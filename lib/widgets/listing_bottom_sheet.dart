@@ -20,6 +20,7 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
   final _ctrl = Get.find<ListingController>();
   ListingModel? _listing;
   bool _loading = true;
+  int _currentPhoto = 0;
 
   @override
   void initState() {
@@ -29,10 +30,10 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
     });
   }
 
-  void _whatsapp() async {
+  void _call() async {
     final phone = _listing?.ownerPhone;
     if (phone == null) return;
-    final url = Uri.parse('https://wa.me/91$phone?text=Hi, I saw your room on RentNearBy. Is it still available?');
+    final url = Uri.parse('tel:+91$phone');
     if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
@@ -69,39 +70,68 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
           margin: const EdgeInsets.only(top: 12, bottom: 16),
           decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
         ),
-        // Photo
-        if (l.photos.isNotEmpty)
-          ClipRRect(
+        // Photo carousel
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: CachedNetworkImage(
-                imageUrl: l.photos.first,
-                height: 180,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(height: 180, color: AppColors.surface),
-                errorWidget: (_, __, ___) => Container(
-                  height: 180,
-                  decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-                  child: const Icon(Icons.home_rounded, size: 60, color: Colors.white38),
-                ),
-              ),
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                height: 140,
-                width: double.infinity,
-                decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-                child: const Icon(Icons.home_rounded, size: 60, color: Colors.white38),
-              ),
+            child: SizedBox(
+              height: 190,
+              child: l.photos.isEmpty
+                  ? Container(
+                      decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+                      child: const Center(child: Icon(Icons.home_rounded, size: 60, color: Colors.white38)),
+                    )
+                  : Stack(
+                      children: [
+                        PageView.builder(
+                          itemCount: l.photos.length,
+                          onPageChanged: (i) => setState(() => _currentPhoto = i),
+                          itemBuilder: (_, i) => CachedNetworkImage(
+                            imageUrl: l.photos[i],
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            placeholder: (_, __) => Container(color: AppColors.surface),
+                            errorWidget: (_, __, ___) => Container(
+                              decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+                              child: const Center(child: Icon(Icons.broken_image_rounded, size: 40, color: Colors.white38)),
+                            ),
+                          ),
+                        ),
+                        // Photo count badge
+                        if (l.photos.length > 1)
+                          Positioned(
+                            top: 10, right: 10,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(10)),
+                              child: Text('${_currentPhoto + 1}/${l.photos.length}',
+                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                        // Dots
+                        if (l.photos.length > 1)
+                          Positioned(
+                            bottom: 10, left: 0, right: 0,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(l.photos.length, (i) => AnimatedContainer(
+                                duration: const Duration(milliseconds: 250),
+                                margin: const EdgeInsets.symmetric(horizontal: 3),
+                                width: _currentPhoto == i ? 18 : 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: _currentPhoto == i ? Colors.white : Colors.white54,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              )),
+                            ),
+                          ),
+                      ],
+                    ),
             ),
           ),
+        ),
         const SizedBox(height: 16),
         // Content
         Padding(
@@ -192,11 +222,11 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: _whatsapp,
-                      icon: const Icon(Icons.chat_rounded, size: 18),
-                      label: const Text('WhatsApp', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                      onPressed: _call,
+                      icon: const Icon(Icons.call_rounded, size: 18),
+                      label: const Text('Call Owner', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366),
+                        backgroundColor: const Color(0xFF2E7D32),
                         foregroundColor: Colors.white,
                         minimumSize: const Size(0, 48),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

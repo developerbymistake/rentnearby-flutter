@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:ui' as ui;
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
@@ -23,10 +25,13 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   Worker? _citiesWorker;
   List<Marker> _markers = [];
   LatLng? _userLocation;
-  double _radius = 5.0;
+  double _radius = 1.0;
   CityModel? _selectedCity;
   bool _locationLoading = true;
   bool _mapReady = false;
+  int _currentPage = 1;
+  bool _animateCancelled = false;
+  final _audioPlayer = AudioPlayer();
 
   @override
   bool get wantKeepAlive => true;
@@ -43,6 +48,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   @override
   void dispose() {
     _citiesWorker?.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -112,15 +118,33 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     }
   }
 
-  Future<void> _loadNearby() async {
+  Future<void> _loadNearby({bool reset = true}) async {
     if (_selectedCity == null) return;
+    final wasEmpty = _listingCtrl.nearbyListings.isEmpty;
+    if (reset) _currentPage = 1;
     final lat = _userLocation?.latitude ?? _selectedCity!.latitude ?? 29.3803;
     final lng = _userLocation?.longitude ?? _selectedCity!.longitude ?? 79.4636;
-    await _listingCtrl.loadNearby(lat, lng, _radius, _selectedCity!.id);
+    await _listingCtrl.loadNearby(lat, lng, _radius, _selectedCity!.id, page: _currentPage);
     _buildMarkers();
+    // Play ting only on first load when rooms are found
+    if (reset && wasEmpty && _listingCtrl.nearbyListings.isNotEmpty) {
+      _playTing();
+    }
     if (_userLocation == null && _mapReady) {
       _animateTo(LatLng(lat, lng), _radiusToZoom(_radius));
     }
+  }
+
+  void _playTing() async {
+    try {
+      await _audioPlayer.play(AssetSource('sounds/ting.mp3'));
+    } catch (_) {}
+  }
+
+  Future<void> _loadMoreNearby() async {
+    if (!_listingCtrl.hasMoreNearby.value || _listingCtrl.isLoading.value) return;
+    _currentPage++;
+    await _loadNearby(reset: false);
   }
 
   void _buildMarkers() {
@@ -142,7 +166,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
       ));
     }
 
-    // Cap at 30 closest listings — sorted by distance for accuracy priority
+    // Sorted by distance, capped at 30
     final listings = (_listingCtrl.nearbyListings.toList()
       ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm)))
       .take(30);
@@ -151,26 +175,36 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
       final priceText = listing.priceMonthly != null ? listing.shortPrice : 'Call';
       markers.add(Marker(
         point: LatLng(listing.latitude, listing.longitude),
-        width: 90, height: 32,
+        width: 100,
+        height: 46,
+        alignment: Alignment.bottomCenter,
         child: GestureDetector(
           onTap: () => _showDetail(listing.id),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 2))],
+          child: CustomPaint(
+            painter: const _MapPinPainter(
+              fill: Colors.white,
+              shadow: Colors.black54,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.home_rounded, color: Colors.white, size: 11),
-                const SizedBox(width: 3),
-                Text(priceText,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-              ],
+            child: Padding(
+              // Extra 9px bottom padding = tail height reserved by painter
+              padding: const EdgeInsets.fromLTRB(10, 5, 10, 14),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.home_rounded, color: AppColors.primary, size: 13),
+                  const SizedBox(width: 4),
+                  Text(
+                    priceText,
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: listing.priceMonthly != null ? AppColors.textDark : AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -198,11 +232,12 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
 
   Future<void> _animateTo(LatLng target, double zoom) async {
     if (!_mapReady || !mounted) return;
+    _animateCancelled = false;
     final startCenter = _mapController.camera.center;
     final startZoom = _mapController.camera.zoom;
-    const frames = 30;
+    const frames = 24;
     for (var i = 1; i <= frames; i++) {
-      if (!mounted) return;
+      if (!mounted || _animateCancelled) return;
       final t = Curves.easeInOut.transform(i / frames);
       _mapController.move(
         LatLng(
@@ -239,6 +274,9 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                     maxZoom: 18,
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                      enableMultiFingerGestureRace: true,
+                      pinchZoomThreshold: 0.3,
+                      pinchMoveThreshold: 30.0,
                     ),
                     onMapReady: () {
                       _mapReady = true;
@@ -246,14 +284,20 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                         _mapController.move(_userLocation!, _radiusToZoom(_radius));
                       }
                     },
+                    onPositionChanged: (_, hasGesture) {
+                      if (hasGesture) _animateCancelled = true;
+                    },
                   ),
                   children: [
                     TileLayer(
                       urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                       userAgentPackageName: 'com.rentnearby.rentnearby',
-                      maxNativeZoom: 19,
-                      keepBuffer: 4,
-                      panBuffer: 2,
+                      maxNativeZoom: 18,
+                      keepBuffer: 2,
+                      panBuffer: 1,
+                      tileUpdateTransformer: TileUpdateTransformers.throttle(
+                        const Duration(milliseconds: 150),
+                      ),
                     ),
                     // Radius circle
                     if (_userLocation != null || _selectedCity != null)
@@ -351,7 +395,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
         final active = _radius == r;
         return GestureDetector(
           onTap: () {
-            setState(() => _radius = r);
+            setState(() { _radius = r; _currentPage = 1; });
             _loadNearby();
             // Zoom map to match new radius
             final center = _userLocation ??
@@ -381,30 +425,51 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
 
   Widget _buildCounterCard() {
     final count = _listingCtrl.nearbyListings.length;
-    return Container(
+    return Obx(() => Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
       ),
-      child: Row(children: [
-        Container(
-          width: 42, height: 42,
-          decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
-          child: Center(child: Text('$count',
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white))),
-        ),
-        const SizedBox(width: 14),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(count == 0 ? 'No rooms found' : '$count room${count == 1 ? '' : 's'} nearby',
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          Text('within ${_radius.toInt() == _radius ? _radius.toInt() : _radius} km radius',
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-        ])),
-        const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.textLight),
-      ]),
-    );
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(children: [
+            Container(
+              width: 42, height: 42,
+              decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
+              child: Center(child: Text('$count',
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white))),
+            ),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(count == 0 ? 'No rooms found' : '$count room${count == 1 ? '' : 's'} loaded',
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+              Text('within ${_radius.toInt() == _radius ? _radius.toInt() : _radius} km radius',
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+            ])),
+          ]),
+          if (_listingCtrl.hasMoreNearby.value) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: _loadMoreNearby,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Center(
+                  child: Text('Load More', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    ));
   }
 
   Widget _buildLocationFab() {
@@ -460,7 +525,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                 )),
                 trailing: selected ? const Icon(Icons.check_rounded, color: AppColors.primary) : null,
                 onTap: () {
-                  setState(() => _selectedCity = city);
+                  setState(() { _selectedCity = city; _currentPage = 1; });
                   Navigator.pop(context);
                   _loadNearby();
                 },
@@ -471,4 +536,42 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
       ]),
     );
   }
+}
+
+// Premium map pin painter — draws a rounded bubble + downward tail
+// Uses dart:ui explicitly (ui.Path) to avoid latlong2.Path<LatLng> conflict
+class _MapPinPainter extends CustomPainter {
+  final Color fill;
+  final Color shadow;
+  const _MapPinPainter({required this.fill, required this.shadow});
+
+  static const double _r = 10.0;   // corner radius
+  static const double _tw = 9.0;   // tail half-width
+  static const double _th = 9.0;   // tail height
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bh = size.height - _th; // bubble height (excluding tail)
+
+    final path = ui.Path()
+      ..moveTo(_r, 0)
+      ..lineTo(size.width - _r, 0)
+      ..arcToPoint(ui.Offset(size.width, _r), radius: ui.Radius.circular(_r))
+      ..lineTo(size.width, bh - _r)
+      ..arcToPoint(ui.Offset(size.width - _r, bh), radius: ui.Radius.circular(_r))
+      ..lineTo(size.width / 2 + _tw, bh)
+      ..lineTo(size.width / 2, size.height) // tail tip = map point
+      ..lineTo(size.width / 2 - _tw, bh)
+      ..lineTo(_r, bh)
+      ..arcToPoint(ui.Offset(0, bh - _r), radius: ui.Radius.circular(_r))
+      ..lineTo(0, _r)
+      ..arcToPoint(ui.Offset(_r, 0), radius: ui.Radius.circular(_r))
+      ..close();
+
+    canvas.drawShadow(path, shadow, 6, true);
+    canvas.drawPath(path, Paint()..color = fill);
+  }
+
+  @override
+  bool shouldRepaint(_MapPinPainter old) => old.fill != fill;
 }

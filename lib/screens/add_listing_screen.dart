@@ -9,6 +9,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:io';
 import '../config/app_colors.dart';
+import '../config/app_routes.dart';
 import '../controllers/listing_controller.dart';
 import '../models/city_model.dart';
 import '../widgets/gradient_button.dart';
@@ -25,7 +26,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _priceMonthlyCtrl = TextEditingController();
-  final _priceDayCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
 
   String? _selectedCityId;
@@ -34,6 +34,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   LatLng? _selectedLocation;
   LatLng? _userLocation;
   bool _mapReady = false;
+  bool _animateCancelled = false;
   final List<File> _photos = [];
   final _picker = ImagePicker();
   int _step = 0;
@@ -91,11 +92,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   Future<void> _animateTo(LatLng target, double zoom) async {
     if (!_mapReady || !mounted) return;
+    _animateCancelled = false;
     final startCenter = _mapController.camera.center;
     final startZoom = _mapController.camera.zoom;
-    const frames = 30;
+    const frames = 24;
     for (var i = 1; i <= frames; i++) {
-      if (!mounted) return;
+      if (!mounted || _animateCancelled) return;
       final t = Curves.easeInOut.transform(i / frames);
       _mapController.move(
         LatLng(
@@ -113,7 +115,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceMonthlyCtrl.dispose();
-    _priceDayCtrl.dispose();
     _addressCtrl.dispose();
     super.dispose();
   }
@@ -165,12 +166,40 @@ class _AddListingScreenState extends State<AddListingScreen> {
     if (picked != null && mounted) setState(() => _photos.add(File(picked.path)));
   }
 
+  void _handleNext() {
+    if (_step == 0) {
+      if (_selectedRoomTypeId == null) {
+        Get.snackbar('Room Type Required', 'Please select a room type to continue',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.error,
+            colorText: Colors.white,
+            margin: const EdgeInsets.all(16));
+        return;
+      }
+    }
+    if (_step == 1) {
+      if (_selectedCityId == null) {
+        Get.snackbar('District Required', 'Please select a district to continue',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.error,
+            colorText: Colors.white,
+            margin: const EdgeInsets.all(16));
+        return;
+      }
+    }
+    if (_step < 2) {
+      setState(() => _step++);
+    } else {
+      _submit();
+    }
+  }
+
   Future<void> _submit() async {
     if (_selectedRoomTypeId == null) {
       Get.snackbar('Required', 'Please select a room type', snackPosition: SnackPosition.BOTTOM); return;
     }
     if (_selectedCityId == null) {
-      Get.snackbar('Required', 'Please select a city', snackPosition: SnackPosition.BOTTOM); return;
+      Get.snackbar('Required', 'Please select a district', snackPosition: SnackPosition.BOTTOM); return;
     }
 
     // Auto-use GPS location if user didn't pin manually
@@ -184,7 +213,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
       'title': _titleCtrl.text.trim().isNotEmpty ? _titleCtrl.text.trim() : null,
       'description': _descCtrl.text.trim().isNotEmpty ? _descCtrl.text.trim() : null,
       'priceMonthly': _priceMonthlyCtrl.text.isNotEmpty ? int.tryParse(_priceMonthlyCtrl.text) : null,
-      'pricePerDay': _priceDayCtrl.text.isNotEmpty ? int.tryParse(_priceDayCtrl.text) : null,
       'latitude': pinLocation.latitude,
       'longitude': pinLocation.longitude,
       'address': _addressCtrl.text.trim().isNotEmpty ? _addressCtrl.text.trim() : null,
@@ -199,8 +227,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
       await _ctrl.uploadPhoto(listingId, photo.path);
     }
 
-    Get.back();
-    Get.snackbar('Posted!', 'Your room is now live', snackPosition: SnackPosition.BOTTOM);
+    // Navigate to detail so user can review their listing and delete if needed
+    Get.offNamed(AppRoutes.listingDetail, arguments: listingId);
   }
 
   InputDecoration _inputDec(String hint, {Widget? prefixIcon, String? prefix}) => InputDecoration(
@@ -283,10 +311,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             Expanded(
               flex: 2,
               child: Obx(() => GradientButton(
-                onPressed: _ctrl.isLoading.value ? null : () {
-                  if (_step < 2) setState(() => _step++);
-                  else _submit();
-                },
+                onPressed: _ctrl.isLoading.value ? null : _handleNext,
                 isLoading: _ctrl.isLoading.value,
                 label: _step == 0 ? 'Next: Location' : _step == 1 ? 'Next: Photos' : 'Post Listing',
               )),
@@ -367,24 +392,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
       ),
 
       _sectionCard(
-        title: 'Monthly Rent & Per Day',
-        child: Row(children: [
-          Expanded(child: TextFormField(
-            controller: _priceMonthlyCtrl,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-            decoration: _inputDec('e.g. 8000', prefix: '₹ '),
-          )),
-          const SizedBox(width: 12),
-          Expanded(child: TextFormField(
-            controller: _priceDayCtrl,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-            decoration: _inputDec('Per day', prefix: '₹ '),
-          )),
-        ]),
+        title: 'Monthly Rent (₹)',
+        child: TextFormField(
+          controller: _priceMonthlyCtrl,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+          decoration: _inputDec('e.g. 8000', prefix: '₹ '),
+        ),
       ),
 
       _sectionCard(
@@ -393,7 +408,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           TextFormField(
             controller: _titleCtrl,
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-            decoration: _inputDec('Title e.g. Spacious 1BHK near market',
+            decoration: _inputDec('e.g. Near railway station, bus stand, landmark',
                 prefixIcon: const Icon(Iconsax.home, color: AppColors.primaryLight, size: 18)),
           ),
           const SizedBox(height: 12),
@@ -413,14 +428,16 @@ class _AddListingScreenState extends State<AddListingScreen> {
     padding: const EdgeInsets.all(16),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _sectionCard(
-        title: 'City & District',
+        title: 'District & Area',
         child: Obx(() {
           final cities = _nearbyCities;
-          return Column(children: [
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('District *', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+            const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               key: ValueKey('city-${cities.length}'),
               value: _selectedCityId,
-              decoration: _inputDec('Select city', prefixIcon: const Icon(Iconsax.location, color: AppColors.primaryLight, size: 18)),
+              decoration: _inputDec('Select your district', prefixIcon: const Icon(Iconsax.location, color: AppColors.primaryLight, size: 18)),
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
               items: cities.map((c) => DropdownMenuItem(value: c.id,
                   child: Text(c.name, style: const TextStyle(fontFamily: 'Poppins')))).toList(),
@@ -429,11 +446,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 if (v != null) _ctrl.loadDistricts(v);
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            const Text('Area/City (Optional)', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+            const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               key: ValueKey('district-$_selectedCityId-${_ctrl.districts.length}'),
               value: _selectedDistrictId,
-              decoration: _inputDec('Select district (optional)',
+              decoration: _inputDec('Select area or city',
                   prefixIcon: const Icon(Iconsax.map, color: AppColors.primaryLight, size: 18)),
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
               items: _ctrl.districts.map((d) => DropdownMenuItem(value: d.id,
@@ -482,6 +501,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     maxZoom: 18,
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                      enableMultiFingerGestureRace: true,
+                      pinchZoomThreshold: 0.3,
+                      pinchMoveThreshold: 30.0,
                     ),
                     onMapReady: () {
                       _mapReady = true;
@@ -492,15 +514,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         }
                       }
                     },
+                    onPositionChanged: (_, hasGesture) {
+                      if (hasGesture) _animateCancelled = true;
+                    },
                     onTap: (_, pos) => setState(() => _selectedLocation = pos),
                   ),
                   children: [
                     TileLayer(
                       urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                       userAgentPackageName: 'com.rentnearby.rentnearby',
-                      maxNativeZoom: 19,
-                      keepBuffer: 4,
-                      panBuffer: 2,
+                      maxNativeZoom: 18,
+                      keepBuffer: 2,
+                      panBuffer: 1,
+                      tileUpdateTransformer: TileUpdateTransformers.throttle(
+                        const Duration(milliseconds: 150),
+                      ),
                     ),
                     MarkerLayer(markers: [
                       if (_userLocation != null)

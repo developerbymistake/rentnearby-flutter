@@ -8,6 +8,7 @@ import 'listing_controller.dart';
 class AuthController extends GetxController {
   final isLoading = false.obs;
   final user = Rxn<UserModel>();
+  final tabIndex = 0.obs;
 
   @override
   void onInit() {

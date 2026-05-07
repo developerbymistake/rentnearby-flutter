@@ -5,6 +5,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../widgets/listing_card.dart';
 
@@ -16,6 +17,7 @@ class MyListingsScreen extends StatefulWidget {
 
 class _MyListingsScreenState extends State<MyListingsScreen> {
   final _ctrl = Get.find<ListingController>();
+  final _auth = Get.find<AuthController>();
 
   @override
   void initState() {
@@ -95,13 +97,56 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 6))],
           ),
           child: FloatingActionButton.extended(
-            onPressed: () => Get.toNamed(AppRoutes.addListing),
+            onPressed: _onAddRoom,
             backgroundColor: Colors.transparent,
             elevation: 0,
             icon: const Icon(Iconsax.add_square, color: Colors.white),
             label: const Text('Add Room', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Colors.white)),
           ),
         ),
+      ),
+    );
+  }
+
+  void _onAddRoom() {
+    final name = _auth.user.value?.name?.trim() ?? '';
+    if (name.isEmpty) {
+      _showProfileRequiredDialog();
+    } else {
+      Get.toNamed(AppRoutes.addListing);
+    }
+  }
+
+  void _showProfileRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Name Required', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        content: const Text(
+          'Please add your name to your profile before posting a room listing.',
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Later', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              minimumSize: Size.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              _auth.tabIndex.value = 2;
+            },
+            child: const Text('Update Profile', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          ),
+        ],
       ),
     );
   }

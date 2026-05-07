@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import 'explore_screen.dart';
 import 'my_listings_screen.dart';
@@ -17,6 +18,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   int _currentIndex = 0;
   late AnimationController _navController;
+  final _auth = Get.find<AuthController>();
 
   final _screens = const [ExploreScreen(), MyListingsScreen(), ProfileScreen()];
 
@@ -25,6 +27,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     super.initState();
     _navController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     Get.put(ListingController());
+    ever(_auth.tabIndex, (i) => setState(() => _currentIndex = i));
   }
 
   @override

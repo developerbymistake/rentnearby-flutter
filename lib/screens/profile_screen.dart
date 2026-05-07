@@ -99,7 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 20),
                   _buildField('Full Name', Iconsax.user, _nameCtrl),
                   const SizedBox(height: 16),
-                  _buildField('Gmail ID', Iconsax.sms, _gmailCtrl, keyboardType: TextInputType.emailAddress),
+                  _buildField('Gmail ID (Optional)', Iconsax.sms, _gmailCtrl, keyboardType: TextInputType.emailAddress, hint: 'Enter your Gmail (optional)'),
                   const SizedBox(height: 24),
                   Obx(() => GradientButton(
                     onPressed: _auth.isLoading.value ? null : _save,
@@ -133,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildField(String label, IconData icon, TextEditingController ctrl, {TextInputType? keyboardType}) {
+  Widget _buildField(String label, IconData icon, TextEditingController ctrl, {TextInputType? keyboardType, String? hint}) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
       const SizedBox(height: 8),
@@ -143,7 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: AppColors.primaryLight, size: 20),
-          hintText: 'Enter $label',
+          hintText: hint ?? 'Enter $label',
         ),
       ),
     ]);

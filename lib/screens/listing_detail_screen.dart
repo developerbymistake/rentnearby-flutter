@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../models/listing_model.dart';
 
@@ -15,9 +16,12 @@ class ListingDetailScreen extends StatefulWidget {
 
 class _ListingDetailScreenState extends State<ListingDetailScreen> {
   final _ctrl = Get.find<ListingController>();
+  final _auth = Get.find<AuthController>();
   ListingModel? _listing;
   bool _loading = true;
   int _currentPhoto = 0;
+
+  bool get _isOwner => _listing != null && _auth.user.value?.id == _listing!.userId;
 
   @override
   void initState() {
@@ -26,10 +30,49 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     _ctrl.getById(id).then((l) => setState(() { _listing = l; _loading = false; }));
   }
 
-  void _whatsapp() async {
+  void _call() async {
     final phone = _listing?.ownerPhone;
     if (phone == null) return;
-    final url = Uri.parse('https://wa.me/91$phone?text=Hi, I saw your room on RentNearBy. Is it still available?');
+    final url = Uri.parse('tel:+91$phone');
+    if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
+  }
+
+  void _confirmDelete() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Listing', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+        content: const Text('Are you sure? This will also delete all photos.', style: TextStyle(fontFamily: 'Poppins')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error, foregroundColor: Colors.white,
+              minimumSize: Size.zero, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              _ctrl.deleteListing(_listing!.id);
+              Get.back();
+            },
+            child: const Text('Delete', style: TextStyle(fontFamily: 'Poppins')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _checkDistance() async {
+    final l = _listing;
+    if (l == null) return;
+    final url = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=${l.latitude},${l.longitude}&travelmode=driving',
+    );
     if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
@@ -61,6 +104,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
             ),
           ),
+          actions: _isOwner ? [
+            GestureDetector(
+              onTap: _confirmDelete,
+              child: Container(
+                margin: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+                child: const Icon(Icons.delete_rounded, color: Colors.white, size: 20),
+              ),
+            ),
+          ] : null,
           flexibleSpace: FlexibleSpaceBar(
             background: l.photos.isEmpty
                 ? Container(
@@ -165,19 +219,39 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           color: Colors.white,
           boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 16, offset: const Offset(0, -4))],
         ),
-        child: ElevatedButton.icon(
-          onPressed: _whatsapp,
-          icon: const Icon(Icons.chat_rounded, size: 20),
-          label: const Text('Contact on WhatsApp',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF25D366),
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 52),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            elevation: 0,
+        child: Row(children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: _checkDistance,
+              icon: const Icon(Icons.near_me_rounded, size: 20),
+              label: const Text('Check Distance',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(0, 52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+            ),
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: _call,
+              icon: const Icon(Icons.call_rounded, size: 20),
+              label: const Text('Call Owner',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2E7D32),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(0, 52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+            ),
+          ),
+        ]),
       );
 
   Widget _tag(IconData icon, String label, {Color? color}) => Container(

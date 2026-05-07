@@ -12,6 +12,7 @@ class ListingController extends GetxController {
   final roomTypes = <RoomTypeModel>[].obs;
   final isLoading = false.obs;
   final isUploading = false.obs;
+  final hasMoreNearby = false.obs;
 
   @override
   void onInit() {
@@ -35,7 +36,7 @@ class ListingController extends GetxController {
     } catch (_) {}
   }
 
-  Future<void> loadNearby(double lat, double lng, double radius, String cityId) async {
+  Future<void> loadNearby(double lat, double lng, double radius, String cityId, {int page = 1}) async {
     try {
       isLoading.value = true;
       final res = await ApiService.get('/listings/nearby', params: {
@@ -43,8 +44,16 @@ class ListingController extends GetxController {
         'longitude': lng,
         'radius': radius,
         'cityId': cityId,
+        'page': page,
+        'pageSize': 30,
       });
-      nearbyListings.value = (res['data'] as List).map((e) => NearbyListingModel.fromJson(e)).toList();
+      final items = (res['data'] as List).map((e) => NearbyListingModel.fromJson(e)).toList();
+      if (page == 1) {
+        nearbyListings.value = items;
+      } else {
+        nearbyListings.addAll(items);
+      }
+      hasMoreNearby.value = res['hasMore'] == true;
     } catch (_) {
     } finally {
       isLoading.value = false;
