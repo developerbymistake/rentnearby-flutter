@@ -1,3 +1,5 @@
+import '../config/app_constants.dart';
+
 class ListingModel {
   final String id;
   final String userId;
@@ -62,7 +64,9 @@ class ListingModel {
         isActive: json['isActive'] ?? true,
         ownerName: json['ownerName'],
         ownerPhone: json['ownerPhone'],
-        photos: List<String>.from(json['photos'] ?? []),
+        photos: (json['photos'] as List? ?? [])
+            .map((p) => p.toString().startsWith('http') ? p.toString() : '${AppConstants.serverUrl}$p')
+            .toList(),
         createdAt: DateTime.parse(json['createdAt']),
       );
 
@@ -111,7 +115,11 @@ class NearbyListingModel {
         longitude: (json['longitude'] as num).toDouble(),
         roomTypeName: json['roomTypeName'],
         ownerPhone: json['ownerPhone'],
-        thumbnailUrl: json['thumbnailUrl'],
+        thumbnailUrl: json['thumbnailUrl'] == null
+            ? null
+            : json['thumbnailUrl'].toString().startsWith('http')
+                ? json['thumbnailUrl']
+                : '${AppConstants.serverUrl}${json['thumbnailUrl']}',
         distanceKm: (json['distanceKm'] as num).toDouble(),
       );
 
