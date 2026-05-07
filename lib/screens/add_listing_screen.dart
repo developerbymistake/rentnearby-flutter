@@ -23,13 +23,12 @@ class AddListingScreen extends StatefulWidget {
 class _AddListingScreenState extends State<AddListingScreen> {
   final _ctrl = Get.find<ListingController>();
   final _mapController = MapController();
-  final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _priceMonthlyCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
 
-  String? _selectedCityId;
   String? _selectedDistrictId;
+  String? _selectedCityId;
   String? _selectedRoomTypeId;
   LatLng? _selectedLocation;
   LatLng? _userLocation;
@@ -54,11 +53,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
     return r * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
 
-  List<CityModel> get _nearbyCities {
-    final all = _ctrl.cities.toList();
+  List<DistrictModel> get _nearbyDistricts {
+    final all = _ctrl.districts.toList();
     if (_userLocation == null) return all;
-    final withDist = all.map((c) => MapEntry(c,
-        _haversineKm(_userLocation!.latitude, _userLocation!.longitude, c.latitude ?? 0, c.longitude ?? 0)
+    final withDist = all.map((d) => MapEntry(d,
+        _haversineKm(_userLocation!.latitude, _userLocation!.longitude, d.latitude ?? 0, d.longitude ?? 0)
     )).toList()..sort((a, b) => a.value.compareTo(b.value));
     final nearby = withDist.where((e) => e.value <= 100).map((e) => e.key).toList();
     return nearby.isNotEmpty ? nearby : (withDist.isNotEmpty ? [withDist.first.key] : all);
@@ -75,19 +74,38 @@ class _AddListingScreenState extends State<AddListingScreen> {
       final loc = LatLng(pos.latitude, pos.longitude);
       setState(() => _userLocation = loc);
 
-      // Auto-select nearest city
-      if (_selectedCityId == null && _ctrl.cities.isNotEmpty) {
-        final nearest = _nearbyCities.first;
-        setState(() => _selectedCityId = nearest.id);
-        await _ctrl.loadDistricts(nearest.id);
+      // Auto-detect nearest Uttarakhand district
+      if (_selectedDistrictId == null && _ctrl.districts.isNotEmpty) {
+        final nearest = _nearbyDistricts.first;
+        setState(() => _selectedDistrictId = nearest.id);
+        await _ctrl.loadCities(nearest.id);
+        // Auto-detect nearest city within that district
+        final nearestCity = _nearestCity();
+        if (nearestCity != null) {
+          setState(() => _selectedCityId = nearestCity.id);
+        }
       }
 
-      // Auto-pin at user's GPS location
       if (_selectedLocation == null) {
         setState(() => _selectedLocation = loc);
       }
       if (_mapReady) _animateTo(loc, 15.0);
     } catch (_) {}
+  }
+
+  CityModel? _nearestCity() {
+    if (_userLocation == null || _ctrl.cities.isEmpty) return null;
+    CityModel? nearest;
+    double minDist = double.infinity;
+    for (final c in _ctrl.cities) {
+      if (c.latitude == null || c.longitude == null) continue;
+      final dist = _haversineKm(
+        _userLocation!.latitude, _userLocation!.longitude,
+        c.latitude!, c.longitude!,
+      );
+      if (dist < minDist) { minDist = dist; nearest = c; }
+    }
+    return nearest;
   }
 
   Future<void> _animateTo(LatLng target, double zoom) async {
@@ -112,7 +130,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   @override
   void dispose() {
-    _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceMonthlyCtrl.dispose();
     _addressCtrl.dispose();
@@ -176,9 +193,17 @@ class _AddListingScreenState extends State<AddListingScreen> {
             margin: const EdgeInsets.all(16));
         return;
       }
+      if (_priceMonthlyCtrl.text.trim().isEmpty) {
+        Get.snackbar('Rent Required', 'Please enter the monthly rent amount',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.error,
+            colorText: Colors.white,
+            margin: const EdgeInsets.all(16));
+        return;
+      }
     }
     if (_step == 1) {
-      if (_selectedCityId == null) {
+      if (_selectedDistrictId == null) {
         Get.snackbar('District Required', 'Please select a district to continue',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: AppColors.error,
@@ -198,11 +223,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
     if (_selectedRoomTypeId == null) {
       Get.snackbar('Required', 'Please select a room type', snackPosition: SnackPosition.BOTTOM); return;
     }
-    if (_selectedCityId == null) {
+    if (_selectedDistrictId == null) {
       Get.snackbar('Required', 'Please select a district', snackPosition: SnackPosition.BOTTOM); return;
     }
 
-    // Auto-use GPS location if user didn't pin manually
     final pinLocation = _selectedLocation ?? _userLocation;
     if (pinLocation == null) {
       Get.snackbar('Required', 'Please pin your location on the map', snackPosition: SnackPosition.BOTTOM); return;
@@ -210,14 +234,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
     final data = {
       'roomTypeId': _selectedRoomTypeId,
-      'title': _titleCtrl.text.trim().isNotEmpty ? _titleCtrl.text.trim() : null,
       'description': _descCtrl.text.trim().isNotEmpty ? _descCtrl.text.trim() : null,
       'priceMonthly': _priceMonthlyCtrl.text.isNotEmpty ? int.tryParse(_priceMonthlyCtrl.text) : null,
       'latitude': pinLocation.latitude,
       'longitude': pinLocation.longitude,
       'address': _addressCtrl.text.trim().isNotEmpty ? _addressCtrl.text.trim() : null,
-      'cityId': _selectedCityId,
       'districtId': _selectedDistrictId,
+      'cityId': _selectedCityId,
     };
 
     final listingId = await _ctrl.createListing(data);
@@ -227,7 +250,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
       await _ctrl.uploadPhoto(listingId, photo.path);
     }
 
-    // Navigate to detail so user can review their listing and delete if needed
     Get.offNamed(AppRoutes.listingDetail, arguments: listingId);
   }
 
@@ -250,7 +272,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: Column(children: [
-        // Header
         Container(
           decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
           child: SafeArea(
@@ -265,7 +286,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ),
         ),
 
-        // Step indicator with labels
         Container(
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
@@ -289,7 +309,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ),
         ),
 
-        // Bottom buttons
         Container(
           color: Colors.white,
           padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom + 12),
@@ -392,7 +411,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       ),
 
       _sectionCard(
-        title: 'Monthly Rent (₹)',
+        title: 'Monthly Rent (₹) *',
         child: TextFormField(
           controller: _priceMonthlyCtrl,
           keyboardType: TextInputType.number,
@@ -403,22 +422,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
       ),
 
       _sectionCard(
-        title: 'Room Details (Optional)',
-        child: Column(children: [
-          TextFormField(
-            controller: _titleCtrl,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-            decoration: _inputDec('e.g. Near railway station, bus stand, landmark',
-                prefixIcon: const Icon(Iconsax.home, color: AppColors.primaryLight, size: 18)),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _descCtrl,
-            maxLines: 3,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-            decoration: _inputDec('Describe amenities, nearby facilities, rules...'),
-          ),
-        ]),
+        title: 'Description (Optional)',
+        child: TextFormField(
+          controller: _descCtrl,
+          maxLines: 3,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+          decoration: _inputDec('Describe amenities, nearby facilities, rules...'),
+        ),
       ),
     ]),
   );
@@ -428,61 +438,17 @@ class _AddListingScreenState extends State<AddListingScreen> {
     padding: const EdgeInsets.all(16),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _sectionCard(
-        title: 'District & Area',
-        child: Obx(() {
-          final cities = _nearbyCities;
-          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('District *', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
-            const SizedBox(height: 6),
-            DropdownButtonFormField<String>(
-              key: ValueKey('city-${cities.length}'),
-              value: _selectedCityId,
-              decoration: _inputDec('Select your district', prefixIcon: const Icon(Iconsax.location, color: AppColors.primaryLight, size: 18)),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
-              items: cities.map((c) => DropdownMenuItem(value: c.id,
-                  child: Text(c.name, style: const TextStyle(fontFamily: 'Poppins')))).toList(),
-              onChanged: (v) {
-                setState(() { _selectedCityId = v; _selectedDistrictId = null; });
-                if (v != null) _ctrl.loadDistricts(v);
-              },
-            ),
-            const SizedBox(height: 16),
-            const Text('Area/City (Optional)', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
-            const SizedBox(height: 6),
-            DropdownButtonFormField<String>(
-              key: ValueKey('district-$_selectedCityId-${_ctrl.districts.length}'),
-              value: _selectedDistrictId,
-              decoration: _inputDec('Select area or city',
-                  prefixIcon: const Icon(Iconsax.map, color: AppColors.primaryLight, size: 18)),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
-              items: _ctrl.districts.map((d) => DropdownMenuItem(value: d.id,
-                  child: Text(d.name, style: const TextStyle(fontFamily: 'Poppins')))).toList(),
-              onChanged: (v) => setState(() => _selectedDistrictId = v),
-            ),
-          ]);
-        }),
-      ),
-
-      _sectionCard(
-        title: 'Address (Optional)',
-        child: TextFormField(
-          controller: _addressCtrl,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-          decoration: _inputDec('Street, landmark, nearby place...',
-              prefixIcon: const Icon(Iconsax.building, color: AppColors.primaryLight, size: 18)),
-        ),
-      ),
-
-      _sectionCard(
-        title: 'Pin Location on Map *',
+        title: 'Pin Your Location *',
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             const Icon(Icons.info_outline_rounded, color: AppColors.primaryLight, size: 15),
             const SizedBox(width: 6),
             Expanded(child: Text(
-              _selectedLocation != null
-                  ? 'Location pinned — tap map to adjust'
-                  : 'Tap anywhere on the map to set your pin',
+              _userLocation != null
+                  ? (_selectedLocation != null
+                      ? 'Pinned — tap inside the circle to adjust'
+                      : 'Tap inside the blue circle to pin your room')
+                  : 'Waiting for your GPS location...',
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
             )),
           ]),
@@ -497,7 +463,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   options: MapOptions(
                     initialCenter: _userLocation ?? const LatLng(29.3803, 79.4636),
                     initialZoom: 15.0,
-                    minZoom: 12.0,
+                    minZoom: 13.0,
                     maxZoom: 18,
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
@@ -517,7 +483,24 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     onPositionChanged: (_, hasGesture) {
                       if (hasGesture) _animateCancelled = true;
                     },
-                    onTap: (_, pos) => setState(() => _selectedLocation = pos),
+                    onTap: (_, pos) {
+                      if (_userLocation != null) {
+                        final dist = _haversineKm(
+                          _userLocation!.latitude, _userLocation!.longitude,
+                          pos.latitude, pos.longitude,
+                        );
+                        if (dist > 1.0) {
+                          Get.snackbar('Out of Range',
+                              'You can only pin within 1km of your current location',
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: AppColors.error,
+                              colorText: Colors.white,
+                              margin: const EdgeInsets.all(16));
+                          return;
+                        }
+                      }
+                      setState(() => _selectedLocation = pos);
+                    },
                   ),
                   children: [
                     TileLayer(
@@ -530,6 +513,17 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         const Duration(milliseconds: 150),
                       ),
                     ),
+                    if (_userLocation != null)
+                      CircleLayer(circles: [
+                        CircleMarker(
+                          point: _userLocation!,
+                          radius: 1000,
+                          useRadiusInMeter: true,
+                          color: AppColors.primary.withOpacity(0.08),
+                          borderColor: AppColors.primary.withOpacity(0.6),
+                          borderStrokeWidth: 1.5,
+                        ),
+                      ]),
                     MarkerLayer(markers: [
                       if (_userLocation != null)
                         Marker(
@@ -548,33 +542,27 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         Marker(
                           point: _selectedLocation!,
                           width: 40, height: 48,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 36, height: 36,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 3))],
-                                ),
-                                child: const Icon(Icons.home_rounded, color: Colors.white, size: 18),
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            Container(
+                              width: 36, height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 3))],
                               ),
-                              Container(width: 2, height: 10, color: AppColors.primary),
-                            ],
-                          ),
+                              child: const Icon(Icons.home_rounded, color: Colors.white, size: 18),
+                            ),
+                            Container(width: 2, height: 10, color: AppColors.primary),
+                          ]),
                         ),
                     ]),
                   ],
                 ),
               ),
-              // My location FAB
               Positioned(
                 bottom: 10, right: 10,
                 child: GestureDetector(
-                  onTap: () {
-                    if (_userLocation != null) _animateTo(_userLocation!, 15.0);
-                  },
+                  onTap: () { if (_userLocation != null) _animateTo(_userLocation!, 15.0); },
                   child: Container(
                     width: 38, height: 38,
                     decoration: BoxDecoration(
@@ -601,6 +589,76 @@ class _AddListingScreenState extends State<AddListingScreen> {
             ),
         ]),
       ),
+
+      _sectionCard(
+        title: 'District & City',
+        child: Obx(() {
+          final gpsAvailable = _userLocation != null;
+          final districtName = _ctrl.districts.firstWhereOrNull((d) => d.id == _selectedDistrictId)?.name;
+          final cityName = _ctrl.cities.firstWhereOrNull((c) => c.id == _selectedCityId)?.name;
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('District *', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+            const SizedBox(height: 6),
+            if (gpsAvailable && districtName != null)
+              _readOnlyField(Iconsax.location, districtName)
+            else
+              DropdownButtonFormField<String>(
+                key: ValueKey('district-${_ctrl.districts.length}'),
+                value: _selectedDistrictId,
+                decoration: _inputDec('Select your district', prefixIcon: const Icon(Iconsax.location, color: AppColors.primaryLight, size: 18)),
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
+                items: _ctrl.districts.map((d) => DropdownMenuItem(value: d.id,
+                    child: Text(d.name, style: const TextStyle(fontFamily: 'Poppins')))).toList(),
+                onChanged: (v) {
+                  setState(() { _selectedDistrictId = v; _selectedCityId = null; });
+                  if (v != null) _ctrl.loadCities(v);
+                },
+              ),
+            const SizedBox(height: 16),
+            const Text('City / Area (Optional)', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+            const SizedBox(height: 6),
+            if (gpsAvailable && cityName != null)
+              _readOnlyField(Iconsax.map, cityName)
+            else
+              DropdownButtonFormField<String>(
+                key: ValueKey('city-$_selectedDistrictId-${_ctrl.cities.length}'),
+                value: _selectedCityId,
+                decoration: _inputDec('Select city or area', prefixIcon: const Icon(Iconsax.map, color: AppColors.primaryLight, size: 18)),
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
+                items: _ctrl.cities.map((c) => DropdownMenuItem(value: c.id,
+                    child: Text(c.name, style: const TextStyle(fontFamily: 'Poppins')))).toList(),
+                onChanged: (v) => setState(() => _selectedCityId = v),
+              ),
+          ]);
+        }),
+      ),
+
+      _sectionCard(
+        title: 'Address (Optional)',
+        child: TextFormField(
+          controller: _addressCtrl,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+          decoration: _inputDec('Street, landmark, nearby place...',
+              prefixIcon: const Icon(Iconsax.building, color: AppColors.primaryLight, size: 18)),
+        ),
+      ),
+    ]),
+  );
+
+  Widget _readOnlyField(IconData icon, String value) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    decoration: BoxDecoration(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppColors.divider),
+    ),
+    child: Row(children: [
+      Icon(icon, color: AppColors.primaryLight, size: 18),
+      const SizedBox(width: 10),
+      Text(value, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark)),
+      const Spacer(),
+      const Icon(Icons.gps_fixed_rounded, color: AppColors.success, size: 14),
     ]),
   );
 
@@ -719,4 +777,3 @@ class _AddListingScreenState extends State<AddListingScreen> {
     ]),
   );
 }
-

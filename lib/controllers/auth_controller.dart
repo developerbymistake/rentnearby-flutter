@@ -60,7 +60,7 @@ class AuthController extends GetxController {
     Get.offAllNamed(AppRoutes.otp);
   }
 
-  Future<void> updateProfile(String? name, String? gmailId) async {
+  Future<bool> updateProfile(String? name, String? gmailId) async {
     try {
       isLoading.value = true;
       final res = await ApiService.put('/users/profile', {
@@ -71,8 +71,10 @@ class AuthController extends GetxController {
       StorageService.saveUser(updated);
       user.value = updated;
       Get.snackbar('Success', 'Profile updated!', snackPosition: SnackPosition.BOTTOM);
+      return true;
     } catch (_) {
       Get.snackbar('Error', 'Could not update profile.', snackPosition: SnackPosition.BOTTOM);
+      return false;
     } finally {
       isLoading.value = false;
     }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../controllers/auth_controller.dart';
@@ -31,23 +30,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  String _initials(String? name) {
+    if (name == null || name.trim().isEmpty) return '';
+    final parts = name.trim().split(' ').where((p) => p.isNotEmpty).toList();
+    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    return parts[0][0].toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header
+            // Compact header — avatar + name + phone in one row
             Container(
               decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
-                  child: Column(children: [
-                    Row(children: [
-                      const Text('Profile', style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                      const Spacer(),
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                  child: Row(
+                    children: [
+                      // Avatar: initials if name exists, icon otherwise
+                      Obx(() {
+                        final initials = _initials(_auth.user.value?.name);
+                        return Container(
+                          width: 54, height: 54,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.25),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
+                          ),
+                          child: Center(
+                            child: initials.isNotEmpty
+                                ? Text(initials,
+                                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white))
+                                : const Icon(Iconsax.user5, size: 26, color: Colors.white),
+                          ),
+                        );
+                      }),
+                      const SizedBox(width: 14),
+                      // Name + phone number
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Obx(() => Text(
+                              _auth.user.value?.name?.trim().isNotEmpty == true
+                                  ? _auth.user.value!.name!.trim()
+                                  : 'Your Profile',
+                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )),
+                            Obx(() => Text(
+                              '+91 ${_auth.user.value?.phoneNumber ?? ''}',
+                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70),
+                            )),
+                          ],
+                        ),
+                      ),
+                      // Admin badge
                       Obx(() => _auth.user.value?.isAdmin == true
                           ? Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -55,75 +99,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: const Text('Admin', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
                             )
                           : const SizedBox()),
-                    ]),
-                    const SizedBox(height: 24),
-                    // Avatar
-                    FadeInDown(
-                      child: Container(
-                        width: 82, height: 82,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
-                        ),
-                        child: const Icon(Iconsax.user5, size: 40, color: Colors.white),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Obx(() => Text(
-                      _auth.user.value?.displayName ?? '',
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
-                    )),
-                    Obx(() => Text(
-                      '+91 ${_auth.user.value?.phoneNumber ?? ''}',
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70),
-                    )),
-                  ]),
+                    ],
+                  ),
                 ),
               ),
             ),
 
             // Form card
-            FadeInUp(
-              delay: const Duration(milliseconds: 200),
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
-                ),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Edit Profile', style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                  const SizedBox(height: 20),
-                  _buildField('Full Name', Iconsax.user, _nameCtrl),
-                  const SizedBox(height: 16),
-                  _buildField('Gmail ID (Optional)', Iconsax.sms, _gmailCtrl, keyboardType: TextInputType.emailAddress, hint: 'Enter your Gmail (optional)'),
-                  const SizedBox(height: 24),
-                  Obx(() => GradientButton(
-                    onPressed: _auth.isLoading.value ? null : _save,
-                    isLoading: _auth.isLoading.value,
-                    label: 'Save Profile',
-                  )),
-                ]),
+            Container(
+              margin: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
               ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Edit Profile', style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                const SizedBox(height: 20),
+                _buildField('Full Name', Iconsax.user, _nameCtrl),
+                const SizedBox(height: 16),
+                _buildField('Gmail ID (Optional)', Iconsax.sms, _gmailCtrl, keyboardType: TextInputType.emailAddress, hint: 'Enter your Gmail (optional)'),
+                const SizedBox(height: 24),
+                Obx(() => GradientButton(
+                  onPressed: _auth.isLoading.value ? null : _save,
+                  isLoading: _auth.isLoading.value,
+                  label: 'Save Profile',
+                )),
+              ]),
             ),
 
             // Logout
-            FadeInUp(
-              delay: const Duration(milliseconds: 300),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                child: OutlinedButton.icon(
-                  onPressed: _confirmLogout,
-                  icon: const Icon(Iconsax.logout, color: AppColors.error, size: 20),
-                  label: const Text('Logout', style: TextStyle(fontFamily: 'Poppins', color: AppColors.error, fontWeight: FontWeight.w600)),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 52),
-                    side: const BorderSide(color: AppColors.error, width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+              child: OutlinedButton.icon(
+                onPressed: _confirmLogout,
+                icon: const Icon(Iconsax.logout, color: AppColors.error, size: 20),
+                label: const Text('Logout', style: TextStyle(fontFamily: 'Poppins', color: AppColors.error, fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                  side: const BorderSide(color: AppColors.error, width: 1.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               ),
             ),

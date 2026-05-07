@@ -8,13 +8,14 @@ class ListingModel {
   final double latitude;
   final double longitude;
   final String? address;
-  final String cityId;
-  final String? cityName;
-  final String? districtId;
+  final String districtId;
   final String? districtName;
+  final String? cityId;
+  final String? cityName;
   final String roomTypeId;
   final String? roomTypeName;
   final bool isActive;
+  final String? ownerName;
   final String? ownerPhone;
   final List<String> photos;
   final DateTime createdAt;
@@ -29,13 +30,14 @@ class ListingModel {
     required this.latitude,
     required this.longitude,
     this.address,
-    required this.cityId,
-    this.cityName,
-    this.districtId,
+    required this.districtId,
     this.districtName,
+    this.cityId,
+    this.cityName,
     required this.roomTypeId,
     this.roomTypeName,
     required this.isActive,
+    this.ownerName,
     this.ownerPhone,
     required this.photos,
     required this.createdAt,
@@ -51,13 +53,14 @@ class ListingModel {
         latitude: (json['latitude'] as num).toDouble(),
         longitude: (json['longitude'] as num).toDouble(),
         address: json['address'],
-        cityId: json['cityId'],
-        cityName: json['cityName'],
         districtId: json['districtId'],
         districtName: json['districtName'],
+        cityId: json['cityId'],
+        cityName: json['cityName'],
         roomTypeId: json['roomTypeId'],
         roomTypeName: json['roomTypeName'],
         isActive: json['isActive'] ?? true,
+        ownerName: json['ownerName'],
         ownerPhone: json['ownerPhone'],
         photos: List<String>.from(json['photos'] ?? []),
         createdAt: DateTime.parse(json['createdAt']),

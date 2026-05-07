@@ -1,12 +1,12 @@
-class CityModel {
+class DistrictModel {
   final String id;
   final String name;
   final double? latitude;
   final double? longitude;
 
-  CityModel({required this.id, required this.name, this.latitude, this.longitude});
+  DistrictModel({required this.id, required this.name, this.latitude, this.longitude});
 
-  factory CityModel.fromJson(Map<String, dynamic> json) => CityModel(
+  factory DistrictModel.fromJson(Map<String, dynamic> json) => DistrictModel(
         id: json['id'],
         name: json['name'],
         latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
@@ -14,17 +14,21 @@ class CityModel {
       );
 }
 
-class DistrictModel {
+class CityModel {
   final String id;
-  final String cityId;
+  final String districtId;
   final String name;
+  final double? latitude;
+  final double? longitude;
 
-  DistrictModel({required this.id, required this.cityId, required this.name});
+  CityModel({required this.id, required this.districtId, required this.name, this.latitude, this.longitude});
 
-  factory DistrictModel.fromJson(Map<String, dynamic> json) => DistrictModel(
+  factory CityModel.fromJson(Map<String, dynamic> json) => CityModel(
         id: json['id'],
-        cityId: json['cityId'],
+        districtId: json['districtId'],
         name: json['name'],
+        latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
+        longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
       );
 }
 

@@ -22,10 +22,11 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveClientMixin {
   final _mapController = MapController();
   final _listingCtrl = Get.find<ListingController>();
-  Worker? _citiesWorker;
+  Worker? _districtsWorker;
   List<Marker> _markers = [];
   LatLng? _userLocation;
   double _radius = 1.0;
+  DistrictModel? _selectedDistrict;
   CityModel? _selectedCity;
   bool _locationLoading = true;
   bool _mapReady = false;
@@ -39,26 +40,26 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   @override
   void initState() {
     super.initState();
-    _citiesWorker = ever(_listingCtrl.cities, (_) => _tryAutoLoad());
+    _districtsWorker = ever(_listingCtrl.districts, (_) => _tryAutoLoad());
     _initLocation();
-    // Cities may have loaded before the ever() listener was registered
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryAutoLoad());
   }
 
   @override
   void dispose() {
-    _citiesWorker?.dispose();
+    _districtsWorker?.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
 
   void _tryAutoLoad() {
-    if (_selectedCity != null || _listingCtrl.cities.isEmpty) return;
-    setState(() => _selectedCity = _nearestCity());
+    if (_selectedDistrict != null || _listingCtrl.districts.isEmpty) return;
+    final district = _nearestDistrict();
+    setState(() => _selectedDistrict = district);
+    _listingCtrl.loadCities(district.id);
     _loadNearby();
   }
 
-  // Haversine distance in km between two lat/lng points
   double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
     const r = 6371.0;
     final dlat = (lat2 - lat1) * pi / 180;
@@ -68,21 +69,20 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     return r * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
 
-  // Cities within 100km of user, sorted by distance. Falls back to all if no location.
-  List<CityModel> get _nearbyCities {
-    final all = _listingCtrl.cities.toList();
+  // Districts within 100km of user, sorted by distance.
+  List<DistrictModel> get _nearbyDistricts {
+    final all = _listingCtrl.districts.toList();
     if (_userLocation == null) return all;
-    final withDist = all.map((c) => MapEntry(c,
-        _haversineKm(_userLocation!.latitude, _userLocation!.longitude, c.latitude ?? 0, c.longitude ?? 0)
+    final withDist = all.map((d) => MapEntry(d,
+        _haversineKm(_userLocation!.latitude, _userLocation!.longitude, d.latitude ?? 0, d.longitude ?? 0)
     )).toList()..sort((a, b) => a.value.compareTo(b.value));
     final nearby = withDist.where((e) => e.value <= 100).map((e) => e.key).toList();
-    // Always show at least the nearest city even if > 100km
     return nearby.isNotEmpty ? nearby : [withDist.first.key];
   }
 
-  CityModel _nearestCity() {
-    final cities = _nearbyCities;
-    return cities.isNotEmpty ? cities.first : _listingCtrl.cities.first;
+  DistrictModel _nearestDistrict() {
+    final ds = _nearbyDistricts;
+    return ds.isNotEmpty ? ds.first : _listingCtrl.districts.first;
   }
 
   Future<void> _initLocation() async {
@@ -105,11 +105,11 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
         _locationLoading = false;
       });
       if (_mapReady) _animateTo(_userLocation!, _radiusToZoom(_radius));
-      // Re-evaluate nearest city now that we have exact coordinates
-      if (_listingCtrl.cities.isNotEmpty) {
-        final nearest = _nearestCity();
-        if (_selectedCity == null || _selectedCity!.id != nearest.id) {
-          setState(() => _selectedCity = nearest);
+      if (_listingCtrl.districts.isNotEmpty) {
+        final nearest = _nearestDistrict();
+        if (_selectedDistrict == null || _selectedDistrict!.id != nearest.id) {
+          setState(() => _selectedDistrict = nearest);
+          _listingCtrl.loadCities(nearest.id);
         }
       }
       _loadNearby();
@@ -118,15 +118,27 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     }
   }
 
+  // If a sub-area city chip is selected → use that city's midpoint.
+  // Otherwise → GPS or district center.
+  LatLng get _searchCenter {
+    if (_selectedCity?.latitude != null && _selectedCity?.longitude != null) {
+      return LatLng(_selectedCity!.latitude!, _selectedCity!.longitude!);
+    }
+    return _userLocation ??
+        (_selectedDistrict != null
+            ? LatLng(_selectedDistrict!.latitude ?? 29.3803, _selectedDistrict!.longitude ?? 79.4636)
+            : const LatLng(29.3803, 79.4636));
+  }
+
   Future<void> _loadNearby({bool reset = true}) async {
-    if (_selectedCity == null) return;
+    if (_selectedDistrict == null) return;
     final wasEmpty = _listingCtrl.nearbyListings.isEmpty;
     if (reset) _currentPage = 1;
-    final lat = _userLocation?.latitude ?? _selectedCity!.latitude ?? 29.3803;
-    final lng = _userLocation?.longitude ?? _selectedCity!.longitude ?? 79.4636;
-    await _listingCtrl.loadNearby(lat, lng, _radius, _selectedCity!.id, page: _currentPage);
+    final center = _searchCenter;
+    final lat = center.latitude;
+    final lng = center.longitude;
+    await _listingCtrl.loadNearby(lat, lng, _radius, _selectedDistrict!.id, page: _currentPage);
     _buildMarkers();
-    // Play ting only on first load when rooms are found
     if (reset && wasEmpty && _listingCtrl.nearbyListings.isNotEmpty) {
       _playTing();
     }
@@ -150,7 +162,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   void _buildMarkers() {
     final markers = <Marker>[];
 
-    // User location — red dot
     if (_userLocation != null) {
       markers.add(Marker(
         point: _userLocation!,
@@ -166,7 +177,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
       ));
     }
 
-    // Sorted by distance, capped at 30
     final listings = (_listingCtrl.nearbyListings.toList()
       ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm)))
       .take(30);
@@ -184,7 +194,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
           onTap: () => _showDetail(listing.id),
           child: Stack(
             children: [
-              // Price label — floats above the pin, centered
               Positioned(
                 bottom: 50,
                 left: 0,
@@ -209,8 +218,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                   ),
                 ),
               ),
-              // Pin body: blue circle + spike
-              // Align.bottomCenter ensures spike tip = marker anchor = exact coordinate
               Align(
                 alignment: Alignment.bottomCenter,
                 child: SizedBox(
@@ -240,6 +247,10 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   }
 
   String _pinPrice(int price) {
+    if (price >= 100000) {
+      final l = price / 100000;
+      return l == l.truncateToDouble() ? '₹${l.toInt()}L/-' : '₹${l.toStringAsFixed(1)}L/-';
+    }
     if (price >= 1000) {
       final t = price ~/ 1000;
       final h = price % 1000;
@@ -284,11 +295,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     }
   }
 
-  LatLng get _circleCenter =>
-      _userLocation ??
-      (_selectedCity != null
-          ? LatLng(_selectedCity!.latitude ?? 29.3803, _selectedCity!.longitude ?? 79.4636)
-          : const LatLng(29.3803, 79.4636));
+  LatLng get _circleCenter => _searchCenter;
 
   @override
   Widget build(BuildContext context) {
@@ -333,8 +340,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                         const Duration(milliseconds: 150),
                       ),
                     ),
-                    // Radius circle
-                    if (_userLocation != null || _selectedCity != null)
+                    if (_userLocation != null || _selectedDistrict != null)
                       CircleLayer(circles: [
                         CircleMarker(
                           point: _circleCenter,
@@ -350,7 +356,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                 ),
               ),
 
-          // Top gradient header
           Positioned(
             top: 0, left: 0, right: 0,
             child: Container(
@@ -366,23 +371,40 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                       const Text('RentNearBy',
                           style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
                       const Spacer(),
-                      _buildCitySelector(),
+                      if (_selectedDistrict != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withOpacity(0.4)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Iconsax.location, color: Colors.white, size: 13),
+                              const SizedBox(width: 5),
+                              Text(_selectedDistrict!.name,
+                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
+                            ],
+                          ),
+                        ),
                     ]),
                     const SizedBox(height: 14),
                     _buildRadiusChips(),
+                    const SizedBox(height: 10),
+                    _buildCityChips(),
                   ]),
                 ),
               ),
             ),
           ),
 
-          // Counter card
           Obx(() => Positioned(
             bottom: 20, left: 20, right: 20,
             child: _listingCtrl.isLoading.value ? const SizedBox() : _buildCounterCard(),
           )),
 
-          // My location FAB
           Positioned(
             bottom: 100, right: 20,
             child: _buildLocationFab(),
@@ -390,36 +412,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
         ],
       ),
     );
-  }
-
-  Widget _buildCitySelector() {
-    return Obx(() {
-      if (_listingCtrl.cities.isEmpty) return const SizedBox();
-      final nearby = _nearbyCities;
-      if (nearby.isEmpty) return const SizedBox();
-      return GestureDetector(
-        onTap: nearby.length > 1 ? _showCityPicker : null,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.4)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(_selectedCity?.name ?? nearby.first.name,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
-              if (nearby.length > 1) ...[
-                const SizedBox(width: 4),
-                const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 18),
-              ],
-            ],
-          ),
-        ),
-      );
-    });
   }
 
   Widget _buildRadiusChips() {
@@ -431,12 +423,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
           onTap: () {
             setState(() { _radius = r; _currentPage = 1; });
             _loadNearby();
-            // Zoom map to match new radius
-            final center = _userLocation ??
-                (_selectedCity != null
-                    ? LatLng(_selectedCity!.latitude ?? 29.3803, _selectedCity!.longitude ?? 79.4636)
-                    : null);
-            if (center != null) _animateTo(center, _radiusToZoom(r));
+            _animateTo(_searchCenter, _radiusToZoom(r));
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
@@ -454,6 +441,54 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildCityChips() {
+    return Obx(() {
+      final cs = _listingCtrl.cities;
+      if (cs.isEmpty) return const SizedBox();
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _cityChip(null, 'All'),
+            ...cs.map((c) => _cityChip(c, c.name)),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _cityChip(CityModel? city, String label) {
+    final active = city == null
+        ? _selectedCity == null
+        : _selectedCity?.id == city.id;
+    return GestureDetector(
+      onTap: () {
+        setState(() { _selectedCity = city; _currentPage = 1; });
+        _loadNearby();
+        final target = city?.latitude != null && city?.longitude != null
+            ? LatLng(city!.latitude!, city!.longitude!)
+            : _searchCenter;
+        if (_mapReady) _animateTo(target, _radiusToZoom(_radius));
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? Colors.white : Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(label,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: active ? AppColors.primary : Colors.white,
+            )),
+      ),
     );
   }
 
@@ -532,68 +567,22 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
       child: Container(color: AppColors.shimmerBase),
     );
   }
-
-  void _showCityPicker() {
-    final nearby = _nearbyCities;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => Column(children: [
-        Container(width: 40, height: 4, margin: const EdgeInsets.only(top: 12, bottom: 16),
-            decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
-        const Text('Nearby Districts', style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        const SizedBox(height: 16),
-        Expanded(
-          child: ListView.separated(
-            itemCount: nearby.length,
-            separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.divider),
-            itemBuilder: (_, i) {
-              final city = nearby[i];
-              final selected = _selectedCity?.id == city.id;
-              return ListTile(
-                title: Text(city.name, style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                  color: selected ? AppColors.primary : AppColors.textDark,
-                )),
-                trailing: selected ? const Icon(Icons.check_rounded, color: AppColors.primary) : null,
-                onTap: () {
-                  setState(() { _selectedCity = city; _currentPage = 1; });
-                  Navigator.pop(context);
-                  _loadNearby();
-                },
-              );
-            },
-          ),
-        ),
-      ]),
-    );
-  }
 }
 
-// Map pin painter: blue circle (house icon inside) + downward spike.
-// Spike tip is at (size.width/2, size.height) = exact bottom-center of the widget.
-// Marker uses alignment: Alignment.bottomCenter so spike tip = lat/lng coordinate at all zoom levels.
 class _PinBodyPainter extends CustomPainter {
   final Color color;
   const _PinBodyPainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Circle: radius 18, centered at (18, 18)
     final circle = ui.Path()
       ..addOval(Rect.fromCircle(center: const Offset(18, 18), radius: 18));
-
-    // Spike: base inside circle at y=32, tip at exact bottom-center
     final spike = ui.Path()
       ..moveTo(10, 32)
-      ..lineTo(size.width / 2, size.height) // tip = coordinate
+      ..lineTo(size.width / 2, size.height)
       ..lineTo(26, 32)
       ..close();
-
     final pin = ui.Path.combine(ui.PathOperation.union, circle, spike);
-
     canvas.drawShadow(pin, Colors.black38, 4, true);
     canvas.drawPath(pin, Paint()..color = color);
   }

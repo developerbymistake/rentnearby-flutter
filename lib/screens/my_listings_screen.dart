@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
@@ -72,15 +71,11 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   itemCount: _ctrl.myListings.length,
                   itemBuilder: (_, i) => Padding(
                     padding: const EdgeInsets.only(bottom: 14),
-                    child: FadeInUp(
-                    duration: const Duration(milliseconds: 400),
-                    delay: Duration(milliseconds: i * 80),
                     child: ListingCard(
                       listing: _ctrl.myListings[i],
                       onToggleActive: () => _ctrl.toggleActive(_ctrl.myListings[i].id, _ctrl.myListings[i].isActive),
                       onDelete: () => _confirmDelete(_ctrl.myListings[i].id),
                     ),
-                  ),
                   ),
                 ),
               );
@@ -88,21 +83,18 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FadeInUp(
-        delay: const Duration(milliseconds: 300),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 6))],
-          ),
-          child: FloatingActionButton.extended(
-            onPressed: _onAddRoom,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            icon: const Icon(Iconsax.add_square, color: Colors.white),
-            label: const Text('Add Room', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Colors.white)),
-          ),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 6))],
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: _onAddRoom,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          icon: const Icon(Iconsax.add_square, color: Colors.white),
+          label: const Text('Add Room', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Colors.white)),
         ),
       ),
     );
@@ -118,35 +110,80 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   }
 
   void _showProfileRequiredDialog() {
+    final nameCtrl = TextEditingController();
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Name Required', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        content: const Text(
-          'Please add your name to your profile before posting a room listing.',
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Later', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      barrierDismissible: false,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          bool saving = false;
+
+          Future<void> save() async {
+            final name = nameCtrl.text.trim();
+            if (name.isEmpty) {
+              Get.snackbar('Required', 'Please enter your name.', snackPosition: SnackPosition.BOTTOM);
+              return;
+            }
+            setDialogState(() => saving = true);
+            final ok = await _auth.updateProfile(name, null);
+            setDialogState(() => saving = false);
+            if (ok && ctx.mounted) {
+              Navigator.pop(ctx);
+              Get.toNamed(AppRoutes.addListing);
+            }
+          }
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('Enter Your Name', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Your name is shown to renters. Please add it before listing a room.',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameCtrl,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
+                  decoration: InputDecoration(
+                    hintText: 'Full name',
+                    hintStyle: const TextStyle(fontFamily: 'Poppins', color: AppColors.textHint),
+                    prefixIcon: const Icon(Icons.person_rounded, color: AppColors.primaryLight, size: 20),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+                  ),
+                  onSubmitted: (_) => save(),
+                ),
+              ],
             ),
-            onPressed: () {
-              Navigator.pop(context);
-              _auth.tabIndex.value = 2;
-            },
-            child: const Text('Update Profile', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: saving ? null : () { nameCtrl.dispose(); Navigator.pop(ctx); },
+                child: const Text('Later', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: saving ? null : save,
+                child: saving
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Update Profile', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

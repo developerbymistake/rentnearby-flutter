@@ -7,8 +7,8 @@ import '../services/api_service.dart';
 class ListingController extends GetxController {
   final myListings = <ListingModel>[].obs;
   final nearbyListings = <NearbyListingModel>[].obs;
-  final cities = <CityModel>[].obs;
   final districts = <DistrictModel>[].obs;
+  final cities = <CityModel>[].obs;
   final roomTypes = <RoomTypeModel>[].obs;
   final isLoading = false.obs;
   final isUploading = false.obs;
@@ -22,28 +22,28 @@ class ListingController extends GetxController {
 
   Future<void> loadMasterData() async {
     try {
-      final citiesRes = await ApiService.get('/admin/cities');
-      cities.value = (citiesRes['data'] as List).map((e) => CityModel.fromJson(e)).toList();
+      final districtsRes = await ApiService.get('/admin/districts');
+      districts.value = (districtsRes['data'] as List).map((e) => DistrictModel.fromJson(e)).toList();
       final typesRes = await ApiService.get('/admin/room-types');
       roomTypes.value = (typesRes['data'] as List).map((e) => RoomTypeModel.fromJson(e)).toList();
     } catch (_) {}
   }
 
-  Future<void> loadDistricts(String cityId) async {
+  Future<void> loadCities(String districtId) async {
     try {
-      final res = await ApiService.get('/admin/districts', params: {'cityId': cityId});
-      districts.value = (res['data'] as List).map((e) => DistrictModel.fromJson(e)).toList();
+      final res = await ApiService.get('/admin/cities', params: {'districtId': districtId});
+      cities.value = (res['data'] as List).map((e) => CityModel.fromJson(e)).toList();
     } catch (_) {}
   }
 
-  Future<void> loadNearby(double lat, double lng, double radius, String cityId, {int page = 1}) async {
+  Future<void> loadNearby(double lat, double lng, double radius, String districtId, {int page = 1}) async {
     try {
       isLoading.value = true;
       final res = await ApiService.get('/listings/nearby', params: {
         'latitude': lat,
         'longitude': lng,
         'radius': radius,
-        'cityId': cityId,
+        'districtId': districtId,
         'page': page,
         'pageSize': 30,
       });

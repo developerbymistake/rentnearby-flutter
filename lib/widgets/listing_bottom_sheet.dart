@@ -143,14 +143,28 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(
-                      l.title ?? 'Room for Rent',
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l.title ?? 'Room for Rent',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        if (l.ownerName != null && l.ownerName!.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Row(children: [
+                            const Icon(Icons.person_rounded, size: 13, color: AppColors.primaryLight),
+                            const SizedBox(width: 4),
+                            Text(l.ownerName!,
+                                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                          ]),
+                        ],
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -178,8 +192,8 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
                 spacing: 8, runSpacing: 6,
                 children: [
                   if (l.roomTypeName != null) _tag(Icons.home_rounded, l.roomTypeName!),
-                  if (l.cityName != null) _tag(Iconsax.location, l.cityName!),
-                  if (l.districtName != null) _tag(Icons.place_outlined, l.districtName!),
+                  if (l.districtName != null) _tag(Iconsax.location, l.districtName!),
+                  if (l.cityName != null) _tag(Icons.place_outlined, l.cityName!),
                 ],
               ),
               if (l.address != null) ...[
@@ -224,7 +238,7 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
                     child: ElevatedButton.icon(
                       onPressed: _call,
                       icon: const Icon(Icons.call_rounded, size: 18),
-                      label: const Text('Call Owner', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                      label: const Text('Call', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2E7D32),
                         foregroundColor: Colors.white,

@@ -70,10 +70,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   void _checkDistance() async {
     final l = _listing;
     if (l == null) return;
-    final url = Uri.parse(
+    final geoUrl = Uri.parse('geo:${l.latitude},${l.longitude}?q=${l.latitude},${l.longitude}');
+    if (await canLaunchUrl(geoUrl)) {
+      launchUrl(geoUrl, mode: LaunchMode.externalApplication);
+      return;
+    }
+    final mapsUrl = Uri.parse(
       'https://www.google.com/maps/dir/?api=1&destination=${l.latitude},${l.longitude}&travelmode=driving',
     );
-    if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
+    launchUrl(mapsUrl, mode: LaunchMode.externalApplication);
   }
 
   @override
@@ -185,12 +190,21 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                     ),
                 ]),
               ]),
+              if (l.ownerName != null && l.ownerName!.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Row(children: [
+                  const Icon(Icons.person_rounded, size: 14, color: AppColors.primaryLight),
+                  const SizedBox(width: 6),
+                  Text(l.ownerName!,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+                ]),
+              ],
               const SizedBox(height: 16),
               // Tags
               Wrap(spacing: 8, runSpacing: 8, children: [
                 _tag(Icons.home_rounded, l.roomTypeName ?? 'Room'),
-                if (l.cityName != null) _tag(Iconsax.location, l.cityName!),
-                if (l.districtName != null) _tag(Icons.place_outlined, l.districtName!),
+                if (l.districtName != null) _tag(Iconsax.location, l.districtName!),
+                if (l.cityName != null) _tag(Icons.place_outlined, l.cityName!),
                 _tag(l.isActive ? Icons.check_circle_rounded : Icons.cancel_rounded,
                     l.isActive ? 'Available' : 'Not Available',
                     color: l.isActive ? AppColors.success : AppColors.error),
@@ -224,7 +238,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             child: ElevatedButton.icon(
               onPressed: _checkDistance,
               icon: const Icon(Icons.near_me_rounded, size: 20),
-              label: const Text('Check Distance',
+              label: const Text('Distance',
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
