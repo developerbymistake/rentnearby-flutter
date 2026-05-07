@@ -69,7 +69,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     return r * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
 
-  // Districts within 100km of user, sorted by distance.
   List<DistrictModel> get _nearbyDistricts {
     final all = _listingCtrl.districts.toList();
     if (_userLocation == null) return all;
@@ -104,7 +103,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
         _userLocation = LatLng(pos.latitude, pos.longitude);
         _locationLoading = false;
       });
-      if (_mapReady) _animateTo(_userLocation!, _radiusToZoom(_radius));
+      if (_mapReady) _fitToRadius();
       if (_listingCtrl.districts.isNotEmpty) {
         final nearest = _nearestDistrict();
         if (_selectedDistrict == null || _selectedDistrict!.id != nearest.id) {
@@ -118,8 +117,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     }
   }
 
-  // If a sub-area city chip is selected → use that city's midpoint.
-  // Otherwise → GPS or district center.
   LatLng get _searchCenter {
     if (_selectedCity?.latitude != null && _selectedCity?.longitude != null) {
       return LatLng(_selectedCity!.latitude!, _selectedCity!.longitude!);
@@ -130,21 +127,34 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
             : const LatLng(29.3803, 79.4636));
   }
 
+  // Fit camera so the search radius circle fills the visible map area.
+  void _fitToRadius() {
+    if (!_mapReady || !mounted) return;
+    final center = _searchCenter;
+    final degLat = _radius / 111.0;
+    final degLng = _radius / (111.0 * cos(center.latitude * pi / 180));
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: LatLngBounds(
+          LatLng(center.latitude - degLat, center.longitude - degLng),
+          LatLng(center.latitude + degLat, center.longitude + degLng),
+        ),
+        padding: const EdgeInsets.fromLTRB(40, 190, 40, 210),
+      ),
+    );
+  }
+
   Future<void> _loadNearby({bool reset = true}) async {
     if (_selectedDistrict == null) return;
     final wasEmpty = _listingCtrl.nearbyListings.isEmpty;
     if (reset) _currentPage = 1;
     final center = _searchCenter;
-    final lat = center.latitude;
-    final lng = center.longitude;
-    await _listingCtrl.loadNearby(lat, lng, _radius, _selectedDistrict!.id, page: _currentPage);
+    await _listingCtrl.loadNearby(center.latitude, center.longitude, _radius, _selectedDistrict!.id, page: _currentPage);
     _buildMarkers();
     if (reset && wasEmpty && _listingCtrl.nearbyListings.isNotEmpty) {
       _playTing();
     }
-    if (_userLocation == null && _mapReady) {
-      _animateTo(LatLng(lat, lng), _radiusToZoom(_radius));
-    }
+    if (_mapReady) _fitToRadius();
   }
 
   void _playTing() async {
@@ -268,35 +278,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     );
   }
 
-  double _radiusToZoom(double km) {
-    if (km <= 1) return 13.5;
-    if (km <= 2) return 12.5;
-    if (km <= 5) return 11.0;
-    return 10.0;
-  }
-
-  Future<void> _animateTo(LatLng target, double zoom) async {
-    if (!_mapReady || !mounted) return;
-    _animateCancelled = false;
-    final startCenter = _mapController.camera.center;
-    final startZoom = _mapController.camera.zoom;
-    const frames = 24;
-    for (var i = 1; i <= frames; i++) {
-      if (!mounted || _animateCancelled) return;
-      final t = Curves.easeInOut.transform(i / frames);
-      _mapController.move(
-        LatLng(
-          startCenter.latitude + (target.latitude - startCenter.latitude) * t,
-          startCenter.longitude + (target.longitude - startCenter.longitude) * t,
-        ),
-        startZoom + (zoom - startZoom) * t,
-      );
-      await Future.delayed(const Duration(milliseconds: 16));
-    }
-  }
-
-  LatLng get _circleCenter => _searchCenter;
-
   LatLngBounds? _districtBounds() {
     final d = _selectedDistrict;
     if (d?.latitude == null || d?.longitude == null) return null;
@@ -322,6 +303,26 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     return b != null ? CameraConstraint.containCenter(bounds: b) : const CameraConstraint.unconstrained();
   }
 
+  Future<void> _animateTo(LatLng target, double zoom) async {
+    if (!_mapReady || !mounted) return;
+    _animateCancelled = false;
+    final startCenter = _mapController.camera.center;
+    final startZoom = _mapController.camera.zoom;
+    const frames = 24;
+    for (var i = 1; i <= frames; i++) {
+      if (!mounted || _animateCancelled) return;
+      final t = Curves.easeInOut.transform(i / frames);
+      _mapController.move(
+        LatLng(
+          startCenter.latitude + (target.latitude - startCenter.latitude) * t,
+          startCenter.longitude + (target.longitude - startCenter.longitude) * t,
+        ),
+        startZoom + (zoom - startZoom) * t,
+      );
+      await Future.delayed(const Duration(milliseconds: 16));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -335,7 +336,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                   mapController: _mapController,
                   options: MapOptions(
                     initialCenter: _userLocation ?? const LatLng(29.3803, 79.4636),
-                    initialZoom: _radiusToZoom(_radius),
+                    initialZoom: 13.0,
                     minZoom: 8,
                     maxZoom: 18,
                     cameraConstraint: _cameraConstraint,
@@ -347,9 +348,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                     ),
                     onMapReady: () {
                       _mapReady = true;
-                      if (_userLocation != null) {
-                        _mapController.move(_userLocation!, _radiusToZoom(_radius));
-                      }
+                      _fitToRadius();
                     },
                     onPositionChanged: (_, hasGesture) {
                       if (hasGesture) _animateCancelled = true;
@@ -369,7 +368,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                     if (_userLocation != null || _selectedDistrict != null)
                       CircleLayer(circles: [
                         CircleMarker(
-                          point: _circleCenter,
+                          point: _searchCenter,
                           radius: _radius * 1000,
                           useRadiusInMeter: true,
                           color: AppColors.primary.withOpacity(0.08),
@@ -389,7 +388,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                   child: Column(children: [
                     Row(children: [
                       const Icon(Icons.location_on_rounded, color: Colors.white, size: 22),
@@ -397,29 +396,10 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                       const Text('RentNearBy',
                           style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
                       const Spacer(),
-                      if (_selectedDistrict != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withOpacity(0.4)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Iconsax.location, color: Colors.white, size: 13),
-                              const SizedBox(width: 5),
-                              Text(_selectedDistrict!.name,
-                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
-                            ],
-                          ),
-                        ),
+                      _buildCityDropdown(),
                     ]),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     _buildRadiusChips(),
-                    const SizedBox(height: 10),
-                    _buildCityChips(),
                   ]),
                 ),
               ),
@@ -440,6 +420,79 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     );
   }
 
+  Widget _buildCityDropdown() {
+    return Obx(() {
+      final cs = _listingCtrl.cities;
+      if (cs.isEmpty) {
+        return _selectedDistrict != null
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withOpacity(0.4)),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Iconsax.location, color: Colors.white, size: 13),
+                  const SizedBox(width: 5),
+                  Text(_selectedDistrict!.name,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
+                ]),
+              )
+            : const SizedBox();
+      }
+
+      final displayName = _selectedCity?.name ?? 'All Areas';
+
+      return PopupMenuButton<String>(
+        onSelected: (id) {
+          final city = id.isEmpty ? null : cs.firstWhereOrNull((c) => c.id == id);
+          setState(() { _selectedCity = city; _currentPage = 1; });
+          _loadNearby();
+          if (_mapReady) _fitToRadius();
+        },
+        offset: const Offset(0, 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        itemBuilder: (_) => [
+          PopupMenuItem(
+            value: '',
+            child: Row(children: [
+              Icon(Icons.grid_view_rounded, size: 16, color: _selectedCity == null ? AppColors.primary : AppColors.textLight),
+              const SizedBox(width: 10),
+              Text('All Areas', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500,
+                  color: _selectedCity == null ? AppColors.primary : AppColors.textDark)),
+            ]),
+          ),
+          ...cs.map((c) => PopupMenuItem(
+            value: c.id,
+            child: Row(children: [
+              Icon(Iconsax.location, size: 14, color: _selectedCity?.id == c.id ? AppColors.primary : AppColors.textLight),
+              const SizedBox(width: 10),
+              Text(c.name, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500,
+                  color: _selectedCity?.id == c.id ? AppColors.primary : AppColors.textDark)),
+            ]),
+          )),
+        ],
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.4)),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Iconsax.map, color: Colors.white, size: 13),
+            const SizedBox(width: 6),
+            Text(displayName,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
+            const SizedBox(width: 4),
+            const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 16),
+          ]),
+        ),
+      );
+    });
+  }
+
   Widget _buildRadiusChips() {
     final radii = [1.0, 2.0, 5.0, 10.0];
     return Row(
@@ -449,7 +502,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
           onTap: () {
             setState(() { _radius = r; _currentPage = 1; });
             _loadNearby();
-            _animateTo(_searchCenter, _radiusToZoom(r));
+            if (_mapReady) _fitToRadius();
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
@@ -467,54 +520,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
           ),
         );
       }).toList(),
-    );
-  }
-
-  Widget _buildCityChips() {
-    return Obx(() {
-      final cs = _listingCtrl.cities;
-      if (cs.isEmpty) return const SizedBox();
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _cityChip(null, 'All'),
-            ...cs.map((c) => _cityChip(c, c.name)),
-          ],
-        ),
-      );
-    });
-  }
-
-  Widget _cityChip(CityModel? city, String label) {
-    final active = city == null
-        ? _selectedCity == null
-        : _selectedCity?.id == city.id;
-    return GestureDetector(
-      onTap: () {
-        setState(() { _selectedCity = city; _currentPage = 1; });
-        _loadNearby();
-        final target = city?.latitude != null && city?.longitude != null
-            ? LatLng(city!.latitude!, city!.longitude!)
-            : _searchCenter;
-        if (_mapReady) _animateTo(target, _radiusToZoom(_radius));
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? Colors.white : Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(label,
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: active ? AppColors.primary : Colors.white,
-            )),
-      ),
     );
   }
 
@@ -570,9 +575,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   Widget _buildLocationFab() {
     return GestureDetector(
       onTap: () {
-        if (_userLocation != null) {
-          _animateTo(_userLocation!, _radiusToZoom(_radius));
-        }
+        if (_mapReady) _fitToRadius();
       },
       child: Container(
         width: 46, height: 46,
