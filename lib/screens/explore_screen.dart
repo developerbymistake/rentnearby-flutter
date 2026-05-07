@@ -137,7 +137,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
 
   void _playTing() async {
     try {
-      await _audioPlayer.play(AssetSource('sounds/ting.mp3'));
+      await _audioPlayer.play(AssetSource('sounds/tone.mp3'));
     } catch (_) {}
   }
 
