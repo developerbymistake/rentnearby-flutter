@@ -61,25 +61,8 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     final district = _nearestDistrict();
     setState(() => _selectedDistrict = district);
     await _listingCtrl.loadCities(district.id);
-    _autoSelectNearestCity();
+    // _selectedCity stays null → "Current" mode (use GPS as search center)
     _loadNearby();
-  }
-
-  void _autoSelectNearestCity() {
-    final cities = _listingCtrl.cities;
-    if (cities.isEmpty) return;
-    if (_userLocation != null) {
-      CityModel? nearest;
-      double minDist = double.infinity;
-      for (final c in cities) {
-        if (c.latitude == null || c.longitude == null) continue;
-        final d = _haversineKm(_userLocation!.latitude, _userLocation!.longitude, c.latitude!, c.longitude!);
-        if (d < minDist) { minDist = d; nearest = c; }
-      }
-      if (nearest != null && mounted) setState(() => _selectedCity = nearest);
-    } else {
-      if (mounted) setState(() => _selectedCity = cities.first);
-    }
   }
 
   double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
@@ -131,9 +114,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
         if (_selectedDistrict == null || _selectedDistrict!.id != nearest.id) {
           setState(() => _selectedDistrict = nearest);
           await _listingCtrl.loadCities(nearest.id);
-          _autoSelectNearestCity();
-        } else if (_selectedCity == null && _listingCtrl.cities.isNotEmpty) {
-          _autoSelectNearestCity();
         }
       }
 
@@ -436,31 +416,49 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
             : const SizedBox();
       }
 
-      final displayName = _selectedCity?.name ?? cs.first.name;
+      final isCurrent = _selectedCity == null;
+      final displayName = isCurrent ? 'Current' : _selectedCity!.name;
 
       return PopupMenuButton<String>(
         onSelected: (id) {
-          final city = cs.firstWhereOrNull((c) => c.id == id);
-          if (city == null) return;
-          setState(() { _selectedCity = city; _currentPage = 1; });
+          if (id == '__current__') {
+            setState(() { _selectedCity = null; _currentPage = 1; });
+          } else {
+            final city = cs.firstWhereOrNull((c) => c.id == id);
+            if (city == null) return;
+            setState(() { _selectedCity = city; _currentPage = 1; });
+          }
           _loadNearby();
           if (_mapReady) _fitToRadius();
         },
         offset: const Offset(0, 40),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        itemBuilder: (_) => cs.map((c) => PopupMenuItem(
-          value: c.id,
-          child: Row(children: [
-            Icon(Iconsax.location, size: 14,
-                color: _selectedCity?.id == c.id ? AppColors.primary : AppColors.textLight),
-            const SizedBox(width: 10),
-            Text(c.name, style: TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w500,
-              color: _selectedCity?.id == c.id ? AppColors.primary : AppColors.textDark,
-            )),
-          ]),
-        )).toList(),
+        itemBuilder: (_) => [
+          PopupMenuItem<String>(
+            value: '__current__',
+            child: Row(children: [
+              Icon(Icons.my_location_rounded, size: 14,
+                  color: isCurrent ? AppColors.primary : AppColors.textLight),
+              const SizedBox(width: 10),
+              Text('Current', style: TextStyle(
+                fontFamily: 'Poppins', fontWeight: FontWeight.w500,
+                color: isCurrent ? AppColors.primary : AppColors.textDark,
+              )),
+            ]),
+          ),
+          ...cs.map((c) => PopupMenuItem<String>(
+            value: c.id,
+            child: Row(children: [
+              Icon(Iconsax.location, size: 14,
+                  color: _selectedCity?.id == c.id ? AppColors.primary : AppColors.textLight),
+              const SizedBox(width: 10),
+              Text(c.name, style: TextStyle(
+                fontFamily: 'Poppins', fontWeight: FontWeight.w500,
+                color: _selectedCity?.id == c.id ? AppColors.primary : AppColors.textDark,
+              )),
+            ]),
+          )),
+        ],
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
@@ -469,7 +467,8 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
             border: Border.all(color: Colors.white.withOpacity(0.4)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Iconsax.map, color: Colors.white, size: 13),
+            Icon(isCurrent ? Icons.my_location_rounded : Iconsax.map,
+                color: Colors.white, size: 13),
             const SizedBox(width: 6),
             Text(displayName,
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
@@ -562,7 +561,11 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
 
   Widget _buildLocationFab() {
     return GestureDetector(
-      onTap: () { if (_mapReady) _fitToRadius(); },
+      onTap: () {
+        setState(() { _selectedCity = null; _currentPage = 1; });
+        _loadNearby();
+        if (_mapReady) _fitToRadius();
+      },
       child: Container(
         width: 46, height: 46,
         decoration: BoxDecoration(
@@ -570,7 +573,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
           shape: BoxShape.circle,
           boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
         ),
-        child: const Icon(Iconsax.location, color: AppColors.primary, size: 22),
+        child: const Icon(Icons.my_location_rounded, color: AppColors.primary, size: 22),
       ),
     );
   }
