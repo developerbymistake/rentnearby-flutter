@@ -103,7 +103,18 @@ class ListingController extends GetxController {
       });
       await ApiService.postFormData('/listings/$listingId/photos', formData);
       return true;
-    } catch (_) {
+    } catch (e) {
+      String msg;
+      if (e is DioException) {
+        final status = e.response?.statusCode;
+        final body = e.response?.data;
+        msg = status != null ? 'Server error $status: $body' : 'Network error: ${e.message}';
+      } else {
+        msg = e.toString();
+      }
+      Get.snackbar('Photo Upload Failed', msg,
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 6));
       return false;
     } finally {
       isUploading.value = false;
