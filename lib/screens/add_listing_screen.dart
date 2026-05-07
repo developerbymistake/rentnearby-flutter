@@ -93,6 +93,31 @@ class _AddListingScreenState extends State<AddListingScreen> {
     } catch (_) {}
   }
 
+  LatLngBounds? _districtBounds() {
+    final d = _ctrl.districts.firstWhereOrNull((d) => d.id == _selectedDistrictId);
+    if (d?.latitude == null || d?.longitude == null) return null;
+    final points = <LatLng>[LatLng(d!.latitude!, d.longitude!)];
+    for (final city in _ctrl.cities) {
+      if (city.latitude != null && city.longitude != null) {
+        points.add(LatLng(city.latitude!, city.longitude!));
+      }
+    }
+    var minLat = points.map((p) => p.latitude).reduce(min);
+    var maxLat = points.map((p) => p.latitude).reduce(max);
+    var minLng = points.map((p) => p.longitude).reduce(min);
+    var maxLng = points.map((p) => p.longitude).reduce(max);
+    const minSpan = 0.5;
+    if (maxLat - minLat < minSpan) { final mid = (maxLat + minLat) / 2; minLat = mid - minSpan / 2; maxLat = mid + minSpan / 2; }
+    if (maxLng - minLng < minSpan) { final mid = (maxLng + minLng) / 2; minLng = mid - minSpan / 2; maxLng = mid + minSpan / 2; }
+    const pad = 0.2;
+    return LatLngBounds(LatLng(minLat - pad, minLng - pad), LatLng(maxLat + pad, maxLng + pad));
+  }
+
+  CameraConstraint get _cameraConstraint {
+    final b = _districtBounds();
+    return b != null ? CameraConstraint.containCenter(bounds: b) : const CameraConstraint.unconstrained();
+  }
+
   CityModel? _nearestCity() {
     if (_userLocation == null || _ctrl.cities.isEmpty) return null;
     CityModel? nearest;
@@ -465,6 +490,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     initialZoom: 15.0,
                     minZoom: 13.0,
                     maxZoom: 18,
+                    cameraConstraint: _cameraConstraint,
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                       enableMultiFingerGestureRace: true,
