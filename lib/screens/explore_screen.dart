@@ -54,10 +54,32 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
 
   void _tryAutoLoad() {
     if (_selectedDistrict != null || _listingCtrl.districts.isEmpty) return;
+    _autoLoad();
+  }
+
+  Future<void> _autoLoad() async {
     final district = _nearestDistrict();
     setState(() => _selectedDistrict = district);
-    _listingCtrl.loadCities(district.id);
+    await _listingCtrl.loadCities(district.id);
+    _autoSelectNearestCity();
     _loadNearby();
+  }
+
+  void _autoSelectNearestCity() {
+    final cities = _listingCtrl.cities;
+    if (cities.isEmpty) return;
+    if (_userLocation != null) {
+      CityModel? nearest;
+      double minDist = double.infinity;
+      for (final c in cities) {
+        if (c.latitude == null || c.longitude == null) continue;
+        final d = _haversineKm(_userLocation!.latitude, _userLocation!.longitude, c.latitude!, c.longitude!);
+        if (d < minDist) { minDist = d; nearest = c; }
+      }
+      if (nearest != null && mounted) setState(() => _selectedCity = nearest);
+    } else {
+      if (mounted) setState(() => _selectedCity = cities.first);
+    }
   }
 
   double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
@@ -103,15 +125,20 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
         _userLocation = LatLng(pos.latitude, pos.longitude);
         _locationLoading = false;
       });
-      if (_mapReady) _fitToRadius();
+
       if (_listingCtrl.districts.isNotEmpty) {
         final nearest = _nearestDistrict();
         if (_selectedDistrict == null || _selectedDistrict!.id != nearest.id) {
           setState(() => _selectedDistrict = nearest);
-          _listingCtrl.loadCities(nearest.id);
+          await _listingCtrl.loadCities(nearest.id);
+          _autoSelectNearestCity();
+        } else if (_selectedCity == null && _listingCtrl.cities.isNotEmpty) {
+          _autoSelectNearestCity();
         }
       }
+
       _loadNearby();
+      if (_mapReady) _fitToRadius();
     } catch (_) {
       setState(() => _locationLoading = false);
     }
@@ -127,7 +154,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
             : const LatLng(29.3803, 79.4636));
   }
 
-  // Fit camera so the search radius circle fills the visible map area.
   void _fitToRadius() {
     if (!_mapReady || !mounted) return;
     final center = _searchCenter;
@@ -139,7 +165,8 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
           LatLng(center.latitude - degLat, center.longitude - degLng),
           LatLng(center.latitude + degLat, center.longitude + degLng),
         ),
-        padding: const EdgeInsets.fromLTRB(40, 190, 40, 210),
+        padding: const EdgeInsets.fromLTRB(24, 175, 24, 145),
+        maxZoom: 17.0,
       ),
     );
   }
@@ -151,16 +178,11 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     final center = _searchCenter;
     await _listingCtrl.loadNearby(center.latitude, center.longitude, _radius, _selectedDistrict!.id, page: _currentPage);
     _buildMarkers();
-    if (reset && wasEmpty && _listingCtrl.nearbyListings.isNotEmpty) {
-      _playTing();
-    }
-    if (_mapReady) _fitToRadius();
+    if (reset && wasEmpty && _listingCtrl.nearbyListings.isNotEmpty) _playTing();
   }
 
   void _playTing() async {
-    try {
-      await _audioPlayer.play(AssetSource('sounds/tone.mp3'));
-    } catch (_) {}
+    try { await _audioPlayer.play(AssetSource('sounds/tone.mp3')); } catch (_) {}
   }
 
   Future<void> _loadMoreNearby() async {
@@ -192,62 +214,34 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
       .take(30);
 
     for (final listing in listings) {
-      final priceText = listing.priceMonthly != null
-          ? _pinPrice(listing.priceMonthly!)
-          : 'Call';
+      final priceText = listing.priceMonthly != null ? _pinPrice(listing.priceMonthly!) : 'Call';
       markers.add(Marker(
         point: LatLng(listing.latitude, listing.longitude),
-        width: 90,
-        height: 76,
-        alignment: Alignment.bottomCenter,
+        width: 100,
+        height: 32,
+        alignment: Alignment.center,
         child: GestureDetector(
           onTap: () => _showDetail(listing.id),
-          child: Stack(
-            children: [
-              Positioned(
-                bottom: 50,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: const Offset(0, 2))],
-                    ),
-                    child: Text(
-                      priceText,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: SizedBox(
-                  width: 36,
-                  height: 46,
-                  child: Stack(
-                    children: [
-                      CustomPaint(
-                        painter: _PinBodyPainter(color: AppColors.primary),
-                        size: const Size(36, 46),
-                      ),
-                      const Positioned(
-                        top: 9, left: 9,
-                        child: Icon(Icons.home_rounded, size: 18, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(color: AppColors.primary.withOpacity(0.5), blurRadius: 6, offset: const Offset(0, 3)),
+                BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 2, offset: const Offset(0, 1)),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.home_rounded, size: 12, color: Colors.white),
+                const SizedBox(width: 4),
+                Text(priceText, style: const TextStyle(
+                  fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white,
+                )),
+              ],
+            ),
           ),
         ),
       ));
@@ -259,14 +253,14 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   String _pinPrice(int price) {
     if (price >= 100000) {
       final l = price / 100000;
-      return l == l.truncateToDouble() ? '₹${l.toInt()}L/-' : '₹${l.toStringAsFixed(1)}L/-';
+      return l == l.truncateToDouble() ? '₹${l.toInt()}L' : '₹${l.toStringAsFixed(1)}L';
     }
     if (price >= 1000) {
       final t = price ~/ 1000;
       final h = price % 1000;
-      return '₹$t,${h.toString().padLeft(3, '0')}/-';
+      return h == 0 ? '₹${t}k' : '₹$t,${h.toString().padLeft(3, '0')}';
     }
-    return '₹$price/-';
+    return '₹$price';
   }
 
   void _showDetail(String id) {
@@ -442,37 +436,31 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
             : const SizedBox();
       }
 
-      final displayName = _selectedCity?.name ?? 'All Areas';
+      final displayName = _selectedCity?.name ?? cs.first.name;
 
       return PopupMenuButton<String>(
         onSelected: (id) {
-          final city = id.isEmpty ? null : cs.firstWhereOrNull((c) => c.id == id);
+          final city = cs.firstWhereOrNull((c) => c.id == id);
+          if (city == null) return;
           setState(() { _selectedCity = city; _currentPage = 1; });
           _loadNearby();
           if (_mapReady) _fitToRadius();
         },
         offset: const Offset(0, 40),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        itemBuilder: (_) => [
-          PopupMenuItem(
-            value: '',
-            child: Row(children: [
-              Icon(Icons.grid_view_rounded, size: 16, color: _selectedCity == null ? AppColors.primary : AppColors.textLight),
-              const SizedBox(width: 10),
-              Text('All Areas', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500,
-                  color: _selectedCity == null ? AppColors.primary : AppColors.textDark)),
-            ]),
-          ),
-          ...cs.map((c) => PopupMenuItem(
-            value: c.id,
-            child: Row(children: [
-              Icon(Iconsax.location, size: 14, color: _selectedCity?.id == c.id ? AppColors.primary : AppColors.textLight),
-              const SizedBox(width: 10),
-              Text(c.name, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w500,
-                  color: _selectedCity?.id == c.id ? AppColors.primary : AppColors.textDark)),
-            ]),
-          )),
-        ],
+        itemBuilder: (_) => cs.map((c) => PopupMenuItem(
+          value: c.id,
+          child: Row(children: [
+            Icon(Iconsax.location, size: 14,
+                color: _selectedCity?.id == c.id ? AppColors.primary : AppColors.textLight),
+            const SizedBox(width: 10),
+            Text(c.name, style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w500,
+              color: _selectedCity?.id == c.id ? AppColors.primary : AppColors.textDark,
+            )),
+          ]),
+        )).toList(),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
@@ -574,9 +562,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
 
   Widget _buildLocationFab() {
     return GestureDetector(
-      onTap: () {
-        if (_mapReady) _fitToRadius();
-      },
+      onTap: () { if (_mapReady) _fitToRadius(); },
       child: Container(
         width: 46, height: 46,
         decoration: BoxDecoration(
