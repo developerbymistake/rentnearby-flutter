@@ -126,17 +126,17 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   void _buildMarkers() {
     final markers = <Marker>[];
 
-    // User location — sky blue dot, clearly distinct from listing pins
+    // User location — red dot
     if (_userLocation != null) {
       markers.add(Marker(
         point: _userLocation!,
         width: 22, height: 22,
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.accent,
+            color: const Color(0xFFE53935),
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 3),
-            boxShadow: [BoxShadow(color: AppColors.accent.withOpacity(0.5), blurRadius: 10, spreadRadius: 3)],
+            boxShadow: [BoxShadow(color: const Color(0xFFE53935).withOpacity(0.5), blurRadius: 10, spreadRadius: 3)],
           ),
         ),
       ));
@@ -148,21 +148,29 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
       .take(30);
 
     for (final listing in listings) {
+      final priceText = listing.priceMonthly != null ? listing.shortPrice : 'Call';
       markers.add(Marker(
         point: LatLng(listing.latitude, listing.longitude),
-        width: 80, height: 36,
+        width: 90, height: 32,
         child: GestureDetector(
           onTap: () => _showDetail(listing.id),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
             decoration: BoxDecoration(
               gradient: AppColors.primaryGradient,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 2))],
             ),
-            child: Text(listing.shortPrice,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
-              textAlign: TextAlign.center,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.home_rounded, color: Colors.white, size: 11),
+                const SizedBox(width: 3),
+                Text(priceText,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+              ],
             ),
           ),
         ),
