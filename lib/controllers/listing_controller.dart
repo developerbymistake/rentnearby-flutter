@@ -1,0 +1,120 @@
+import 'package:dio/dio.dart';
+import 'package:get/get.dart' hide FormData, MultipartFile;
+import '../models/listing_model.dart';
+import '../models/city_model.dart';
+import '../services/api_service.dart';
+
+class ListingController extends GetxController {
+  final myListings = <ListingModel>[].obs;
+  final nearbyListings = <NearbyListingModel>[].obs;
+  final cities = <CityModel>[].obs;
+  final districts = <DistrictModel>[].obs;
+  final roomTypes = <RoomTypeModel>[].obs;
+  final isLoading = false.obs;
+  final isUploading = false.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    loadMasterData();
+  }
+
+  Future<void> loadMasterData() async {
+    try {
+      final citiesRes = await ApiService.get('/admin/cities');
+      cities.value = (citiesRes['data'] as List).map((e) => CityModel.fromJson(e)).toList();
+      final typesRes = await ApiService.get('/admin/room-types');
+      roomTypes.value = (typesRes['data'] as List).map((e) => RoomTypeModel.fromJson(e)).toList();
+    } catch (_) {}
+  }
+
+  Future<void> loadDistricts(String cityId) async {
+    try {
+      final res = await ApiService.get('/admin/districts', params: {'cityId': cityId});
+      districts.value = (res['data'] as List).map((e) => DistrictModel.fromJson(e)).toList();
+    } catch (_) {}
+  }
+
+  Future<void> loadNearby(double lat, double lng, double radius, String cityId) async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.get('/listings/nearby', params: {
+        'latitude': lat,
+        'longitude': lng,
+        'radius': radius,
+        'cityId': cityId,
+      });
+      nearbyListings.value = (res['data'] as List).map((e) => NearbyListingModel.fromJson(e)).toList();
+    } catch (_) {
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> loadMyListings() async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.get('/listings/my');
+      myListings.value = (res['data'] as List).map((e) => ListingModel.fromJson(e)).toList();
+    } catch (_) {
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<ListingModel?> getById(String id) async {
+    try {
+      final res = await ApiService.get('/listings/$id');
+      return ListingModel.fromJson(res['data']);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> createListing(Map<String, dynamic> data) async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.post('/listings/', data);
+      final listingId = res['data']?['listingId'] as String?;
+      await loadMyListings();
+      return listingId;
+    } catch (_) {
+      Get.snackbar('Error', 'Could not create listing.', snackPosition: SnackPosition.BOTTOM);
+      return null;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<bool> uploadPhoto(String listingId, String filePath) async {
+    try {
+      isUploading.value = true;
+      final formData = FormData.fromMap({
+        'photo': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+      });
+      await ApiService.postFormData('/listings/$listingId/photos', formData);
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      isUploading.value = false;
+    }
+  }
+
+  Future<void> toggleActive(String id, bool isActive) async {
+    try {
+      await ApiService.put('/listings/$id', {'isActive': !isActive});
+      await loadMyListings();
+    } catch (_) {}
+  }
+
+  Future<void> deleteListing(String id) async {
+    try {
+      await ApiService.delete('/listings/$id');
+      myListings.removeWhere((l) => l.id == id);
+      Get.snackbar('Deleted', 'Listing removed successfully.', snackPosition: SnackPosition.BOTTOM);
+    } catch (_) {
+      Get.snackbar('Error', 'Could not delete listing.', snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+}
