@@ -1,8 +1,7 @@
 class AppConstants {
-  // Physical Android device — uses PC's local IP (must be on same WiFi)
-  static const String baseUrl = 'http://192.168.1.33:5000/api/v1';
+  static const String baseUrl = 'http://a2kig7sikxlht7ag77g6eet9.187.127.162.91.sslip.io/api/v1';
+  // static const String baseUrl = 'http://192.168.1.33:5000/api/v1'; // Local dev
   // static const String baseUrl = 'http://10.0.2.2:5000/api/v1'; // Android emulator
-  // static const String baseUrl = 'http://localhost:5000/api/v1'; // iOS simulator
 
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:geolocator/geolocator.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../services/storage_service.dart';
@@ -44,11 +45,76 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _navigate();
   }
 
-  void _navigate() {
+  Future<void> _navigate() async {
+    await _ensureLocationPermission();
+    if (!mounted) return;
     if (StorageService.isLoggedIn) {
       Get.offAllNamed(AppRoutes.main);
     } else {
       Get.offAllNamed(AppRoutes.otp);
+    }
+  }
+
+  Future<void> _ensureLocationPermission() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Location Required',
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          content: const Text(
+              'RentNearBy needs location access to show rooms near you. Please enable it in Settings.',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await Geolocator.openAppSettings();
+              },
+              child: const Text('Open Settings',
+                  style: TextStyle(fontFamily: 'Poppins', color: AppColors.primary, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      );
+      // Re-check after returning from settings
+      await _ensureLocationPermission();
+      return;
+    }
+
+    if (permission == LocationPermission.denied) {
+      // User denied but not permanently — show explanation and ask again
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Location Required',
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          content: const Text(
+              'This app needs your location to find rooms nearby. Please allow location access to continue.',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _ensureLocationPermission();
+              },
+              child: const Text('Allow',
+                  style: TextStyle(fontFamily: 'Poppins', color: AppColors.primary, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      );
     }
   }
 

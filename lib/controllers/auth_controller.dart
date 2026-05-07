@@ -3,6 +3,7 @@ import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../config/app_routes.dart';
+import 'listing_controller.dart';
 
 class AuthController extends GetxController {
   final isLoading = false.obs;
@@ -54,6 +55,7 @@ class AuthController extends GetxController {
     } catch (_) {}
     StorageService.clearAll();
     user.value = null;
+    Get.find<ListingController>().clearData();
     Get.offAllNamed(AppRoutes.otp);
   }
 

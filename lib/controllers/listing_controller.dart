@@ -117,4 +117,9 @@ class ListingController extends GetxController {
       Get.snackbar('Error', 'Could not delete listing.', snackPosition: SnackPosition.BOTTOM);
     }
   }
+
+  void clearData() {
+    nearbyListings.clear();
+    myListings.clear();
+  }
 }

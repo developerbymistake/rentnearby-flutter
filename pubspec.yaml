@@ -20,11 +20,11 @@ dependencies:
   get_storage: ^2.1.1
 
   # Maps
-  google_maps_flutter: ^2.10.0
+  flutter_map: ^8.3.0
+  latlong2: ^0.9.1
 
   # Location
   geolocator: ^13.0.2
-  geocoding: ^3.0.0
 
   # Image picker
   image_picker: ^1.1.2

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:latlong2/latlong.dart';
 import 'dart:io';
 import '../config/app_colors.dart';
 import '../controllers/listing_controller.dart';
@@ -17,6 +19,7 @@ class AddListingScreen extends StatefulWidget {
 
 class _AddListingScreenState extends State<AddListingScreen> {
   final _ctrl = Get.find<ListingController>();
+  final _mapController = MapController();
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _priceMonthlyCtrl = TextEditingController();
@@ -27,9 +30,49 @@ class _AddListingScreenState extends State<AddListingScreen> {
   String? _selectedDistrictId;
   String? _selectedRoomTypeId;
   LatLng? _selectedLocation;
+  LatLng? _userLocation;
+  bool _mapReady = false;
   final List<File> _photos = [];
   final _picker = ImagePicker();
   int _step = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserLocation();
+  }
+
+  Future<void> _fetchUserLocation() async {
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) return;
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.best),
+      );
+      if (!mounted) return;
+      setState(() => _userLocation = LatLng(pos.latitude, pos.longitude));
+      if (_mapReady) _animateTo(_userLocation!, 12.0);
+    } catch (_) {}
+  }
+
+  Future<void> _animateTo(LatLng target, double zoom) async {
+    if (!_mapReady || !mounted) return;
+    final startCenter = _mapController.camera.center;
+    final startZoom = _mapController.camera.zoom;
+    const frames = 30;
+    for (var i = 1; i <= frames; i++) {
+      if (!mounted) return;
+      final t = Curves.easeInOut.transform(i / frames);
+      _mapController.move(
+        LatLng(
+          startCenter.latitude + (target.latitude - startCenter.latitude) * t,
+          startCenter.longitude + (target.longitude - startCenter.longitude) * t,
+        ),
+        startZoom + (zoom - startZoom) * t,
+      );
+      await Future.delayed(const Duration(milliseconds: 16));
+    }
+  }
 
   @override
   void dispose() {
@@ -242,16 +285,75 @@ class _AddListingScreenState extends State<AddListingScreen> {
       const SizedBox(height: 20),
       _label('Pin on Map *'),
       Container(
-        height: 250,
+        height: 280,
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.divider)),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
-          child: GoogleMap(
-            initialCameraPosition: const CameraPosition(target: LatLng(20.5937, 78.9629), zoom: 5),
-            onTap: (pos) => setState(() => _selectedLocation = pos),
-            markers: _selectedLocation != null ? {Marker(markerId: const MarkerId('selected'), position: _selectedLocation!)} : {},
-            zoomControlsEnabled: false,
-            myLocationButtonEnabled: false,
+          child: Stack(
+            children: [
+              FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: _userLocation ?? const LatLng(29.3803, 79.4636),
+                  initialZoom: 12.0,
+                  minZoom: 12.0,
+                  maxZoom: 18,
+                  interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                  ),
+                  onMapReady: () {
+                    _mapReady = true;
+                    if (_userLocation != null) _animateTo(_userLocation!, 12.0);
+                  },
+                  onTap: (_, pos) => setState(() => _selectedLocation = pos),
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.rentnearby.rentnearby',
+                    maxNativeZoom: 19,
+                    keepBuffer: 4,
+                    panBuffer: 2,
+                  ),
+                  MarkerLayer(markers: [
+                    if (_userLocation != null)
+                      Marker(
+                        point: _userLocation!,
+                        width: 20, height: 20,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2.5),
+                            boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.5), blurRadius: 8, spreadRadius: 2)],
+                          ),
+                        ),
+                      ),
+                    if (_selectedLocation != null)
+                      Marker(
+                        point: _selectedLocation!,
+                        width: 40, height: 40,
+                        child: const Icon(Icons.location_pin, color: AppColors.primary, size: 40),
+                      ),
+                  ]),
+                ],
+              ),
+              // My location button
+              Positioned(
+                bottom: 10, right: 10,
+                child: GestureDetector(
+                  onTap: () { if (_userLocation != null) _animateTo(_userLocation!, 12.0); },
+                  child: Container(
+                    width: 38, height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.white, shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+                    ),
+                    child: const Icon(Iconsax.location, color: AppColors.primary, size: 18),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
