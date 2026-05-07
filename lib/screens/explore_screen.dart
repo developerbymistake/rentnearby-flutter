@@ -172,46 +172,80 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
       .take(30);
 
     for (final listing in listings) {
-      final priceText = listing.priceMonthly != null ? listing.shortPrice : 'Call';
+      final priceText = listing.priceMonthly != null
+          ? _pinPrice(listing.priceMonthly!)
+          : 'Call';
       markers.add(Marker(
         point: LatLng(listing.latitude, listing.longitude),
-        width: 100,
-        height: 46,
+        width: 90,
+        height: 76,
         alignment: Alignment.bottomCenter,
         child: GestureDetector(
           onTap: () => _showDetail(listing.id),
-          child: CustomPaint(
-            painter: const _MapPinPainter(
-              fill: Colors.white,
-              shadow: Colors.black54,
-            ),
-            child: Padding(
-              // Extra 9px bottom padding = tail height reserved by painter
-              padding: const EdgeInsets.fromLTRB(10, 5, 10, 14),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.home_rounded, color: AppColors.primary, size: 13),
-                  const SizedBox(width: 4),
-                  Text(
-                    priceText,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: listing.priceMonthly != null ? AppColors.textDark : AppColors.primary,
+          child: Stack(
+            children: [
+              // Price label — floats above the pin, centered
+              Positioned(
+                bottom: 50,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4, offset: const Offset(0, 2))],
+                    ),
+                    child: Text(
+                      priceText,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+              // Pin body: blue circle + spike
+              // Align.bottomCenter ensures spike tip = marker anchor = exact coordinate
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: SizedBox(
+                  width: 36,
+                  height: 46,
+                  child: Stack(
+                    children: [
+                      CustomPaint(
+                        painter: _PinBodyPainter(color: AppColors.primary),
+                        size: const Size(36, 46),
+                      ),
+                      const Positioned(
+                        top: 9, left: 9,
+                        child: Icon(Icons.home_rounded, size: 18, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ));
     }
 
     setState(() => _markers = markers);
+  }
+
+  String _pinPrice(int price) {
+    if (price >= 1000) {
+      final t = price ~/ 1000;
+      final h = price % 1000;
+      return '₹$t,${h.toString().padLeft(3, '0')}/-';
+    }
+    return '₹$price/-';
   }
 
   void _showDetail(String id) {
@@ -224,10 +258,10 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   }
 
   double _radiusToZoom(double km) {
-    if (km <= 1) return 14.5;
-    if (km <= 2) return 13.5;
-    if (km <= 5) return 12.0;
-    return 11.0;
+    if (km <= 1) return 13.5;
+    if (km <= 2) return 12.5;
+    if (km <= 5) return 11.0;
+    return 10.0;
   }
 
   Future<void> _animateTo(LatLng target, double zoom) async {
@@ -270,7 +304,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                   options: MapOptions(
                     initialCenter: _userLocation ?? const LatLng(29.3803, 79.4636),
                     initialZoom: _radiusToZoom(_radius),
-                    minZoom: _radiusToZoom(_radius),
+                    minZoom: 8,
                     maxZoom: 18,
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
@@ -538,40 +572,32 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   }
 }
 
-// Premium map pin painter — draws a rounded bubble + downward tail
-// Uses dart:ui explicitly (ui.Path) to avoid latlong2.Path<LatLng> conflict
-class _MapPinPainter extends CustomPainter {
-  final Color fill;
-  final Color shadow;
-  const _MapPinPainter({required this.fill, required this.shadow});
-
-  static const double _r = 10.0;   // corner radius
-  static const double _tw = 9.0;   // tail half-width
-  static const double _th = 9.0;   // tail height
+// Map pin painter: blue circle (house icon inside) + downward spike.
+// Spike tip is at (size.width/2, size.height) = exact bottom-center of the widget.
+// Marker uses alignment: Alignment.bottomCenter so spike tip = lat/lng coordinate at all zoom levels.
+class _PinBodyPainter extends CustomPainter {
+  final Color color;
+  const _PinBodyPainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bh = size.height - _th; // bubble height (excluding tail)
+    // Circle: radius 18, centered at (18, 18)
+    final circle = ui.Path()
+      ..addOval(Rect.fromCircle(center: const Offset(18, 18), radius: 18));
 
-    final path = ui.Path()
-      ..moveTo(_r, 0)
-      ..lineTo(size.width - _r, 0)
-      ..arcToPoint(ui.Offset(size.width, _r), radius: ui.Radius.circular(_r))
-      ..lineTo(size.width, bh - _r)
-      ..arcToPoint(ui.Offset(size.width - _r, bh), radius: ui.Radius.circular(_r))
-      ..lineTo(size.width / 2 + _tw, bh)
-      ..lineTo(size.width / 2, size.height) // tail tip = map point
-      ..lineTo(size.width / 2 - _tw, bh)
-      ..lineTo(_r, bh)
-      ..arcToPoint(ui.Offset(0, bh - _r), radius: ui.Radius.circular(_r))
-      ..lineTo(0, _r)
-      ..arcToPoint(ui.Offset(_r, 0), radius: ui.Radius.circular(_r))
+    // Spike: base inside circle at y=32, tip at exact bottom-center
+    final spike = ui.Path()
+      ..moveTo(10, 32)
+      ..lineTo(size.width / 2, size.height) // tip = coordinate
+      ..lineTo(26, 32)
       ..close();
 
-    canvas.drawShadow(path, shadow, 6, true);
-    canvas.drawPath(path, Paint()..color = fill);
+    final pin = ui.Path.combine(ui.PathOperation.union, circle, spike);
+
+    canvas.drawShadow(pin, Colors.black38, 4, true);
+    canvas.drawPath(pin, Paint()..color = color);
   }
 
   @override
-  bool shouldRepaint(_MapPinPainter old) => old.fill != fill;
+  bool shouldRepaint(_PinBodyPainter old) => old.color != color;
 }
