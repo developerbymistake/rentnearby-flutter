@@ -62,8 +62,7 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> postFormData(String path, FormData data) async {
-    final res = await _dio.post(path, data: data,
-        options: Options(headers: {'Content-Type': 'multipart/form-data'}));
+    final res = await _dio.post(path, data: data);
     return res.data;
   }
 }
