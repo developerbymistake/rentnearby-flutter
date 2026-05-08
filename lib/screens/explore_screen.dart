@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:ui' as ui;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -253,34 +252,34 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
     for (final listing in listings) {
       final priceText = listing.priceMonthly != null ? _pinPrice(listing.priceMonthly!) : 'Call';
+      final chipW = _chipWidth(priceText);
       markers.add(Marker(
         point: LatLng(listing.latitude, listing.longitude),
-        width: 52,
-        height: 64,
-        alignment: Alignment.bottomCenter,
+        width: chipW,
+        height: 34,
+        alignment: Alignment.center,
         child: GestureDetector(
           onTap: () => _showDetail(listing.id),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              CustomPaint(
-                size: const Size(52, 64),
-                painter: _PinBodyPainter(color: AppColors.primary),
-              ),
-              Positioned(
-                top: 0, left: 0, right: 0, height: 42,
-                child: Center(
-                  child: Text(
-                    priceText,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 11,
-                      fontWeight: FontWeight.w700, color: Colors.white, height: 1.1,
-                    ),
-                  ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(17),
+              border: Border.all(color: AppColors.primary, width: 2),
+              boxShadow: const [
+                BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                priceText,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ));
@@ -288,6 +287,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
     setState(() => _markers = markers);
   }
+
+  double _chipWidth(String text) => (text.length * 9.0 + 26).clamp(52.0, 90.0);
 
   String _pinPrice(int price) {
     if (price >= 100000) {
@@ -647,33 +648,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 }
 
-// FIX #2 (pin painter): Path cached as static final — computed once at class
-// load time instead of on every paint() call (was: Path.combine PathOperation.union
-// + 2 Path allocations per frame per pin = ~1800 heavy ops/sec with 30 pins at 60fps).
-class _PinBodyPainter extends CustomPainter {
-  final Color color;
-  const _PinBodyPainter({required this.color});
-
-  static final ui.Path _pinPath = () {
-    final circle = ui.Path()
-      ..addOval(Rect.fromCircle(center: const Offset(26, 22), radius: 22));
-    final spike = ui.Path()
-      ..moveTo(14, 38)
-      ..lineTo(26, 64)
-      ..lineTo(38, 38)
-      ..close();
-    return ui.Path.combine(ui.PathOperation.union, circle, spike);
-  }();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawShadow(_pinPath, Colors.black38, 4, true);
-    canvas.drawPath(_pinPath, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(_PinBodyPainter old) => old.color != color;
-}
 
 // FIX #5: Tile disk cache using flutter_cache_manager (bundled with cached_network_image).
 // Tiles are stored on device and served from disk on subsequent sessions.
