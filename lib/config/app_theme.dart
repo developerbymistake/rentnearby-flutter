@@ -78,5 +78,12 @@ class AppTheme {
           type: BottomNavigationBarType.fixed,
           elevation: 0,
         ),
+        dialogTheme: const DialogThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(20))),
+        ),
       );
 }

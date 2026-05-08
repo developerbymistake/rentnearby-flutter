@@ -24,7 +24,7 @@ class AuthController extends GetxController {
       await ApiService.post('/auth/send-otp', {'phoneNumber': phone});
       return true;
     } catch (e) {
-      AppToast.error(_dioMessage(e, 'Failed to send OTP. Please try again.'));
+      AppToast.error(_otpSendError(e));
       return false;
     } finally {
       isLoading.value = false;
@@ -43,7 +43,7 @@ class AuthController extends GetxController {
       user.value = userModel;
       return true;
     } catch (e) {
-      AppToast.error(_dioMessage(e, 'Invalid or expired OTP. Please try again.'));
+      AppToast.error(_otpVerifyError(e));
       return false;
     } finally {
       isLoading.value = false;
@@ -58,6 +58,37 @@ class AuthController extends GetxController {
     user.value = null;
     Get.find<ListingController>().clearData();
     Get.offAllNamed(AppRoutes.otp);
+  }
+
+  static String _otpSendError(dynamic e) {
+    if (e is DioException) {
+      final status = e.response?.statusCode;
+      if (status == 429) return 'OTP limit reached. Please wait 1 hour before requesting again.';
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        return 'No internet connection. Please check your network.';
+      }
+      final message = e.response?.data?['message'] as String?;
+      return message ?? 'Failed to send OTP. Please try again.';
+    }
+    return 'Failed to send OTP. Please try again.';
+  }
+
+  static String _otpVerifyError(dynamic e) {
+    if (e is DioException) {
+      final status = e.response?.statusCode;
+      if (status == 429) return 'Too many wrong attempts. Please wait before trying again.';
+      if (status == 400 || status == 401) return 'Incorrect OTP. Please check and try again.';
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        return 'No internet connection. Please check your network.';
+      }
+      final message = e.response?.data?['message'] as String?;
+      return message ?? 'Invalid or expired OTP. Please try again.';
+    }
+    return 'Invalid or expired OTP. Please try again.';
   }
 
   static String _dioMessage(dynamic e, String fallback) {

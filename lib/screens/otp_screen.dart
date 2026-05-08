@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:pinput/pinput.dart';
 import '../config/app_colors.dart';
@@ -20,8 +21,15 @@ class _OtpScreenState extends State<OtpScreen> {
   final _otpController = TextEditingController();
   final _otpFocusNode = FocusNode();
   final _auth = Get.find<AuthController>();
+  final _box = GetStorage();
   bool _otpSent = false;
   bool _agreed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _agreed = _box.read<bool>('terms_agreed') ?? false;
+  }
 
   @override
   void dispose() {
@@ -131,6 +139,14 @@ class _OtpScreenState extends State<OtpScreen> {
     if (confirmed != true) return;
     final ok = await _auth.sendOtp(phone);
     if (ok) setState(() => _otpSent = true);
+  }
+
+  Future<void> _resendOtp() async {
+    final phone = _phoneController.text.trim();
+    FocusScope.of(context).unfocus();
+    _otpController.clear();
+    final ok = await _auth.sendOtp(phone);
+    if (ok) AppToast.success('OTP resent to +91 $phone');
   }
 
   Future<void> _verifyOtp([String? pin]) async {
@@ -313,44 +329,53 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Gradient header — scales with screen height
-          Container(
-            height: screenH * 0.42,
-            decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-          ),
-          SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  SizedBox(height: screenH * 0.05),
-                  // Header
-                  FadeInDown(
-                    duration: const Duration(milliseconds: 600),
-                    child: const Column(
-                      children: [
-                        Icon(Icons.location_on_rounded, size: 48, color: Colors.white),
-                        SizedBox(height: 12),
-                        Text('Bakhli',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            )),
-                        SizedBox(height: 4),
-                        Text('Sign in to find rooms near you',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 13,
-                              color: Colors.white70,
-                            )),
-                      ],
+    return PopScope(
+      canPop: !_otpSent,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _otpSent) {
+          FocusScope.of(context).unfocus();
+          _otpController.clear();
+          setState(() => _otpSent = false);
+        }
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            // Gradient header — scales with screen height
+            Container(
+              height: screenH * 0.52,
+              decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+            ),
+            SafeArea(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    SizedBox(height: screenH * 0.06),
+                    // Header
+                    FadeInDown(
+                      duration: const Duration(milliseconds: 600),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.location_on_rounded, size: 48, color: Colors.white),
+                          SizedBox(height: 12),
+                          Text('Bakhli',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              )),
+                          SizedBox(height: 4),
+                          Text('Sign in to find rooms near you',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 13,
+                                color: Colors.white70,
+                              )),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(height: screenH * 0.04),
+                    SizedBox(height: screenH * 0.12),
                   // Card
                   FadeInUp(
                     duration: const Duration(milliseconds: 600),
@@ -384,6 +409,7 @@ class _OtpScreenState extends State<OtpScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -418,13 +444,17 @@ class _OtpScreenState extends State<OtpScreen> {
                 child: const Text('+91',
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary)),
               ),
-              hintText: '10-digit mobile number',
+              hintText: 'Enter mobile number',
             ),
           ),
           const SizedBox(height: 20),
           // Mandatory checkbox
           GestureDetector(
-            onTap: () => setState(() => _agreed = !_agreed),
+            onTap: () {
+              final next = !_agreed;
+              setState(() => _agreed = next);
+              _box.write('terms_agreed', next);
+            },
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -432,7 +462,11 @@ class _OtpScreenState extends State<OtpScreen> {
                   width: 22, height: 22,
                   child: Checkbox(
                     value: _agreed,
-                    onChanged: (v) => setState(() => _agreed = v ?? false),
+                    onChanged: (v) {
+                      final next = v ?? false;
+                      setState(() => _agreed = next);
+                      _box.write('terms_agreed', next);
+                    },
                     activeColor: AppColors.primary,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
@@ -447,7 +481,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       text: TextSpan(
                         style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5),
                         children: [
-                          const TextSpan(text: 'I have read and agree to the '),
+                          const TextSpan(text: 'I have read and agree to the\n'),
                           TextSpan(
                             text: 'Terms of Service',
                             style: TextStyle(
@@ -576,11 +610,11 @@ class _OtpScreenState extends State<OtpScreen> {
             )),
         const SizedBox(height: 16),
         Center(
-          child: TextButton(
-            onPressed: _sendOtp,
+          child: Obx(() => TextButton(
+            onPressed: _auth.isLoading.value ? null : _resendOtp,
             child: const Text('Resend OTP',
                 style: TextStyle(fontFamily: 'Poppins', color: AppColors.primary, fontWeight: FontWeight.w600)),
-          ),
+          )),
         ),
       ],
     );
