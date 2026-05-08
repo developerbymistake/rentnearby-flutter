@@ -62,13 +62,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     // Avatar + name/phone in a Row
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 21, 56, 25),
+                      padding: const EdgeInsets.fromLTRB(20, 30, 60, 34),
                       child: Row(
                         children: [
                           Obx(() {
                             final initials = _initials(_auth.user.value?.name);
                             return Container(
-                              width: 64, height: 64,
+                              width: 80, height: 80,
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.22),
                                 shape: BoxShape.circle,
@@ -79,14 +79,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ? Text(initials,
                                         style: const TextStyle(
                                             fontFamily: 'Poppins',
-                                            fontSize: 24,
+                                            fontSize: 30,
                                             fontWeight: FontWeight.w700,
                                             color: Colors.white))
-                                    : const Icon(Iconsax.user5, size: 30, color: Colors.white),
+                                    : const Icon(Iconsax.user5, size: 38, color: Colors.white),
                               ),
                             );
                           }),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 18),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,17 +97,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       : 'Your Profile',
                                   style: const TextStyle(
                                       fontFamily: 'Poppins',
-                                      fontSize: 17,
+                                      fontSize: 20,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.white),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 )),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 4),
                                 Obx(() => Text(
                                   '+91 ${_auth.user.value?.phoneNumber ?? ''}',
                                   style: const TextStyle(
-                                      fontFamily: 'Poppins', fontSize: 13, color: Colors.white70),
+                                      fontFamily: 'Poppins', fontSize: 15, color: Colors.white70),
                                 )),
                                 Obx(() => _auth.user.value?.isAdmin == true
                                     ? Padding(
@@ -201,15 +201,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // Footer
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 36),
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 const Text('Made with ',
                     style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
-                const Icon(Icons.favorite_rounded, color: Color(0xFFE53935), size: 13),
-                const Text(' by Dev',
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.textLight,
+                        letterSpacing: 0.2)),
+                const Icon(Icons.favorite_rounded, color: Color(0xFFE53935), size: 14),
+                const Text(' by ',
                     style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.textLight,
+                        letterSpacing: 0.2)),
+                const Text('Dev',
+                    style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryLight,
+                        letterSpacing: 0.2)),
               ]),
             ),
           ],
@@ -240,10 +255,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ]);
   }
 
-  void _save() => _auth.updateProfile(
-        _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : null,
-        _gmailCtrl.text.trim().isNotEmpty ? _gmailCtrl.text.trim() : null,
-      );
+  void _save() {
+    FocusScope.of(context).unfocus();
+    _auth.updateProfile(
+      _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : null,
+      _gmailCtrl.text.trim().isNotEmpty ? _gmailCtrl.text.trim() : null,
+    );
+  }
 
   void _confirmLogout() {
     showDialog(
