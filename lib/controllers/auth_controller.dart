@@ -60,10 +60,22 @@ class AuthController extends GetxController {
     Get.offAllNamed(AppRoutes.otp);
   }
 
+  static String _retryAfter(DioException e) {
+    final raw = e.response?.headers.value('retry-after');
+    final seconds = raw != null ? int.tryParse(raw) : null;
+    if (seconds == null || seconds <= 0) return '1 hour';
+    final totalMinutes = (seconds / 60).ceil();
+    if (totalMinutes < 60) return '$totalMinutes minute${totalMinutes == 1 ? '' : 's'}';
+    final hours = totalMinutes ~/ 60;
+    final mins = totalMinutes % 60;
+    if (mins == 0) return '$hours hour${hours == 1 ? '' : 's'}';
+    return '$hours hour${hours == 1 ? '' : 's'} $mins minute${mins == 1 ? '' : 's'}';
+  }
+
   static String _otpSendError(dynamic e) {
     if (e is DioException) {
       final status = e.response?.statusCode;
-      if (status == 429) return 'OTP limit reached. Please wait 1 hour before requesting again.';
+      if (status == 429) return 'OTP limit reached. Try again in ${_retryAfter(e)}.';
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.connectionError) {
@@ -78,7 +90,7 @@ class AuthController extends GetxController {
   static String _otpVerifyError(dynamic e) {
     if (e is DioException) {
       final status = e.response?.statusCode;
-      if (status == 429) return 'Too many wrong attempts. Please wait before trying again.';
+      if (status == 429) return 'Too many attempts. Try again in ${_retryAfter(e)}.';
       if (status == 400 || status == 401) return 'Incorrect OTP. Please check and try again.';
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout ||
