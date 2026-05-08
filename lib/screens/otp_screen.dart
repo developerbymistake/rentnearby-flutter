@@ -361,7 +361,7 @@ class _OtpScreenState extends State<OtpScreen> {
                           Text('Bakhli',
                               style: TextStyle(
                                 fontFamily: 'Poppins',
-                                fontSize: 28,
+                                fontSize: 36,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               )),
