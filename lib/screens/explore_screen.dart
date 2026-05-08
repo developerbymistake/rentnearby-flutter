@@ -27,6 +27,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   final _mapController = MapController();
   final _listingCtrl = Get.find<ListingController>();
   Worker? _districtsWorker;
+  Worker? _postedWorker;
   List<Marker> _markers = [];
   LatLng? _userLocation;
   double _radius = 1.0;
@@ -54,6 +55,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     )..addListener(_onCameraAnimTick);
 
     _districtsWorker = ever(_listingCtrl.districts, (_) => _tryAutoLoad());
+    _postedWorker = ever(_listingCtrl.listingPostedTrigger, (_) => _loadNearby());
     _initLocation();
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryAutoLoad());
   }
@@ -74,6 +76,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   @override
   void dispose() {
     _districtsWorker?.dispose();
+    _postedWorker?.dispose();
     _cameraAnimController.dispose();
     _audioPlayer.dispose();
     super.dispose();

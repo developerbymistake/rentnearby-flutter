@@ -14,6 +14,7 @@ class ListingController extends GetxController {
   final isLoading = false.obs;
   final isUploading = false.obs;
   final hasMoreNearby = false.obs;
+  final listingPostedTrigger = 0.obs;
 
   @override
   void onInit() {
@@ -86,6 +87,7 @@ class ListingController extends GetxController {
       isLoading.value = true;
       final res = await ApiService.post('/listings/', data);
       final listingId = res['data']?['listingId'] as String?;
+      listingPostedTrigger.value++;
       return listingId;
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not create listing.'));
