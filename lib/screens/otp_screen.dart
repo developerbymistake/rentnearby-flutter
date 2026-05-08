@@ -20,6 +20,7 @@ class _OtpScreenState extends State<OtpScreen> {
   final _otpFocusNodes = List.generate(4, (_) => FocusNode());
   final _auth = Get.find<AuthController>();
   bool _otpSent = false;
+  bool _agreed = false;
 
   @override
   void dispose() {
@@ -106,32 +107,32 @@ class _OtpScreenState extends State<OtpScreen> {
                     _termSection(
                       Icons.home_rounded,
                       'What RentNearBy Does',
-                      'RentNearBy is a free platform that directly connects people looking for rental rooms with room owners — no brokers, no commission, no hidden charges. Our goal is to make finding a home near you simple, fast, and transparent.',
+                      'RentNearBy connects people looking for rental rooms with room owners. Our goal is to make finding a home near you simple and transparent.',
                     ),
                     _termSection(
                       Icons.visibility_rounded,
-                      'Your Listing is Publicly Visible',
-                      'When you post a room on RentNearBy, the details you provide — including photos, address, rent amount, and your contact number — will be visible to all users browsing the app. This is intentional, so genuine tenants can reach you directly. By posting a listing, you agree that this information may be seen by anyone using the app.',
+                      'Your Information is Publicly Visible',
+                      'When you post a room, the details you provide — photos, address, rent amount, and your contact number — are visible to all users of the app. This is how tenants can reach you directly. By posting, you agree that this information may be seen by anyone using RentNearBy.',
                     ),
                     _termSection(
                       Icons.phone_rounded,
                       'Your Contact Number',
-                      'Your mobile number is used to log in and is shown on your listings so interested tenants can contact you directly. We do not share your number with any third-party companies or advertisers.',
+                      'Your mobile number is used to log in and is displayed on your listings so tenants can contact you. Since it is publicly visible on your listings, you should only register with a number you are comfortable sharing.',
                     ),
                     _termSection(
                       Icons.location_on_rounded,
                       'Location Access',
-                      'RentNearBy uses your device\'s location only to show nearby rooms and help you find listings close to you. Your live location is never stored on our servers or shared with other users.',
+                      'RentNearBy uses your device location only to show rooms near you. Your live location is not stored on our servers or shared with other users.',
                     ),
                     _termSection(
                       Icons.person_rounded,
                       'Your Responsibility',
-                      'You are responsible for the accuracy of any information you post. Please ensure that room details, photos, and pricing are truthful and up to date. Misleading listings may be removed. RentNearBy acts only as a platform and is not responsible for any disputes between tenants and room owners.',
+                      'You are responsible for the accuracy of any information you post. Room details, photos, and pricing must be truthful. Misleading listings may be removed. RentNearBy is a platform only and is not responsible for any disputes between tenants and room owners.',
                     ),
                     _termSection(
                       Icons.security_rounded,
                       'Your Agreement',
-                      'By using RentNearBy, you confirm that you are 18 years or older, that the information you provide is accurate, and that you consent to your listing details being publicly visible to other users of the app. You can delete your listing at any time from the My Rooms section.',
+                      'By using RentNearBy, you confirm that the information you provide is accurate and that you consent to your listing details being publicly visible to all users. You can delete your listing at any time from the My Rooms section.',
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -147,7 +148,7 @@ class _OtpScreenState extends State<OtpScreen> {
                           const SizedBox(width: 10),
                           const Expanded(
                             child: Text(
-                              'These terms exist to keep the platform safe and transparent for everyone — both tenants and room owners.',
+                              'These terms keep the platform safe and transparent for both tenants and room owners.',
                               style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5),
                             ),
                           ),
@@ -228,7 +229,6 @@ class _OtpScreenState extends State<OtpScreen> {
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
     return Scaffold(
-      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           // Gradient header — scales with screen height
@@ -292,31 +292,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 400),
-                    child: GestureDetector(
-                      onTap: _showTerms,
-                      child: RichText(
-                        textAlign: TextAlign.center,
-                        text: TextSpan(
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textHint),
-                          children: [
-                            const TextSpan(text: 'By continuing, you agree to our '),
-                            TextSpan(
-                              text: 'Terms of Service',
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                                decoration: TextDecoration.underline,
-                                decorationColor: AppColors.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -360,9 +336,53 @@ class _OtpScreenState extends State<OtpScreen> {
               hintText: '10-digit mobile number',
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 20),
+          // Mandatory checkbox
+          GestureDetector(
+            onTap: () => setState(() => _agreed = !_agreed),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 22, height: 22,
+                  child: Checkbox(
+                    value: _agreed,
+                    onChanged: (v) => setState(() => _agreed = v ?? false),
+                    activeColor: AppColors.primary,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                    side: const BorderSide(color: AppColors.textLight, width: 1.5),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _showTerms,
+                    child: RichText(
+                      text: TextSpan(
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5),
+                        children: [
+                          const TextSpan(text: 'I have read and agree to the '),
+                          TextSpan(
+                            text: 'Terms of Service',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                              decorationColor: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           Obx(() => GradientButton(
-                onPressed: _auth.isLoading.value ? null : _sendOtp,
+                onPressed: (_agreed && !_auth.isLoading.value) ? _sendOtp : null,
                 isLoading: _auth.isLoading.value,
                 label: 'Send OTP',
               )),
@@ -376,7 +396,11 @@ class _OtpScreenState extends State<OtpScreen> {
           Row(
             children: [
               GestureDetector(
-                onTap: () => setState(() => _otpSent = false),
+                onTap: () {
+                  FocusScope.of(context).unfocus();
+                  for (final c in _otpControllers) { c.clear(); }
+                  setState(() => _otpSent = false);
+                },
                 child: const Icon(Icons.arrow_back_ios_rounded, size: 20, color: AppColors.primary),
               ),
               const SizedBox(width: 8),
