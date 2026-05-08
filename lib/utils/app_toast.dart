@@ -33,7 +33,6 @@ class AppToast {
       ),
       backgroundColor: _bgColor(type),
       foregroundColor: Colors.white,
-      iconColor: Colors.white,
       alignment: Alignment.topCenter,
       autoCloseDuration: const Duration(seconds: 4),
       closeButtonShowType: CloseButtonShowType.none,
