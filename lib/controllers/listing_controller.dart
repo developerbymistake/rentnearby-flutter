@@ -3,6 +3,7 @@ import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../models/listing_model.dart';
 import '../models/city_model.dart';
 import '../services/api_service.dart';
+import '../utils/app_toast.dart';
 
 class ListingController extends GetxController {
   final myListings = <ListingModel>[].obs;
@@ -85,10 +86,9 @@ class ListingController extends GetxController {
       isLoading.value = true;
       final res = await ApiService.post('/listings/', data);
       final listingId = res['data']?['listingId'] as String?;
-      await loadMyListings();
       return listingId;
-    } catch (_) {
-      Get.snackbar('Error', 'Could not create listing.', snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not create listing.'));
       return null;
     } finally {
       isLoading.value = false;
@@ -112,9 +112,7 @@ class ListingController extends GetxController {
       } else {
         msg = e.toString();
       }
-      Get.snackbar('Photo Upload Failed', msg,
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 6));
+      AppToast.error(msg);
       return false;
     } finally {
       isUploading.value = false;
@@ -132,14 +130,31 @@ class ListingController extends GetxController {
     try {
       await ApiService.delete('/listings/$id');
       myListings.removeWhere((l) => l.id == id);
-      Get.snackbar('Deleted', 'Listing removed successfully.', snackPosition: SnackPosition.BOTTOM);
-    } catch (_) {
-      Get.snackbar('Error', 'Could not delete listing.', snackPosition: SnackPosition.BOTTOM);
+      AppToast.success('Listing removed successfully.');
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not delete listing.'));
     }
   }
 
   void clearData() {
     nearbyListings.clear();
     myListings.clear();
+  }
+
+  static String _errorMessage(dynamic e, String fallback) {
+    if (e is DioException) {
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        return 'No internet connection. Please check your network.';
+      }
+      final status = e.response?.statusCode;
+      final message = e.response?.data?['message'] as String?;
+      if (status == 400 && message != null) return message;
+      if (status == 429) return 'Too many attempts. Please try again later.';
+      if (status != null && status >= 500) return 'Server error. Please try again.';
+      if (message != null) return message;
+    }
+    return fallback;
   }
 }

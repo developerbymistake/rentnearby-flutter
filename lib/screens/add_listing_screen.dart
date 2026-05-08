@@ -12,6 +12,7 @@ import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/listing_controller.dart';
 import '../models/city_model.dart';
+import '../utils/app_toast.dart';
 import '../widgets/gradient_button.dart';
 
 class AddListingScreen extends StatefulWidget {
@@ -26,6 +27,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final _descCtrl = TextEditingController();
   final _priceMonthlyCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
+  final _priceFocusNode = FocusNode();
+  final _addressFocusNode = FocusNode();
 
   String? _selectedDistrictId;
   String? _selectedCityId;
@@ -158,6 +161,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _descCtrl.dispose();
     _priceMonthlyCtrl.dispose();
     _addressCtrl.dispose();
+    _priceFocusNode.dispose();
+    _addressFocusNode.dispose();
     super.dispose();
   }
 
@@ -211,29 +216,23 @@ class _AddListingScreenState extends State<AddListingScreen> {
   void _handleNext() {
     if (_step == 0) {
       if (_selectedRoomTypeId == null) {
-        Get.snackbar('Room Type Required', 'Please select a room type to continue',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: AppColors.error,
-            colorText: Colors.white,
-            margin: const EdgeInsets.all(16));
+        AppToast.error('Please select a room type to continue');
         return;
       }
       if (_priceMonthlyCtrl.text.trim().isEmpty) {
-        Get.snackbar('Rent Required', 'Please enter the monthly rent amount',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: AppColors.error,
-            colorText: Colors.white,
-            margin: const EdgeInsets.all(16));
+        AppToast.error('Please enter the monthly rent amount');
+        _priceFocusNode.requestFocus();
         return;
       }
     }
     if (_step == 1) {
       if (_selectedDistrictId == null) {
-        Get.snackbar('District Required', 'Please select a district to continue',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: AppColors.error,
-            colorText: Colors.white,
-            margin: const EdgeInsets.all(16));
+        AppToast.error('Please select a district to continue');
+        return;
+      }
+      if (_addressCtrl.text.trim().isEmpty) {
+        AppToast.error('Address is required');
+        _addressFocusNode.requestFocus();
         return;
       }
     }
@@ -246,15 +245,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   Future<void> _submit() async {
     if (_selectedRoomTypeId == null) {
-      Get.snackbar('Required', 'Please select a room type', snackPosition: SnackPosition.BOTTOM); return;
+      AppToast.error('Please select a room type'); return;
     }
     if (_selectedDistrictId == null) {
-      Get.snackbar('Required', 'Please select a district', snackPosition: SnackPosition.BOTTOM); return;
+      AppToast.error('Please select a district'); return;
+    }
+    if (_addressCtrl.text.trim().isEmpty) {
+      AppToast.error('Address is required');
+      _addressFocusNode.requestFocus();
+      return;
     }
 
     final pinLocation = _selectedLocation ?? _userLocation;
     if (pinLocation == null) {
-      Get.snackbar('Required', 'Please pin your location on the map', snackPosition: SnackPosition.BOTTOM); return;
+      AppToast.error('Please pin your location on the map'); return;
     }
 
     final data = {
@@ -263,7 +267,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       'priceMonthly': _priceMonthlyCtrl.text.isNotEmpty ? int.tryParse(_priceMonthlyCtrl.text) : null,
       'latitude': pinLocation.latitude,
       'longitude': pinLocation.longitude,
-      'address': _addressCtrl.text.trim().isNotEmpty ? _addressCtrl.text.trim() : null,
+      'address': _addressCtrl.text.trim(),
       'districtId': _selectedDistrictId,
       'cityId': _selectedCityId,
     };
@@ -275,6 +279,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       await _ctrl.uploadPhoto(listingId, photo.path);
     }
 
+    await _ctrl.loadMyListings();
     Get.offNamed(AppRoutes.listingDetail, arguments: listingId);
   }
 
@@ -413,32 +418,46 @@ class _AddListingScreenState extends State<AddListingScreen> {
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _sectionCard(
         title: 'Room Type *',
-        child: Obx(() => Wrap(
-          spacing: 8, runSpacing: 8,
-          children: _ctrl.roomTypes.map((rt) {
-            final active = _selectedRoomTypeId == rt.id;
-            return GestureDetector(
-              onTap: () => setState(() => _selectedRoomTypeId = rt.id),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                decoration: BoxDecoration(
-                  color: active ? AppColors.primary : Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: active ? AppColors.primary : AppColors.divider, width: 1.5),
+        child: Obx(() {
+          final types = _ctrl.roomTypes;
+          return Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: types.map((rt) {
+              final active = _selectedRoomTypeId == rt.id;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedRoomTypeId = rt.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: (MediaQuery.of(context).size.width - 40 - 32 - 16) / 3,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: active ? AppColors.primary : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: active ? AppColors.primary : AppColors.divider,
+                        width: 1.5),
+                  ),
+                  child: Center(
+                    child: Text(rt.name,
+                        style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: active ? Colors.white : AppColors.textMedium)),
+                  ),
                 ),
-                child: Text(rt.name, style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500,
-                    color: active ? Colors.white : AppColors.textMedium)),
-              ),
-            );
-          }).toList(),
-        )),
+              );
+            }).toList(),
+          );
+        }),
       ),
 
       _sectionCard(
         title: 'Monthly Rent (₹) *',
         child: TextFormField(
           controller: _priceMonthlyCtrl,
+          focusNode: _priceFocusNode,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
@@ -516,12 +535,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           pos.latitude, pos.longitude,
                         );
                         if (dist > 1.0) {
-                          Get.snackbar('Out of Range',
-                              'You can only pin within 1km of your current location',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: AppColors.error,
-                              colorText: Colors.white,
-                              margin: const EdgeInsets.all(16));
+                          AppToast.warning('You can only pin within 1 km of your current location');
                           return;
                         }
                       }
@@ -660,9 +674,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
       ),
 
       _sectionCard(
-        title: 'Address (Optional)',
+        title: 'Address *',
         child: TextFormField(
           controller: _addressCtrl,
+          focusNode: _addressFocusNode,
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
           decoration: _inputDec('Street, landmark, nearby place...',
               prefixIcon: const Icon(Iconsax.building, color: AppColors.primaryLight, size: 18)),

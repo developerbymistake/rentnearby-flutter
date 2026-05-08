@@ -113,12 +113,17 @@ class ListingCard extends StatelessWidget {
                     ),
                     if (listing.roomTypeName != null) ...[
                       const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
-                        child: Text(listing.roomTypeName!,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w500)),
-                      ),
+                      Row(children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
+                          child: Text(listing.roomTypeName!,
+                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w500)),
+                        ),
+                        const Spacer(),
+                        Text(_timeAgo(listing.createdAt),
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, color: AppColors.textHint)),
+                      ]),
                     ],
                     if (onDelete != null || onToggleActive != null) ...[
                       const SizedBox(height: 8),
@@ -166,6 +171,17 @@ class ListingCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().toUtc().difference(dt.toUtc());
+    if (diff.inSeconds < 60) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w ago';
+    if (diff.inDays < 365) return '${(diff.inDays / 30).floor()}mo ago';
+    return '${(diff.inDays / 365).floor()}y ago';
   }
 
   Widget _photoPlaceholder() => Container(

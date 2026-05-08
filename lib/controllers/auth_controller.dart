@@ -1,8 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../config/app_routes.dart';
+import '../utils/app_toast.dart';
 import 'listing_controller.dart';
 
 class AuthController extends GetxController {
@@ -21,9 +23,8 @@ class AuthController extends GetxController {
       isLoading.value = true;
       await ApiService.post('/auth/send-otp', {'phoneNumber': phone});
       return true;
-    } catch (_) {
-      Get.snackbar('Error', 'Failed to send OTP. Please try again.',
-          snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      AppToast.error(_dioMessage(e, 'Failed to send OTP. Please try again.'));
       return false;
     } finally {
       isLoading.value = false;
@@ -36,14 +37,13 @@ class AuthController extends GetxController {
       final res = await ApiService.post('/auth/verify-otp', {'phoneNumber': phone, 'otp': otp});
       final token = res['data']['token'];
       final userData = res['data']['user'];
-      StorageService.saveToken(token);
+      await StorageService.saveToken(token);
       final userModel = UserModel.fromJson(userData);
       StorageService.saveUser(userModel);
       user.value = userModel;
       return true;
-    } catch (_) {
-      Get.snackbar('Invalid OTP', 'Please enter the correct OTP.',
-          snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      AppToast.error(_dioMessage(e, 'Invalid or expired OTP. Please try again.'));
       return false;
     } finally {
       isLoading.value = false;
@@ -54,10 +54,27 @@ class AuthController extends GetxController {
     try {
       await ApiService.post('/auth/logout', {});
     } catch (_) {}
-    StorageService.clearAll();
+    await StorageService.clearAll();
     user.value = null;
     Get.find<ListingController>().clearData();
     Get.offAllNamed(AppRoutes.otp);
+  }
+
+  static String _dioMessage(dynamic e, String fallback) {
+    if (e is DioException) {
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        return 'No internet connection. Please check your network.';
+      }
+      final status = e.response?.statusCode;
+      final message = e.response?.data?['message'] as String?;
+      if (status == 400 && message != null) return message;
+      if (status == 429) return 'Too many attempts. Please try again later.';
+      if (status != null && status >= 500) return 'Server error. Please try again.';
+      if (message != null) return message;
+    }
+    return fallback;
   }
 
   Future<bool> updateProfile(String? name, String? gmailId) async {
@@ -70,10 +87,10 @@ class AuthController extends GetxController {
       final updated = UserModel.fromJson(res['data']);
       StorageService.saveUser(updated);
       user.value = updated;
-      Get.snackbar('Success', 'Profile updated!', snackPosition: SnackPosition.BOTTOM);
+      AppToast.success('Profile updated!');
       return true;
-    } catch (_) {
-      Get.snackbar('Error', 'Could not update profile.', snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      AppToast.error(_dioMessage(e, 'Could not update profile.'));
       return false;
     } finally {
       isLoading.value = false;

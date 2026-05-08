@@ -6,6 +6,7 @@ import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
+import '../utils/app_toast.dart';
 import '../widgets/listing_card.dart';
 
 class MyListingsScreen extends StatefulWidget {
@@ -121,7 +122,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           Future<void> save() async {
             final name = nameCtrl.text.trim();
             if (name.isEmpty) {
-              Get.snackbar('Required', 'Please enter your name.', snackPosition: SnackPosition.BOTTOM);
+              AppToast.error('Please enter your name.');
               return;
             }
             setDialogState(() => saving = true);

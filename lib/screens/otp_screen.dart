@@ -5,6 +5,7 @@ import 'package:animate_do/animate_do.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
+import '../utils/app_toast.dart';
 import '../widgets/gradient_button.dart';
 
 class OtpScreen extends StatefulWidget {
@@ -31,7 +32,7 @@ class _OtpScreenState extends State<OtpScreen> {
   Future<void> _sendOtp() async {
     final phone = _phoneController.text.trim();
     if (phone.length != 10) {
-      Get.snackbar('Invalid', 'Enter a valid 10-digit number', snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('Enter a valid 10-digit number');
       return;
     }
     final ok = await _auth.sendOtp(phone);
@@ -41,7 +42,7 @@ class _OtpScreenState extends State<OtpScreen> {
   Future<void> _verifyOtp() async {
     final otp = _otpControllers.map((c) => c.text).join();
     if (otp.length != 4) {
-      Get.snackbar('Invalid', 'Enter the 4-digit OTP', snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('Enter the 4-digit OTP');
       return;
     }
     final ok = await _auth.verifyOtp(_phoneController.text.trim(), otp);

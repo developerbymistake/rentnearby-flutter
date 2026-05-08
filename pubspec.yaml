@@ -18,6 +18,7 @@ dependencies:
 
   # Local storage
   get_storage: ^2.1.1
+  flutter_secure_storage: ^9.2.4
 
   # Maps
   flutter_map: ^8.3.0
@@ -42,6 +43,12 @@ dependencies:
 
   # URL launcher (WhatsApp)
   url_launcher: ^6.3.1
+
+  # Native share sheet
+  share_plus: ^10.1.4
+
+  # Toast notifications
+  toastification: ^2.3.0
 
   # JWT decode
   jwt_decoder: ^2.0.1

@@ -1,16 +1,31 @@
 import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_storage/get_storage.dart';
 import '../config/app_constants.dart';
 import '../models/user_model.dart';
 
 class StorageService {
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
   static final _box = GetStorage();
+  static String? _cachedToken;
 
-  static String? getToken() => _box.read(AppConstants.tokenKey);
+  static Future<void> init() async {
+    _cachedToken = await _secureStorage.read(key: AppConstants.tokenKey);
+  }
 
-  static void saveToken(String token) => _box.write(AppConstants.tokenKey, token);
+  static String? getToken() => _cachedToken;
 
-  static void clearToken() => _box.remove(AppConstants.tokenKey);
+  static Future<void> saveToken(String token) async {
+    _cachedToken = token;
+    await _secureStorage.write(key: AppConstants.tokenKey, value: token);
+  }
+
+  static Future<void> clearToken() async {
+    _cachedToken = null;
+    await _secureStorage.delete(key: AppConstants.tokenKey);
+  }
 
   static UserModel? getUser() {
     final data = _box.read(AppConstants.userKey);
@@ -23,10 +38,10 @@ class StorageService {
 
   static void clearUser() => _box.remove(AppConstants.userKey);
 
-  static bool get isLoggedIn => getToken() != null;
+  static bool get isLoggedIn => _cachedToken != null;
 
-  static void clearAll() {
-    _box.remove(AppConstants.tokenKey);
-    _box.remove(AppConstants.userKey);
+  static Future<void> clearAll() async {
+    await clearToken();
+    clearUser();
   }
 }

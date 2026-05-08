@@ -51,9 +51,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         }
       },
       child: Scaffold(
-        body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _screens[_currentIndex],
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
         ),
         bottomNavigationBar: _buildBottomNav(),
       ),

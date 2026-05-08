@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart' show Color;
 import 'package:get/get.dart' hide Response, FormData, MultipartFile;
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
+import '../utils/app_toast.dart';
 import 'storage_service.dart';
 
 class ApiService {
@@ -22,20 +22,11 @@ class ApiService {
         if (token != null) options.headers['Authorization'] = 'Bearer $token';
         handler.next(options);
       },
-      onError: (error, handler) {
+      onError: (error, handler) async {
         if (error.response?.statusCode == 401) {
-          StorageService.clearAll();
-          Get.snackbar(
-            'Session Expired',
-            'Another device signed in with your account.',
-            snackPosition: SnackPosition.TOP,
-            backgroundColor: const Color(0xFF1E3A8A),
-            colorText: const Color(0xFFFFFFFF),
-            duration: const Duration(seconds: 3),
-          );
-          Future.delayed(const Duration(milliseconds: 600), () {
-            Get.offAllNamed(AppRoutes.otp);
-          });
+          await StorageService.clearAll();
+          AppToast.info('Session expired. Please log in again.');
+          Get.offAllNamed(AppRoutes.otp);
         }
         handler.next(error);
       },

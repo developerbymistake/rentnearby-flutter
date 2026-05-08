@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
@@ -19,7 +20,10 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveClientMixin {
+// FIX #1 consequence: AutomaticKeepAliveClientMixin removed — IndexedStack in MainScreen
+// keeps this screen alive natively, so KeepAlive mixin is redundant.
+// FIX #6: TickerProviderStateMixin added for vsync-synced camera animation.
+class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateMixin {
   final _mapController = MapController();
   final _listingCtrl = Get.find<ListingController>();
   Worker? _districtsWorker;
@@ -31,29 +35,55 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   bool _locationLoading = true;
   bool _mapReady = false;
   int _currentPage = 1;
-  bool _animateCancelled = false;
   final _audioPlayer = AudioPlayer();
 
-  @override
-  bool get wantKeepAlive => true;
+  // FIX #6: AnimationController replaces manual Future.delayed loop.
+  // Synced to device display refresh rate (60/90/120 Hz), smooth easeInOut.
+  late AnimationController _cameraAnimController;
+  LatLng? _animFromCenter;
+  double? _animFromZoom;
+  LatLng? _animToCenter;
+  double? _animToZoom;
 
   @override
   void initState() {
     super.initState();
+    _cameraAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    )..addListener(_onCameraAnimTick);
+
     _districtsWorker = ever(_listingCtrl.districts, (_) => _tryAutoLoad());
     _initLocation();
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryAutoLoad());
   }
 
+  void _onCameraAnimTick() {
+    if (!_mapReady || !mounted) return;
+    if (_animFromCenter == null || _animToCenter == null) return;
+    final t = Curves.easeInOut.transform(_cameraAnimController.value);
+    _mapController.move(
+      LatLng(
+        _animFromCenter!.latitude + (_animToCenter!.latitude - _animFromCenter!.latitude) * t,
+        _animFromCenter!.longitude + (_animToCenter!.longitude - _animFromCenter!.longitude) * t,
+      ),
+      _animFromZoom! + (_animToZoom! - _animFromZoom!) * t,
+    );
+  }
+
   @override
   void dispose() {
     _districtsWorker?.dispose();
+    _cameraAnimController.dispose();
     _audioPlayer.dispose();
     super.dispose();
   }
 
+  // FIX #3 (race condition): Guard added — do not auto-select district until
+  // GPS is resolved. Prevents wrong district selection with null location.
   void _tryAutoLoad() {
     if (_selectedDistrict != null || _listingCtrl.districts.isEmpty) return;
+    if (_locationLoading) return;
     _autoLoad();
   }
 
@@ -61,7 +91,6 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     final district = _nearestDistrict();
     setState(() => _selectedDistrict = district);
     await _listingCtrl.loadCities(district.id);
-    // _selectedCity stays null → "Current" mode (use GPS as search center)
     _loadNearby();
   }
 
@@ -92,22 +121,46 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   Future<void> _initLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) { setState(() => _locationLoading = false); return; }
+      if (!serviceEnabled) {
+        setState(() => _locationLoading = false);
+        _tryAutoLoad();
+        return;
+      }
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) { setState(() => _locationLoading = false); return; }
+        if (permission == LocationPermission.denied) {
+          setState(() => _locationLoading = false);
+          _tryAutoLoad();
+          return;
+        }
       }
-      if (permission == LocationPermission.deniedForever) { setState(() => _locationLoading = false); return; }
+      if (permission == LocationPermission.deniedForever) {
+        setState(() => _locationLoading = false);
+        _tryAutoLoad();
+        return;
+      }
 
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.best),
-      );
+      // FIX #4: Use last known position instantly — map appears immediately
+      // without waiting for a fresh GPS fix (which can take 5–10 seconds cold).
+      final lastKnown = await Geolocator.getLastKnownPosition();
       setState(() {
-        _userLocation = LatLng(pos.latitude, pos.longitude);
+        if (lastKnown != null) {
+          _userLocation = LatLng(lastKnown.latitude, lastKnown.longitude);
+        }
         _locationLoading = false;
       });
+      if (_listingCtrl.districts.isNotEmpty && lastKnown != null) _tryAutoLoad();
+      if (_mapReady) _fitToRadius();
+
+      // FIX #3 (accuracy): LocationAccuracy.high uses network + GPS — resolves
+      // in <1 second vs LocationAccuracy.best which waits for satellite fix.
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      if (!mounted) return;
+      setState(() => _userLocation = LatLng(pos.latitude, pos.longitude));
 
       if (_listingCtrl.districts.isNotEmpty) {
         final nearest = _nearestDistrict();
@@ -121,6 +174,7 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
       if (_mapReady) _fitToRadius();
     } catch (_) {
       setState(() => _locationLoading = false);
+      _tryAutoLoad();
     }
   }
 
@@ -137,8 +191,9 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   void _fitToRadius() {
     if (!_mapReady || !mounted) return;
     final center = _searchCenter;
-    final degLat = _radius / 111.0;
-    final degLng = _radius / (111.0 * cos(center.latitude * pi / 180));
+    const extra = 0.10;
+    final degLat = (_radius / 111.0) * (1 + extra);
+    final degLng = (_radius / (111.0 * cos(center.latitude * pi / 180))) * (1 + extra);
     _mapController.fitCamera(
       CameraFit.bounds(
         bounds: LatLngBounds(
@@ -177,13 +232,13 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     if (_userLocation != null) {
       markers.add(Marker(
         point: _userLocation!,
-        width: 22, height: 22,
+        width: 16, height: 16,
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFE53935),
+            color: const Color(0xFF1E88E5),
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 3),
-            boxShadow: [BoxShadow(color: const Color(0xFFE53935).withOpacity(0.5), blurRadius: 10, spreadRadius: 3)],
+            border: Border.all(color: Colors.white, width: 2.5),
+            boxShadow: [BoxShadow(color: const Color(0xFF1E88E5).withOpacity(0.35), blurRadius: 8, spreadRadius: 2)],
           ),
         ),
       ));
@@ -197,31 +252,32 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
       final priceText = listing.priceMonthly != null ? _pinPrice(listing.priceMonthly!) : 'Call';
       markers.add(Marker(
         point: LatLng(listing.latitude, listing.longitude),
-        width: 100,
-        height: 32,
-        alignment: Alignment.center,
+        width: 36,
+        height: 56,
+        alignment: Alignment.bottomCenter,
         child: GestureDetector(
           onTap: () => _showDetail(listing.id),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(color: AppColors.primary.withOpacity(0.5), blurRadius: 6, offset: const Offset(0, 3)),
-                BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 2, offset: const Offset(0, 1)),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.home_rounded, size: 12, color: Colors.white),
-                const SizedBox(width: 4),
-                Text(priceText, style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white,
-                )),
-              ],
-            ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CustomPaint(
+                size: const Size(36, 56),
+                painter: _PinBodyPainter(color: AppColors.primary),
+              ),
+              Positioned(
+                top: 0, left: 0, right: 0, height: 36,
+                child: Center(
+                  child: Text(
+                    priceText,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins', fontSize: 9,
+                      fontWeight: FontWeight.w700, color: Colors.white, height: 1,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ));
@@ -277,29 +333,19 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
     return b != null ? CameraConstraint.containCenter(bounds: b) : const CameraConstraint.unconstrained();
   }
 
-  Future<void> _animateTo(LatLng target, double zoom) async {
+  // FIX #6: Replaced 24-frame Future.delayed loop with AnimationController.
+  // The controller calls _onCameraAnimTick() in sync with display refresh rate.
+  void _animateTo(LatLng target, double zoom) {
     if (!_mapReady || !mounted) return;
-    _animateCancelled = false;
-    final startCenter = _mapController.camera.center;
-    final startZoom = _mapController.camera.zoom;
-    const frames = 24;
-    for (var i = 1; i <= frames; i++) {
-      if (!mounted || _animateCancelled) return;
-      final t = Curves.easeInOut.transform(i / frames);
-      _mapController.move(
-        LatLng(
-          startCenter.latitude + (target.latitude - startCenter.latitude) * t,
-          startCenter.longitude + (target.longitude - startCenter.longitude) * t,
-        ),
-        startZoom + (zoom - startZoom) * t,
-      );
-      await Future.delayed(const Duration(milliseconds: 16));
-    }
+    _animFromCenter = _mapController.camera.center;
+    _animFromZoom = _mapController.camera.zoom;
+    _animToCenter = target;
+    _animToZoom = zoom;
+    _cameraAnimController.forward(from: 0);
   }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     return Scaffold(
       body: Stack(
         children: [
@@ -325,16 +371,19 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
                       _fitToRadius();
                     },
                     onPositionChanged: (_, hasGesture) {
-                      if (hasGesture) _animateCancelled = true;
+                      if (hasGesture) _cameraAnimController.stop();
                     },
                   ),
                   children: [
+                    // FIX #5: CachedTileProvider stores tiles on disk via flutter_cache_manager.
+                    // Previously tiles were re-fetched from network on every app open.
                     TileLayer(
                       urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                       userAgentPackageName: 'com.rentnearby.rentnearby',
                       maxNativeZoom: 18,
                       keepBuffer: 2,
                       panBuffer: 1,
+                      tileProvider: _CachedTileProvider(),
                       tileUpdateTransformer: TileUpdateTransformers.throttle(
                         const Duration(milliseconds: 150),
                       ),
@@ -481,29 +530,37 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   }
 
   Widget _buildRadiusChips() {
-    final radii = [1.0, 2.0, 5.0, 10.0];
+    final radii = [1.0, 4.0, 8.0];
     return Row(
-      children: radii.map((r) {
+      children: radii.asMap().entries.map((entry) {
+        final i = entry.key;
+        final r = entry.value;
         final active = _radius == r;
-        return GestureDetector(
-          onTap: () {
-            setState(() { _radius = r; _currentPage = 1; });
-            _loadNearby();
-            if (_mapReady) _fitToRadius();
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: active ? Colors.white : Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
+        return Expanded(
+          child: GestureDetector(
+            onTap: () {
+              _listingCtrl.nearbyListings.clear();
+              _listingCtrl.hasMoreNearby.value = false;
+              setState(() { _radius = r; _currentPage = 1; });
+              _loadNearby();
+              if (_mapReady) _fitToRadius();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: EdgeInsets.only(right: i < radii.length - 1 ? 8 : 0),
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              decoration: BoxDecoration(
+                color: active ? Colors.white : Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Center(
+                child: Text('${r.toInt()} km',
+                    style: TextStyle(
+                      fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600,
+                      color: active ? AppColors.primary : Colors.white,
+                    )),
+              ),
             ),
-            child: Text('${r.toInt() == r ? r.toInt() : r} km',
-                style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600,
-                  color: active ? AppColors.primary : Colors.white,
-                )),
           ),
         );
       }).toList(),
@@ -587,24 +644,43 @@ class _ExploreScreenState extends State<ExploreScreen> with AutomaticKeepAliveCl
   }
 }
 
+// FIX #2 (pin painter): Path cached as static final — computed once at class
+// load time instead of on every paint() call (was: Path.combine PathOperation.union
+// + 2 Path allocations per frame per pin = ~1800 heavy ops/sec with 30 pins at 60fps).
 class _PinBodyPainter extends CustomPainter {
   final Color color;
   const _PinBodyPainter({required this.color});
 
-  @override
-  void paint(Canvas canvas, Size size) {
+  static final ui.Path _pinPath = () {
     final circle = ui.Path()
       ..addOval(Rect.fromCircle(center: const Offset(18, 18), radius: 18));
     final spike = ui.Path()
       ..moveTo(10, 32)
-      ..lineTo(size.width / 2, size.height)
+      ..lineTo(18, 56)
       ..lineTo(26, 32)
       ..close();
-    final pin = ui.Path.combine(ui.PathOperation.union, circle, spike);
-    canvas.drawShadow(pin, Colors.black38, 4, true);
-    canvas.drawPath(pin, Paint()..color = color);
+    return ui.Path.combine(ui.PathOperation.union, circle, spike);
+  }();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawShadow(_pinPath, Colors.black38, 4, true);
+    canvas.drawPath(_pinPath, Paint()..color = color);
   }
 
   @override
   bool shouldRepaint(_PinBodyPainter old) => old.color != color;
+}
+
+// FIX #5: Tile disk cache using flutter_cache_manager (bundled with cached_network_image).
+// Tiles are stored on device and served from disk on subsequent sessions.
+// OSM User-Agent header required to comply with tile usage policy.
+class _CachedTileProvider extends TileProvider {
+  @override
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
+    return CachedNetworkImageProvider(
+      getTileUrl(coordinates, options),
+      headers: const {'User-Agent': 'RentNearBy/1.0 (Flutter; com.rentnearby.rentnearby)'},
+    );
+  }
 }

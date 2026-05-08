@@ -98,7 +98,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 280,
+          expandedHeight: 380,
           pinned: true,
           backgroundColor: AppColors.primary,
           leading: GestureDetector(
@@ -182,12 +182,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                       child: Text(l.priceDisplay,
                           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
                     ),
-                  if (l.pricePerDay != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text('₹${l.pricePerDay}/day',
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                    ),
                 ]),
               ]),
               if (l.ownerName != null && l.ownerName!.isNotEmpty) ...[
@@ -219,12 +213,30 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 const SizedBox(height: 8),
                 Text(l.description!, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium, height: 1.6)),
               ],
+              const SizedBox(height: 12),
+              Row(children: [
+                const Icon(Icons.access_time_rounded, size: 13, color: AppColors.textHint),
+                const SizedBox(width: 4),
+                Text('Posted ${_timeAgo(l.createdAt)}',
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
+              ]),
               const SizedBox(height: 20),
             ]),
           ),
         ),
       ],
     );
+  }
+
+  static String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().toUtc().difference(dt.toUtc());
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()} weeks ago';
+    if (diff.inDays < 365) return '${(diff.inDays / 30).floor()} months ago';
+    return '${(diff.inDays / 365).floor()} years ago';
   }
 
   Widget _buildWhatsAppBar() => Container(

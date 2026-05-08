@@ -6,7 +6,6 @@ class ListingModel {
   final String? title;
   final String? description;
   final int? priceMonthly;
-  final int? pricePerDay;
   final double latitude;
   final double longitude;
   final String? address;
@@ -28,7 +27,6 @@ class ListingModel {
     this.title,
     this.description,
     this.priceMonthly,
-    this.pricePerDay,
     required this.latitude,
     required this.longitude,
     this.address,
@@ -51,7 +49,6 @@ class ListingModel {
         title: json['title'],
         description: json['description'],
         priceMonthly: json['priceMonthly'],
-        pricePerDay: json['pricePerDay'],
         latitude: (json['latitude'] as num).toDouble(),
         longitude: (json['longitude'] as num).toDouble(),
         address: json['address'],
