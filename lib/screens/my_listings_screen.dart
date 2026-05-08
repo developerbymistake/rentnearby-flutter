@@ -47,7 +47,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                     Obx(() => Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text('${_ctrl.myListings.length} rooms',
@@ -88,7 +88,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 6))],
+          boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))],
         ),
         child: FloatingActionButton.extended(
           onPressed: _onAddRoom,
@@ -206,7 +206,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   Widget _buildShimmer() => ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: 4,
-        itemBuilder: (_, __) => Shimmer.fromColors(
+        itemBuilder: (context, idx) => Shimmer.fromColors(
           baseColor: AppColors.shimmerBase,
           highlightColor: AppColors.shimmerHighlight,
           child: Container(

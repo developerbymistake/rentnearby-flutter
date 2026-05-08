@@ -253,7 +253,7 @@ class _SplashScreenState extends State<SplashScreen>
               const Spacer(flex: 2),
               AnimatedBuilder(
                 animation: _logoController,
-                builder: (_, __) => Opacity(
+                builder: (context, child) => Opacity(
                   opacity: _logoOpacity.value,
                   child: Transform.scale(
                     scale: _logoScale.value,
@@ -261,10 +261,10 @@ class _SplashScreenState extends State<SplashScreen>
                       width: 100,
                       height: 100,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(28),
                         border: Border.all(
-                            color: Colors.white.withOpacity(0.3), width: 2),
+                            color: Colors.white.withValues(alpha: 0.3), width: 2),
                       ),
                       child: const Icon(Icons.location_on_rounded,
                           size: 52, color: Colors.white),
@@ -275,7 +275,7 @@ class _SplashScreenState extends State<SplashScreen>
               const SizedBox(height: 28),
               AnimatedBuilder(
                 animation: _textController,
-                builder: (_, __) => FadeTransition(
+                builder: (context, child) => FadeTransition(
                   opacity: _textOpacity,
                   child: SlideTransition(
                     position: _textSlide,
@@ -295,7 +295,7 @@ class _SplashScreenState extends State<SplashScreen>
                               fontFamily: 'Poppins',
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
-                              color: Colors.white.withOpacity(0.75),
+                              color: Colors.white.withValues(alpha: 0.75),
                               letterSpacing: 0.2,
                             )),
                       ],
@@ -306,7 +306,7 @@ class _SplashScreenState extends State<SplashScreen>
               const Spacer(flex: 2),
               AnimatedBuilder(
                 animation: _textController,
-                builder: (_, __) => Opacity(
+                builder: (context, child) => Opacity(
                   opacity: _textOpacity.value,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -326,12 +326,12 @@ class _SplashScreenState extends State<SplashScreen>
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.4, end: 1.0),
       duration: Duration(milliseconds: 600 + index * 200),
-      builder: (_, v, __) => Container(
+      builder: (context, v, child) => Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
         width: 8,
         height: 8,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(v),
+          color: Colors.white.withValues(alpha: v),
           shape: BoxShape.circle,
         ),
       ),

@@ -40,7 +40,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (_currentIndex != 0) {
           // Go back to Explore tab instead of closing app
@@ -61,27 +61,26 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildBottomNav() {
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),
         ],
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Row(
-            children: [
-              _navItem(0, Iconsax.map, Iconsax.map5, 'Explore'),
-              _navItem(1, Iconsax.building, Iconsax.building5, 'My Rooms'),
-              _navItem(2, Iconsax.user, Iconsax.user5, 'Profile'),
-            ],
-          ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + bottomInset),
+        child: Row(
+          children: [
+            _navItem(0, Iconsax.map, Iconsax.map5, 'Explore'),
+            _navItem(1, Iconsax.building, Iconsax.building5, 'My Rooms'),
+            _navItem(2, Iconsax.user, Iconsax.user5, 'Profile'),
+          ],
         ),
       ),
     );
@@ -98,7 +97,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           curve: Curves.easeInOut,
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isActive ? AppColors.primary.withOpacity(0.08) : Colors.transparent,
+            color: isActive ? AppColors.primary.withValues(alpha: 0.08) : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(

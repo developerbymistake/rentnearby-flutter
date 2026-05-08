@@ -240,7 +240,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             color: const Color(0xFF1E88E5),
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 2.5),
-            boxShadow: [BoxShadow(color: const Color(0xFF1E88E5).withOpacity(0.35), blurRadius: 8, spreadRadius: 2)],
+            boxShadow: [BoxShadow(color: const Color(0xFF1E88E5).withValues(alpha: 0.35), blurRadius: 8, spreadRadius: 2)],
           ),
         ),
       ));
@@ -398,8 +398,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           point: _searchCenter,
                           radius: _radius * 1000,
                           useRadiusInMeter: true,
-                          color: AppColors.primary.withOpacity(0.08),
-                          borderColor: AppColors.primary.withOpacity(0.7),
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderColor: AppColors.primary.withValues(alpha: 0.7),
                           borderStrokeWidth: 2,
                         ),
                       ]),
@@ -455,9 +455,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             ? Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.4)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Iconsax.location, color: Colors.white, size: 13),
@@ -515,9 +515,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.4)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(isCurrent ? Icons.my_location_rounded : Iconsax.map,
@@ -554,7 +554,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
               margin: EdgeInsets.only(right: i < radii.length - 1 ? 8 : 0),
               padding: const EdgeInsets.symmetric(vertical: 7),
               decoration: BoxDecoration(
-                color: active ? Colors.white : Colors.white.withOpacity(0.15),
+                color: active ? Colors.white : Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Center(
@@ -606,7 +606,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Center(

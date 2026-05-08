@@ -559,8 +559,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           point: _userLocation!,
                           radius: 1000,
                           useRadiusInMeter: true,
-                          color: AppColors.primary.withOpacity(0.08),
-                          borderColor: AppColors.primary.withOpacity(0.6),
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderColor: AppColors.primary.withValues(alpha: 0.6),
                           borderStrokeWidth: 1.5,
                         ),
                       ]),
@@ -574,7 +574,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                               color: const Color(0xFFE53935),
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 2.5),
-                              boxShadow: [BoxShadow(color: const Color(0xFFE53935).withOpacity(0.4), blurRadius: 6, spreadRadius: 2)],
+                              boxShadow: [BoxShadow(color: const Color(0xFFE53935).withValues(alpha: 0.4), blurRadius: 6, spreadRadius: 2)],
                             ),
                           ),
                         ),
@@ -588,7 +588,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                               decoration: BoxDecoration(
                                 color: AppColors.primary,
                                 shape: BoxShape.circle,
-                                boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 3))],
+                                boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 6, offset: const Offset(0, 3))],
                               ),
                               child: const Icon(Icons.home_rounded, color: Colors.white, size: 18),
                             ),
@@ -644,7 +644,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             else
               DropdownButtonFormField<String>(
                 key: ValueKey('district-${_ctrl.districts.length}'),
-                value: _selectedDistrictId,
+                initialValue: _selectedDistrictId,
                 decoration: _inputDec('Select your district', prefixIcon: const Icon(Iconsax.location, color: AppColors.primaryLight, size: 18)),
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
                 items: _ctrl.districts.map((d) => DropdownMenuItem(value: d.id,
@@ -662,7 +662,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             else
               DropdownButtonFormField<String>(
                 key: ValueKey('city-$_selectedDistrictId-${_ctrl.cities.length}'),
-                value: _selectedCityId,
+                initialValue: _selectedCityId,
                 decoration: _inputDec('Select city or area', prefixIcon: const Icon(Iconsax.map, color: AppColors.primaryLight, size: 18)),
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
                 items: _ctrl.cities.map((c) => DropdownMenuItem(value: c.id,
@@ -730,13 +730,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5,
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1.5,
                       style: BorderStyle.solid),
                 ),
                 child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Container(
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
                     child: const Icon(Icons.add_a_photo_rounded, color: AppColors.primary, size: 28),
                   ),
                   const SizedBox(height: 10),
@@ -782,7 +782,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.8),
+                          color: AppColors.primary.withValues(alpha: 0.8),
                           borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
                         ),
                         child: const Text('Cover', textAlign: TextAlign.center,

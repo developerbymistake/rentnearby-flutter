@@ -134,8 +134,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                         itemBuilder: (_, i) => CachedNetworkImage(
                           imageUrl: l.photos[i],
                           fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(color: AppColors.surface),
-                          errorWidget: (_, __, ___) => Container(
+                          placeholder: (ctx, url) => Container(color: AppColors.surface),
+                          errorWidget: (ctx, url, err) => Container(
                             color: AppColors.surface,
                             child: const Icon(Icons.broken_image_rounded, size: 48, color: AppColors.textHint),
                           ),
@@ -283,7 +283,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   Widget _tag(IconData icon, String label, {Color? color}) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: (color ?? AppColors.primary).withOpacity(0.1),
+          color: (color ?? AppColors.primary).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [

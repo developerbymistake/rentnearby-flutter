@@ -70,9 +70,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             return Container(
                               width: 64, height: 64,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.22),
+                                color: Colors.white.withValues(alpha: 0.22),
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 2),
                               ),
                               child: Center(
                                 child: initials.isNotEmpty

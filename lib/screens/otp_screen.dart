@@ -226,19 +226,21 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenH = MediaQuery.of(context).size.height;
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // Gradient header
+          // Gradient header — scales with screen height
           Container(
-            height: 300,
+            height: screenH * 0.42,
             decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
           ),
           SafeArea(
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  const SizedBox(height: 40),
+                  SizedBox(height: screenH * 0.05),
                   // Header
                   FadeInDown(
                     duration: const Duration(milliseconds: 600),
@@ -263,7 +265,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  SizedBox(height: screenH * 0.04),
                   // Card
                   FadeInUp(
                     duration: const Duration(milliseconds: 600),
