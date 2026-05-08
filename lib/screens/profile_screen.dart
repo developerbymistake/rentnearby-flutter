@@ -39,14 +39,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _shareApp() {
-    SharePlus.instance.share(
-      ShareParams(
-        text:
-            '🏠 RentNearBy — Find rooms near you!\n'
-            'No brokers. No commission. Just homes.\n\n'
-            'Download now: https://rentnearby.in',
-        subject: 'Check out RentNearBy!',
-      ),
+    Share.share(
+      '🏠 RentNearBy — Find rooms near you!\n'
+      'No brokers. No commission. Just homes.\n\n'
+      'Download now: https://rentnearby.in',
+      subject: 'Check out RentNearBy!',
     );
   }
 
