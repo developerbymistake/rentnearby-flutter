@@ -50,6 +50,9 @@ dependencies:
   # Toast notifications
   toastification: ^2.3.0
 
+  # OTP input
+  pinput: ^5.0.0
+
   # JWT decode
   jwt_decoder: ^2.0.1
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:pinput/pinput.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
@@ -16,8 +17,8 @@ class OtpScreen extends StatefulWidget {
 
 class _OtpScreenState extends State<OtpScreen> {
   final _phoneController = TextEditingController();
-  final _otpControllers = List.generate(4, (_) => TextEditingController());
-  final _otpFocusNodes = List.generate(4, (_) => FocusNode());
+  final _otpController = TextEditingController();
+  final _otpFocusNode = FocusNode();
   final _auth = Get.find<AuthController>();
   bool _otpSent = false;
   bool _agreed = false;
@@ -25,8 +26,8 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   void dispose() {
     _phoneController.dispose();
-    for (final c in _otpControllers) { c.dispose(); }
-    for (final f in _otpFocusNodes) { f.dispose(); }
+    _otpController.dispose();
+    _otpFocusNode.dispose();
     super.dispose();
   }
 
@@ -128,8 +129,8 @@ class _OtpScreenState extends State<OtpScreen> {
     if (ok) setState(() => _otpSent = true);
   }
 
-  Future<void> _verifyOtp() async {
-    final otp = _otpControllers.map((c) => c.text).join();
+  Future<void> _verifyOtp([String? pin]) async {
+    final otp = pin ?? _otpController.text;
     if (otp.length != 4) {
       AppToast.error('Enter the 4-digit OTP');
       return;
@@ -305,14 +306,6 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 
-  void _onOtpChanged(String value, int index) {
-    if (value.isNotEmpty && index < 3) {
-      _otpFocusNodes[index + 1].requestFocus();
-    } else if (value.isEmpty && index > 0) {
-      _otpFocusNodes[index - 1].requestFocus();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
@@ -477,76 +470,115 @@ class _OtpScreenState extends State<OtpScreen> {
         ],
       );
 
-  Widget _otpSection() => Column(
-        key: const ValueKey('otp'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  FocusScope.of(context).unfocus();
-                  for (final c in _otpControllers) { c.clear(); }
-                  setState(() => _otpSent = false);
-                },
-                child: const Icon(Icons.arrow_back_ios_rounded, size: 20, color: AppColors.primary),
-              ),
-              const SizedBox(width: 8),
-              const Text('Verify OTP',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark,
-                  )),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text('Sent to +91 ${_phoneController.text}',
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-          const SizedBox(height: 32),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(4, (i) => _otpBox(i)),
-          ),
-          const SizedBox(height: 32),
-          Obx(() => GradientButton(
-                onPressed: _auth.isLoading.value ? null : _verifyOtp,
-                isLoading: _auth.isLoading.value,
-                label: 'Verify & Login',
-              )),
-          const SizedBox(height: 20),
-          Center(
-            child: TextButton(
-              onPressed: _sendOtp,
-              child: const Text('Resend OTP',
-                  style: TextStyle(fontFamily: 'Poppins', color: AppColors.primary, fontWeight: FontWeight.w600)),
-            ),
-          ),
-        ],
-      );
+  Widget _otpSection() {
+    final screenW = MediaQuery.of(context).size.width;
+    final boxSize = ((screenW - 56 - 36) / 4).clamp(56.0, 72.0);
 
-  Widget _otpBox(int index) => SizedBox(
-        width: 58,
-        height: 58,
-        child: TextFormField(
-          controller: _otpControllers[index],
-          focusNode: _otpFocusNodes[index],
-          keyboardType: TextInputType.number,
-          textAlign: TextAlign.center,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(1)],
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.primary),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.surface,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+    final defaultTheme = PinTheme(
+      width: boxSize,
+      height: boxSize + 8,
+      textStyle: TextStyle(
+        fontFamily: 'Poppins',
+        fontSize: boxSize * 0.38,
+        fontWeight: FontWeight.w700,
+        color: AppColors.primary,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider, width: 1.5),
+      ),
+    );
+
+    final focusedTheme = defaultTheme.copyWith(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary, width: 2),
+        boxShadow: [
+          BoxShadow(color: AppColors.primary.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+    );
+
+    final submittedTheme = defaultTheme.copyWith(
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
+      ),
+    );
+
+    return Column(
+      key: const ValueKey('otp'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            GestureDetector(
+              onTap: () {
+                FocusScope.of(context).unfocus();
+                _otpController.clear();
+                setState(() => _otpSent = false);
+              },
+              child: const Icon(Icons.arrow_back_ios_rounded, size: 20, color: AppColors.primary),
             ),
-            contentPadding: EdgeInsets.zero,
-          ),
-          onChanged: (v) => _onOtpChanged(v, index),
+            const SizedBox(width: 8),
+            const Text('Verify OTP',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textDark,
+                )),
+          ],
         ),
-      );
+        const SizedBox(height: 6),
+        Text('Sent to +91 ${_phoneController.text}',
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+        const SizedBox(height: 28),
+        Center(
+          child: Pinput(
+            length: 4,
+            controller: _otpController,
+            focusNode: _otpFocusNode,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            defaultPinTheme: defaultTheme,
+            focusedPinTheme: focusedTheme,
+            submittedPinTheme: submittedTheme,
+            cursor: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 9),
+                  width: 22, height: 2,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ],
+            ),
+            onCompleted: (pin) => _verifyOtp(pin),
+          ),
+        ),
+        const SizedBox(height: 28),
+        Obx(() => GradientButton(
+              onPressed: _auth.isLoading.value ? null : () => _verifyOtp(),
+              isLoading: _auth.isLoading.value,
+              label: 'Verify & Login',
+            )),
+        const SizedBox(height: 16),
+        Center(
+          child: TextButton(
+            onPressed: _sendOtp,
+            child: const Text('Resend OTP',
+                style: TextStyle(fontFamily: 'Poppins', color: AppColors.primary, fontWeight: FontWeight.w600)),
+          ),
+        ),
+      ],
+    );
+  }
 }
