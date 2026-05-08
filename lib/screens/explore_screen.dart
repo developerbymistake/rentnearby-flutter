@@ -252,48 +252,29 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       final priceText = listing.priceMonthly != null ? _pinPrice(listing.priceMonthly!) : 'Call';
       markers.add(Marker(
         point: LatLng(listing.latitude, listing.longitude),
-        width: 72,
-        height: 78,
+        width: 52,
+        height: 64,
         alignment: Alignment.bottomCenter,
         child: GestureDetector(
           onTap: () => _showDetail(listing.id),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              // Price bubble
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))],
-                ),
-                child: Text(
-                  priceText,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 13,
-                    fontWeight: FontWeight.w700, color: Colors.white,
-                  ),
-                ),
+              CustomPaint(
+                size: const Size(52, 64),
+                painter: _PinBodyPainter(color: AppColors.primary),
               ),
-              const SizedBox(height: 3),
-              // Pin with home icon
-              SizedBox(
-                width: 38, height: 50,
-                child: Stack(
-                  children: [
-                    CustomPaint(
-                      size: const Size(38, 50),
-                      painter: _PinBodyPainter(color: AppColors.primary),
+              Positioned(
+                top: 0, left: 0, right: 0, height: 42,
+                child: Center(
+                  child: Text(
+                    priceText,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins', fontSize: 11,
+                      fontWeight: FontWeight.w700, color: Colors.white, height: 1.1,
                     ),
-                    const Positioned(
-                      top: 0, left: 0, right: 0, bottom: 14,
-                      child: Center(
-                        child: Icon(Icons.home_rounded, color: Colors.white, size: 18),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -672,11 +653,11 @@ class _PinBodyPainter extends CustomPainter {
 
   static final ui.Path _pinPath = () {
     final circle = ui.Path()
-      ..addOval(Rect.fromCircle(center: const Offset(19, 17), radius: 17));
+      ..addOval(Rect.fromCircle(center: const Offset(26, 22), radius: 22));
     final spike = ui.Path()
-      ..moveTo(10, 28)
-      ..lineTo(19, 50)
-      ..lineTo(28, 28)
+      ..moveTo(14, 38)
+      ..lineTo(26, 64)
+      ..lineTo(38, 38)
       ..close();
     return ui.Path.combine(ui.PathOperation.union, circle, spike);
   }();
