@@ -81,12 +81,43 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     launchUrl(mapsUrl, mode: LaunchMode.externalApplication);
   }
 
+  static IconData _roomTypeIcon(String? type) {
+    switch (type?.toLowerCase()) {
+      case 'pg': return Icons.people_alt_rounded;
+      case 'hostel': return Icons.hotel_rounded;
+      case '1rk': return Icons.single_bed_rounded;
+      default: return Icons.apartment_rounded;
+    }
+  }
+
+  Widget _buildTitle(ListingModel l) {
+    const fs = 22.0;
+    if (l.title != null && l.title!.isNotEmpty) {
+      return Text(l.title!,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: fs, fontWeight: FontWeight.w700, color: AppColors.textDark));
+    }
+    return Row(children: [
+      Icon(_roomTypeIcon(l.roomTypeName), size: fs, color: AppColors.primary),
+      const SizedBox(width: 8),
+      Text(l.roomTypeName ?? 'Room',
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: fs, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+    ]);
+  }
+
+  String _locationStr(ListingModel l) {
+    final parts = [l.cityName, l.districtName]
+        .where((s) => s != null && s.isNotEmpty)
+        .cast<String>()
+        .toList();
+    return parts.join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: _loading ? _buildLoader() : _buildContent(),
-      bottomNavigationBar: _loading || _listing == null ? null : _buildWhatsAppBar(),
+      bottomNavigationBar: _loading || _listing == null ? null : _buildActionBar(),
     );
   }
 
@@ -105,7 +136,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             onTap: () => Get.back(),
             child: Container(
               margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+              decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
               child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
             ),
           ),
@@ -115,7 +146,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               child: Container(
                 margin: const EdgeInsets.all(8),
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+                decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
                 child: const Icon(Icons.delete_rounded, color: Colors.white, size: 20),
               ),
             ),
@@ -141,7 +172,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                           ),
                         ),
                       ),
-                      // Photo dots
                       if (l.photos.length > 1)
                         Positioned(
                           bottom: 16, left: 0, right: 0,
@@ -170,50 +200,71 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               // Title + price
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
-                  child: Text(l.title ?? 'Room for Rent',
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  child: _buildTitle(l),
                 ),
                 const SizedBox(width: 12),
-                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  if (l.priceMonthly != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(10)),
-                      child: Text(l.priceDisplay,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
-                    ),
-                ]),
+                if (l.priceMonthly != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(10)),
+                    child: Text(l.priceDisplay,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
               ]),
-              if (l.ownerName != null && l.ownerName!.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Row(children: [
-                  const Icon(Icons.person_rounded, size: 14, color: AppColors.primaryLight),
-                  const SizedBox(width: 6),
-                  Text(l.ownerName!,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-                ]),
-              ],
               const SizedBox(height: 16),
-              // Tags
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                _tag(Icons.home_rounded, l.roomTypeName ?? 'Room'),
-                if (l.districtName != null) _tag(Iconsax.location, l.districtName!),
-                if (l.cityName != null) _tag(Icons.place_outlined, l.cityName!),
-                _tag(l.isActive ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                    l.isActive ? 'Available' : 'Not Available',
-                    color: l.isActive ? AppColors.success : AppColors.error),
-              ]),
-              if (l.address != null) ...[
-                const SizedBox(height: 20),
-                _infoRow(Iconsax.location5, 'Address', l.address!),
-              ],
+
+              // Info card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
+                ),
+                child: Column(children: [
+                  // Room type row
+                  _infoRow(
+                    Icons.bed_rounded,
+                    'Room Type',
+                    l.roomTypeName ?? 'Room',
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Divider(height: 1, color: AppColors.divider),
+                  ),
+                  // Owner row
+                  if (l.ownerName != null && l.ownerName!.isNotEmpty) ...[
+                    _infoRow(Icons.person_rounded, 'Owner', l.ownerName!),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(height: 1, color: AppColors.divider),
+                    ),
+                  ],
+                  // Location row (city + district combined)
+                  if (_locationStr(l).isNotEmpty)
+                    _infoRow(Iconsax.location, 'Location', _locationStr(l)),
+                  // Address row
+                  if (l.address != null && l.address!.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(height: 1, color: AppColors.divider),
+                    ),
+                    _infoRow(Iconsax.location5, 'Address', l.address!),
+                  ],
+                ]),
+              ),
+
+              // Description
               if (l.description != null && l.description!.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                const Text('About this room', style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                const SizedBox(height: 24),
+                const Text('About this room',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                 const SizedBox(height: 8),
-                Text(l.description!, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium, height: 1.6)),
+                Text(l.description!,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium, height: 1.6)),
               ],
-              const SizedBox(height: 12),
+
+              const SizedBox(height: 16),
               Row(children: [
                 const Icon(Icons.access_time_rounded, size: 13, color: AppColors.textHint),
                 const SizedBox(width: 4),
@@ -239,7 +290,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     return '${(diff.inDays / 365).floor()} years ago';
   }
 
-  Widget _buildWhatsAppBar() => Container(
+  Widget _buildActionBar() => Container(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -247,11 +298,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         ),
         child: Row(children: [
           Expanded(
+            flex: 3,
             child: ElevatedButton.icon(
               onPressed: _checkDistance,
               icon: const Icon(Icons.near_me_rounded, size: 20),
-              label: const Text('Distance',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+              label: const Text('Get Directions',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -263,11 +315,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           ),
           const SizedBox(width: 12),
           Expanded(
+            flex: 2,
             child: ElevatedButton.icon(
               onPressed: _call,
               icon: const Icon(Icons.call_rounded, size: 20),
-              label: const Text('Call Owner',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+              label: const Text('Call',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2E7D32),
                 foregroundColor: Colors.white,
@@ -280,28 +333,25 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         ]),
       );
 
-  Widget _tag(IconData icon, String label, {Color? color}) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: (color ?? AppColors.primary).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 14, color: color ?? AppColors.primary),
-          const SizedBox(width: 5),
-          Text(label, style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: color ?? AppColors.primary)),
-        ]),
-      );
-
-  Widget _infoRow(IconData icon, String label, String value) => Row(
+  Widget _infoRow(IconData icon, String label, String value, {Color? valueColor, Color? iconColor}) => Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: AppColors.primaryLight),
-          const SizedBox(width: 10),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-            Text(value, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark)),
-          ])),
+          Icon(icon, size: 18, color: iconColor ?? AppColors.primaryLight),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+              const SizedBox(height: 2),
+              Text(value,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: valueColor ?? AppColors.textDark,
+                  )),
+            ]),
+          ),
         ],
       );
 }

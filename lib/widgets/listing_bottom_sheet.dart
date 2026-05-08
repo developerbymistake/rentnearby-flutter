@@ -37,6 +37,37 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
     if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
+  static IconData _roomTypeIcon(String? type) {
+    switch (type?.toLowerCase()) {
+      case 'pg': return Icons.people_alt_rounded;
+      case 'hostel': return Icons.hotel_rounded;
+      case '1rk': return Icons.single_bed_rounded;
+      default: return Icons.apartment_rounded;
+    }
+  }
+
+  Widget _buildTitle(ListingModel l) {
+    const fs = 18.0;
+    if (l.title != null && l.title!.isNotEmpty) {
+      return Text(l.title!,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: fs, fontWeight: FontWeight.w700, color: AppColors.textDark));
+    }
+    return Row(children: [
+      Icon(_roomTypeIcon(l.roomTypeName), size: fs, color: AppColors.primary),
+      const SizedBox(width: 6),
+      Text(l.roomTypeName ?? 'Room',
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: fs, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+    ]);
+  }
+
+  String _locationStr(ListingModel l) {
+    final parts = [l.cityName, l.districtName]
+        .where((s) => s != null && s.isNotEmpty)
+        .cast<String>()
+        .toList();
+    return parts.join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -64,7 +95,6 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Handle bar
         Container(
           width: 40, height: 4,
           margin: const EdgeInsets.only(top: 12, bottom: 16),
@@ -91,14 +121,13 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
                             imageUrl: l.photos[i],
                             fit: BoxFit.cover,
                             width: double.infinity,
-                            placeholder: (_, __) => Container(color: AppColors.surface),
-                            errorWidget: (_, __, ___) => Container(
+                            placeholder: (context, _) => Container(color: AppColors.surface),
+                            errorWidget: (context, _, err) => Container(
                               decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
                               child: const Center(child: Icon(Icons.broken_image_rounded, size: 40, color: Colors.white38)),
                             ),
                           ),
                         ),
-                        // Photo count badge
                         if (l.photos.length > 1)
                           Positioned(
                             top: 10, right: 10,
@@ -109,7 +138,6 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
                                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600)),
                             ),
                           ),
-                        // Dots
                         if (l.photos.length > 1)
                           Positioned(
                             bottom: 10, left: 0, right: 0,
@@ -133,39 +161,17 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
           ),
         ),
         const SizedBox(height: 16),
-        // Content
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Title + price
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l.title ?? 'Room for Rent',
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                        if (l.ownerName != null && l.ownerName!.isNotEmpty) ...[
-                          const SizedBox(height: 3),
-                          Row(children: [
-                            const Icon(Icons.person_rounded, size: 13, color: AppColors.primaryLight),
-                            const SizedBox(width: 4),
-                            Text(l.ownerName!,
-                                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                          ]),
-                        ],
-                      ],
-                    ),
+                    child: _buildTitle(l),
                   ),
                   const SizedBox(width: 12),
                   if (l.priceMonthly != null)
@@ -187,31 +193,78 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8, runSpacing: 6,
-                children: [
-                  if (l.roomTypeName != null) _tag(Icons.home_rounded, l.roomTypeName!),
-                  if (l.districtName != null) _tag(Iconsax.location, l.districtName!),
-                  if (l.cityName != null) _tag(Icons.place_outlined, l.cityName!),
-                ],
-              ),
-              if (l.address != null) ...[
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Icon(Iconsax.location5, size: 14, color: AppColors.primaryLight),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        l.address!,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 12),
+              // Room type + availability
+              Row(children: [
+                const Icon(Icons.bed_rounded, size: 15, color: AppColors.primaryLight),
+                const SizedBox(width: 6),
+                Text(
+                  l.roomTypeName ?? 'Room',
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
                 ),
+                const Spacer(),
+                Container(
+                  width: 7, height: 7,
+                  decoration: BoxDecoration(
+                    color: l.isActive ? AppColors.success : AppColors.error,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  l.isActive ? 'Available' : 'Not Available',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: l.isActive ? AppColors.success : AppColors.error,
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 8),
+              // Owner
+              if (l.ownerName != null && l.ownerName!.isNotEmpty) ...[
+                Row(children: [
+                  const Icon(Icons.person_rounded, size: 14, color: AppColors.textHint),
+                  const SizedBox(width: 6),
+                  Text(l.ownerName!,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                ]),
+                const SizedBox(height: 6),
+              ],
+              // Single location line
+              if (_locationStr(l).isNotEmpty) ...[
+                Row(children: [
+                  const Icon(Iconsax.location, size: 14, color: AppColors.textLight),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _locationStr(l),
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 6),
+              ],
+              // Address
+              if (l.address != null && l.address!.isNotEmpty) ...[
+                Row(children: [
+                  const Icon(Iconsax.location5, size: 14, color: AppColors.textHint),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      l.address!,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ]),
               ],
               const SizedBox(height: 20),
               Row(
@@ -257,26 +310,4 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
       ],
     );
   }
-
-  Widget _tag(IconData icon, String label) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 12, color: AppColors.primary),
-            const SizedBox(width: 4),
-            Text(label,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.primary,
-                )),
-          ],
-        ),
-      );
 }

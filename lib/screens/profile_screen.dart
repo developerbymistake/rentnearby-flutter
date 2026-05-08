@@ -42,7 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Share.share(
       '🏠 Bakhli — Find rooms near you!\n'
       'No brokers. No commission. Just homes.\n\n'
-      'Download: https://bakhli.in',
+      'Download: https://google.com',
       subject: 'Check out Bakhli!',
     );
   }

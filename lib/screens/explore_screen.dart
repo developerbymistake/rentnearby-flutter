@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -27,6 +28,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   final _listingCtrl = Get.find<ListingController>();
   Worker? _districtsWorker;
   Worker? _postedWorker;
+  Worker? _loadingWorker;
   List<Marker> _markers = [];
   LatLng? _userLocation;
   double _radius = 1.0;
@@ -37,6 +39,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   bool _checkingPermission = false;
   int _currentPage = 1;
   final _audioPlayer = AudioPlayer();
+  int _revealedCount = 0;
+  Timer? _revealTimer;
+  late AnimationController _radarController;
 
   // FIX #6: AnimationController replaces manual Future.delayed loop.
   // Synced to device display refresh rate (60/90/120 Hz), smooth easeInOut.
@@ -54,9 +59,20 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       duration: const Duration(milliseconds: 400),
     )..addListener(_onCameraAnimTick);
 
+    _radarController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+
     WidgetsBinding.instance.addObserver(this);
     _districtsWorker = ever(_listingCtrl.districts, (_) => _tryAutoLoad());
     _postedWorker = ever(_listingCtrl.listingPostedTrigger, (_) => _loadNearby());
+    _loadingWorker = ever(_listingCtrl.isLoading, (loading) {
+      if (!loading && _radarController.isAnimating) {
+        _radarController.stop();
+        _radarController.reset();
+      }
+    });
     _initLocation();
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryAutoLoad());
   }
@@ -79,14 +95,23 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     WidgetsBinding.instance.removeObserver(this);
     _districtsWorker?.dispose();
     _postedWorker?.dispose();
+    _loadingWorker?.dispose();
     _cameraAnimController.dispose();
+    _radarController.dispose();
+    _revealTimer?.cancel();
     _audioPlayer.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _checkPermissionOnResume();
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissionOnResume();
+      if (!_listingCtrl.isLoading.value && _radarController.isAnimating) {
+        _radarController.stop();
+        _radarController.reset();
+      }
+    }
   }
 
   Future<void> _checkPermissionOnResume() async {
@@ -266,11 +291,22 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
   Future<void> _loadNearby({bool reset = true}) async {
     if (_selectedDistrict == null) return;
+    if (reset) {
+      _revealTimer?.cancel();
+      _markers = [];
+      _revealedCount = 0;
+      _radarController.repeat();
+      setState(() {});
+    }
     final wasEmpty = _listingCtrl.nearbyListings.isEmpty;
     if (reset) _currentPage = 1;
     final center = _searchCenter;
     await _listingCtrl.loadNearby(center.latitude, center.longitude, _radius, _selectedDistrict!.id, page: _currentPage);
-    _buildMarkers();
+    if (reset) {
+      _radarController.stop();
+      _radarController.reset();
+    }
+    _buildMarkers(animate: reset);
     if (reset && wasEmpty && _listingCtrl.nearbyListings.isNotEmpty) _playTing();
   }
 
@@ -284,7 +320,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     await _loadNearby(reset: false);
   }
 
-  void _buildMarkers() {
+  void _buildMarkers({bool animate = true}) {
     final markers = <Marker>[];
 
     if (_userLocation != null) {
@@ -316,23 +352,25 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         alignment: Alignment.center,
         child: GestureDetector(
           onTap: () => _showDetail(listing.id),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(17),
-              border: Border.all(color: AppColors.primary, width: 2),
-              boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                priceText,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
+          child: _AnimatedPin(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(17),
+                border: Border.all(color: AppColors.primary, width: 2),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  priceText,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ),
@@ -341,7 +379,27 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       ));
     }
 
-    setState(() => _markers = markers);
+    _revealTimer?.cancel();
+    _markers = markers;
+
+    if (!animate || markers.isEmpty) {
+      setState(() => _revealedCount = markers.length);
+      return;
+    }
+
+    final userCount = _userLocation != null ? 1 : 0;
+    _revealedCount = userCount;
+    setState(() {});
+
+    if (markers.length <= userCount) return;
+
+    int i = userCount;
+    _revealTimer = Timer.periodic(const Duration(milliseconds: 150), (timer) {
+      if (!mounted) { timer.cancel(); return; }
+      i++;
+      setState(() => _revealedCount = i);
+      if (i >= markers.length) timer.cancel();
+    });
   }
 
   double _chipWidth(String text) => (text.length * 9.0 + 26).clamp(52.0, 90.0);
@@ -459,10 +517,27 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           borderStrokeWidth: 2,
                         ),
                       ]),
-                    MarkerLayer(markers: _markers),
+                    MarkerLayer(markers: _markers.take(_revealedCount).toList()),
                   ],
                 ),
               ),
+
+          Obx(() {
+            if (!_listingCtrl.isLoading.value || !_mapReady) return const SizedBox();
+            return Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _radarController,
+                  builder: (context, _) => CustomPaint(
+                    painter: _RadarPainter(
+                      progress: _radarController.value,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
 
           Positioned(
             top: 0, left: 0, right: 0,
@@ -704,6 +779,66 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 }
 
+
+class _AnimatedPin extends StatefulWidget {
+  final Widget child;
+  const _AnimatedPin({required this.child});
+  @override
+  State<_AnimatedPin> createState() => _AnimatedPinState();
+}
+
+class _AnimatedPinState extends State<_AnimatedPin> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ScaleTransition(scale: _scale, child: widget.child);
+}
+
+class _RadarPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+
+  const _RadarPainter({required this.progress, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxRadius = size.shortestSide * 0.42;
+
+    for (int i = 0; i < 3; i++) {
+      final p = (progress + i / 3.0) % 1.0;
+      final radius = maxRadius * p;
+      final opacity = (1.0 - p) * 0.5;
+      if (opacity <= 0) continue;
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..color = color.withValues(alpha: opacity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RadarPainter old) => old.progress != progress;
+}
 
 // FIX #5: Tile disk cache using flutter_cache_manager (bundled with cached_network_image).
 // Tiles are stored on device and served from disk on subsequent sessions.

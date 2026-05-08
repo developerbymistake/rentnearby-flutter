@@ -51,6 +51,7 @@ class AuthController extends GetxController {
   }
 
   Future<void> logout() async {
+    isLoading.value = false;
     try {
       await ApiService.post('/auth/logout', {});
     } catch (_) {}

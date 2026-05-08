@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -19,6 +21,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   int _currentIndex = 0;
   late AnimationController _navController;
   final _auth = Get.find<AuthController>();
+  bool _isOffline = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
   final _screens = const [ExploreScreen(), MyListingsScreen(), ProfileScreen()];
 
@@ -28,10 +32,23 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     _navController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     Get.put(ListingController());
     ever(_auth.tabIndex, (i) => setState(() => _currentIndex = i));
+    _initConnectivity();
+  }
+
+  void _initConnectivity() {
+    Connectivity().checkConnectivity().then((results) {
+      if (!mounted) return;
+      setState(() => _isOffline = results.every((r) => r == ConnectivityResult.none));
+    });
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
+      if (!mounted) return;
+      setState(() => _isOffline = results.every((r) => r == ConnectivityResult.none));
+    });
   }
 
   @override
   void dispose() {
+    _connectivitySub?.cancel();
     _navController.dispose();
     super.dispose();
   }
@@ -51,9 +68,37 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         }
       },
       child: Scaffold(
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _screens,
+        body: Column(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeInOut,
+              height: _isOffline ? MediaQuery.of(context).padding.top + 36 : 0,
+              color: const Color(0xFFC62828),
+              child: Padding(
+                padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.wifi_off_rounded, color: Colors.white, size: 14),
+                    SizedBox(width: 8),
+                    Text('No internet connection',
+                        style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white)),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: IndexedStack(
+                index: _currentIndex,
+                children: _screens,
+              ),
+            ),
+          ],
         ),
         bottomNavigationBar: _buildBottomNav(),
       ),

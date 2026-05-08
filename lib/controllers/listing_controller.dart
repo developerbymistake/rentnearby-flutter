@@ -56,7 +56,8 @@ class ListingController extends GetxController {
         nearbyListings.addAll(items);
       }
       hasMoreNearby.value = res['hasMore'] == true;
-    } catch (_) {
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not load nearby rooms.'));
     } finally {
       isLoading.value = false;
     }
@@ -77,7 +78,16 @@ class ListingController extends GetxController {
     try {
       final res = await ApiService.get('/listings/$id');
       return ListingModel.fromJson(res['data']);
-    } catch (_) {
+    } catch (e) {
+      if (e is DioException) {
+        if (e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout ||
+            e.type == DioExceptionType.connectionError) {
+          AppToast.error('No internet connection. Please check your network.');
+        } else if (e.response?.statusCode != 404) {
+          AppToast.error('Could not load room. Please try again.');
+        }
+      }
       return null;
     }
   }
