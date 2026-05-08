@@ -62,62 +62,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     // Centered avatar + name
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 36),
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                       child: Column(
                         children: [
                           Obx(() {
                             final initials = _initials(_auth.user.value?.name);
                             return Container(
-                              width: 86, height: 86,
+                              width: 66, height: 66,
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.22),
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white.withOpacity(0.6), width: 2.5),
+                                border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
                               ),
                               child: Center(
                                 child: initials.isNotEmpty
                                     ? Text(initials,
                                         style: const TextStyle(
                                             fontFamily: 'Poppins',
-                                            fontSize: 32,
+                                            fontSize: 24,
                                             fontWeight: FontWeight.w700,
                                             color: Colors.white))
-                                    : const Icon(Iconsax.user5, size: 40, color: Colors.white),
+                                    : const Icon(Iconsax.user5, size: 32, color: Colors.white),
                               ),
                             );
                           }),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 10),
                           Obx(() => Text(
                             _auth.user.value?.name?.trim().isNotEmpty == true
                                 ? _auth.user.value!.name!.trim()
                                 : 'Your Profile',
                             style: const TextStyle(
                                 fontFamily: 'Poppins',
-                                fontSize: 20,
+                                fontSize: 17,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white),
                             textAlign: TextAlign.center,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           )),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Obx(() => Text(
                             '+91 ${_auth.user.value?.phoneNumber ?? ''}',
                             style: const TextStyle(
-                                fontFamily: 'Poppins', fontSize: 15, color: Colors.white70),
+                                fontFamily: 'Poppins', fontSize: 13, color: Colors.white70),
                           )),
                           Obx(() => _auth.user.value?.isAdmin == true
                               ? Padding(
-                                  padding: const EdgeInsets.only(top: 12),
+                                  padding: const EdgeInsets.only(top: 8),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
                                     decoration: BoxDecoration(
                                         color: AppColors.accent,
                                         borderRadius: BorderRadius.circular(20)),
                                     child: const Text('Admin',
                                         style: TextStyle(
                                             fontFamily: 'Poppins',
-                                            fontSize: 13,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.w600,
                                             color: Colors.white)),
                                   ),
@@ -196,25 +196,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Footer
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-              child: Column(children: [
-                Divider(color: AppColors.divider.withOpacity(0.6), thickness: 1),
-                const SizedBox(height: 14),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Text('Made with ',
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
-                  const Icon(Icons.favorite_rounded, color: Color(0xFFE53935), size: 13),
-                  const Text(' for renters who hate broker fees',
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
-                ]),
-                const SizedBox(height: 4),
-                const Text('RentNearBy · v1.0.0',
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const Text('Made by Dev ',
                     style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 11,
-                        color: AppColors.textHint,
-                        letterSpacing: 0.4)),
+                        fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
+                const Icon(Icons.favorite_rounded, color: Color(0xFFE53935), size: 13),
               ]),
             ),
           ],
