@@ -22,7 +22,7 @@ class ExploreScreen extends StatefulWidget {
 // FIX #1 consequence: AutomaticKeepAliveClientMixin removed — IndexedStack in MainScreen
 // keeps this screen alive natively, so KeepAlive mixin is redundant.
 // FIX #6: TickerProviderStateMixin added for vsync-synced camera animation.
-class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateMixin {
+class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
   final _mapController = MapController();
   final _listingCtrl = Get.find<ListingController>();
   Worker? _districtsWorker;
@@ -34,6 +34,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   CityModel? _selectedCity;
   bool _locationLoading = true;
   bool _mapReady = false;
+  bool _checkingPermission = false;
   int _currentPage = 1;
   final _audioPlayer = AudioPlayer();
 
@@ -53,6 +54,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       duration: const Duration(milliseconds: 400),
     )..addListener(_onCameraAnimTick);
 
+    WidgetsBinding.instance.addObserver(this);
     _districtsWorker = ever(_listingCtrl.districts, (_) => _tryAutoLoad());
     _postedWorker = ever(_listingCtrl.listingPostedTrigger, (_) => _loadNearby());
     _initLocation();
@@ -74,11 +76,65 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _districtsWorker?.dispose();
     _postedWorker?.dispose();
     _cameraAnimController.dispose();
     _audioPlayer.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _checkPermissionOnResume();
+  }
+
+  Future<void> _checkPermissionOnResume() async {
+    // Guard: prevent concurrent checks and dialog stacking if user
+    // backgrounds the app while the dialog is already showing.
+    if (_checkingPermission) return;
+    _checkingPermission = true;
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (!mounted) return;
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        if (_userLocation == null && !_locationLoading) _initLocation();
+        return;
+      }
+      // Permission was revoked mid-session — block with dialog.
+      // When user returns from Settings, resumed fires again and re-checks.
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('Location Required',
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+            content: const Text(
+                'Bakhli needs location access to show rooms near you. Please enable it in Settings.',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Geolocator.openAppSettings();
+                },
+                child: const Text('Open Settings',
+                    style: TextStyle(
+                        fontFamily: 'Poppins',
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      );
+    } finally {
+      _checkingPermission = false;
+    }
   }
 
   // FIX #3 (race condition): Guard added — do not auto-select district until
@@ -383,7 +439,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                     // Previously tiles were re-fetched from network on every app open.
                     TileLayer(
                       urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.rentnearby.rentnearby',
+                      userAgentPackageName: 'com.bakhli.app',
                       maxNativeZoom: 18,
                       keepBuffer: 2,
                       panBuffer: 1,
@@ -420,7 +476,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                     Row(children: [
                       const Icon(Icons.location_on_rounded, color: Colors.white, size: 22),
                       const SizedBox(width: 6),
-                      const Text('RentNearBy',
+                      const Text('Bakhli',
                           style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
                       const Spacer(),
                       _buildCityDropdown(),
@@ -657,7 +713,7 @@ class _CachedTileProvider extends TileProvider {
   ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
     return CachedNetworkImageProvider(
       getTileUrl(coordinates, options),
-      headers: const {'User-Agent': 'RentNearBy/1.0 (Flutter; com.rentnearby.rentnearby)'},
+      headers: const {'User-Agent': 'Bakhli/1.0 (Flutter; com.bakhli.app)'},
     );
   }
 }

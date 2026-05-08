@@ -73,8 +73,14 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigate() async {
-    await _ensureLocationPermission();
-    if (!mounted || _waitingForSettings) return;
+    // Hard block: never navigate anywhere without location permission.
+    while (true) {
+      final granted = await _ensureLocationPermission();
+      if (!mounted) return;
+      if (_waitingForSettings) return; // lifecycle observer resumes on app return
+      if (granted) break;
+      // denied (not forever): explanation dialog was shown, loop re-requests
+    }
 
     final isSupported = await _checkDistrictSupport();
     if (!mounted || !isSupported) return;
@@ -86,64 +92,68 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
-  Future<void> _ensureLocationPermission() async {
+  // Returns true = granted, false = denied (dialog shown; caller should retry or stop).
+  Future<bool> _ensureLocationPermission() async {
     LocationPermission permission = await Geolocator.checkPermission();
+
+    if (_isGranted(permission)) return true;
 
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
+      if (_isGranted(permission)) return true;
     }
 
     if (permission == LocationPermission.deniedForever) {
-      if (!mounted) return;
+      if (!mounted) return false;
       await showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Location Required',
-              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          content: const Text(
-              'RentNearBy needs location access to show rooms near you. Please enable it in Settings.',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _waitingForSettings = true;
-                Geolocator.openAppSettings();
-              },
-              child: const Text('Open Settings',
-                  style: TextStyle(
-                      fontFamily: 'Poppins',
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600)),
-            ),
-          ],
+        builder: (_) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('Location Required',
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+            content: const Text(
+                'Bakhli needs location access to show rooms near you. Please enable it in Settings.',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _waitingForSettings = true;
+                  Geolocator.openAppSettings();
+                },
+                child: const Text('Open Settings',
+                    style: TextStyle(
+                        fontFamily: 'Poppins',
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
         ),
       );
-      // After dialog closes, _waitingForSettings is true — lifecycle observer takes over.
-      return;
+      return false;
     }
 
-    if (permission == LocationPermission.denied) {
-      // User denied but not permanently — show explanation and let them try again.
-      if (!mounted) return;
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => AlertDialog(
+    // Denied but not permanently — explain and dismiss. Loop in _navigate() retries.
+    if (!mounted) return false;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text('Location Required',
               style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
           content: const Text(
-              'This app needs your location to find rooms nearby. Please allow location access to continue.',
+              'Bakhli needs your location to find rooms nearby. Please allow location access to continue.',
               style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
           actions: [
             TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                await _ensureLocationPermission();
-              },
+              onPressed: () => Navigator.pop(context),
               child: const Text('Allow',
                   style: TextStyle(
                       fontFamily: 'Poppins',
@@ -152,20 +162,17 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ],
         ),
-      );
-    }
+      ),
+    );
+    return false;
   }
 
+  bool _isGranted(LocationPermission p) =>
+      p == LocationPermission.whileInUse || p == LocationPermission.always;
+
   // Returns false and shows a non-dismissible popup if user is outside all supported districts.
-  // Returns true if location is unavailable (let through — explore screen handles it).
   Future<bool> _checkDistrictSupport() async {
     try {
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return true;
-      }
-
       final pos = await Geolocator.getLastKnownPosition() ??
           await Geolocator.getCurrentPosition(
             locationSettings:
@@ -191,25 +198,26 @@ class _SplashScreenState extends State<SplashScreen>
         await showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (_) => AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('Service Not Available',
-                style: TextStyle(
-                    fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-            content: const Text(
-                'RentNearBy is not available in your district yet. Contact our support on WhatsApp to request coverage in your area.',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
-            actions: [
-              TextButton(
-                onPressed: _launchWhatsApp,
-                child: const Text('Contact Support',
-                    style: TextStyle(
-                        fontFamily: 'Poppins',
-                        color: Color(0xFF25D366),
-                        fontWeight: FontWeight.w600)),
-              ),
-            ],
+          builder: (_) => PopScope(
+            canPop: false,
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text('Service Not Available',
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+              content: const Text(
+                  'Bakhli is not available in your district yet. Contact our support on WhatsApp to request coverage in your area.',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
+              actions: [
+                TextButton(
+                  onPressed: _launchWhatsApp,
+                  child: const Text('Contact Support',
+                      style: TextStyle(
+                          fontFamily: 'Poppins',
+                          color: Color(0xFF25D366),
+                          fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
           ),
         );
         return false;
@@ -224,7 +232,7 @@ class _SplashScreenState extends State<SplashScreen>
     // TODO: replace with real support number via admin panel
     const number = '919999999999';
     final uri = Uri.parse(
-        'https://wa.me/$number?text=Hi%2C%20I%20want%20RentNearBy%20in%20my%20district.');
+        'https://wa.me/$number?text=Hi%2C%20I%20want%20Bakhli%20in%20my%20district.');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -266,7 +274,7 @@ class _SplashScreenState extends State<SplashScreen>
                         border: Border.all(
                             color: Colors.white.withValues(alpha: 0.3), width: 2),
                       ),
-                      child: const Icon(Icons.location_on_rounded,
+                      child: const Icon(Icons.volunteer_activism_rounded,
                           size: 52, color: Colors.white),
                     ),
                   ),
@@ -281,7 +289,7 @@ class _SplashScreenState extends State<SplashScreen>
                     position: _textSlide,
                     child: Column(
                       children: [
-                        const Text('RentNearBy',
+                        const Text('Bakhli',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 34,
@@ -290,14 +298,22 @@ class _SplashScreenState extends State<SplashScreen>
                               letterSpacing: -0.5,
                             )),
                         const SizedBox(height: 8),
-                        Text('Find rooms near you. No brokers.',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.white.withValues(alpha: 0.75),
-                              letterSpacing: 0.2,
-                            )),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.handshake_rounded,
+                                size: 15, color: Colors.white.withValues(alpha: 0.75)),
+                            const SizedBox(width: 6),
+                            Text('Find rooms near you. No brokers.',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  color: Colors.white.withValues(alpha: 0.75),
+                                  letterSpacing: 0.2,
+                                )),
+                          ],
+                        ),
                       ],
                     ),
                   ),

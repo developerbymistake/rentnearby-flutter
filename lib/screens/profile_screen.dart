@@ -40,10 +40,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _shareApp() {
     Share.share(
-      '🏠 RentNearBy — Find rooms near you!\n'
+      '🏠 Bakhli — Find rooms near you!\n'
       'No brokers. No commission. Just homes.\n\n'
-      'Download now: https://rentnearby.in',
-      subject: 'Check out RentNearBy!',
+      'Download: https://bakhli.in',
+      subject: 'Check out Bakhli!',
     );
   }
 
@@ -62,7 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     // Avatar + name/phone in a Row
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 56, 20),
+                      padding: const EdgeInsets.fromLTRB(20, 21, 56, 25),
                       child: Row(
                         children: [
                           Obx(() {
@@ -203,10 +203,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Text('Made by Dev ',
+                const Text('Made with ',
                     style: TextStyle(
                         fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
                 const Icon(Icons.favorite_rounded, color: Color(0xFFE53935), size: 13),
+                const Text(' by Dev',
+                    style: TextStyle(
+                        fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
               ]),
             ),
           ],

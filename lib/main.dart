@@ -23,16 +23,16 @@ Future<void> main() async {
 
   Get.put(AuthController());
 
-  runApp(const RentNearByApp());
+  runApp(const BakhliApp());
 }
 
-class RentNearByApp extends StatelessWidget {
-  const RentNearByApp({super.key});
+class BakhliApp extends StatelessWidget {
+  const BakhliApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'RentNearBy',
+      title: 'Bakhli',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
       initialRoute: AppRoutes.splash,

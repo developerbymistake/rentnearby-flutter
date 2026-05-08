@@ -195,13 +195,13 @@ class _OtpScreenState extends State<OtpScreen> {
                   children: [
                     _termSection(
                       Icons.home_rounded,
-                      'What RentNearBy Does',
-                      'RentNearBy connects people looking for rental rooms with room owners. Our goal is to make finding a home near you simple and transparent.',
+                      'What Bakhli Does',
+                      'Bakhli connects people looking for rental rooms with room owners. Our goal is to make finding a home near you simple and transparent.',
                     ),
                     _termSection(
                       Icons.visibility_rounded,
                       'Your Information is Publicly Visible',
-                      'When you post a room, the details you provide — photos, address, rent amount, and your contact number — are visible to all users of the app. This is how tenants can reach you directly. By posting, you agree that this information may be seen by anyone using RentNearBy.',
+                      'When you post a room, the details you provide — photos, address, rent amount, and your contact number — are visible to all users of the app. This is how tenants can reach you directly. By posting, you agree that this information may be seen by anyone using Bakhli.',
                     ),
                     _termSection(
                       Icons.phone_rounded,
@@ -211,17 +211,17 @@ class _OtpScreenState extends State<OtpScreen> {
                     _termSection(
                       Icons.location_on_rounded,
                       'Location Access',
-                      'RentNearBy uses your device location only to show rooms near you. Your live location is not stored on our servers or shared with other users.',
+                      'Bakhli uses your device location only to show rooms near you. Your live location is not stored on our servers or shared with other users.',
                     ),
                     _termSection(
                       Icons.person_rounded,
                       'Your Responsibility',
-                      'You are responsible for the accuracy of any information you post. Room details, photos, and pricing must be truthful. Misleading listings may be removed. RentNearBy is a platform only and is not responsible for any disputes between tenants and room owners.',
+                      'You are responsible for the accuracy of any information you post. Room details, photos, and pricing must be truthful. Misleading listings may be removed. Bakhli is a platform only and is not responsible for any disputes between tenants and room owners.',
                     ),
                     _termSection(
                       Icons.security_rounded,
                       'Your Agreement',
-                      'By using RentNearBy, you confirm that the information you provide is accurate and that you consent to your listing details being publicly visible to all users. You can delete your listing at any time from the My Rooms section.',
+                      'By using Bakhli, you confirm that the information you provide is accurate and that you consent to your listing details being publicly visible to all users. You can delete your listing at any time from the My Rooms section.',
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -329,7 +329,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       children: [
                         Icon(Icons.location_on_rounded, size: 48, color: Colors.white),
                         SizedBox(height: 12),
-                        Text('RentNearBy',
+                        Text('Bakhli',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 28,

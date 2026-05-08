@@ -545,7 +545,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   children: [
                     TileLayer(
                       urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.rentnearby.rentnearby',
+                      userAgentPackageName: 'com.bakhli.app',
                       maxNativeZoom: 18,
                       keepBuffer: 2,
                       panBuffer: 1,
