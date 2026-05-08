@@ -252,29 +252,52 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       final priceText = listing.priceMonthly != null ? _pinPrice(listing.priceMonthly!) : 'Call';
       markers.add(Marker(
         point: LatLng(listing.latitude, listing.longitude),
-        width: 36,
-        height: 56,
+        width: 80,
+        height: 90,
         alignment: Alignment.bottomCenter,
         child: GestureDetector(
           onTap: () => _showDetail(listing.id),
-          child: Stack(
-            clipBehavior: Clip.none,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              CustomPaint(
-                size: const Size(36, 56),
-                painter: _PinBodyPainter(color: AppColors.primary),
-              ),
-              Positioned(
-                top: 0, left: 0, right: 0, height: 36,
-                child: Center(
-                  child: Text(
-                    priceText,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 9,
-                      fontWeight: FontWeight.w700, color: Colors.white, height: 1,
-                    ),
+              // Price bubble
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2))],
+                ),
+                child: Text(
+                  priceText,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins', fontSize: 11,
+                    fontWeight: FontWeight.w700, color: Colors.white,
                   ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              // Pin with home icon
+              SizedBox(
+                width: 46, height: 58,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CustomPaint(
+                      size: const Size(46, 58),
+                      painter: _PinBodyPainter(color: AppColors.primary),
+                    ),
+                    const Positioned(
+                      top: 2, left: 0, right: 0,
+                      child: SizedBox(
+                        height: 40,
+                        child: Center(
+                          child: Icon(Icons.home_rounded, color: Colors.white, size: 22),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -652,14 +675,18 @@ class _PinBodyPainter extends CustomPainter {
   const _PinBodyPainter({required this.color});
 
   static final ui.Path _pinPath = () {
-    final circle = ui.Path()
-      ..addOval(Rect.fromCircle(center: const Offset(18, 18), radius: 18));
-    final spike = ui.Path()
-      ..moveTo(10, 32)
-      ..lineTo(18, 56)
-      ..lineTo(26, 32)
+    const cx = 23.0;
+    const cy = 21.0;
+    const r  = 21.0;
+    final path = ui.Path()
+      // circle body
+      ..addOval(Rect.fromCircle(center: const Offset(cx, cy), radius: r))
+      // smooth spike using bezier curves for a teardrop look
+      ..moveTo(cx - 8, cy + r - 4)
+      ..cubicTo(cx - 10, cy + r + 10, cx - 3, 56, cx, 58)
+      ..cubicTo(cx + 3, 56, cx + 10, cy + r + 10, cx + 8, cy + r - 4)
       ..close();
-    return ui.Path.combine(ui.PathOperation.union, circle, spike);
+    return path;
   }();
 
   @override
