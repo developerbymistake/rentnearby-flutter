@@ -191,19 +191,19 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   void _fitToRadius() {
     if (!_mapReady || !mounted) return;
     final center = _searchCenter;
-    const extra = 0.10;
-    final degLat = (_radius / 111.0) * (1 + extra);
-    final degLng = (_radius / (111.0 * cos(center.latitude * pi / 180))) * (1 + extra);
-    _mapController.fitCamera(
-      CameraFit.bounds(
-        bounds: LatLngBounds(
-          LatLng(center.latitude - degLat, center.longitude - degLng),
-          LatLng(center.latitude + degLat, center.longitude + degLng),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 175, 24, 145),
-        maxZoom: 17.0,
-      ),
-    );
+    _animateTo(center, _zoomForRadius(_radius, center.latitude));
+  }
+
+  // Calculates zoom so the circle diameter fills ~80% of usable screen height.
+  // Accounts for latitude (tiles shrink toward poles) via cos(lat).
+  double _zoomForRadius(double radiusKm, double lat) {
+    const earthCircumference = 2 * pi * 6378137.0;
+    const tileSize = 256.0;
+    const usablePx = 480.0;
+    final metersPerPxAtZ0 = earthCircumference * cos(lat * pi / 180) / tileSize;
+    final targetMetersPerPx = (radiusKm * 1000 * 2) / (usablePx * 0.80);
+    final zoom = log(metersPerPxAtZ0 / targetMetersPerPx) / log(2);
+    return zoom.clamp(10.0, 17.0);
   }
 
   Future<void> _loadNearby({bool reset = true}) async {
