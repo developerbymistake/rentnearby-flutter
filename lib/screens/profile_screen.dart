@@ -60,15 +60,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 bottom: false,
                 child: Stack(
                   children: [
-                    // Centered avatar + name
+                    // Avatar + name/phone in a Row
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                      child: Column(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 56, 20),
+                      child: Row(
                         children: [
                           Obx(() {
                             final initials = _initials(_auth.user.value?.name);
                             return Container(
-                              width: 66, height: 66,
+                              width: 64, height: 64,
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.22),
                                 shape: BoxShape.circle,
@@ -82,47 +82,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             fontSize: 24,
                                             fontWeight: FontWeight.w700,
                                             color: Colors.white))
-                                    : const Icon(Iconsax.user5, size: 32, color: Colors.white),
+                                    : const Icon(Iconsax.user5, size: 30, color: Colors.white),
                               ),
                             );
                           }),
-                          const SizedBox(height: 10),
-                          Obx(() => Text(
-                            _auth.user.value?.name?.trim().isNotEmpty == true
-                                ? _auth.user.value!.name!.trim()
-                                : 'Your Profile',
-                            style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          )),
-                          const SizedBox(height: 2),
-                          Obx(() => Text(
-                            '+91 ${_auth.user.value?.phoneNumber ?? ''}',
-                            style: const TextStyle(
-                                fontFamily: 'Poppins', fontSize: 13, color: Colors.white70),
-                          )),
-                          Obx(() => _auth.user.value?.isAdmin == true
-                              ? Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-                                    decoration: BoxDecoration(
-                                        color: AppColors.accent,
-                                        borderRadius: BorderRadius.circular(20)),
-                                    child: const Text('Admin',
-                                        style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white)),
-                                  ),
-                                )
-                              : const SizedBox()),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Obx(() => Text(
+                                  _auth.user.value?.name?.trim().isNotEmpty == true
+                                      ? _auth.user.value!.name!.trim()
+                                      : 'Your Profile',
+                                  style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                )),
+                                const SizedBox(height: 2),
+                                Obx(() => Text(
+                                  '+91 ${_auth.user.value?.phoneNumber ?? ''}',
+                                  style: const TextStyle(
+                                      fontFamily: 'Poppins', fontSize: 13, color: Colors.white70),
+                                )),
+                                Obx(() => _auth.user.value?.isAdmin == true
+                                    ? Padding(
+                                        padding: const EdgeInsets.only(top: 6),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                          decoration: BoxDecoration(
+                                              color: AppColors.accent,
+                                              borderRadius: BorderRadius.circular(20)),
+                                          child: const Text('Admin',
+                                              style: TextStyle(
+                                                  fontFamily: 'Poppins',
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white)),
+                                        ),
+                                      )
+                                    : const SizedBox()),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
