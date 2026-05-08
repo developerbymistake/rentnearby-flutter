@@ -24,8 +24,8 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   void dispose() {
     _phoneController.dispose();
-    for (final c in _otpControllers) c.dispose();
-    for (final f in _otpFocusNodes) f.dispose();
+    for (final c in _otpControllers) { c.dispose(); }
+    for (final f in _otpFocusNodes) { f.dispose(); }
     super.dispose();
   }
 
@@ -47,6 +47,173 @@ class _OtpScreenState extends State<OtpScreen> {
     }
     final ok = await _auth.verifyOtp(_phoneController.text.trim(), otp);
     if (ok) Get.offAllNamed(AppRoutes.main);
+  }
+
+  void _showTerms() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        height: MediaQuery.of(context).size.height * 0.82,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            const SizedBox(height: 12),
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 4),
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: const BoxDecoration(gradient: AppColors.primaryGradient, shape: BoxShape.circle),
+                    child: const Icon(Icons.shield_rounded, color: Colors.white, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text('Terms of Service',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
+                      child: const Icon(Icons.close_rounded, size: 18, color: AppColors.textMedium),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // Scrollable content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _termSection(
+                      Icons.home_rounded,
+                      'What RentNearBy Does',
+                      'RentNearBy is a free platform that directly connects people looking for rental rooms with room owners — no brokers, no commission, no hidden charges. Our goal is to make finding a home near you simple, fast, and transparent.',
+                    ),
+                    _termSection(
+                      Icons.visibility_rounded,
+                      'Your Listing is Publicly Visible',
+                      'When you post a room on RentNearBy, the details you provide — including photos, address, rent amount, and your contact number — will be visible to all users browsing the app. This is intentional, so genuine tenants can reach you directly. By posting a listing, you agree that this information may be seen by anyone using the app.',
+                    ),
+                    _termSection(
+                      Icons.phone_rounded,
+                      'Your Contact Number',
+                      'Your mobile number is used to log in and is shown on your listings so interested tenants can contact you directly. We do not share your number with any third-party companies or advertisers.',
+                    ),
+                    _termSection(
+                      Icons.location_on_rounded,
+                      'Location Access',
+                      'RentNearBy uses your device\'s location only to show nearby rooms and help you find listings close to you. Your live location is never stored on our servers or shared with other users.',
+                    ),
+                    _termSection(
+                      Icons.person_rounded,
+                      'Your Responsibility',
+                      'You are responsible for the accuracy of any information you post. Please ensure that room details, photos, and pricing are truthful and up to date. Misleading listings may be removed. RentNearBy acts only as a platform and is not responsible for any disputes between tenants and room owners.',
+                    ),
+                    _termSection(
+                      Icons.security_rounded,
+                      'Your Agreement',
+                      'By using RentNearBy, you confirm that you are 18 years or older, that the information you provide is accurate, and that you consent to your listing details being publicly visible to other users of the app. You can delete your listing at any time from the My Rooms section.',
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 18),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              'These terms exist to keep the platform safe and transparent for everyone — both tenants and room owners.',
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Bottom button
+            Padding(
+              padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom + 16),
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Center(
+                    child: Text('Got it, Continue',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _termSection(IconData icon, String title, String body) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32, height: 32,
+            margin: const EdgeInsets.only(top: 2),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: AppColors.primary, size: 16),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                const SizedBox(height: 4),
+                Text(body,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.6)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onOtpChanged(String value, int index) {
@@ -109,7 +276,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.12),
+                            color: AppColors.primary.withValues(alpha: 0.12),
                             blurRadius: 30,
                             offset: const Offset(0, 10),
                           ),
@@ -123,15 +290,30 @@ class _OtpScreenState extends State<OtpScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                   FadeInUp(
                     delay: const Duration(milliseconds: 400),
-                    child: Text('By continuing, you agree to our Terms of Service',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 11,
-                          color: AppColors.textHint,
-                        )),
+                    child: GestureDetector(
+                      onTap: _showTerms,
+                      child: RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textHint),
+                          children: [
+                            const TextSpan(text: 'By continuing, you agree to our '),
+                            TextSpan(
+                              text: 'Terms of Service',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                                decoration: TextDecoration.underline,
+                                decorationColor: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
