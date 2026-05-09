@@ -52,8 +52,12 @@ class ApiService {
     await _dio.delete(path);
   }
 
-  static Future<Map<String, dynamic>> postFormData(String path, FormData data) async {
-    final res = await _dio.post(path, data: data);
+  static Future<Map<String, dynamic>> postFormData(
+    String path,
+    FormData data, {
+    void Function(int sent, int total)? onSendProgress,
+  }) async {
+    final res = await _dio.post(path, data: data, onSendProgress: onSendProgress);
     return res.data;
   }
 }

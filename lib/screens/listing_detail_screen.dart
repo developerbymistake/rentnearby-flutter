@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../models/listing_model.dart';
+import '../widgets/detail_action_bar.dart';
 
 class ListingDetailScreen extends StatefulWidget {
   const ListingDetailScreen({super.key});
@@ -27,14 +27,11 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   void initState() {
     super.initState();
     final id = Get.arguments as String;
-    _ctrl.getById(id).then((l) => setState(() { _listing = l; _loading = false; }));
-  }
-
-  void _call() async {
-    final phone = _listing?.ownerPhone;
-    if (phone == null) return;
-    final url = Uri.parse('tel:+91$phone');
-    if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
+    _ctrl.getById(id).then((l) {
+      if (mounted) setState(() { _listing = l; _loading = false; });
+    }).catchError((_) {
+      if (mounted) setState(() => _loading = false);
+    });
   }
 
   void _confirmDelete() {
@@ -67,20 +64,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     );
   }
 
-  void _checkDistance() async {
-    final l = _listing;
-    if (l == null) return;
-    final geoUrl = Uri.parse('geo:${l.latitude},${l.longitude}?q=${l.latitude},${l.longitude}');
-    if (await canLaunchUrl(geoUrl)) {
-      launchUrl(geoUrl, mode: LaunchMode.externalApplication);
-      return;
-    }
-    final mapsUrl = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1&destination=${l.latitude},${l.longitude}&travelmode=driving',
-    );
-    launchUrl(mapsUrl, mode: LaunchMode.externalApplication);
-  }
-
   static IconData _roomTypeIcon(String? type) {
     switch (type?.toLowerCase()) {
       case 'pg': return Icons.people_alt_rounded;
@@ -92,10 +75,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   Widget _buildTitle(ListingModel l) {
     const fs = 22.0;
-    if (l.title != null && l.title!.isNotEmpty) {
-      return Text(l.title!,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: fs, fontWeight: FontWeight.w700, color: AppColors.textDark));
-    }
     return Row(children: [
       Icon(_roomTypeIcon(l.roomTypeName), size: fs, color: AppColors.primary),
       const SizedBox(width: 8),
@@ -290,48 +269,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     return '${(diff.inDays / 365).floor()} years ago';
   }
 
-  Widget _buildActionBar() => Container(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 16, offset: const Offset(0, -4))],
-        ),
-        child: Row(children: [
-          Expanded(
-            flex: 3,
-            child: ElevatedButton.icon(
-              onPressed: _checkDistance,
-              icon: const Icon(Icons.near_me_rounded, size: 20),
-              label: const Text('Get Directions',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(0, 52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 2,
-            child: ElevatedButton.icon(
-              onPressed: _call,
-              icon: const Icon(Icons.call_rounded, size: 20),
-              label: const Text('Call',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E7D32),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(0, 52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
-            ),
-          ),
-        ]),
-      );
+  Widget _buildActionBar() {
+    final l = _listing!;
+    final phone = _isOwner ? null : l.ownerPhone;
+    return DetailActionBar(
+      latitude: l.latitude,
+      longitude: l.longitude,
+      ownerPhone: phone,
+    );
+  }
 
   Widget _infoRow(IconData icon, String label, String value, {Color? valueColor, Color? iconColor}) => Row(
         crossAxisAlignment: CrossAxisAlignment.start,

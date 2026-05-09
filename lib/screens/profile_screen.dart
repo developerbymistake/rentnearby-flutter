@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:share_plus/share_plus.dart';
 import '../config/app_colors.dart';
 import '../controllers/auth_controller.dart';
+import '../utils/app_toast.dart';
 import '../widgets/gradient_button.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -257,9 +258,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _save() {
     FocusScope.of(context).unfocus();
+    final name = _nameCtrl.text.trim();
+    final gmail = _gmailCtrl.text.trim();
+    // Catch the case where the field has whitespace content but no real value
+    if (_nameCtrl.text.isNotEmpty && name.isEmpty) {
+      AppToast.error('Name cannot be blank');
+      return;
+    }
     _auth.updateProfile(
-      _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : null,
-      _gmailCtrl.text.trim().isNotEmpty ? _gmailCtrl.text.trim() : null,
+      name.isNotEmpty ? name : null,
+      gmail.isNotEmpty ? gmail : null,
     );
   }
 

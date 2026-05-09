@@ -81,7 +81,7 @@ class ListingCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            listing.title ?? 'Room for Rent',
+                            listing.roomTypeName ?? 'Room for Rent',
                             style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

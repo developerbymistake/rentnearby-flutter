@@ -29,11 +29,13 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   Worker? _districtsWorker;
   Worker? _postedWorker;
   Worker? _loadingWorker;
+  StreamSubscription<ServiceStatus>? _serviceStatusSub;
   List<Marker> _markers = [];
   LatLng? _userLocation;
   double _radius = 1.0;
   DistrictModel? _selectedDistrict;
   CityModel? _selectedCity;
+  CityModel? _autoCity;
   bool _locationLoading = true;
   bool _mapReady = false;
   bool _checkingPermission = false;
@@ -73,6 +75,25 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         _radarController.reset();
       }
     });
+
+    // React to the user toggling GPS in device Settings without leaving the app.
+    _serviceStatusSub = Geolocator.getServiceStatusStream().listen((status) {
+      if (!mounted) return;
+      if (status == ServiceStatus.enabled) {
+        if (_userLocation == null && !_locationLoading) {
+          setState(() => _locationLoading = true);
+          _initLocation();
+        }
+      } else {
+        // GPS turned off: clear user dot, stop loading state.
+        setState(() {
+          _userLocation = null;
+          _locationLoading = false;
+        });
+        _buildMarkers(animate: false);
+      }
+    });
+
     _initLocation();
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryAutoLoad());
   }
@@ -96,6 +117,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     _districtsWorker?.dispose();
     _postedWorker?.dispose();
     _loadingWorker?.dispose();
+    _serviceStatusSub?.cancel();
     _cameraAnimController.dispose();
     _radarController.dispose();
     _revealTimer?.cancel();
@@ -170,10 +192,26 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     _autoLoad();
   }
 
+  String? get _effectiveCityId => _selectedCity?.id ?? _autoCity?.id;
+
+  CityModel? _nearestCity() {
+    final cs = _listingCtrl.cities;
+    if (cs.isEmpty) return null;
+    if (_userLocation == null) return cs.first;
+    return cs.reduce((a, b) {
+      final dA = _haversineKm(_userLocation!.latitude, _userLocation!.longitude,
+          a.latitude ?? 0, a.longitude ?? 0);
+      final dB = _haversineKm(_userLocation!.latitude, _userLocation!.longitude,
+          b.latitude ?? 0, b.longitude ?? 0);
+      return dA <= dB ? a : b;
+    });
+  }
+
   Future<void> _autoLoad() async {
     final district = _nearestDistrict();
     setState(() => _selectedDistrict = district);
     await _listingCtrl.loadCities(district.id);
+    setState(() => _autoCity = _nearestCity());
     _loadNearby();
   }
 
@@ -250,6 +288,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         if (_selectedDistrict == null || _selectedDistrict!.id != nearest.id) {
           setState(() => _selectedDistrict = nearest);
           await _listingCtrl.loadCities(nearest.id);
+          setState(() => _autoCity = _nearestCity());
         }
       }
 
@@ -262,13 +301,19 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   LatLng get _searchCenter {
-    if (_selectedCity?.latitude != null && _selectedCity?.longitude != null) {
-      return LatLng(_selectedCity!.latitude!, _selectedCity!.longitude!);
+    final activeCity = _selectedCity ?? _autoCity;
+    if (activeCity?.latitude != null && activeCity?.longitude != null) {
+      return LatLng(activeCity!.latitude!, activeCity.longitude!);
     }
-    return _userLocation ??
-        (_selectedDistrict != null
-            ? LatLng(_selectedDistrict!.latitude ?? 29.3803, _selectedDistrict!.longitude ?? 79.4636)
-            : const LatLng(29.3803, 79.4636));
+    if (_userLocation != null) return _userLocation!;
+    if (_selectedDistrict?.latitude != null && _selectedDistrict?.longitude != null) {
+      return LatLng(_selectedDistrict!.latitude!, _selectedDistrict!.longitude!);
+    }
+    final first = _listingCtrl.districts.firstOrNull;
+    if (first?.latitude != null && first?.longitude != null) {
+      return LatLng(first!.latitude!, first.longitude!);
+    }
+    return const LatLng(28.6139, 77.2090);
   }
 
   void _fitToRadius() {
@@ -291,6 +336,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
   Future<void> _loadNearby({bool reset = true}) async {
     if (_selectedDistrict == null) return;
+    final cityId = _effectiveCityId;
+    if (cityId == null) return;
     if (reset) {
       _revealTimer?.cancel();
       _markers = [];
@@ -301,7 +348,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     final wasEmpty = _listingCtrl.nearbyListings.isEmpty;
     if (reset) _currentPage = 1;
     final center = _searchCenter;
-    await _listingCtrl.loadNearby(center.latitude, center.longitude, _radius, _selectedDistrict!.id, page: _currentPage);
+    await _listingCtrl.loadNearby(center.latitude, center.longitude, _radius, cityId, page: _currentPage);
     if (reset) {
       _radarController.stop();
       _radarController.reset();
@@ -418,11 +465,13 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   void _showDetail(String id) {
+    final listing = _listingCtrl.nearbyListings.firstWhereOrNull((l) => l.id == id);
+    if (listing == null) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => ListingBottomSheet(listingId: id),
+      builder: (_) => ListingBottomSheet(listing: listing),
     );
   }
 
@@ -473,7 +522,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 child: FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter: _userLocation ?? const LatLng(29.3803, 79.4636),
+                    initialCenter: _searchCenter,
                     initialZoom: 13.0,
                     minZoom: 8,
                     maxZoom: 18,

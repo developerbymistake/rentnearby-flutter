@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +8,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:dio/dio.dart' as http_dio;
 import 'dart:io';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
@@ -37,9 +40,23 @@ class _AddListingScreenState extends State<AddListingScreen> {
   LatLng? _userLocation;
   bool _mapReady = false;
   bool _animateCancelled = false;
+  bool _isGeocoding = false;
+  bool _isUploading = false;
+  int _uploadCurrent = 0;
+  int _uploadTotal = 0;
+  double _uploadProgress = 0.0;
   final List<File> _photos = [];
   final _picker = ImagePicker();
   int _step = 0;
+  Timer? _nominatimTimer;
+
+  bool get _hasChanges =>
+      _selectedRoomTypeId != null ||
+      _priceMonthlyCtrl.text.isNotEmpty ||
+      _descCtrl.text.isNotEmpty ||
+      _photos.isNotEmpty ||
+      _addressCtrl.text.isNotEmpty ||
+      _selectedLocation != null;
 
   @override
   void initState() {
@@ -158,12 +175,118 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   @override
   void dispose() {
+    _nominatimTimer?.cancel();
     _descCtrl.dispose();
     _priceMonthlyCtrl.dispose();
     _addressCtrl.dispose();
     _priceFocusNode.dispose();
     _addressFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _reverseGeocode(LatLng pos) async {
+    _nominatimTimer?.cancel();
+    _nominatimTimer = Timer(const Duration(milliseconds: 600), () async {
+      if (!mounted) return;
+      setState(() => _isGeocoding = true);
+      try {
+        final dio = http_dio.Dio();
+        final res = await dio.get<Map<String, dynamic>>(
+          'https://nominatim.openstreetmap.org/reverse',
+          queryParameters: {
+            'format': 'jsonv2',
+            'lat': pos.latitude.toStringAsFixed(6),
+            'lon': pos.longitude.toStringAsFixed(6),
+          },
+          options: http_dio.Options(
+            headers: {'User-Agent': 'Bakhli/1.0 (bakhli.app)'},
+            receiveTimeout: const Duration(seconds: 8),
+          ),
+        );
+        if (!mounted) return;
+        final displayName = res.data?['display_name'] as String? ?? '';
+        if (displayName.isNotEmpty) {
+          final parts = displayName.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+          _addressCtrl.text = parts.take(3).join(', ');
+        }
+      } catch (_) {
+        // Ignore geocoding failures silently — user can type manually
+      } finally {
+        if (mounted) setState(() => _isGeocoding = false);
+      }
+    });
+  }
+
+  void _confirmDiscard() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Discard Listing?',
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        content: const Text(
+          'You have unsaved changes. Going back will discard everything.',
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Keep Editing',
+                style: TextStyle(fontFamily: 'Poppins', color: AppColors.primary, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              minimumSize: Size.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              Get.back();
+            },
+            child: const Text('Discard', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPermissionDeniedDialog(String type) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('$type Permission Required',
+            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        content: Text(
+          'Please enable $type access in your device Settings to add photos.',
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel',
+                style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              minimumSize: Size.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              openAppSettings();
+            },
+            child: const Text('Open Settings', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _pickPhoto() async {
@@ -209,6 +332,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
       ),
     );
     if (source == null) return;
+
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (status.isPermanentlyDenied && mounted) _showPermissionDeniedDialog('Camera');
+        return;
+      }
+    } else {
+      final status = await Permission.photos.request();
+      if (!status.isGranted && !status.isLimited) {
+        if (status.isPermanentlyDenied && mounted) _showPermissionDeniedDialog('Photos');
+        return;
+      }
+    }
+
     final picked = await _picker.pickImage(source: source, imageQuality: 85);
     if (picked != null && mounted) setState(() => _photos.add(File(picked.path)));
   }
@@ -275,8 +413,24 @@ class _AddListingScreenState extends State<AddListingScreen> {
     final listingId = await _ctrl.createListing(data);
     if (listingId == null) return;
 
-    for (final photo in _photos) {
-      await _ctrl.uploadPhoto(listingId, photo.path);
+    if (_photos.isNotEmpty) {
+      setState(() {
+        _isUploading = true;
+        _uploadTotal = _photos.length;
+        _uploadCurrent = 1;
+        _uploadProgress = 0.0;
+      });
+      for (int i = 0; i < _photos.length; i++) {
+        setState(() {
+          _uploadCurrent = i + 1;
+          _uploadProgress = 0.0;
+        });
+        await _ctrl.uploadPhoto(listingId, _photos[i].path, onProgress: (sent, total) {
+          if (!mounted) return;
+          setState(() => _uploadProgress = total > 0 ? sent / total : 0.0);
+        });
+      }
+      if (mounted) setState(() => _isUploading = false);
     }
 
     await _ctrl.loadMyListings();
@@ -297,9 +451,72 @@ class _AddListingScreenState extends State<AddListingScreen> {
     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
   );
 
+  Widget _buildUploadOverlay() {
+    final overall = _uploadTotal > 0
+        ? ((_uploadCurrent - 1) + _uploadProgress) / _uploadTotal
+        : 0.0;
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.55),
+        child: Center(
+          child: Container(
+            width: 280,
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 32, offset: const Offset(0, 8))],
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: 60, height: 60,
+                decoration: BoxDecoration(gradient: AppColors.primaryGradient, shape: BoxShape.circle),
+                child: const Center(child: Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 28)),
+              ),
+              const SizedBox(height: 20),
+              const Text('Uploading Photos',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+              const SizedBox(height: 6),
+              Text(
+                'Photo $_uploadCurrent of $_uploadTotal · ${(overall * 100).toInt()}%',
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
+              ),
+              const SizedBox(height: 20),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: overall,
+                  minHeight: 8,
+                  backgroundColor: AppColors.divider,
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text('Please wait…',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_isUploading) return;
+        if (_hasChanges) {
+          _confirmDiscard();
+        } else {
+          Get.back();
+        }
+      },
+      child: Stack(
+        children: [
+      Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: Column(children: [
         Container(
@@ -309,7 +526,16 @@ class _AddListingScreenState extends State<AddListingScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
               child: Row(children: [
-                IconButton(onPressed: () => Get.back(), icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white)),
+                IconButton(
+                  onPressed: _isUploading ? null : () {
+                    if (_hasChanges) {
+                      _confirmDiscard();
+                    } else {
+                      Get.back();
+                    }
+                  },
+                  icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                ),
                 const Text('Post Your Room', style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
               ]),
             ),
@@ -368,6 +594,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ]),
         ),
       ]),
+      ),
+          if (_isUploading) _buildUploadOverlay(),
+        ],
+      ),
     );
   }
 
@@ -505,7 +735,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 child: FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter: _userLocation ?? const LatLng(29.3803, 79.4636),
+                    initialCenter: _userLocation ??
+                        (_nearbyDistricts.isNotEmpty && _nearbyDistricts.first.latitude != null
+                            ? LatLng(_nearbyDistricts.first.latitude!, _nearbyDistricts.first.longitude!)
+                            : const LatLng(28.6139, 77.2090)),
                     initialZoom: 15.0,
                     minZoom: 13.0,
                     maxZoom: 18,
@@ -540,6 +773,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         }
                       }
                       setState(() => _selectedLocation = pos);
+                      _reverseGeocode(pos);
                     },
                   ),
                   children: [
@@ -679,8 +913,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
           controller: _addressCtrl,
           focusNode: _addressFocusNode,
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-          decoration: _inputDec('Street, landmark, nearby place...',
-              prefixIcon: const Icon(Iconsax.building, color: AppColors.primaryLight, size: 18)),
+          decoration: _inputDec(
+            'Street, landmark, nearby place...',
+            prefixIcon: const Icon(Iconsax.building, color: AppColors.primaryLight, size: 18),
+          ).copyWith(
+            suffixIcon: _isGeocoding
+                ? const Padding(
+                    padding: EdgeInsets.all(14),
+                    child: SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryLight),
+                    ),
+                  )
+                : null,
+          ),
         ),
       ),
     ]),

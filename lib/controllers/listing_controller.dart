@@ -14,6 +14,7 @@ class ListingController extends GetxController {
   final isLoading = false.obs;
   final isUploading = false.obs;
   final hasMoreNearby = false.obs;
+  final hasMoreMyListings = false.obs;
   final listingPostedTrigger = 0.obs;
 
   @override
@@ -24,10 +25,12 @@ class ListingController extends GetxController {
 
   Future<void> loadMasterData() async {
     try {
-      final districtsRes = await ApiService.get('/admin/districts');
-      districts.value = (districtsRes['data'] as List).map((e) => DistrictModel.fromJson(e)).toList();
-      final typesRes = await ApiService.get('/admin/room-types');
-      roomTypes.value = (typesRes['data'] as List).map((e) => RoomTypeModel.fromJson(e)).toList();
+      final results = await Future.wait([
+        ApiService.get('/admin/districts'),
+        ApiService.get('/admin/room-types'),
+      ]);
+      districts.value = (results[0]['data'] as List).map((e) => DistrictModel.fromJson(e)).toList();
+      roomTypes.value = (results[1]['data'] as List).map((e) => RoomTypeModel.fromJson(e)).toList();
     } catch (_) {}
   }
 
@@ -35,27 +38,29 @@ class ListingController extends GetxController {
     try {
       final res = await ApiService.get('/admin/cities', params: {'districtId': districtId});
       cities.value = (res['data'] as List).map((e) => CityModel.fromJson(e)).toList();
-    } catch (_) {}
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not load cities.'));
+    }
   }
 
-  Future<void> loadNearby(double lat, double lng, double radius, String districtId, {int page = 1}) async {
+  Future<void> loadNearby(double lat, double lng, double radius, String cityId, {int page = 1}) async {
     try {
       isLoading.value = true;
       final res = await ApiService.get('/listings/nearby', params: {
         'latitude': lat,
         'longitude': lng,
         'radius': radius,
-        'districtId': districtId,
+        'cityId': cityId,
         'page': page,
         'pageSize': 30,
       });
-      final items = (res['data'] as List).map((e) => NearbyListingModel.fromJson(e)).toList();
+      final items = (res['data']['items'] as List).map((e) => NearbyListingModel.fromJson(e)).toList();
       if (page == 1) {
         nearbyListings.value = items;
       } else {
         nearbyListings.addAll(items);
       }
-      hasMoreNearby.value = res['hasMore'] == true;
+      hasMoreNearby.value = res['data']['hasMore'] == true;
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not load nearby rooms.'));
     } finally {
@@ -63,11 +68,17 @@ class ListingController extends GetxController {
     }
   }
 
-  Future<void> loadMyListings() async {
+  Future<void> loadMyListings({int page = 1}) async {
     try {
       isLoading.value = true;
-      final res = await ApiService.get('/listings/my');
-      myListings.value = (res['data'] as List).map((e) => ListingModel.fromJson(e)).toList();
+      final res = await ApiService.get('/listings/my', params: {'page': page, 'pageSize': 10});
+      final items = (res['data']['items'] as List).map((e) => ListingModel.fromJson(e)).toList();
+      if (page == 1) {
+        myListings.value = items;
+      } else {
+        myListings.addAll(items);
+      }
+      hasMoreMyListings.value = res['data']['hasMore'] == true;
     } catch (_) {
     } finally {
       isLoading.value = false;
@@ -107,22 +118,47 @@ class ListingController extends GetxController {
     }
   }
 
-  Future<bool> uploadPhoto(String listingId, String filePath) async {
+  Future<bool> uploadPhoto(String listingId, String filePath, {void Function(int, int)? onProgress}) async {
+    isUploading.value = true;
+    const maxAttempts = 3;
+    int attempt = 0;
+    dynamic lastError;
+
     try {
-      isUploading.value = true;
-      final formData = FormData.fromMap({
-        'photo': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
-      });
-      await ApiService.postFormData('/listings/$listingId/photos', formData);
-      return true;
-    } catch (e) {
+      while (attempt < maxAttempts) {
+        attempt++;
+        try {
+          final formData = FormData.fromMap({
+            'photo': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+          });
+          await ApiService.postFormData(
+            '/listings/$listingId/photos',
+            formData,
+            onSendProgress: onProgress,
+          );
+          return true;
+        } catch (e) {
+          lastError = e;
+          final isRetriable = e is DioException &&
+              (e.type == DioExceptionType.connectionTimeout ||
+                  e.type == DioExceptionType.receiveTimeout ||
+                  e.type == DioExceptionType.connectionError ||
+                  e.type == DioExceptionType.sendTimeout);
+          // Immediately fail on non-retriable errors (4xx, etc.)
+          if (!isRetriable) break;
+          if (attempt < maxAttempts) {
+            await Future.delayed(Duration(seconds: attempt));
+          }
+        }
+      }
+
       String msg;
-      if (e is DioException) {
-        final status = e.response?.statusCode;
-        final body = e.response?.data;
-        msg = status != null ? 'Server error $status: $body' : 'Network error: ${e.message}';
+      if (lastError is DioException) {
+        final status = lastError.response?.statusCode;
+        final body = lastError.response?.data;
+        msg = status != null ? 'Server error $status: $body' : 'Network error: ${lastError.message}';
       } else {
-        msg = e.toString();
+        msg = lastError.toString();
       }
       AppToast.error(msg);
       return false;
@@ -151,6 +187,8 @@ class ListingController extends GetxController {
   void clearData() {
     nearbyListings.clear();
     myListings.clear();
+    hasMoreNearby.value = false;
+    hasMoreMyListings.value = false;
   }
 
   static String _errorMessage(dynamic e, String fallback) {

@@ -3,7 +3,6 @@ import '../config/app_constants.dart';
 class ListingModel {
   final String id;
   final String userId;
-  final String? title;
   final String? description;
   final int? priceMonthly;
   final double latitude;
@@ -24,7 +23,6 @@ class ListingModel {
   ListingModel({
     required this.id,
     required this.userId,
-    this.title,
     this.description,
     this.priceMonthly,
     required this.latitude,
@@ -46,7 +44,6 @@ class ListingModel {
   factory ListingModel.fromJson(Map<String, dynamic> json) => ListingModel(
         id: json['id'],
         userId: json['userId'],
-        title: json['title'],
         description: json['description'],
         priceMonthly: json['priceMonthly'],
         latitude: (json['latitude'] as num).toDouble(),
@@ -83,34 +80,36 @@ class ListingModel {
 
 class NearbyListingModel {
   final String id;
-  final String? title;
   final int? priceMonthly;
   final double latitude;
   final double longitude;
   final String? roomTypeName;
+  final String? ownerName;
   final String? ownerPhone;
   final String? thumbnailUrl;
   final double distanceKm;
+  final bool isActive;
 
   NearbyListingModel({
     required this.id,
-    this.title,
     this.priceMonthly,
     required this.latitude,
     required this.longitude,
     this.roomTypeName,
+    this.ownerName,
     this.ownerPhone,
     this.thumbnailUrl,
     required this.distanceKm,
+    required this.isActive,
   });
 
   factory NearbyListingModel.fromJson(Map<String, dynamic> json) => NearbyListingModel(
         id: json['id'],
-        title: json['title'],
         priceMonthly: json['priceMonthly'],
         latitude: (json['latitude'] as num).toDouble(),
         longitude: (json['longitude'] as num).toDouble(),
         roomTypeName: json['roomTypeName'],
+        ownerName: json['ownerName'],
         ownerPhone: json['ownerPhone'],
         thumbnailUrl: json['thumbnailUrl'] == null
             ? null
@@ -118,6 +117,7 @@ class NearbyListingModel {
                 ? json['thumbnailUrl']
                 : '${AppConstants.serverUrl}${json['thumbnailUrl']}',
         distanceKm: (json['distanceKm'] as num).toDouble(),
+        isActive: json['isActive'] ?? true,
       );
 
   String get shortPrice =>

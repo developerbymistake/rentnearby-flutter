@@ -1,41 +1,15 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
-import '../controllers/listing_controller.dart';
 import '../models/listing_model.dart';
+import 'bottom_sheet_action_bar.dart';
 
-class ListingBottomSheet extends StatefulWidget {
-  final String listingId;
-  const ListingBottomSheet({super.key, required this.listingId});
-
-  @override
-  State<ListingBottomSheet> createState() => _ListingBottomSheetState();
-}
-
-class _ListingBottomSheetState extends State<ListingBottomSheet> {
-  final _ctrl = Get.find<ListingController>();
-  ListingModel? _listing;
-  bool _loading = true;
-  int _currentPhoto = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl.getById(widget.listingId).then((l) {
-      if (mounted) setState(() { _listing = l; _loading = false; });
-    });
-  }
-
-  void _call() async {
-    final phone = _listing?.ownerPhone;
-    if (phone == null) return;
-    final url = Uri.parse('tel:+91$phone');
-    if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
-  }
+class ListingBottomSheet extends StatelessWidget {
+  final NearbyListingModel listing;
+  const ListingBottomSheet({super.key, required this.listing});
 
   static IconData _roomTypeIcon(String? type) {
     switch (type?.toLowerCase()) {
@@ -46,28 +20,6 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
     }
   }
 
-  Widget _buildTitle(ListingModel l) {
-    const fs = 18.0;
-    if (l.title != null && l.title!.isNotEmpty) {
-      return Text(l.title!,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: fs, fontWeight: FontWeight.w700, color: AppColors.textDark));
-    }
-    return Row(children: [
-      Icon(_roomTypeIcon(l.roomTypeName), size: fs, color: AppColors.primary),
-      const SizedBox(width: 6),
-      Text(l.roomTypeName ?? 'Room',
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: fs, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-    ]);
-  }
-
-  String _locationStr(ListingModel l) {
-    final parts = [l.cityName, l.districtName]
-        .where((s) => s != null && s.isNotEmpty)
-        .cast<String>()
-        .toList();
-    return parts.join(', ');
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -75,239 +27,133 @@ class _ListingBottomSheetState extends State<ListingBottomSheet> {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: _loading ? _buildLoader() : _buildContent(),
-    );
-  }
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40, height: 4,
+            margin: const EdgeInsets.only(top: 12, bottom: 16),
+            decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
+          ),
 
-  Widget _buildLoader() => const SizedBox(
-        height: 200,
-        child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-      );
-
-  Widget _buildContent() {
-    if (_listing == null) {
-      return const SizedBox(
-        height: 120,
-        child: Center(child: Text('Room not found', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight))),
-      );
-    }
-    final l = _listing!;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 40, height: 4,
-          margin: const EdgeInsets.only(top: 12, bottom: 16),
-          decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
-        ),
-        // Photo carousel
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: SizedBox(
-              height: 190,
-              child: l.photos.isEmpty
-                  ? Container(
-                      decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-                      child: const Center(child: Icon(Icons.home_rounded, size: 60, color: Colors.white38)),
-                    )
-                  : Stack(
-                      children: [
-                        PageView.builder(
-                          itemCount: l.photos.length,
-                          onPageChanged: (i) => setState(() => _currentPhoto = i),
-                          itemBuilder: (_, i) => CachedNetworkImage(
-                            imageUrl: l.photos[i],
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            placeholder: (context, _) => Container(color: AppColors.surface),
-                            errorWidget: (context, _, err) => Container(
-                              decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-                              child: const Center(child: Icon(Icons.broken_image_rounded, size: 40, color: Colors.white38)),
-                            ),
-                          ),
-                        ),
-                        if (l.photos.length > 1)
-                          Positioned(
-                            top: 10, right: 10,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(10)),
-                              child: Text('${_currentPhoto + 1}/${l.photos.length}',
-                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600)),
-                            ),
-                          ),
-                        if (l.photos.length > 1)
-                          Positioned(
-                            bottom: 10, left: 0, right: 0,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(l.photos.length, (i) => AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
-                                margin: const EdgeInsets.symmetric(horizontal: 3),
-                                width: _currentPhoto == i ? 18 : 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: _currentPhoto == i ? Colors.white : Colors.white54,
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                              )),
-                            ),
-                          ),
-                      ],
-                    ),
+          // Thumbnail
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: SizedBox(
+                height: 180,
+                width: double.infinity,
+                child: listing.thumbnailUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: listing.thumbnailUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(color: AppColors.surface),
+                        errorWidget: (_, __, ___) => _photoPlaceholder(),
+                      )
+                    : _photoPlaceholder(),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title + price
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _buildTitle(l),
-                  ),
-                  const SizedBox(width: 12),
-                  if (l.priceMonthly != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+          const SizedBox(height: 16),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Room type + price
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(_roomTypeIcon(listing.roomTypeName), size: 20, color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
                       child: Text(
-                        l.priceDisplay,
+                        listing.roomTypeName ?? 'Room',
                         style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                            fontFamily: 'Poppins',
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textDark),
+                      ),
+                    ),
+                    if (listing.priceMonthly != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                            gradient: AppColors.primaryGradient,
+                            borderRadius: BorderRadius.circular(10)),
+                        child: Text(
+                          listing.shortPrice,
+                          style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white),
                         ),
                       ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Availability + distance
+                Row(children: [
+                  Container(
+                    width: 7, height: 7,
+                    decoration: BoxDecoration(
+                      color: listing.isActive ? AppColors.success : AppColors.error,
+                      shape: BoxShape.circle,
                     ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    listing.isActive ? 'Available' : 'Not Available',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: listing.isActive ? AppColors.success : AppColors.error,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Iconsax.location, size: 13, color: AppColors.textHint),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${listing.distanceKm.toStringAsFixed(1)} km away',
+                    style: const TextStyle(
+                        fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+                  ),
+                ]),
+
+                if (listing.ownerName != null && listing.ownerName!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    const Icon(Icons.person_rounded, size: 14, color: AppColors.textHint),
+                    const SizedBox(width: 6),
+                    Text(listing.ownerName!,
+                        style: const TextStyle(
+                            fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                  ]),
                 ],
-              ),
-              const SizedBox(height: 12),
-              // Room type + availability
-              Row(children: [
-                const Icon(Icons.bed_rounded, size: 15, color: AppColors.primaryLight),
-                const SizedBox(width: 6),
-                Text(
-                  l.roomTypeName ?? 'Room',
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark,
-                  ),
+
+                const SizedBox(height: 20),
+                BottomSheetActionBar(
+                  listingId: listing.id,
+                  ownerPhone: listing.ownerPhone,
                 ),
-                const Spacer(),
-                Container(
-                  width: 7, height: 7,
-                  decoration: BoxDecoration(
-                    color: l.isActive ? AppColors.success : AppColors.error,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  l.isActive ? 'Available' : 'Not Available',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: l.isActive ? AppColors.success : AppColors.error,
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 8),
-              // Owner
-              if (l.ownerName != null && l.ownerName!.isNotEmpty) ...[
-                Row(children: [
-                  const Icon(Icons.person_rounded, size: 14, color: AppColors.textHint),
-                  const SizedBox(width: 6),
-                  Text(l.ownerName!,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                ]),
-                const SizedBox(height: 6),
               ],
-              // Single location line
-              if (_locationStr(l).isNotEmpty) ...[
-                Row(children: [
-                  const Icon(Iconsax.location, size: 14, color: AppColors.textLight),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      _locationStr(l),
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 6),
-              ],
-              // Address
-              if (l.address != null && l.address!.isNotEmpty) ...[
-                Row(children: [
-                  const Icon(Iconsax.location5, size: 14, color: AppColors.textHint),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      l.address!,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ]),
-              ],
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Get.toNamed(AppRoutes.listingDetail, arguments: l.id);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 48),
-                        side: const BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text(
-                        'View Details',
-                        style: TextStyle(fontFamily: 'Poppins', color: AppColors.primary, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _call,
-                      icon: const Icon(Icons.call_rounded, size: 18),
-                      label: const Text('Call', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E7D32),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(0, 48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+
+  static Widget _photoPlaceholder() => Container(
+        color: AppColors.surface,
+        child: const Center(
+          child: Icon(Icons.home_rounded, size: 56, color: AppColors.primaryLight),
+        ),
+      );
 }
