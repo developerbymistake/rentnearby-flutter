@@ -353,7 +353,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       _radarController.repeat();
       setState(() {});
     }
-    final wasEmpty = _listingCtrl.nearbyListings.isEmpty;
     if (reset) _currentPage = 1;
     final center = _searchCenter;
     await _listingCtrl.loadNearby(center.latitude, center.longitude, _radius, cityId, page: _currentPage);
@@ -362,7 +361,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       _radarController.reset();
     }
     _buildMarkers(animate: reset);
-    if (reset && wasEmpty && _listingCtrl.nearbyListings.isNotEmpty) _playTing();
+    if (reset && _listingCtrl.nearbyListings.isNotEmpty) _playTing();
   }
 
   void _playTing() async {
@@ -381,13 +380,26 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     if (_userLocation != null) {
       markers.add(Marker(
         point: _userLocation!,
-        width: 16, height: 16,
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E88E5),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2.5),
-            boxShadow: [BoxShadow(color: const Color(0xFF1E88E5).withValues(alpha: 0.35), blurRadius: 8, spreadRadius: 2)],
+        width: 120, height: 120,
+        alignment: Alignment.center,
+        child: AnimatedBuilder(
+          animation: _radarController,
+          builder: (_, _) => CustomPaint(
+            painter: _RadarPainter(
+              progress: _radarController.value,
+              color: const Color(0xFF1E88E5),
+            ),
+            child: Center(
+              child: Container(
+                width: 16, height: 16,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E88E5),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2.5),
+                  boxShadow: [BoxShadow(color: const Color(0xFF1E88E5).withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 2)],
+                ),
+              ),
+            ),
           ),
         ),
       ));
@@ -662,22 +674,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 ),
               ),
 
-          Obx(() {
-            if (!_listingCtrl.isLoading.value || !_mapReady) return const SizedBox();
-            return Positioned.fill(
-              child: IgnorePointer(
-                child: AnimatedBuilder(
-                  animation: _radarController,
-                  builder: (context, _) => CustomPaint(
-                    painter: _RadarPainter(
-                      progress: _radarController.value,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
 
           Positioned(
             top: 0, left: 0, right: 0,
@@ -976,21 +972,31 @@ class _RadarPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (progress == 0) return;
     final center = Offset(size.width / 2, size.height / 2);
-    final maxRadius = size.shortestSide * 0.42;
+    const maxRadius = 52.0;
 
     for (int i = 0; i < 3; i++) {
       final p = (progress + i / 3.0) % 1.0;
       final radius = maxRadius * p;
-      final opacity = (1.0 - p) * 0.5;
-      if (opacity <= 0) continue;
+      final opacity = (1.0 - p);
+
+      // Filled glow ring
       canvas.drawCircle(
         center,
         radius,
         Paint()
-          ..color = color.withValues(alpha: opacity)
+          ..color = color.withValues(alpha: opacity * 0.12)
+          ..style = PaintingStyle.fill,
+      );
+      // Stroke ring
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..color = color.withValues(alpha: opacity * 0.6)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.0,
+          ..strokeWidth = 1.5,
       );
     }
   }

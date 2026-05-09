@@ -201,16 +201,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
                 ),
                 child: Column(children: [
-                  // Room type row
-                  _infoRow(
-                    Icons.bed_rounded,
-                    'Room Type',
-                    l.roomTypeName ?? 'Room',
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10),
-                    child: Divider(height: 1, color: AppColors.divider),
-                  ),
                   // Owner row
                   if (l.ownerName != null && l.ownerName!.isNotEmpty) ...[
                     _infoRow(Icons.person_rounded, 'Owner', l.ownerName!),

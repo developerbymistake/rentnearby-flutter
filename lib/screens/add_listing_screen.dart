@@ -38,6 +38,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   String? _selectedRoomTypeId;
   LatLng? _selectedLocation;
   LatLng? _userLocation;
+  bool _locationBlocked = false; // permission denied forever OR GPS service off
   bool _mapReady = false;
   bool _animateCancelled = false;
   bool _isGeocoding = false;
@@ -85,8 +86,19 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   Future<void> _fetchUserLocation() async {
     try {
-      final perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) return;
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) setState(() => _locationBlocked = true);
+        return;
+      }
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _locationBlocked = true);
+        return;
+      }
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.best),
       );
@@ -420,17 +432,63 @@ class _AddListingScreenState extends State<AddListingScreen> {
         _uploadCurrent = 1;
         _uploadProgress = 0.0;
       });
+      int failed = 0;
       for (int i = 0; i < _photos.length; i++) {
         setState(() {
           _uploadCurrent = i + 1;
           _uploadProgress = 0.0;
         });
-        await _ctrl.uploadPhoto(listingId, _photos[i].path, onProgress: (sent, total) {
+        final success = await _ctrl.uploadPhoto(listingId, _photos[i].path, onProgress: (sent, total) {
           if (!mounted) return;
           setState(() => _uploadProgress = total > 0 ? sent / total : 0.0);
         });
+        if (!success) {
+          failed++;
+          // Ask user: skip or retry this photo
+          if (!mounted) break;
+          final retry = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text('Upload Failed',
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+              content: Text(
+                'Photo ${i + 1} could not be uploaded after 3 attempts. What would you like to do?',
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Skip',
+                      style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Retry', style: TextStyle(fontFamily: 'Poppins')),
+                ),
+              ],
+            ),
+          );
+          if (retry == true) {
+            // One more full attempt (controller internally retries 3x again)
+            final retrySuccess = await _ctrl.uploadPhoto(listingId, _photos[i].path, onProgress: (sent, total) {
+              if (!mounted) return;
+              setState(() => _uploadProgress = total > 0 ? sent / total : 0.0);
+            });
+            if (retrySuccess) failed--;
+          }
+        }
       }
       if (mounted) setState(() => _isUploading = false);
+      if (failed > 0 && mounted) {
+        AppToast.error('$failed photo${failed > 1 ? 's' : ''} could not be uploaded.');
+      }
     }
 
     await _ctrl.loadMyListings();
@@ -742,6 +800,66 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _sectionCard(
         title: 'Pin Your Location *',
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (_locationBlocked) ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
+              ),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.location_off_rounded, color: AppColors.error, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('Location access required',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.error)),
+                    const SizedBox(height: 4),
+                    const Text('Please enable GPS and grant location permission to pin your room.',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5)),
+                    const SizedBox(height: 10),
+                    Row(children: [
+                      GestureDetector(
+                        onTap: () async {
+                          await Geolocator.openLocationSettings();
+                          if (mounted) setState(() => _locationBlocked = false);
+                          _fetchUserLocation();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('Enable GPS',
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      GestureDetector(
+                        onTap: () async {
+                          await Geolocator.openAppSettings();
+                          if (mounted) setState(() => _locationBlocked = false);
+                          _fetchUserLocation();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.primary),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('App Settings',
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                        ),
+                      ),
+                    ]),
+                  ]),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 12),
+          ] else
           Row(children: [
             const Icon(Icons.info_outline_rounded, color: AppColors.primaryLight, size: 15),
             const SizedBox(width: 6),

@@ -125,8 +125,8 @@ class AuthController extends GetxController {
     try {
       isLoading.value = true;
       final res = await ApiService.put('/users/profile', {
-        if (name != null) 'name': name,
-        if (gmailId != null) 'gmailId': gmailId,
+        'name': ?name,
+        'gmailId': ?gmailId,
       });
       final updated = UserModel.fromJson(res['data']);
       StorageService.saveUser(updated);

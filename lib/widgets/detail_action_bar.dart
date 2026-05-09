@@ -44,16 +44,18 @@ class DetailActionBar extends StatelessWidget {
           BoxShadow(color: AppColors.shadow, blurRadius: 16, offset: const Offset(0, -4))
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            flex: hasPhone ? 3 : 1,
+          // Row 1: Get Directions — full width
+          SizedBox(
+            width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _directions,
               icon: const Icon(Icons.near_me_rounded, size: 20),
-              label: const Text('Directions',
+              label: const Text('Get Directions',
                   style: TextStyle(
-                      fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+                      fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -64,41 +66,44 @@ class DetailActionBar extends StatelessWidget {
             ),
           ),
           if (hasPhone) ...[
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 2,
-              child: ElevatedButton.icon(
-                onPressed: _call,
-                icon: const Icon(Icons.call_rounded, size: 20),
-                label: const Text('Call',
-                    style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E7D32),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
+            const SizedBox(height: 10),
+            // Row 2: Call Owner + WhatsApp side by side
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _call,
+                    icon: const Icon(Icons.call_rounded, size: 20),
+                    label: const Text('Call Owner',
+                        style: TextStyle(
+                            fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E7D32),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 2,
-              child: ElevatedButton.icon(
-                onPressed: _whatsapp,
-                icon: const Icon(Icons.chat_rounded, size: 20),
-                label: const Text('WhatsApp',
-                    style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF25D366),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 52),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _whatsapp,
+                    icon: const Icon(Icons.chat_rounded, size: 20),
+                    label: const Text('WhatsApp',
+                        style: TextStyle(
+                            fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF25D366),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(0, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ],

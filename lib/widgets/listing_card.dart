@@ -48,8 +48,8 @@ class ListingCard extends StatelessWidget {
                           height: 110,
                           width: 100,
                           fit: BoxFit.cover,
-                          placeholder: (_, __) => _photoPlaceholder(),
-                          errorWidget: (_, __, ___) => _photoPlaceholder(),
+                          placeholder: (_, _) => _photoPlaceholder(),
+                          errorWidget: (_, _, _) => _photoPlaceholder(),
                         )
                       : _photoPlaceholder(),
                   Positioned(
@@ -116,7 +116,7 @@ class ListingCard extends StatelessWidget {
                       Row(children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
+                          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
                           child: Text(listing.roomTypeName!,
                               style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w500)),
                         ),

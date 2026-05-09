@@ -18,7 +18,7 @@ class PriceMapPin extends StatelessWidget {
             gradient: AppColors.primaryGradient,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 3)),
+              BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(0, 3)),
             ],
           ),
           child: Text(price,
