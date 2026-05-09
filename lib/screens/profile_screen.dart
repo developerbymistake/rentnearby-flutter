@@ -17,23 +17,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = Get.find<AuthController>();
   final _nameCtrl = TextEditingController();
   final _gmailCtrl = TextEditingController();
-  Worker? _userWorker;
+  bool _tickerWasActive = false;
 
   @override
   void initState() {
     super.initState();
     _nameCtrl.text = _auth.user.value?.name ?? '';
     _gmailCtrl.text = _auth.user.value?.gmailId ?? '';
-    // Sync text fields whenever user observable updates (e.g. name modal in My Rooms)
-    _userWorker = ever(_auth.user, (user) {
-      _nameCtrl.text = user?.name ?? '';
-      _gmailCtrl.text = user?.gmailId ?? '';
-    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final active = TickerMode.of(context);
+    if (active && !_tickerWasActive) {
+      _nameCtrl.text = _auth.user.value?.name ?? '';
+      _gmailCtrl.text = _auth.user.value?.gmailId ?? '';
+    }
+    _tickerWasActive = active;
   }
 
   @override
   void dispose() {
-    _userWorker?.dispose();
     _nameCtrl.dispose();
     _gmailCtrl.dispose();
     super.dispose();
