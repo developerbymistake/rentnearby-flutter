@@ -80,30 +80,55 @@ class _AddListingScreenState extends State<AddListingScreen> {
         if (mounted) setState(() => _locationBlocked = true);
         return;
       }
+
+      // Step 1: lastKnown se turant map + district/city load karo (Step 1 background mein)
+      final lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null && mounted) {
+        final lastLoc = LatLng(lastKnown.latitude, lastKnown.longitude);
+        setState(() {
+          _userLocation = lastLoc;
+          _selectedLocation ??= lastLoc;
+        });
+        // District/city Step 1 mein hi load karo — Step 2 instantly ready milega
+        if (_selectedDistrictId == null) {
+          final ctx = await _ctrl.loadContext(lastLoc.latitude, lastLoc.longitude);
+          if (mounted && ctx != null) {
+            await _ctrl.loadCities(ctx.district.id);
+            if (mounted) setState(() {
+              _selectedDistrictId = ctx.district.id;
+              _selectedCityId = ctx.nearestCity?.id;
+            });
+          }
+        }
+      }
+
+      // Step 2: Accurate GPS fix — pin update karo (district already set hai toh skip)
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.best),
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       if (!mounted) return;
       final loc = LatLng(pos.latitude, pos.longitude);
-      setState(() => _userLocation = loc);
+      setState(() {
+        _userLocation = loc;
+        if (_selectedLocation == null ||
+            (_selectedLocation!.latitude == lastKnown?.latitude &&
+             _selectedLocation!.longitude == lastKnown?.longitude)) {
+          _selectedLocation = loc;
+        }
+      });
 
+      // Accurate GPS se district reload sirf tab jab lastKnown nahi tha
       if (_selectedDistrictId == null) {
         final ctx = await _ctrl.loadContext(loc.latitude, loc.longitude);
         if (mounted && ctx != null) {
-          // Trim cities to nearest only — add listing only needs one city
-          if (ctx.nearestCity != null) {
-            _ctrl.cities.value = [ctx.nearestCity!];
-          }
-          setState(() {
+          await _ctrl.loadCities(ctx.district.id);
+          if (mounted) setState(() {
             _selectedDistrictId = ctx.district.id;
             _selectedCityId = ctx.nearestCity?.id;
           });
         }
       }
 
-      if (_selectedLocation == null) {
-        setState(() => _selectedLocation = loc);
-      }
       if (_mapReady) _animateTo(loc, 15.0);
     } catch (_) {}
   }
@@ -328,7 +353,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
       final remaining = 5 - _photos.length;
       final picked = await _picker.pickMultiImage(imageQuality: 85, limit: remaining);
       if (picked.isNotEmpty && mounted) {
-        setState(() => _photos.addAll(picked.map((f) => File(f.path))));
+        final allowed = picked.take(remaining).map((f) => File(f.path)).toList();
+        setState(() => _photos.addAll(allowed));
+        if (allowed.length < picked.length) {
+          AppToast.warning('Only $remaining more photo${remaining == 1 ? '' : 's'} allowed. Extra photos were removed.');
+        }
       }
     }
   }
@@ -494,8 +523,17 @@ class _AddListingScreenState extends State<AddListingScreen> {
     final overall = _uploadTotal > 0
         ? ((_uploadCurrent - 1) + _uploadProgress) / _uploadTotal
         : 0.0;
+    final percent = (overall * 100).toInt();
+    final String statusText;
+    if (percent >= 95) {
+      statusText = 'Almost done!';
+    } else if (_uploadCurrent == _uploadTotal) {
+      statusText = 'Last photo…';
+    } else {
+      statusText = 'Please wait…';
+    }
     return Positioned.fill(
-      child: Container(
+      child: Material(
         color: Colors.black.withValues(alpha: 0.6),
         child: Center(
           child: Container(
@@ -514,13 +552,33 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ),
               const SizedBox(height: 20),
               const Text('Uploading Photos',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark, decoration: TextDecoration.none)),
               const SizedBox(height: 6),
               Text(
                 'Photo $_uploadCurrent of $_uploadTotal',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight, decoration: TextDecoration.none),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+              // Step dots — one per photo
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(_uploadTotal, (i) {
+                  final isDone = i < _uploadCurrent - 1;
+                  final isCurrent = i == _uploadCurrent - 1;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: isCurrent ? 22 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: isDone || isCurrent ? AppColors.primary : AppColors.divider,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 16),
               // Animated gradient progress bar
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.0, end: overall),
@@ -532,35 +590,34 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       borderRadius: BorderRadius.circular(10),
                       child: Stack(
                         children: [
-                          Container(height: 12, color: AppColors.divider),
+                          Container(height: 10, color: AppColors.divider),
                           FractionallySizedBox(
                             widthFactor: value.clamp(0.0, 1.0),
                             child: Container(
-                              height: 12,
-                              decoration: const BoxDecoration(
-                                gradient: AppColors.primaryGradient,
-                              ),
+                              height: 10,
+                              decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
                             ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Text(
-                      '${(value * 100).toInt()}%',
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          statusText,
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint, decoration: TextDecoration.none),
+                        ),
+                        Text(
+                          '${(value * 100).toInt()}%',
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary, decoration: TextDecoration.none),
+                        ),
+                      ],
                     ),
                   ]);
                 },
               ),
-              const SizedBox(height: 8),
-              const Text('Please wait…',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
             ]),
           ),
         ),
@@ -852,12 +909,31 @@ class _AddListingScreenState extends State<AddListingScreen> {
               _userLocation != null
                   ? (_selectedLocation != null
                       ? 'Pinned — tap inside the circle to adjust'
-                      : 'Tap inside the blue circle to pin your room')
+                      : 'Tap inside the 500 m circle to pin your room')
                   : 'Waiting for your GPS location...',
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
             )),
           ]),
           const SizedBox(height: 12),
+          if (_userLocation == null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                height: 280,
+                color: AppColors.surface,
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+                      SizedBox(height: 14),
+                      Text('Getting your location...', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ] else
           ClipRRect(
             borderRadius: BorderRadius.circular(14),
             child: Stack(children: [
@@ -866,7 +942,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 child: FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter: _userLocation ?? const LatLng(28.6139, 77.2090),
+                    initialCenter: _userLocation!,
                     initialZoom: 15.0,
                     minZoom: 13.0,
                     maxZoom: 18,
@@ -879,12 +955,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     ),
                     onMapReady: () {
                       _mapReady = true;
-                      if (_userLocation != null) {
-                        _mapController.move(_userLocation!, 15.0);
-                        if (_selectedLocation == null) {
-                          setState(() => _selectedLocation = _userLocation);
-                        }
-                      }
                     },
                     onPositionChanged: (_, hasGesture) {
                       if (hasGesture) _animateCancelled = true;
@@ -895,8 +965,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           _userLocation!.latitude, _userLocation!.longitude,
                           pos.latitude, pos.longitude,
                         );
-                        if (distM > 1000) {
-                          AppToast.warning('You can only pin within 1 km of your current location');
+                        if (distM > 500) {
+                          AppToast.warning('You can only pin within 500 m of your current location');
                           return;
                         }
                       }
@@ -919,7 +989,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       CircleLayer(circles: [
                         CircleMarker(
                           point: _userLocation!,
-                          radius: 1000,
+                          radius: 500,
                           useRadiusInMeter: true,
                           color: AppColors.primary.withValues(alpha: 0.08),
                           borderColor: AppColors.primary.withValues(alpha: 0.6),

@@ -15,11 +15,11 @@ class ListingController extends GetxController {
   final myListings = <ListingModel>[].obs;
   final nearbyListings = <NearbyListingModel>[].obs;
   final districts = <DistrictModel>[].obs;
-  final cities = <CityModel>[].obs;
+  final cities = <CityModel>[].obs;       // AddListingScreen: district-based city list
+  final nearbyCities = <CityModel>[].obs; // ExploreScreen: location-based city list
   final roomTypes = <RoomTypeModel>[].obs;
   final isLoading = false.obs;
   final isUploading = false.obs;
-  final hasMoreNearby = false.obs;
   final hasMoreMyListings = false.obs;
   final listingPostedTrigger = 0.obs;
   final exploreRefreshTrigger = 0.obs;
@@ -46,9 +46,9 @@ class ListingController extends GetxController {
       final res = await ApiService.get('/listings/context', params: {'lat': lat, 'lng': lng});
       final data = res['data'];
       final district = DistrictModel.fromJson(data['district'] as Map<String, dynamic>);
-      cities.value = (data['cities'] as List).map((e) => CityModel.fromJson(e as Map<String, dynamic>)).toList();
+      nearbyCities.value = (data['cities'] as List).map((e) => CityModel.fromJson(e as Map<String, dynamic>)).toList();
       final nearestCityId = data['nearestCityId'] as String?;
-      final nearestCity = nearestCityId != null ? cities.firstWhereOrNull((c) => c.id == nearestCityId) : cities.firstOrNull;
+      final nearestCity = nearestCityId != null ? nearbyCities.firstWhereOrNull((c) => c.id == nearestCityId) : nearbyCities.firstOrNull;
       return LocationContext(district: district, nearestCity: nearestCity);
     } catch (_) {
       return null;
@@ -64,7 +64,7 @@ class ListingController extends GetxController {
     }
   }
 
-  Future<void> loadNearby(double lat, double lng, double radius, String cityId, {int page = 1}) async {
+  Future<void> loadNearby(double lat, double lng, double radius, String cityId) async {
     try {
       isLoading.value = true;
       final res = await ApiService.get('/listings/nearby', params: {
@@ -72,16 +72,8 @@ class ListingController extends GetxController {
         'longitude': lng,
         'radius': radius,
         'cityId': cityId,
-        'page': page,
-        'pageSize': 30,
       });
-      final items = (res['data']['items'] as List).map((e) => NearbyListingModel.fromJson(e)).toList();
-      if (page == 1) {
-        nearbyListings.value = items;
-      } else {
-        nearbyListings.addAll(items);
-      }
-      hasMoreNearby.value = res['data']['hasMore'] == true;
+      nearbyListings.value = (res['data']['items'] as List).map((e) => NearbyListingModel.fromJson(e)).toList();
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not load nearby rooms.'));
     } finally {
@@ -225,7 +217,6 @@ class ListingController extends GetxController {
   void clearData() {
     nearbyListings.clear();
     myListings.clear();
-    hasMoreNearby.value = false;
     hasMoreMyListings.value = false;
   }
 

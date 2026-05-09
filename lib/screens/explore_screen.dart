@@ -41,7 +41,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   bool _locationLoading = true;
   bool _mapReady = false;
   bool _checkingPermission = false;
-  int _currentPage = 1;
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
@@ -329,37 +328,25 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     ),
   );
 
-  Future<void> _loadNearby({bool reset = true}) async {
+  Future<void> _loadNearby() async {
     if (_selectedDistrict == null) return;
     final cityId = _effectiveCityId;
     if (cityId == null) return;
-    if (reset) {
-      _revealTimer?.cancel();
-      _radarController.repeat();
-      // Show only user dot while loading so radar is visible immediately
-      _markers = _userLocation != null ? [_buildUserMarker()] : [];
-      _revealedCount = _markers.length;
-      setState(() {});
-    }
-    if (reset) _currentPage = 1;
+    _revealTimer?.cancel();
+    _radarController.repeat();
+    _markers = _userLocation != null ? [_buildUserMarker()] : [];
+    _revealedCount = _markers.length;
+    setState(() {});
     final center = _searchCenter;
-    await _listingCtrl.loadNearby(center.latitude, center.longitude, _radius, cityId, page: _currentPage);
-    if (reset) {
-      _radarController.stop();
-      _radarController.reset();
-    }
-    _buildMarkers(animate: reset);
+    await _listingCtrl.loadNearby(center.latitude, center.longitude, _radius, cityId);
+    _radarController.stop();
+    _radarController.reset();
+    _buildMarkers();
     if (reset && _listingCtrl.nearbyListings.isNotEmpty) _playTing();
   }
 
   void _playTing() async {
     try { await _audioPlayer.play(AssetSource('sounds/tone.mp3')); } catch (_) {}
-  }
-
-  Future<void> _loadMoreNearby() async {
-    if (!_listingCtrl.hasMoreNearby.value || _listingCtrl.isLoading.value) return;
-    _currentPage++;
-    await _loadNearby(reset: false);
   }
 
   void _buildMarkers({bool animate = true}) {
@@ -542,7 +529,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     final d = _selectedDistrict;
     if (d?.latitude == null || d?.longitude == null) return null;
     final points = <LatLng>[LatLng(d!.latitude!, d.longitude!)];
-    for (final city in _listingCtrl.cities) {
+    for (final city in _listingCtrl.nearbyCities) {
       if (city.latitude != null && city.longitude != null) {
         points.add(LatLng(city.latitude!, city.longitude!));
       }
@@ -680,7 +667,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
   Widget _buildCityDropdown() {
     return Obx(() {
-      final cs = _listingCtrl.cities;
+      final cs = _listingCtrl.nearbyCities;
       if (cs.isEmpty) {
         return _selectedDistrict != null
             ? Container(
@@ -706,11 +693,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       return PopupMenuButton<String>(
         onSelected: (id) {
           if (id == '__current__') {
-            setState(() { _selectedCity = null; _currentPage = 1; });
+            setState(() { _selectedCity = null; });
           } else {
             final city = cs.firstWhereOrNull((c) => c.id == id);
             if (city == null) return;
-            setState(() { _selectedCity = city; _currentPage = 1; });
+            setState(() { _selectedCity = city; });
           }
           _loadNearby();
           if (_mapReady) _fitToRadius();
@@ -775,8 +762,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           child: GestureDetector(
             onTap: () {
               _listingCtrl.nearbyListings.clear();
-              _listingCtrl.hasMoreNearby.value = false;
-              setState(() { _radius = r; _currentPage = 1; });
+              setState(() { _radius = r; });
               _loadNearby();
               if (_mapReady) _fitToRadius();
             },
@@ -829,23 +815,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
             ])),
           ]),
-          if (_listingCtrl.hasMoreNearby.value) ...[
-            const SizedBox(height: 10),
-            GestureDetector(
-              onTap: _loadMoreNearby,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Center(
-                  child: Text('Load More', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     ));
@@ -854,7 +823,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   Widget _buildLocationFab() {
     return GestureDetector(
       onTap: () {
-        setState(() { _selectedCity = null; _currentPage = 1; });
+        setState(() { _selectedCity = null; });
         _loadNearby();
         if (_mapReady) {
           if (_userLocation != null) {
