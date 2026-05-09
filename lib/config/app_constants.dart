@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String serverUrl = 'http://a2kig7sikxlht7ag77g6eet9.187.127.162.91.sslip.io';
+  static const String serverUrl = 'https://developerbymistake.tech';
   static const String baseUrl = '$serverUrl/api/v1';
   // static const String baseUrl = 'http://192.168.1.33:5000/api/v1'; // Local dev
   // static const String baseUrl = 'http://10.0.2.2:5000/api/v1'; // Android emulator
