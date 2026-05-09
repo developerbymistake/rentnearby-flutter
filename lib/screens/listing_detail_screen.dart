@@ -271,11 +271,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   Widget _buildActionBar() {
     final l = _listing!;
-    final phone = _isOwner ? null : l.ownerPhone;
     return DetailActionBar(
       latitude: l.latitude,
       longitude: l.longitude,
-      ownerPhone: phone,
+      ownerPhone: l.ownerPhone,
     );
   }
 

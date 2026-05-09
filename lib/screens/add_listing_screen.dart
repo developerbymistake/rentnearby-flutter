@@ -457,41 +457,69 @@ class _AddListingScreenState extends State<AddListingScreen> {
         : 0.0;
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withValues(alpha: 0.55),
+        color: Colors.black.withValues(alpha: 0.6),
         child: Center(
           child: Container(
-            width: 280,
+            width: 300,
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 32, offset: const Offset(0, 8))],
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 40, offset: const Offset(0, 12))],
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Container(
-                width: 60, height: 60,
+                width: 68, height: 68,
                 decoration: BoxDecoration(gradient: AppColors.primaryGradient, shape: BoxShape.circle),
-                child: const Center(child: Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 28)),
+                child: const Center(child: Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 32)),
               ),
               const SizedBox(height: 20),
               const Text('Uploading Photos',
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
               const SizedBox(height: 6),
               Text(
-                'Photo $_uploadCurrent of $_uploadTotal · ${(overall * 100).toInt()}%',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
+                'Photo $_uploadCurrent of $_uploadTotal',
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
               ),
-              const SizedBox(height: 20),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: overall,
-                  minHeight: 8,
-                  backgroundColor: AppColors.divider,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                ),
+              const SizedBox(height: 24),
+              // Animated gradient progress bar
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: overall),
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeOut,
+                builder: (context, value, _) {
+                  return Column(children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Stack(
+                        children: [
+                          Container(height: 12, color: AppColors.divider),
+                          FractionallySizedBox(
+                            widthFactor: value.clamp(0.0, 1.0),
+                            child: Container(
+                              height: 12,
+                              decoration: const BoxDecoration(
+                                gradient: AppColors.primaryGradient,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '${(value * 100).toInt()}%',
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ]);
+                },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               const Text('Please wait…',
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
             ]),

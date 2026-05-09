@@ -1,9 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
-import '../config/app_routes.dart';
 import '../models/listing_model.dart';
 import 'bottom_sheet_action_bar.dart';
 
@@ -30,28 +28,62 @@ class ListingBottomSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Drag handle
           Container(
             width: 40, height: 4,
             margin: const EdgeInsets.only(top: 12, bottom: 16),
             decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
           ),
 
-          // Thumbnail
+          // Thumbnail with availability badge overlay
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: SizedBox(
-                height: 180,
-                width: double.infinity,
-                child: listing.thumbnailUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: listing.thumbnailUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(color: AppColors.surface),
-                        errorWidget: (_, __, ___) => _photoPlaceholder(),
-                      )
-                    : _photoPlaceholder(),
+              child: Stack(
+                children: [
+                  SizedBox(
+                    height: 180,
+                    width: double.infinity,
+                    child: listing.thumbnailUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: listing.thumbnailUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(color: AppColors.surface),
+                            errorWidget: (context, url, error) => _photoPlaceholder(),
+                          )
+                        : _photoPlaceholder(),
+                  ),
+                  // Availability badge on photo
+                  Positioned(
+                    top: 10, right: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: listing.isActive
+                            ? AppColors.success.withValues(alpha: 0.92)
+                            : AppColors.error.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Container(
+                          width: 6, height: 6,
+                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          listing.isActive ? 'Available' : 'Not Available',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ]),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -64,7 +96,7 @@ class ListingBottomSheet extends StatelessWidget {
               children: [
                 // Room type + price
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Icon(_roomTypeIcon(listing.roomTypeName), size: 20, color: AppColors.primary),
                     const SizedBox(width: 8),
@@ -95,27 +127,20 @@ class ListingBottomSheet extends StatelessWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
 
-                // Availability + distance
+                // Owner name + distance in same row
                 Row(children: [
-                  Container(
-                    width: 7, height: 7,
-                    decoration: BoxDecoration(
-                      color: listing.isActive ? AppColors.success : AppColors.error,
-                      shape: BoxShape.circle,
+                  if (listing.ownerName != null && listing.ownerName!.isNotEmpty) ...[
+                    const Icon(Icons.person_rounded, size: 15, color: AppColors.textHint),
+                    const SizedBox(width: 5),
+                    Text(
+                      listing.ownerName!,
+                      style: const TextStyle(
+                          fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textMedium),
                     ),
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    listing.isActive ? 'Available' : 'Not Available',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: listing.isActive ? AppColors.success : AppColors.error,
-                    ),
-                  ),
+                  ] else
+                    const SizedBox(),
                   const Spacer(),
                   const Icon(Iconsax.location, size: 13, color: AppColors.textHint),
                   const SizedBox(width: 4),
@@ -125,17 +150,6 @@ class ListingBottomSheet extends StatelessWidget {
                         fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
                   ),
                 ]),
-
-                if (listing.ownerName != null && listing.ownerName!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Row(children: [
-                    const Icon(Icons.person_rounded, size: 14, color: AppColors.textHint),
-                    const SizedBox(width: 6),
-                    Text(listing.ownerName!,
-                        style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                  ]),
-                ],
 
                 const SizedBox(height: 20),
                 BottomSheetActionBar(
