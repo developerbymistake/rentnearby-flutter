@@ -608,6 +608,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                       tileUpdateTransformer: TileUpdateTransformers.throttle(
                         const Duration(milliseconds: 150),
                       ),
+                      // Unloaded tiles show app shimmer color instead of OSM's
+                      // grey placeholder — seamless transition from loading shimmer.
+                      tileBuilder: (context, tileWidget, tile) => tile.readyToDisplay
+                          ? tileWidget
+                          : ColoredBox(color: AppColors.shimmerBase),
                     ),
                     if (_userLocation != null || _selectedDistrict != null)
                       CircleLayer(circles: [
@@ -615,7 +620,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           point: _searchCenter,
                           radius: _radius * 1000,
                           useRadiusInMeter: true,
-                          color: Colors.transparent,
+                          color: AppColors.primary.withValues(alpha: 0.08),
                           borderColor: AppColors.primary.withValues(alpha: 0.7),
                           borderStrokeWidth: 2,
                         ),
