@@ -615,7 +615,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           point: _searchCenter,
                           radius: _radius * 1000,
                           useRadiusInMeter: true,
-                          color: AppColors.primary.withValues(alpha: 0.08),
+                          color: Colors.transparent,
                           borderColor: AppColors.primary.withValues(alpha: 0.7),
                           borderStrokeWidth: 2,
                         ),
