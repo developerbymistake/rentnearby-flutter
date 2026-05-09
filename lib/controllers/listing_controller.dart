@@ -5,6 +5,12 @@ import '../models/city_model.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
 
+class LocationContext {
+  final DistrictModel district;
+  final CityModel? nearestCity;
+  const LocationContext({required this.district, this.nearestCity});
+}
+
 class ListingController extends GetxController {
   final myListings = <ListingModel>[].obs;
   final nearbyListings = <NearbyListingModel>[].obs;
@@ -32,6 +38,20 @@ class ListingController extends GetxController {
       districts.value = (results[0]['data'] as List).map((e) => DistrictModel.fromJson(e)).toList();
       roomTypes.value = (results[1]['data'] as List).map((e) => RoomTypeModel.fromJson(e)).toList();
     } catch (_) {}
+  }
+
+  Future<LocationContext?> loadContext(double lat, double lng) async {
+    try {
+      final res = await ApiService.get('/listings/context', params: {'lat': lat, 'lng': lng});
+      final data = res['data'];
+      final district = DistrictModel.fromJson(data['district'] as Map<String, dynamic>);
+      cities.value = (data['cities'] as List).map((e) => CityModel.fromJson(e as Map<String, dynamic>)).toList();
+      final nearestCityId = data['nearestCityId'] as String?;
+      final nearestCity = nearestCityId != null ? cities.firstWhereOrNull((c) => c.id == nearestCityId) : cities.firstOrNull;
+      return LocationContext(district: district, nearestCity: nearestCity);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> loadCities(String districtId) async {

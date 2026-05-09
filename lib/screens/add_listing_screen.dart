@@ -14,7 +14,6 @@ import 'dart:io';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/listing_controller.dart';
-import '../models/city_model.dart';
 import '../utils/app_toast.dart';
 import '../widgets/gradient_button.dart';
 
@@ -65,24 +64,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _fetchUserLocation();
   }
 
-  double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
-    const r = 6371.0;
-    final dlat = (lat2 - lat1) * pi / 180;
-    final dlng = (lng2 - lng1) * pi / 180;
-    final a = sin(dlat / 2) * sin(dlat / 2) +
-        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) * sin(dlng / 2) * sin(dlng / 2);
-    return r * 2 * atan2(sqrt(a), sqrt(1 - a));
-  }
-
-  List<DistrictModel> get _nearbyDistricts {
-    final all = _ctrl.districts.toList();
-    if (_userLocation == null) return all;
-    final withDist = all.map((d) => MapEntry(d,
-        _haversineKm(_userLocation!.latitude, _userLocation!.longitude, d.latitude ?? 0, d.longitude ?? 0)
-    )).toList()..sort((a, b) => a.value.compareTo(b.value));
-    final nearby = withDist.where((e) => e.value <= 100).map((e) => e.key).toList();
-    return nearby.isNotEmpty ? nearby : (withDist.isNotEmpty ? [withDist.first.key] : all);
-  }
 
   Future<void> _fetchUserLocation() async {
     try {
@@ -106,15 +87,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
       final loc = LatLng(pos.latitude, pos.longitude);
       setState(() => _userLocation = loc);
 
-      // Auto-detect nearest Uttarakhand district
-      if (_selectedDistrictId == null && _ctrl.districts.isNotEmpty) {
-        final nearest = _nearbyDistricts.first;
-        setState(() => _selectedDistrictId = nearest.id);
-        await _ctrl.loadCities(nearest.id);
-        // Auto-detect nearest city within that district
-        final nearestCity = _nearestCity();
-        if (nearestCity != null) {
-          setState(() => _selectedCityId = nearestCity.id);
+      if (_selectedDistrictId == null) {
+        final ctx = await _ctrl.loadContext(loc.latitude, loc.longitude);
+        if (mounted && ctx != null) {
+          setState(() {
+            _selectedDistrictId = ctx.district.id;
+            _selectedCityId = ctx.nearestCity?.id;
+          });
         }
       }
 
@@ -148,21 +127,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
   CameraConstraint get _cameraConstraint {
     final b = _districtBounds();
     return b != null ? CameraConstraint.containCenter(bounds: b) : const CameraConstraint.unconstrained();
-  }
-
-  CityModel? _nearestCity() {
-    if (_userLocation == null || _ctrl.cities.isEmpty) return null;
-    CityModel? nearest;
-    double minDist = double.infinity;
-    for (final c in _ctrl.cities) {
-      if (c.latitude == null || c.longitude == null) continue;
-      final dist = _haversineKm(
-        _userLocation!.latitude, _userLocation!.longitude,
-        c.latitude!, c.longitude!,
-      );
-      if (dist < minDist) { minDist = dist; nearest = c; }
-    }
-    return nearest;
   }
 
   Future<void> _animateTo(LatLng target, double zoom) async {
@@ -881,10 +845,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 child: FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter: _userLocation ??
-                        (_nearbyDistricts.isNotEmpty && _nearbyDistricts.first.latitude != null
-                            ? LatLng(_nearbyDistricts.first.latitude!, _nearbyDistricts.first.longitude!)
-                            : const LatLng(28.6139, 77.2090)),
+                    initialCenter: _userLocation ?? const LatLng(28.6139, 77.2090),
                     initialZoom: 15.0,
                     minZoom: 13.0,
                     maxZoom: 18,
@@ -909,11 +870,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     },
                     onTap: (_, pos) {
                       if (_userLocation != null) {
-                        final dist = _haversineKm(
+                        final distM = Geolocator.distanceBetween(
                           _userLocation!.latitude, _userLocation!.longitude,
                           pos.latitude, pos.longitude,
                         );
-                        if (dist > 1.0) {
+                        if (distM > 1000) {
                           AppToast.warning('You can only pin within 1 km of your current location');
                           return;
                         }

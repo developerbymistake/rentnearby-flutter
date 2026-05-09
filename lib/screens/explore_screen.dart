@@ -186,59 +186,23 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     }
   }
 
-  // FIX #3 (race condition): Guard added — do not auto-select district until
-  // GPS is resolved. Prevents wrong district selection with null location.
   void _tryAutoLoad() {
-    if (_selectedDistrict != null || _listingCtrl.districts.isEmpty) return;
+    if (_selectedDistrict != null) return;
     if (_locationLoading) return;
     _autoLoad();
   }
 
   String? get _effectiveCityId => _selectedCity?.id ?? _autoCity?.id;
 
-  CityModel? _nearestCity() {
-    final cs = _listingCtrl.cities;
-    if (cs.isEmpty) return null;
-    if (_userLocation == null) return cs.first;
-    return cs.reduce((a, b) {
-      final dA = _haversineKm(_userLocation!.latitude, _userLocation!.longitude,
-          a.latitude ?? 0, a.longitude ?? 0);
-      final dB = _haversineKm(_userLocation!.latitude, _userLocation!.longitude,
-          b.latitude ?? 0, b.longitude ?? 0);
-      return dA <= dB ? a : b;
-    });
-  }
-
   Future<void> _autoLoad() async {
-    final district = _nearestDistrict();
-    setState(() => _selectedDistrict = district);
-    await _listingCtrl.loadCities(district.id);
-    setState(() => _autoCity = _nearestCity());
+    if (_userLocation == null) return;
+    final ctx = await _listingCtrl.loadContext(_userLocation!.latitude, _userLocation!.longitude);
+    if (!mounted || ctx == null) return;
+    setState(() {
+      _selectedDistrict = ctx.district;
+      _autoCity = ctx.nearestCity;
+    });
     _loadNearby();
-  }
-
-  double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
-    const r = 6371.0;
-    final dlat = (lat2 - lat1) * pi / 180;
-    final dlng = (lng2 - lng1) * pi / 180;
-    final a = sin(dlat / 2) * sin(dlat / 2) +
-        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) * sin(dlng / 2) * sin(dlng / 2);
-    return r * 2 * atan2(sqrt(a), sqrt(1 - a));
-  }
-
-  List<DistrictModel> get _nearbyDistricts {
-    final all = _listingCtrl.districts.toList();
-    if (_userLocation == null) return all;
-    final withDist = all.map((d) => MapEntry(d,
-        _haversineKm(_userLocation!.latitude, _userLocation!.longitude, d.latitude ?? 0, d.longitude ?? 0)
-    )).toList()..sort((a, b) => a.value.compareTo(b.value));
-    final nearby = withDist.where((e) => e.value <= 100).map((e) => e.key).toList();
-    return nearby.isNotEmpty ? nearby : [withDist.first.key];
-  }
-
-  DistrictModel _nearestDistrict() {
-    final ds = _nearbyDistricts;
-    return ds.isNotEmpty ? ds.first : _listingCtrl.districts.first;
   }
 
   Future<void> _initLocation() async {
@@ -285,14 +249,13 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       if (!mounted) return;
       setState(() => _userLocation = LatLng(pos.latitude, pos.longitude));
 
-      if (_listingCtrl.districts.isNotEmpty) {
-        final nearest = _nearestDistrict();
-        if (_selectedDistrict == null || _selectedDistrict!.id != nearest.id) {
-          setState(() => _selectedDistrict = nearest);
-          await _listingCtrl.loadCities(nearest.id);
-        }
-        // Always recalculate nearest city now that we have an accurate GPS fix
-        setState(() => _autoCity = _nearestCity());
+      final ctx = await _listingCtrl.loadContext(pos.latitude, pos.longitude);
+      if (!mounted) return;
+      if (ctx != null && (_selectedDistrict == null || _selectedDistrict!.id != ctx.district.id)) {
+        setState(() {
+          _selectedDistrict = ctx.district;
+          _autoCity = ctx.nearestCity;
+        });
       }
 
       _loadNearby();
