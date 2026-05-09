@@ -290,8 +290,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         if (_selectedDistrict == null || _selectedDistrict!.id != nearest.id) {
           setState(() => _selectedDistrict = nearest);
           await _listingCtrl.loadCities(nearest.id);
-          setState(() => _autoCity = _nearestCity());
         }
+        // Always recalculate nearest city now that we have an accurate GPS fix
+        setState(() => _autoCity = _nearestCity());
       }
 
       _loadNearby();
@@ -303,11 +304,16 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   LatLng get _searchCenter {
-    final activeCity = _selectedCity ?? _autoCity;
-    if (activeCity?.latitude != null && activeCity?.longitude != null) {
-      return LatLng(activeCity!.latitude!, activeCity.longitude!);
+    // Explicit user city selection overrides everything
+    if (_selectedCity?.latitude != null && _selectedCity?.longitude != null) {
+      return LatLng(_selectedCity!.latitude!, _selectedCity!.longitude!);
     }
+    // Actual GPS position takes priority over any auto-selected city
     if (_userLocation != null) return _userLocation!;
+    // No GPS — fall back to auto-selected nearest city for browsing
+    if (_autoCity?.latitude != null && _autoCity?.longitude != null) {
+      return LatLng(_autoCity!.latitude!, _autoCity!.longitude!);
+    }
     if (_selectedDistrict?.latitude != null && _selectedDistrict?.longitude != null) {
       return LatLng(_selectedDistrict!.latitude!, _selectedDistrict!.longitude!);
     }
@@ -890,7 +896,13 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       onTap: () {
         setState(() { _selectedCity = null; _currentPage = 1; });
         _loadNearby();
-        if (_mapReady) _fitToRadius();
+        if (_mapReady) {
+          if (_userLocation != null) {
+            _animateTo(_userLocation!, _zoomForRadius(_radius, _userLocation!.latitude));
+          } else {
+            _fitToRadius();
+          }
+        }
       },
       child: Container(
         width: 46, height: 46,
