@@ -3,10 +3,12 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
+import '../widgets/gradient_button.dart';
 import 'explore_screen.dart';
 import 'my_listings_screen.dart';
 import 'profile_screen.dart';
@@ -22,7 +24,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   late AnimationController _navController;
   final _auth = Get.find<AuthController>();
   bool _isOffline = false;
+  bool _gpsEnabled = true;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  StreamSubscription<ServiceStatus>? _gpsStatusSub;
 
   final _screens = const [ExploreScreen(), MyListingsScreen(), ProfileScreen()];
 
@@ -33,6 +37,22 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     Get.put(ListingController());
     ever(_auth.tabIndex, (i) => setState(() => _currentIndex = i));
     _initConnectivity();
+    _initGpsGate();
+  }
+
+  Future<void> _initGpsGate() async {
+    final enabled = await Geolocator.isLocationServiceEnabled();
+    if (mounted) setState(() => _gpsEnabled = enabled);
+
+    _gpsStatusSub = Geolocator.getServiceStatusStream().listen((status) {
+      if (!mounted) return;
+      setState(() => _gpsEnabled = status == ServiceStatus.enabled);
+    });
+  }
+
+  Future<void> _recheckGps() async {
+    final enabled = await Geolocator.isLocationServiceEnabled();
+    if (mounted) setState(() => _gpsEnabled = enabled);
   }
 
   void _initConnectivity() {
@@ -49,8 +69,74 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _connectivitySub?.cancel();
+    _gpsStatusSub?.cancel();
     _navController.dispose();
     super.dispose();
+  }
+
+  Widget _buildGpsGate() {
+    return Positioned.fill(
+      child: Material(
+        color: Colors.white,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 100, height: 100,
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.location_off_rounded, color: Colors.white, size: 46),
+                ),
+                const SizedBox(height: 32),
+                const Text(
+                  'Location Required',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Bakhli uses your location to show rooms near you. Please enable GPS to continue.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    color: AppColors.textMedium,
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                GradientButton(
+                  label: 'Enable Location',
+                  onPressed: () => Geolocator.openLocationSettings(),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: _recheckGps,
+                  child: const Text(
+                    'Check Again',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -60,14 +146,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (_currentIndex != 0) {
-          // Go back to Explore tab instead of closing app
           setState(() => _currentIndex = 0);
         } else {
-          // On Explore tab — exit app
           SystemNavigator.pop();
         }
       },
-      child: Scaffold(
+      child: Stack(
+        children: [
+      Scaffold(
         body: Column(
           children: [
             AnimatedContainer(
@@ -101,6 +187,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ],
         ),
         bottomNavigationBar: _buildBottomNav(),
+      ),
+      if (!_gpsEnabled) _buildGpsGate(),
+        ],
       ),
     );
   }

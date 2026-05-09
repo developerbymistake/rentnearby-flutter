@@ -12,6 +12,7 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../controllers/listing_controller.dart';
 import '../models/city_model.dart';
+import '../models/listing_model.dart';
 import '../widgets/listing_bottom_sheet.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -33,6 +34,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   List<Marker> _markers = [];
   LatLng? _userLocation;
   double _radius = 1.0;
+  double _lastClusterZoom = 0;
   DistrictModel? _selectedDistrict;
   CityModel? _selectedCity;
   CityModel? _autoCity;
@@ -387,43 +389,85 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
     final listings = (_listingCtrl.nearbyListings.toList()
       ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm)))
-      .take(30);
+      .take(30)
+      .toList();
 
-    for (final listing in listings) {
-      final priceText = listing.priceMonthly != null ? _pinPrice(listing.priceMonthly!) : 'Call';
-      final chipW = _chipWidth(priceText);
-      markers.add(Marker(
-        point: LatLng(listing.latitude, listing.longitude),
-        width: chipW,
-        height: 34,
-        alignment: Alignment.center,
-        child: GestureDetector(
-          onTap: () => _showDetail(listing.id),
-          child: _AnimatedPin(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(17),
-                border: Border.all(color: AppColors.primary, width: 2),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  priceText,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
+    final clusters = _mapReady
+        ? _computeClusters(listings)
+        : listings.map((l) => _Cluster(l)).toList();
+
+    for (final cluster in clusters) {
+      final count = cluster.listings.length;
+      final rep = cluster.representative;
+
+      if (count == 1) {
+        final priceText = rep.priceMonthly != null ? _pinPrice(rep.priceMonthly!) : 'Call';
+        final chipW = _chipWidth(priceText);
+        markers.add(Marker(
+          point: cluster.center,
+          width: chipW,
+          height: 34,
+          alignment: Alignment.center,
+          child: GestureDetector(
+            onTap: () => _showDetail(rep.id),
+            child: _AnimatedPin(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(color: AppColors.primary, width: 2),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    priceText,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ));
+        ));
+      } else {
+        markers.add(Marker(
+          point: cluster.center,
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          child: GestureDetector(
+            onTap: () => _showDetail(rep.id),
+            child: _AnimatedPin(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  shape: BoxShape.circle,
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    '$count',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ));
+      }
     }
 
     _revealTimer?.cancel();
@@ -447,6 +491,43 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       setState(() => _revealedCount = i);
       if (i >= markers.length) timer.cancel();
     });
+  }
+
+  List<_Cluster> _computeClusters(List<NearbyListingModel> listings) {
+    final clusters = <_Cluster>[];
+    const clusterPx = 56.0;
+    final zoom = _mapController.camera.zoom;
+    for (final listing in listings) {
+      final pt = LatLng(listing.latitude, listing.longitude);
+      _Cluster? best;
+      double bestDist = double.infinity;
+      for (final c in clusters) {
+        final d = _mercatorPixelDist(pt, c.center, zoom);
+        if (d < bestDist) { bestDist = d; best = c; }
+      }
+      if (best != null && bestDist <= clusterPx) {
+        best.listings.add(listing);
+      } else {
+        clusters.add(_Cluster(listing));
+      }
+    }
+    return clusters;
+  }
+
+  static double _mercatorPixelDist(LatLng a, LatLng b, double zoom) {
+    final scale = 256.0 * pow(2.0, zoom);
+    final ax = (a.longitude + 180) / 360 * scale;
+    final ay = _mercatorY(a.latitude) * scale;
+    final bx = (b.longitude + 180) / 360 * scale;
+    final by = _mercatorY(b.latitude) * scale;
+    final dx = ax - bx;
+    final dy = ay - by;
+    return sqrt(dx * dx + dy * dy);
+  }
+
+  static double _mercatorY(double lat) {
+    final sinLat = sin(lat * pi / 180);
+    return 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
   }
 
   double _chipWidth(String text) => (text.length * 9.0 + 26).clamp(52.0, 90.0);
@@ -537,8 +618,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                       _mapReady = true;
                       _fitToRadius();
                     },
-                    onPositionChanged: (_, hasGesture) {
+                    onPositionChanged: (camera, hasGesture) {
                       if (hasGesture) _cameraAnimController.stop();
+                      if ((camera.zoom - _lastClusterZoom).abs() >= 0.4) {
+                        _lastClusterZoom = camera.zoom;
+                        _buildMarkers(animate: false);
+                      }
                     },
                   ),
                   children: [
@@ -828,6 +913,19 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 }
 
+
+class _Cluster {
+  final List<NearbyListingModel> listings;
+  _Cluster(NearbyListingModel first) : listings = [first];
+
+  LatLng get center => LatLng(
+    listings.map((l) => l.latitude).reduce((a, b) => a + b) / listings.length,
+    listings.map((l) => l.longitude).reduce((a, b) => a + b) / listings.length,
+  );
+
+  NearbyListingModel get representative => listings.reduce((a, b) =>
+      (a.priceMonthly ?? 999999999) <= (b.priceMonthly ?? 999999999) ? a : b);
+}
 
 class _AnimatedPin extends StatefulWidget {
   final Widget child;
