@@ -71,6 +71,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     WidgetsBinding.instance.addObserver(this);
     _districtsWorker = ever(_listingCtrl.districts, (_) => _tryAutoLoad());
     _postedWorker = ever(_listingCtrl.listingPostedTrigger, (_) => _loadNearby());
+    ever(_listingCtrl.exploreRefreshTrigger, (_) { if (_selectedDistrict != null) _loadNearby(); });
     _loadingWorker = ever(_listingCtrl.isLoading, (loading) {
       if (!loading && _radarController.isAnimating) {
         _radarController.stop();
@@ -305,15 +306,39 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     return zoom.clamp(10.0, 17.0);
   }
 
+  Marker _buildUserMarker() => Marker(
+    point: _userLocation!,
+    width: 120, height: 120,
+    alignment: Alignment.center,
+    child: AnimatedBuilder(
+      animation: _radarController,
+      builder: (_, _) => CustomPaint(
+        painter: _RadarPainter(progress: _radarController.value, color: const Color(0xFF1E88E5)),
+        child: Center(
+          child: Container(
+            width: 16, height: 16,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E88E5),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2.5),
+              boxShadow: [BoxShadow(color: const Color(0xFF1E88E5).withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 2)],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
   Future<void> _loadNearby({bool reset = true}) async {
     if (_selectedDistrict == null) return;
     final cityId = _effectiveCityId;
     if (cityId == null) return;
     if (reset) {
       _revealTimer?.cancel();
-      _markers = [];
-      _revealedCount = 0;
       _radarController.repeat();
+      // Show only user dot while loading so radar is visible immediately
+      _markers = _userLocation != null ? [_buildUserMarker()] : [];
+      _revealedCount = _markers.length;
       setState(() {});
     }
     if (reset) _currentPage = 1;
@@ -341,31 +366,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     final markers = <Marker>[];
 
     if (_userLocation != null) {
-      markers.add(Marker(
-        point: _userLocation!,
-        width: 120, height: 120,
-        alignment: Alignment.center,
-        child: AnimatedBuilder(
-          animation: _radarController,
-          builder: (_, _) => CustomPaint(
-            painter: _RadarPainter(
-              progress: _radarController.value,
-              color: const Color(0xFF1E88E5),
-            ),
-            child: Center(
-              child: Container(
-                width: 16, height: 16,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E88E5),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2.5),
-                  boxShadow: [BoxShadow(color: const Color(0xFF1E88E5).withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 2)],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ));
+      markers.add(_buildUserMarker());
     }
 
     final listings = (_listingCtrl.nearbyListings.toList()

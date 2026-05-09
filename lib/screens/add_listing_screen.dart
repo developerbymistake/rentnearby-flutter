@@ -90,6 +90,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
       if (_selectedDistrictId == null) {
         final ctx = await _ctrl.loadContext(loc.latitude, loc.longitude);
         if (mounted && ctx != null) {
+          // Trim cities to nearest only — add listing only needs one city
+          if (ctx.nearestCity != null) {
+            _ctrl.cities.value = [ctx.nearestCity!];
+          }
           setState(() {
             _selectedDistrictId = ctx.district.id;
             _selectedCityId = ctx.nearestCity?.id;
@@ -315,16 +319,18 @@ class _AddListingScreenState extends State<AddListingScreen> {
         if (status.isPermanentlyDenied && mounted) _showPermissionDeniedDialog('Camera');
         return;
       }
-    } else {
-      final status = await Permission.photos.request();
-      if (!status.isGranted && !status.isLimited) {
-        if (status.isPermanentlyDenied && mounted) _showPermissionDeniedDialog('Photos');
-        return;
-      }
     }
 
-    final picked = await _picker.pickImage(source: source, imageQuality: 85);
-    if (picked != null && mounted) setState(() => _photos.add(File(picked.path)));
+    if (source == ImageSource.camera) {
+      final picked = await _picker.pickImage(source: source, imageQuality: 85);
+      if (picked != null && mounted) setState(() => _photos.add(File(picked.path)));
+    } else {
+      final remaining = 5 - _photos.length;
+      final picked = await _picker.pickMultiImage(imageQuality: 85, limit: remaining);
+      if (picked.isNotEmpty && mounted) {
+        setState(() => _photos.addAll(picked.map((f) => File(f.path))));
+      }
+    }
   }
 
   void _handleNext() {
@@ -335,6 +341,17 @@ class _AddListingScreenState extends State<AddListingScreen> {
       }
       if (_priceMonthlyCtrl.text.trim().isEmpty) {
         AppToast.error('Please enter the monthly rent amount');
+        _priceFocusNode.requestFocus();
+        return;
+      }
+      final rent = int.tryParse(_priceMonthlyCtrl.text) ?? 0;
+      if (rent <= 0) {
+        AppToast.error('Monthly rent must be greater than 0');
+        _priceFocusNode.requestFocus();
+        return;
+      }
+      if (rent > 9900000) {
+        AppToast.error('Monthly rent cannot exceed ₹99,00,000');
         _priceFocusNode.requestFocus();
         return;
       }
@@ -739,7 +756,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
           controller: _priceMonthlyCtrl,
           focusNode: _priceFocusNode,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(7),
+          ],
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
           decoration: _inputDec('e.g. 8000', prefix: '₹ '),
         ),
@@ -750,6 +770,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
         child: TextFormField(
           controller: _descCtrl,
           maxLines: 3,
+          maxLength: 300,
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
           decoration: _inputDec('Describe amenities, nearby facilities, rules...'),
         ),

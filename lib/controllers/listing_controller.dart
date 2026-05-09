@@ -22,6 +22,7 @@ class ListingController extends GetxController {
   final hasMoreNearby = false.obs;
   final hasMoreMyListings = false.obs;
   final listingPostedTrigger = 0.obs;
+  final exploreRefreshTrigger = 0.obs;
 
   @override
   void onInit() {
@@ -191,6 +192,22 @@ class ListingController extends GetxController {
     try {
       await ApiService.put('/listings/$id', {'isActive': !isActive});
       await loadMyListings();
+      final idx = nearbyListings.indexWhere((l) => l.id == id);
+      if (idx != -1) {
+        if (!isActive) {
+          // activating — update flag in nearby
+          final l = nearbyListings[idx];
+          nearbyListings[idx] = NearbyListingModel(
+            id: l.id, roomTypeName: l.roomTypeName, priceMonthly: l.priceMonthly,
+            latitude: l.latitude, longitude: l.longitude,
+            ownerName: l.ownerName, ownerPhone: l.ownerPhone,
+            thumbnailUrl: l.thumbnailUrl, distanceKm: l.distanceKm, isActive: true,
+          );
+        } else {
+          // deactivating — remove from nearby (API only returns active listings)
+          nearbyListings.removeAt(idx);
+        }
+      }
     } catch (_) {}
   }
 
@@ -198,6 +215,7 @@ class ListingController extends GetxController {
     try {
       await ApiService.delete('/listings/$id');
       myListings.removeWhere((l) => l.id == id);
+      nearbyListings.removeWhere((l) => l.id == id);
       AppToast.success('Listing removed successfully.');
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not delete listing.'));

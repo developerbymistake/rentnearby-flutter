@@ -121,6 +121,15 @@ class AuthController extends GetxController {
     return fallback;
   }
 
+  Future<void> refreshProfile() async {
+    try {
+      final res = await ApiService.get('/users/profile');
+      final updated = UserModel.fromJson(res['data']);
+      StorageService.saveUser(updated);
+      user.value = updated;
+    } catch (_) {}
+  }
+
   Future<bool> updateProfile(String? name, String? gmailId) async {
     try {
       isLoading.value = true;

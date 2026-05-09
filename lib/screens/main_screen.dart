@@ -38,6 +38,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     ever(_auth.tabIndex, (i) => setState(() => _currentIndex = i));
     _initConnectivity();
     _initGpsGate();
+    _auth.refreshProfile();
   }
 
   Future<void> _initGpsGate() async {
@@ -224,7 +225,12 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     final isActive = _currentIndex == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _currentIndex = index),
+        onTap: () {
+          if (index == 0 && _currentIndex != 0) {
+            Get.find<ListingController>().exploreRefreshTrigger.value++;
+          }
+          setState(() => _currentIndex = index);
+        },
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
