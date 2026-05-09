@@ -342,7 +342,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     _radarController.stop();
     _radarController.reset();
     _buildMarkers();
-    if (reset && _listingCtrl.nearbyListings.isNotEmpty) _playTing();
+    if (_listingCtrl.nearbyListings.isNotEmpty) _playTing();
   }
 
   void _playTing() async {
