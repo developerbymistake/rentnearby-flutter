@@ -719,11 +719,15 @@ class _AddListingScreenState extends State<AddListingScreen> {
             ],
             Expanded(
               flex: 2,
-              child: Obx(() => GradientButton(
-                onPressed: _ctrl.isLoading.value ? null : _handleNext,
-                isLoading: _ctrl.isLoading.value,
-                label: _step == 0 ? 'Next: Location' : _step == 1 ? 'Next: Photos' : 'Post Listing',
-              )),
+              child: Obx(() {
+                final isButtonDisabled = _ctrl.isLoading.value ||
+                    (_step == 1 && (_isGeocoding || _addressCtrl.text.trim().isEmpty));
+                return GradientButton(
+                  onPressed: isButtonDisabled ? null : _handleNext,
+                  isLoading: _ctrl.isLoading.value,
+                  label: _step == 0 ? 'Next: Location' : _step == 1 ? 'Next: Photos' : 'Post Listing',
+                );
+              }),
             ),
           ]),
         ),
