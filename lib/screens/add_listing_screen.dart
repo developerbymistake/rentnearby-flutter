@@ -108,6 +108,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       );
       if (!mounted) return;
       final loc = LatLng(pos.latitude, pos.longitude);
+      final addressWasEmpty = _addressCtrl.text.trim().isEmpty;
       setState(() {
         _userLocation = loc;
         if (_selectedLocation == null ||
@@ -116,6 +117,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
           _selectedLocation = loc;
         }
       });
+
+      // Auto-fetch address from accurate GPS if not already filled
+      if (addressWasEmpty && _selectedLocation != null) {
+        _reverseGeocode(_selectedLocation!);
+      }
 
       // Accurate GPS se district reload sirf tab jab lastKnown nahi tha
       if (_selectedDistrictId == null) {
@@ -398,6 +404,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
     }
     if (_step < 2) {
       setState(() => _step++);
+      // Auto-fetch address when entering Step 1 (location step)
+      if (_step == 1 && _addressCtrl.text.trim().isEmpty && _selectedLocation != null) {
+        _reverseGeocode(_selectedLocation!);
+      }
     } else {
       _submit();
     }
