@@ -826,38 +826,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildCounterCard() {
-    final count = _listingCtrl.nearbyListings.length;
-    return Obx(() => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(children: [
-            Container(
-              width: 42, height: 42,
-              decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
-              child: Center(child: Text('$count',
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white))),
-            ),
-            const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(count == 0 ? 'No rooms found' : '$count room${count == 1 ? '' : 's'} loaded',
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-              Text('within ${_radius.toInt() == _radius ? _radius.toInt() : _radius} km radius',
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-            ])),
-          ]),
-        ],
-      ),
-    ));
-  }
-
   Widget _buildLocationFab() {
     return GestureDetector(
       onTap: () {
