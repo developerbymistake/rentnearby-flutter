@@ -41,6 +41,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   bool _locationLoading = true;
   bool _mapReady = false;
   bool _checkingPermission = false;
+  bool _nearbyLoaded = false; // Flag to prevent duplicate _loadNearby calls
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
@@ -206,6 +207,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   Future<void> _initLocation() async {
+    _nearbyLoaded = false; // Reset flag for fresh initialization
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -238,7 +240,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         }
         _locationLoading = false;
       });
-      if (_listingCtrl.districts.isNotEmpty && lastKnown != null) _tryAutoLoad();
+      if (_listingCtrl.districts.isNotEmpty && lastKnown != null) {
+        _tryAutoLoad();
+        _nearbyLoaded = true; // Mark as loaded to prevent duplicate call
+      }
       if (_mapReady) _fitToRadius();
 
       // FIX #3 (accuracy): LocationAccuracy.high uses network + GPS — resolves
@@ -258,7 +263,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         });
       }
 
-      _loadNearby();
+      // Only load nearby if not already loaded via _tryAutoLoad
+      if (!_nearbyLoaded) {
+        _loadNearby();
+      }
       if (_mapReady) _fitToRadius();
     } catch (_) {
       setState(() => _locationLoading = false);
