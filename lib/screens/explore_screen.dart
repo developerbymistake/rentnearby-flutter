@@ -656,10 +656,42 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             ),
           ),
 
-          Obx(() => Positioned(
+          Positioned(
             bottom: 20, left: 20, right: 20,
-            child: _listingCtrl.isLoading.value ? const SizedBox() : _buildCounterCard(),
-          )),
+            child: Obx(() {
+              if (_listingCtrl.isLoading.value) return const SizedBox.shrink();
+              final count = _listingCtrl.nearbyListings.length;
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Container(
+                      width: 42, height: 42,
+                      decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
+                      child: Center(child: Text('$count', style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white))),
+                    ),
+                    const SizedBox(width: 14),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(count == 0 ? 'No rooms found' : '$count room${count == 1 ? '' : 's'} loaded',
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                        Text('within ${_radius.toInt() == _radius ? _radius.toInt() : _radius} km radius',
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ),
 
           Positioned(
             bottom: 100, right: 20,
@@ -773,6 +805,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
+              height: 34,
               margin: EdgeInsets.only(right: i < radii.length - 1 ? 8 : 0),
               padding: const EdgeInsets.symmetric(vertical: 7),
               decoration: BoxDecoration(
