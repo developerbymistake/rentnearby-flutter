@@ -42,6 +42,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   bool _mapReady = false;
   bool _checkingPermission = false;
   bool _nearbyLoaded = false; // Flag to prevent duplicate _loadNearby calls
+  Timer? _loadNearbyDebounceTimer; // Debounce rapid _loadNearby calls
+  bool _autoLoading = false; // Prevent concurrent _autoLoad calls
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
@@ -124,6 +126,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     _cameraAnimController.dispose();
     _radarController.dispose();
     _revealTimer?.cancel();
+    _loadNearbyDebounceTimer?.cancel();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -190,6 +193,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   void _tryAutoLoad() {
     if (_selectedDistrict != null) return;
     if (_locationLoading) return;
+    if (_autoLoading) return; // Prevent concurrent _autoLoad calls
     _autoLoad();
   }
 
@@ -197,13 +201,18 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
   Future<void> _autoLoad() async {
     if (_userLocation == null) return;
-    final ctx = await _listingCtrl.loadContext(_userLocation!.latitude, _userLocation!.longitude);
-    if (!mounted || ctx == null) return;
-    setState(() {
-      _selectedDistrict = ctx.district;
-      _autoCity = ctx.nearestCity;
-    });
-    _loadNearby();
+    _autoLoading = true;
+    try {
+      final ctx = await _listingCtrl.loadContext(_userLocation!.latitude, _userLocation!.longitude);
+      if (!mounted || ctx == null) return;
+      setState(() {
+        _selectedDistrict = ctx.district;
+        _autoCity = ctx.nearestCity;
+      });
+      _loadNearby();
+    } finally {
+      _autoLoading = false;
+    }
   }
 
   Future<void> _initLocation() async {
@@ -336,7 +345,15 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     ),
   );
 
-  Future<void> _loadNearby() async {
+  void _loadNearby() {
+    // Debounce rapid calls to prevent duplicate API requests
+    _loadNearbyDebounceTimer?.cancel();
+    _loadNearbyDebounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      await _executeLoadNearby();
+    });
+  }
+
+  Future<void> _executeLoadNearby() async {
     if (_selectedDistrict == null) return;
     final cityId = _effectiveCityId;
     if (cityId == null) return;
