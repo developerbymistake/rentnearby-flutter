@@ -81,6 +81,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
         return;
       }
 
+      bool contextLoaded = false; // Flag to prevent duplicate context load
+
       // Step 1: lastKnown se turant map + district/city load karo (Step 1 background mein)
       final lastKnown = await Geolocator.getLastKnownPosition();
       if (lastKnown != null && mounted) {
@@ -94,10 +96,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
           final ctx = await _ctrl.loadContext(lastLoc.latitude, lastLoc.longitude);
           if (mounted && ctx != null) {
             await _ctrl.loadCities(ctx.district.id);
-            if (mounted) setState(() {
-              _selectedDistrictId = ctx.district.id;
-              _selectedCityId = ctx.nearestCity?.id;
-            });
+            if (mounted) {
+              setState(() {
+                _selectedDistrictId = ctx.district.id;
+                _selectedCityId = ctx.nearestCity?.id;
+              });
+              contextLoaded = true; // Mark as loaded
+            }
           }
         }
       }
@@ -123,8 +128,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
         _reverseGeocode(_selectedLocation!);
       }
 
-      // Accurate GPS se district reload sirf tab jab lastKnown nahi tha
-      if (_selectedDistrictId == null) {
+      // Accurate GPS se district reload sirf tab jab lastKnown nahi tha aur contextLoaded nahi hai
+      if (!contextLoaded && _selectedDistrictId == null) {
         final ctx = await _ctrl.loadContext(loc.latitude, loc.longitude);
         if (mounted && ctx != null) {
           await _ctrl.loadCities(ctx.district.id);
