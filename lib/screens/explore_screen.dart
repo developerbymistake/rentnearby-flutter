@@ -250,8 +250,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         _locationLoading = false;
       });
       if (_listingCtrl.districts.isNotEmpty && lastKnown != null) {
-        _tryAutoLoad();
-        _nearbyLoaded = true; // Mark as loaded to prevent duplicate call
+        _nearbyLoaded = true; // Mark before calling _tryAutoLoad to prevent duplicate paths
+        _tryAutoLoad(); // Exclusively calls _loadNearby via _autoLoad
       }
       if (_mapReady) _fitToRadius();
 
@@ -272,10 +272,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         });
       }
 
-      // Only load nearby if not already loaded via _tryAutoLoad
-      if (!_nearbyLoaded) {
-        _loadNearby();
-      }
       if (_mapReady) _fitToRadius();
     } catch (_) {
       setState(() => _locationLoading = false);
