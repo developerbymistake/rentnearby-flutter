@@ -514,6 +514,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
       if (failed > 0 && mounted) {
         AppToast.error('$failed photo${failed > 1 ? 's' : ''} could not be uploaded.');
       }
+      // Notify explore page after all photos are uploaded
+      _ctrl.notifyListingPosted();
+    } else {
+      // Case 2: No photos selected (photo upload is optional)
+      // Still notify explore page so pin appears
+      _ctrl.notifyListingPosted();
     }
 
     await _ctrl.loadMyListings();

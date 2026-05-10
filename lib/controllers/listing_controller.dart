@@ -121,7 +121,8 @@ class ListingController extends GetxController {
       isLoading.value = true;
       final res = await ApiService.post('/listings/', data);
       final listingId = res['data']?['listingId'] as String?;
-      listingPostedTrigger.value++;
+      // Note: Do NOT trigger listingPostedTrigger here
+      // Let AddListingScreen control when to notify (after photos are uploaded or skipped)
       return listingId;
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not create listing.'));
@@ -129,6 +130,10 @@ class ListingController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void notifyListingPosted() {
+    listingPostedTrigger.value++;
   }
 
   Future<bool> uploadPhoto(String listingId, String filePath, {void Function(int, int)? onProgress}) async {
