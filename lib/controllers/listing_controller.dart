@@ -228,12 +228,12 @@ class ListingController extends GetxController {
       );
 
       final data = res['data'];
-      if (data != null && data is Map<String, dynamic>) {
-        listingPostedTrigger.value++;
-        AppToast.success('Your FREE plan activated!');
-      } else {
+      if (data == null || data is! Map<String, dynamic>) {
         throw Exception('Invalid response from server');
       }
+
+      listingPostedTrigger.value++;
+      AppToast.success('Your FREE plan activated!');
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not activate free plan.'));
       rethrow;
@@ -259,7 +259,7 @@ class ListingController extends GetxController {
       final amountRaw = data['amount'];
 
       if (orderId == null || amountRaw == null) {
-        throw Exception('Missing payment details (orderId or amount)');
+        throw Exception('Missing payment details: orderId or amount');
       }
 
       final amount = _safeGetInt(amountRaw);
