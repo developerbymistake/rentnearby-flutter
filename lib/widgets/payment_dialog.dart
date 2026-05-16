@@ -232,10 +232,10 @@ class _PaymentDialogState extends State<PaymentDialog> {
         throw Exception('User not found');
       }
 
-      if (user.email == null || user.email!.isEmpty) {
+      if (user.gmailId == null || user.gmailId!.isEmpty) {
         throw Exception('User email is required for payment');
       }
-      if (user.phone == null || user.phone!.isEmpty) {
+      if (user.phoneNumber == null || user.phoneNumber.isEmpty) {
         throw Exception('User phone is required for payment');
       }
 
@@ -257,8 +257,8 @@ class _PaymentDialogState extends State<PaymentDialog> {
         _razorpayService.initiatePayment(
           orderId: orderId,
           amount: amount,
-          email: user.email!,
-          phone: user.phone!,
+          email: user.gmailId!,
+          phone: user.phoneNumber,
           description: 'Premium Plan - 30 days, 2 rooms',
         );
         // Close dialog only AFTER Razorpay opens successfully

@@ -14,7 +14,6 @@ class RazorpayPaymentService {
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentFailure);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_DISMISSED, _handlePaymentDismissed);
   }
 
   void setCallbacks(
