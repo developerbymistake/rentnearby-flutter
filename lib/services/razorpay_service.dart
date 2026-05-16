@@ -2,24 +2,29 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 typedef PaymentSuccessCallback = void Function(PaymentSuccessResponse);
 typedef PaymentFailureCallback = void Function(PaymentFailureResponse);
+typedef PaymentCancelCallback = void Function();
 
 class RazorpayPaymentService {
   late Razorpay _razorpay;
   late PaymentSuccessCallback _onSuccess;
   late PaymentFailureCallback _onFailure;
+  late PaymentCancelCallback _onCancel;
 
   RazorpayPaymentService() {
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentFailure);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_DISMISSED, _handlePaymentDismissed);
   }
 
   void setCallbacks(
     PaymentSuccessCallback onSuccess,
-    PaymentFailureCallback onFailure,
-  ) {
+    PaymentFailureCallback onFailure, {
+    PaymentCancelCallback? onCancel,
+  }) {
     _onSuccess = onSuccess;
     _onFailure = onFailure;
+    _onCancel = onCancel ?? () {};
   }
 
   void initiatePayment({
@@ -57,6 +62,10 @@ class RazorpayPaymentService {
 
   void _handlePaymentFailure(PaymentFailureResponse response) {
     _onFailure(response);
+  }
+
+  void _handlePaymentDismissed() {
+    _onCancel();
   }
 
   void dispose() {

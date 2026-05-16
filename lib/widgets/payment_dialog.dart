@@ -216,11 +216,15 @@ class _PaymentDialogState extends State<PaymentDialog> {
       final res = await listingCtrl.initiatePaidPayment(widget.listingId);
       if (!mounted) return;
 
+      // Validate response (Issue 3: Null checks)
       final orderId = res['razorpayOrderId'] as String?;
       final amount = res['amount'] as int?;
 
-      if (orderId == null || amount == null) {
-        throw Exception('Invalid payment details from server');
+      if (orderId == null || orderId.isEmpty) {
+        throw Exception('Invalid order ID from server');
+      }
+      if (amount == null || amount <= 0) {
+        throw Exception('Invalid amount from server');
       }
 
       final user = authCtrl.user.value;
@@ -228,9 +232,14 @@ class _PaymentDialogState extends State<PaymentDialog> {
         throw Exception('User not found');
       }
 
-      // Close dialog and open Razorpay
-      if (mounted) Navigator.pop(context);
+      if (user.email == null || user.email!.isEmpty) {
+        throw Exception('User email is required for payment');
+      }
+      if (user.phone == null || user.phone!.isEmpty) {
+        throw Exception('User phone is required for payment');
+      }
 
+      // Set up callbacks BEFORE opening payment (Issue 2: Handle cancel)
       _razorpayService.setCallbacks(
         (PaymentSuccessResponse response) {
           _handlePaymentSuccess(response);
@@ -238,31 +247,54 @@ class _PaymentDialogState extends State<PaymentDialog> {
         (PaymentFailureResponse response) {
           _handlePaymentFailure(response);
         },
+        onCancel: () {
+          _handlePaymentCancel();
+        },
       );
 
-      _razorpayService.initiatePayment(
-        orderId: orderId,
-        amount: amount,
-        email: user.email ?? 'customer@rentnearby.com',
-        phone: user.phone ?? '9999999999',
-        description: 'Premium Plan - 30 days, 2 rooms',
-      );
+      // Open Razorpay payment form (keep dialog open for error handling)
+      try {
+        _razorpayService.initiatePayment(
+          orderId: orderId,
+          amount: amount,
+          email: user.email!,
+          phone: user.phone!,
+          description: 'Premium Plan - 30 days, 2 rooms',
+        );
+        // Close dialog only AFTER Razorpay opens successfully
+        if (mounted) Navigator.pop(context);
+      } catch (razorpayError) {
+        throw Exception('Failed to open payment form: $razorpayError');
+      }
     } catch (e) {
-      AppToast.error('Could not initiate payment: $e');
-      if (mounted) Navigator.pop(context);
-    } finally {
+      AppToast.error('Payment Error: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
     try {
+      // Validate response fields (Issue 3: Null checks)
+      final orderId = response.orderId;
+      final paymentId = response.paymentId;
+      final signature = response.signature;
+
+      if (orderId == null || orderId.isEmpty) {
+        throw Exception('Invalid order ID from payment gateway');
+      }
+      if (paymentId == null || paymentId.isEmpty) {
+        throw Exception('Invalid payment ID from payment gateway');
+      }
+      if (signature == null || signature.isEmpty) {
+        throw Exception('Invalid signature from payment gateway');
+      }
+
       final listingCtrl = Get.find<ListingController>();
       await listingCtrl.verifyPayment(
         listingId: widget.listingId,
-        razorpayOrderId: response.orderId ?? '',
-        razorpayPaymentId: response.paymentId ?? '',
-        razorpaySignature: response.signature ?? '',
+        razorpayOrderId: orderId,
+        razorpayPaymentId: paymentId,
+        razorpaySignature: signature,
       );
       widget.onPaymentSuccess();
       AppToast.success('Payment successful! Room is now LIVE! 🎉');
@@ -272,6 +304,10 @@ class _PaymentDialogState extends State<PaymentDialog> {
   }
 
   void _handlePaymentFailure(PaymentFailureResponse response) {
-    AppToast.error('Payment failed: ${response.message}');
+    AppToast.error('Payment failed: ${response.message ?? 'Unknown error'}');
+  }
+
+  void _handlePaymentCancel() {
+    AppToast.info('Payment cancelled');
   }
 }
