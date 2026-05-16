@@ -137,26 +137,38 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           ),
         ],
       ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.4),
-                blurRadius: 16,
-                offset: const Offset(0, 6))
-          ],
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: _onAddRoom,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          icon: const Icon(Iconsax.add_square, color: Colors.white),
-          label: const Text('Add Room',
-              style: TextStyle(
-                  fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Colors.white)),
-        ),
+      floatingActionButton: FutureBuilder<bool>(
+        future: _ctrl.isPaymentFeatureEnabled(),
+        builder: (context, snapshot) {
+          final isPaymentEnabled = snapshot.data ?? false;
+
+          // If payment disabled (FREE plan only): Hide "Add Room" button
+          if (!isPaymentEnabled) {
+            return const SizedBox.shrink();
+          }
+
+          return Container(
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.4),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6))
+              ],
+            ),
+            child: FloatingActionButton.extended(
+              onPressed: _onAddRoom,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              icon: const Icon(Iconsax.add_square, color: Colors.white),
+              label: const Text('Add Room',
+                  style: TextStyle(
+                      fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Colors.white)),
+            ),
+          );
+        },
       ),
     );
   }
