@@ -298,16 +298,20 @@ class _PaymentDialogState extends State<PaymentDialog> {
       );
       widget.onPaymentSuccess();
       AppToast.success('Payment successful! Room is now LIVE! 🎉');
+      if (mounted) Navigator.pop(context);
     } catch (e) {
       AppToast.error('Payment verification failed: $e');
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _handlePaymentFailure(PaymentFailureResponse response) {
     AppToast.error('Payment failed: ${response.message ?? 'Unknown error'}');
+    if (mounted) setState(() => _isLoading = false);
   }
 
   void _handlePaymentCancel() {
     AppToast.info('Payment cancelled');
+    if (mounted) setState(() => _isLoading = false);
   }
 }
