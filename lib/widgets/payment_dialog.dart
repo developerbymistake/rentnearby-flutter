@@ -218,13 +218,28 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
       // Validate response (Issue 3: Null checks)
       final orderId = res['razorpayOrderId'] as String?;
-      final amount = res['amount'] as int?;
+      final amountRaw = res['amount'];
 
       if (orderId == null || orderId.isEmpty) {
         throw Exception('Invalid order ID from server');
       }
+
+      // Handle amount as int, String, or double
+      int? amount;
+      if (amountRaw is int) {
+        amount = amountRaw;
+      } else if (amountRaw is String) {
+        try {
+          amount = int.parse(amountRaw);
+        } catch (_) {
+          amount = null;
+        }
+      } else if (amountRaw is double) {
+        amount = amountRaw.toInt();
+      }
+
       if (amount == null || amount <= 0) {
-        throw Exception('Invalid amount from server');
+        throw Exception('Invalid amount from server: $amountRaw');
       }
 
       final user = authCtrl.user.value;
