@@ -227,13 +227,16 @@ class ListingController extends GetxController {
         {'planType': 'FREE'},
       );
 
-      if (res['success'] == true || res['data'] != null) {
-        AppToast.success('Your FREE plan activated!');
-        await loadMyListings();
+      final data = res['data'];
+      if (data != null && data is Map<String, dynamic>) {
         listingPostedTrigger.value++;
+        AppToast.success('Your FREE plan activated!');
+      } else {
+        throw Exception('Invalid response from server');
       }
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not activate free plan.'));
+      rethrow;
     } finally {
       isLoading.value = false;
     }
@@ -247,22 +250,27 @@ class ListingController extends GetxController {
         {'planType': 'PAID'},
       );
 
-      final orderId = res['data']?['razorpayOrderId'] as String?;
-      if (orderId == null) {
-        AppToast.error('Payment initialization failed.');
-        return;
+      final data = res['data'];
+      if (data == null || data is! Map<String, dynamic>) {
+        throw Exception('Invalid payment response from server');
       }
 
-      // Get user data from GetStorage or Auth
-      final userEmail = 'user@example.com'; // TODO: Get from AuthController
-      final userPhone = '9999999999'; // TODO: Get from AuthController
+      final orderId = _safeGetString(data, 'razorpayOrderId');
+      final amountRaw = data['amount'];
 
-      // Show Razorpay payment UI
-      // Note: RazorpayService setup would be done in the screen
-      // For now, just return the orderId
+      if (orderId == null || amountRaw == null) {
+        throw Exception('Missing payment details (orderId or amount)');
+      }
+
+      final amount = _safeGetInt(amountRaw);
+      if (amount == null) {
+        throw Exception('Invalid amount format from server');
+      }
+
       AppToast.info('Opening payment gateway...');
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not initiate payment.'));
+      rethrow;
     } finally {
       isLoading.value = false;
     }
@@ -285,16 +293,42 @@ class ListingController extends GetxController {
         },
       );
 
-      if (res['data'] != null && res['data']['success'] == true) {
-        AppToast.success('Payment verified successfully!');
-        await loadMyListings();
-        listingPostedTrigger.value++;
+      final data = res['data'];
+      if (data != null && data is Map<String, dynamic>) {
+        final success = data['success'] == true;
+        if (success) {
+          listingPostedTrigger.value++;
+          AppToast.success('Payment verified successfully!');
+        } else {
+          throw Exception(data['message'] ?? 'Payment verification failed');
+        }
+      } else {
+        throw Exception('Invalid payment response');
       }
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Payment verification failed.'));
+      rethrow;
     } finally {
       isLoading.value = false;
     }
+  }
+
+  String? _safeGetString(Map<String, dynamic> data, String key) {
+    final value = data[key];
+    return value is String ? value : null;
+  }
+
+  int? _safeGetInt(dynamic value) {
+    if (value is int) return value;
+    if (value is String) {
+      try {
+        return int.parse(value);
+      } catch (_) {
+        return null;
+      }
+    }
+    if (value is double) return value.toInt();
+    return null;
   }
 
   Future<Map<String, dynamic>?> getMembershipStatus() async {

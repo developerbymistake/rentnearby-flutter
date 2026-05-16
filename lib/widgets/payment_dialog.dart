@@ -20,292 +20,67 @@ class PaymentDialog extends StatefulWidget {
   State<PaymentDialog> createState() => _PaymentDialogState();
 }
 
-class _PaymentDialogState extends State<PaymentDialog>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
-    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+class _PaymentDialogState extends State<PaymentDialog> {
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: Container(
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const SizedBox(width: 32),
-                      const Expanded(
-                        child: Text(
-                          'Choose Your Plan',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'Poppins',
-                          ),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: const Icon(Icons.close, size: 24),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Select a plan to make your listing live',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-
-                  // FREE Plan
-                  if (!widget.hasUsedFreePlan)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _buildPlanCard(
-                        context,
-                        title: 'FREE PLAN',
-                        price: '₹0',
-                        duration: '10 days',
-                        rooms: '1 room max',
-                        description: 'Perfect for getting started',
-                        color: Colors.green,
-                        icon: Icons.star_outline,
-                        onTap: () => _activateFreePlan(context),
-                        isRecommended: true,
-                      ),
-                    ),
-
-                  // PAID Plan
-                  _buildPlanCard(
-                    context,
-                    title: 'PREMIUM PLAN',
-                    price: '₹99',
-                    duration: '30 days',
-                    rooms: '2 rooms max',
-                    description: 'Best for serious sellers',
-                    color: Colors.blue,
-                    icon: Icons.flash_on_rounded,
-                    onTap: () => _initiatePaidPayment(context),
-                    isRecommended: widget.hasUsedFreePlan,
-                  ),
-
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, size: 18, color: Colors.blue[700]),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Tenants can always find your room for FREE.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.blue[800],
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlanCard(
-    BuildContext context, {
-    required String title,
-    required String price,
-    required String duration,
-    required String rooms,
-    required String description,
-    required Color color,
-    required IconData icon,
-    required VoidCallback onTap,
-    required bool isRecommended,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: isRecommended ? color : color.withOpacity(0.3),
-            width: isRecommended ? 2 : 1.5,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          color: isRecommended ? color.withOpacity(0.02) : Colors.white,
-        ),
-        padding: const EdgeInsets.all(20),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: Colors.white,
+      elevation: 8,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(icon, color: color, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'Poppins',
-                            color: color,
-                          ),
-                        ),
-                        Text(
-                          description,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[600],
-                            fontFamily: 'Poppins',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                if (isRecommended)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      'BEST',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
+                const Text(
+                  'Make Room Live',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Poppins',
                   ),
+                ),
+                GestureDetector(
+                  onTap: () => _isLoading ? null : Navigator.pop(context),
+                  child: Icon(
+                    Icons.close,
+                    size: 24,
+                    color: _isLoading ? Colors.grey[300] : Colors.black,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildInfoItem('Duration', duration),
-                  const SizedBox(width: 16),
-                  _buildInfoItem('Rooms', rooms),
-                ],
-              ),
+            const SizedBox(height: 8),
+            Text(
+              'Choose a plan to activate your listing',
+              style: TextStyle(fontSize: 13, color: Colors.grey[600], fontFamily: 'Poppins'),
             ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onTap,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: color,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  elevation: 0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      price == '₹0' ? 'Activate Now' : 'Pay Now',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      price,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ],
-                ),
+            const SizedBox(height: 24),
+            if (!widget.hasUsedFreePlan)
+              _buildPlanButton(
+                title: 'Free Plan',
+                subtitle: '10 days • 1 room',
+                price: '₹0',
+                icon: Icons.star_rounded,
+                color: const Color(0xFF10B981),
+                isLoading: _isLoading,
+                onTap: _activateFreePlan,
               ),
+            if (!widget.hasUsedFreePlan) const SizedBox(height: 12),
+            _buildPlanButton(
+              title: 'Premium Plan',
+              subtitle: '30 days • 2 rooms',
+              price: '₹99',
+              icon: Icons.flash_on_rounded,
+              color: const Color(0xFF3B82F6),
+              isLoading: _isLoading,
+              onTap: _initiatePaidPayment,
+              isHighlighted: widget.hasUsedFreePlan,
             ),
           ],
         ),
@@ -313,51 +88,119 @@ class _PaymentDialogState extends State<PaymentDialog>
     );
   }
 
-  Widget _buildInfoItem(String label, String value) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey[600],
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w500,
+  Widget _buildPlanButton({
+    required String title,
+    required String subtitle,
+    required String price,
+    required IconData icon,
+    required Color color,
+    required bool isLoading,
+    required VoidCallback onTap,
+    bool isHighlighted = false,
+  }) {
+    return Material(
+      child: InkWell(
+        onTap: isLoading ? null : onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: isHighlighted ? color : color.withOpacity(0.3),
+              width: isHighlighted ? 2 : 1.5,
             ),
+            borderRadius: BorderRadius.circular(12),
+            color: isHighlighted ? color.withOpacity(0.05) : Colors.grey[50],
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              fontFamily: 'Poppins',
-            ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                price,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (isLoading)
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
+                )
+              else
+                Icon(Icons.arrow_forward_rounded, color: color, size: 20),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  void _activateFreePlan(BuildContext context) async {
-    Navigator.pop(context);
+  void _activateFreePlan() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
     try {
       final listingCtrl = Get.find<ListingController>();
       await listingCtrl.activateFreePlan(widget.listingId);
+      if (mounted) Navigator.pop(context);
       widget.onPaymentSuccess();
+      AppToast.success('Room is now LIVE! 🎉');
     } catch (e) {
-      AppToast.error('Error: $e');
+      AppToast.error('Could not activate plan: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _initiatePaidPayment(BuildContext context) async {
-    Navigator.pop(context);
+  void _initiatePaidPayment() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
     try {
       final listingCtrl = Get.find<ListingController>();
       await listingCtrl.initiatePaidPayment(widget.listingId);
+      if (mounted) Navigator.pop(context);
     } catch (e) {
-      AppToast.error('Error: $e');
+      AppToast.error('Could not initiate payment: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 }

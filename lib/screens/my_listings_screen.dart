@@ -179,7 +179,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         listingId: listingId,
         hasUsedFreePlan: hasUsedFree,
         onPaymentSuccess: () {
-          _ctrl.loadMyListings(page: 1);
+          _refresh();
         },
       ),
     );
