@@ -30,7 +30,7 @@ class RazorpayPaymentService {
     required String description,
   }) {
     var options = {
-      'key': 'YOUR_RAZORPAY_KEY_ID',
+      'key': 'rzp_test_RyzlE5Ff6wnE5c',
       'order_id': orderId,
       'amount': amount * 100,
       'name': 'RentNearBy',
@@ -47,7 +47,6 @@ class RazorpayPaymentService {
     try {
       _razorpay.open(options);
     } catch (e) {
-      print('Error initiating payment: $e');
       rethrow;
     }
   }
