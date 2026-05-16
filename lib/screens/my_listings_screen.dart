@@ -8,6 +8,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../utils/app_toast.dart';
 import '../widgets/listing_card.dart';
+import '../widgets/payment_dialog.dart';
 
 class MyListingsScreen extends StatefulWidget {
   const MyListingsScreen({super.key});
@@ -126,6 +127,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                         onToggleActive: () =>
                             _ctrl.toggleActive(listings[i].id, listings[i].isActive),
                         onDelete: () => _confirmDelete(listings[i].id),
+                        onGoLive: () => _showPaymentDialog(listings[i].id),
                       ),
                     );
                   },
@@ -166,6 +168,21 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     } else {
       Get.toNamed(AppRoutes.addListing);
     }
+  }
+
+  void _showPaymentDialog(String listingId) async {
+    final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => PaymentDialog(
+        listingId: listingId,
+        hasUsedFreePlan: hasUsedFree,
+        onPaymentSuccess: () {
+          _ctrl.loadMyListings(page: 1);
+        },
+      ),
+    );
   }
 
   void _showProfileRequiredDialog() {

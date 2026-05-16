@@ -219,6 +219,93 @@ class ListingController extends GetxController {
     }
   }
 
+  Future<void> activateFreePlan(String listingId) async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.post(
+        '/listings/$listingId/go-live',
+        {'planType': 'FREE'},
+      );
+
+      if (res['success'] == true || res['data'] != null) {
+        AppToast.success('Your FREE plan activated!');
+        await loadMyListings();
+        listingPostedTrigger.value++;
+      }
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not activate free plan.'));
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> initiatePaidPayment(String listingId) async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.post(
+        '/listings/$listingId/go-live',
+        {'planType': 'PAID'},
+      );
+
+      final orderId = res['data']?['razorpayOrderId'] as String?;
+      if (orderId == null) {
+        AppToast.error('Payment initialization failed.');
+        return;
+      }
+
+      // Get user data from GetStorage or Auth
+      final userEmail = 'user@example.com'; // TODO: Get from AuthController
+      final userPhone = '9999999999'; // TODO: Get from AuthController
+
+      // Show Razorpay payment UI
+      // Note: RazorpayService setup would be done in the screen
+      // For now, just return the orderId
+      AppToast.info('Opening payment gateway...');
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not initiate payment.'));
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> verifyPayment({
+    required String listingId,
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+  }) async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.post(
+        '/listings/$listingId/verify-payment',
+        {
+          'razorpayOrderId': razorpayOrderId,
+          'razorpayPaymentId': razorpayPaymentId,
+          'razorpaySignature': razorpaySignature,
+        },
+      );
+
+      if (res['data'] != null && res['data']['success'] == true) {
+        AppToast.success('Payment verified successfully!');
+        await loadMyListings();
+        listingPostedTrigger.value++;
+      }
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Payment verification failed.'));
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getMembershipStatus() async {
+    try {
+      final res = await ApiService.get('/listings/payment/status');
+      return res['data'];
+    } catch (e) {
+      return null;
+    }
+  }
+
   void clearData() {
     nearbyListings.clear();
     myListings.clear();

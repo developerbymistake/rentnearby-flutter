@@ -9,6 +9,7 @@ class ListingCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final VoidCallback? onToggleActive;
+  final VoidCallback? onGoLive;
 
   const ListingCard({
     super.key,
@@ -16,6 +17,7 @@ class ListingCard extends StatelessWidget {
     this.onTap,
     this.onDelete,
     this.onToggleActive,
+    this.onGoLive,
   });
 
   @override
@@ -58,11 +60,11 @@ class ListingCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: listing.isActive ? AppColors.success : AppColors.error,
+                        color: listing.isActive ? AppColors.success : Colors.orange,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        listing.isActive ? 'Active' : 'Off',
+                        listing.isActive ? 'LIVE' : 'DRAFT',
                         style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w600, color: Colors.white),
                       ),
                     ),
@@ -125,43 +127,59 @@ class ListingCard extends StatelessWidget {
                             style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, color: AppColors.textHint)),
                       ]),
                     ],
-                    if (onDelete != null || onToggleActive != null) ...[
+                    if (onDelete != null || onToggleActive != null || onGoLive != null) ...[
                       const SizedBox(height: 8),
                       const Divider(height: 1, color: AppColors.divider),
                       const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          if (onToggleActive != null)
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: onToggleActive,
-                                child: Row(
+                      if (!listing.isActive && onGoLive != null)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: onGoLive,
+                            icon: const Icon(Iconsax.upload, size: 12),
+                            label: const Text('Go Live', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                            ),
+                          ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            if (onToggleActive != null)
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: onToggleActive,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(listing.isActive ? Iconsax.eye_slash : Iconsax.eye,
+                                          size: 13, color: listing.isActive ? AppColors.textLight : AppColors.success),
+                                      const SizedBox(width: 4),
+                                      Text(listing.isActive ? 'Disable' : 'Enable',
+                                          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w500,
+                                              color: listing.isActive ? AppColors.textLight : AppColors.success)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            if (onDelete != null)
+                              GestureDetector(
+                                onTap: onDelete,
+                                child: const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(listing.isActive ? Iconsax.eye_slash : Iconsax.eye,
-                                        size: 13, color: listing.isActive ? AppColors.textLight : AppColors.success),
-                                    const SizedBox(width: 4),
-                                    Text(listing.isActive ? 'Deactivate' : 'Activate',
-                                        style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w500,
-                                            color: listing.isActive ? AppColors.textLight : AppColors.success)),
+                                    Icon(Iconsax.trash, size: 13, color: AppColors.error),
+                                    SizedBox(width: 4),
+                                    Text('Delete', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.error)),
                                   ],
                                 ),
                               ),
-                            ),
-                          if (onDelete != null)
-                            GestureDetector(
-                              onTap: onDelete,
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Iconsax.trash, size: 13, color: AppColors.error),
-                                  SizedBox(width: 4),
-                                  Text('Delete', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.error)),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
+                          ],
+                        ),
                     ],
                   ],
                 ),
