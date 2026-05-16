@@ -242,7 +242,7 @@ class ListingController extends GetxController {
     }
   }
 
-  Future<void> initiatePaidPayment(String listingId) async {
+  Future<Map<String, dynamic>> initiatePaidPayment(String listingId) async {
     try {
       isLoading.value = true;
       final res = await ApiService.post(
@@ -267,7 +267,10 @@ class ListingController extends GetxController {
         throw Exception('Invalid amount format from server');
       }
 
-      AppToast.info('Opening payment gateway...');
+      return {
+        'razorpayOrderId': orderId,
+        'amount': amount,
+      };
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not initiate payment.'));
       rethrow;

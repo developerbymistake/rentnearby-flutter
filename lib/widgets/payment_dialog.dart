@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
+import '../services/razorpay_service.dart';
 import '../utils/app_toast.dart';
 
 class PaymentDialog extends StatefulWidget {
@@ -22,6 +25,19 @@ class PaymentDialog extends StatefulWidget {
 
 class _PaymentDialogState extends State<PaymentDialog> {
   bool _isLoading = false;
+  late RazorpayPaymentService _razorpayService;
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpayService = RazorpayPaymentService();
+  }
+
+  @override
+  void dispose() {
+    _razorpayService.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -195,12 +211,67 @@ class _PaymentDialogState extends State<PaymentDialog> {
     setState(() => _isLoading = true);
     try {
       final listingCtrl = Get.find<ListingController>();
-      await listingCtrl.initiatePaidPayment(widget.listingId);
+      final authCtrl = Get.find<AuthController>();
+
+      final res = await listingCtrl.initiatePaidPayment(widget.listingId);
+      if (!mounted) return;
+
+      final orderId = res['razorpayOrderId'] as String?;
+      final amount = res['amount'] as int?;
+
+      if (orderId == null || amount == null) {
+        throw Exception('Invalid payment details from server');
+      }
+
+      final user = authCtrl.user.value;
+      if (user == null) {
+        throw Exception('User not found');
+      }
+
+      // Close dialog and open Razorpay
       if (mounted) Navigator.pop(context);
+
+      _razorpayService.setCallbacks(
+        (PaymentSuccessResponse response) {
+          _handlePaymentSuccess(response);
+        },
+        (PaymentFailureResponse response) {
+          _handlePaymentFailure(response);
+        },
+      );
+
+      _razorpayService.initiatePayment(
+        orderId: orderId,
+        amount: amount,
+        email: user.email ?? 'customer@rentnearby.com',
+        phone: user.phone ?? '9999999999',
+        description: 'Premium Plan - 30 days, 2 rooms',
+      );
     } catch (e) {
       AppToast.error('Could not initiate payment: $e');
+      if (mounted) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    try {
+      final listingCtrl = Get.find<ListingController>();
+      await listingCtrl.verifyPayment(
+        listingId: widget.listingId,
+        razorpayOrderId: response.orderId ?? '',
+        razorpayPaymentId: response.paymentId ?? '',
+        razorpaySignature: response.signature ?? '',
+      );
+      widget.onPaymentSuccess();
+      AppToast.success('Payment successful! Room is now LIVE! 🎉');
+    } catch (e) {
+      AppToast.error('Payment verification failed: $e');
+    }
+  }
+
+  void _handlePaymentFailure(PaymentFailureResponse response) {
+    AppToast.error('Payment failed: ${response.message}');
   }
 }
