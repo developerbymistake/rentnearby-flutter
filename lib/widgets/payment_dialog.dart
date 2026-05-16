@@ -132,7 +132,7 @@ class _PaymentDialogState extends State<PaymentDialog>
                     rooms: '2 rooms max',
                     description: 'Best for serious sellers',
                     color: Colors.blue,
-                    icon: Icons.lightning_bolt_rounded,
+                    icon: Icons.flash_on_rounded,
                     onTap: () => _initiatePaidPayment(context),
                     isRecommended: widget.hasUsedFreePlan,
                   ),

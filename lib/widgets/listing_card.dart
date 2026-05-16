@@ -136,7 +136,7 @@ class ListingCard extends StatelessWidget {
                           width: double.infinity,
                           child: ElevatedButton.icon(
                             onPressed: onGoLive,
-                            icon: const Icon(Iconsax.upload, size: 12),
+                            icon: const Icon(Icons.cloud_upload_rounded, size: 12),
                             label: const Text('Go Live', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.success,
