@@ -340,6 +340,16 @@ class ListingController extends GetxController {
     }
   }
 
+  Future<bool> isPaymentFeatureEnabled() async {
+    try {
+      final res = await ApiService.get('/admin/payment-feature');
+      final data = res['data'];
+      return data != null && data is Map<String, dynamic> && (data['isEnabled'] == true);
+    } catch (e) {
+      return false;
+    }
+  }
+
   void clearData() {
     nearbyListings.clear();
     myListings.clear();

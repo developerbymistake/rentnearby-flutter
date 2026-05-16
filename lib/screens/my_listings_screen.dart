@@ -171,7 +171,16 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   }
 
   void _showPaymentDialog(String listingId) async {
+    final isPaymentEnabled = await _ctrl.isPaymentFeatureEnabled();
     final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
+
+    // If payment not enabled and free plan available, activate directly
+    if (!isPaymentEnabled && !hasUsedFree) {
+      _activateFreePlanDirect(listingId);
+      return;
+    }
+
+    // Show payment dialog normally
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -183,6 +192,17 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         },
       ),
     );
+  }
+
+  void _activateFreePlanDirect(String listingId) async {
+    try {
+      AppToast.info('Activating your listing...');
+      await _ctrl.activateFreePlan(listingId);
+      _refresh();
+      AppToast.success('Room is now LIVE! 🎉');
+    } catch (e) {
+      AppToast.error('Could not activate: $e');
+    }
   }
 
   void _showProfileRequiredDialog() {
