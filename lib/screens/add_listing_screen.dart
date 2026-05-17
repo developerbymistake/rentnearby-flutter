@@ -523,6 +523,24 @@ class _AddListingScreenState extends State<AddListingScreen> {
     }
 
     await _ctrl.loadMyListings();
+
+    // If FREE plan is at capacity, skip listing detail and go straight to PAID payment
+    try {
+      final membership = await _ctrl.getMembershipStatus();
+      final hasMembership = membership != null && (membership['hasMembership'] == true);
+      final planType = membership?['planType'] as String? ?? '';
+      final maxRooms = (membership?['maxRooms'] as num?)?.toInt() ?? 0;
+      final activeRooms = (membership?['activeRooms'] as num?)?.toInt() ?? 0;
+
+      if (hasMembership && planType == 'FREE' && activeRooms >= maxRooms) {
+        Get.offNamed(AppRoutes.paymentScreen, arguments: {
+          'listingId': listingId,
+          'planType': 'PAID',
+        });
+        return;
+      }
+    } catch (_) {}
+
     Get.offNamed(AppRoutes.listingDetail, arguments: listingId);
   }
 

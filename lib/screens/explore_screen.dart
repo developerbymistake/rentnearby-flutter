@@ -41,7 +41,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   bool _locationLoading = true;
   bool _mapReady = false;
   bool _checkingPermission = false;
-  bool _nearbyLoaded = false; // Flag to prevent duplicate _loadNearby calls
   Timer? _loadNearbyDebounceTimer; // Debounce rapid _loadNearby calls
   String? _selectedRoomType;
   bool _autoLoading = false; // Prevent concurrent _autoLoad calls
@@ -217,7 +216,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   Future<void> _initLocation() async {
-    _nearbyLoaded = false; // Reset flag for fresh initialization
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -251,8 +249,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         _locationLoading = false;
       });
       if (_listingCtrl.districts.isNotEmpty && lastKnown != null) {
-        _nearbyLoaded = true; // Mark before calling _tryAutoLoad to prevent duplicate paths
-        _tryAutoLoad(); // Exclusively calls _loadNearby via _autoLoad
+        _tryAutoLoad();
       }
       if (_mapReady) _fitToRadius();
 
@@ -886,10 +883,15 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           return Expanded(
                             child: GestureDetector(
                               onTap: () {
-                                setState(() {
-                                  _selectedRoomType = selected ? null : rt.name;
-                                });
+                                final newType = selected ? null : rt.name;
+                                setState(() => _selectedRoomType = newType);
                                 _buildMarkers();
+                                if (newType != null) {
+                                  final hits = _listingCtrl.nearbyListings
+                                      .where((l) => l.roomTypeName == newType)
+                                      .length;
+                                  if (hits > 0) _playTing();
+                                }
                               },
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
