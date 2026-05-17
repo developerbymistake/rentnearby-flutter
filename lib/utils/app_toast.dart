@@ -14,6 +14,7 @@ class AppToast {
       case ToastificationType.error:   return const Color(0xFFB71C1C);
       case ToastificationType.warning: return const Color(0xFFE65100);
       case ToastificationType.info:    return const Color(0xFF0D47A1);
+      default:                         return const Color(0xFF0D47A1);
     }
   }
 

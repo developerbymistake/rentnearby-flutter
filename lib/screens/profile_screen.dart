@@ -51,12 +51,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return parts[0][0].toUpperCase();
   }
 
-  void _shareApp() {
-    Share.share(
-      '🏠 Bakhli — Find rooms near you!\n'
-      'No brokers. No commission. Just homes.\n\n'
-      'Download: https://google.com',
-      subject: 'Check out Bakhli!',
+  Future<void> _shareApp() async {
+    await SharePlus.instance.share(
+      ShareParams(
+        text: '🏠 Bakhli — Find rooms near you!\n'
+            'No brokers. No commission. Just homes.\n\n'
+            'Download: https://google.com',
+        subject: 'Check out Bakhli!',
+      ),
     );
   }
 
