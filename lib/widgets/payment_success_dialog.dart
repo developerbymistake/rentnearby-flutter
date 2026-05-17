@@ -125,7 +125,7 @@ class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Payment Successful!',
+                      widget.planType == 'FREE' ? 'Plan Activated!' : 'Payment Successful!',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
