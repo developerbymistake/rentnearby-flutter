@@ -27,189 +27,317 @@ class ListingCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: AppColors.shadow,
-              blurRadius: 10,
+              color: Colors.black.withValues(alpha: 0.07),
+              blurRadius: 18,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildPhotoSection(),
+            _buildContentSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoSection() {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          child: listing.photos.isNotEmpty
+              ? CachedNetworkImage(
+                  imageUrl: listing.photos.first,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => _photoPlaceholder(),
+                  errorWidget: (_, _, _) => _photoPlaceholder(),
+                )
+              : _photoPlaceholder(),
+        ),
+        // Status badge — top left
+        Positioned(
+          top: 10,
+          left: 10,
+          child: _statusBadge(),
+        ),
+        // Price badge — top right
+        if (listing.priceMonthly != null)
+          Positioned(
+            top: 10,
+            right: 10,
+            child: _priceBadge(),
+          ),
+      ],
+    );
+  }
+
+  Widget _statusBadge() {
+    final isLive = listing.isActive;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isLive
+              ? [const Color(0xFF10B981), const Color(0xFF059669)]
+              : [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            isLive ? 'LIVE' : 'OFFLINE',
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _priceBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.93),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        listing.priceDisplay,
+        style: const TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContentSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Room type + time
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  listing.roomTypeName ?? 'Room for Rent',
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _timeAgo(listing.createdAt),
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 11,
+                  color: AppColors.textHint,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          // Location
+          Row(
+            children: [
+              const Icon(Iconsax.location, size: 13, color: AppColors.primaryLight),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  [listing.districtName, listing.cityName]
+                      .where((e) => e != null && e.isNotEmpty)
+                      .join(', '),
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    color: AppColors.textLight,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          if (onDelete != null || onToggleActive != null || onGoLive != null) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: AppColors.divider),
+            const SizedBox(height: 10),
+            _buildActions(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActions() {
+    return Row(
+      children: [
+        if (onDelete != null) _deleteButton(),
+        const Spacer(),
+        if (!listing.isActive && onGoLive != null)
+          _makeItLiveButton()
+        else if (listing.isActive && onToggleActive != null)
+          _liveToggle(),
+      ],
+    );
+  }
+
+  Widget _deleteButton() {
+    return GestureDetector(
+      onTap: onDelete,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFFECACA)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Iconsax.trash, size: 14, color: AppColors.error),
+            SizedBox(width: 5),
+            Text(
+              'Delete',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.error,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _makeItLiveButton() {
+    return GestureDetector(
+      onTap: onGoLive,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF10B981), Color(0xFF059669)],
+          ),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF10B981).withValues(alpha: 0.35),
+              blurRadius: 8,
               offset: const Offset(0, 3),
             ),
           ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Photo — left side thumbnail
-            ClipRRect(
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(14)),
-              child: Stack(
-                children: [
-                  listing.photos.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: listing.photos.first,
-                          height: 110,
-                          width: 100,
-                          fit: BoxFit.cover,
-                          placeholder: (_, _) => _photoPlaceholder(),
-                          errorWidget: (_, _, _) => _photoPlaceholder(),
-                        )
-                      : _photoPlaceholder(),
-                  Positioned(
-                    top: 6,
-                    left: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: listing.isActive ? AppColors.success : Colors.orange,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        listing.isActive ? 'LIVE' : 'DRAFT',
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w600, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Content — right side
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            listing.roomTypeName ?? 'Room for Rent',
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (listing.priceMonthly != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(8)),
-                            child: Text(listing.priceDisplay,
-                                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Iconsax.location, size: 11, color: AppColors.primaryLight),
-                        const SizedBox(width: 3),
-                        Expanded(
-                          child: Text(
-                            [listing.districtName, listing.cityName].where((e) => e != null).join(', '),
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (listing.roomTypeName != null) ...[
-                      const SizedBox(height: 4),
-                      Row(children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
-                          child: Text(listing.roomTypeName!,
-                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w500)),
-                        ),
-                        const Spacer(),
-                        Text(_timeAgo(listing.createdAt),
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, color: AppColors.textHint)),
-                      ]),
-                    ],
-                    if (onDelete != null || onToggleActive != null || onGoLive != null) ...[
-                      const SizedBox(height: 8),
-                      const Divider(height: 1, color: AppColors.divider),
-                      const SizedBox(height: 6),
-                      if (!listing.isActive && onGoLive != null)
-                        SizedBox(
-                          width: double.infinity,
-                          child: Material(
-                            child: InkWell(
-                              onTap: onGoLive,
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF10B981), Color(0xFF059669)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.rocket_launch_rounded, size: 14, color: Colors.white),
-                                    const SizedBox(width: 6),
-                                    const Text(
-                                      'Make it Live',
-                                      style: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        Row(
-                          children: [
-                            if (onToggleActive != null)
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: onToggleActive,
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(listing.isActive ? Iconsax.eye_slash : Iconsax.eye,
-                                          size: 13, color: listing.isActive ? AppColors.textLight : AppColors.success),
-                                      const SizedBox(width: 4),
-                                      Text(listing.isActive ? 'Disable' : 'Enable',
-                                          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w500,
-                                              color: listing.isActive ? AppColors.textLight : AppColors.success)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      if (onDelete != null)
-                        GestureDetector(
-                          onTap: onDelete,
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Iconsax.trash, size: 13, color: AppColors.error),
-                              SizedBox(width: 4),
-                              Text('Delete', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.error)),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ],
-                ),
+            Icon(Icons.rocket_launch_rounded, size: 14, color: Colors.white),
+            SizedBox(width: 6),
+            Text(
+              'Make it Live',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                letterSpacing: 0.3,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _liveToggle() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Live',
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF10B981),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Transform.scale(
+          scale: 0.85,
+          child: Switch(
+            value: listing.isActive,
+            onChanged: (_) => onToggleActive?.call(),
+            activeColor: const Color(0xFF10B981),
+            activeTrackColor: const Color(0xFFD1FAE5),
+            inactiveThumbColor: const Color(0xFFF59E0B),
+            inactiveTrackColor: const Color(0xFFFEF3C7),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _photoPlaceholder() {
+    return Container(
+      height: 160,
+      width: double.infinity,
+      decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+      child: const Center(
+        child: Icon(Icons.home_rounded, size: 48, color: Colors.white24),
       ),
     );
   }
@@ -224,13 +352,4 @@ class ListingCard extends StatelessWidget {
     if (diff.inDays < 365) return '${(diff.inDays / 30).floor()}mo ago';
     return '${(diff.inDays / 365).floor()}y ago';
   }
-
-  Widget _photoPlaceholder() => Container(
-        height: 110,
-        width: 100,
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-        child: const Center(
-          child: Icon(Icons.home_rounded, size: 36, color: Colors.white38),
-        ),
-      );
 }

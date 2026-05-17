@@ -189,22 +189,8 @@ class ListingController extends GetxController {
     try {
       await ApiService.put('/listings/$id', {'isActive': !isActive});
       await loadMyListings();
-      final idx = nearbyListings.indexWhere((l) => l.id == id);
-      if (idx != -1) {
-        if (!isActive) {
-          // activating — update flag in nearby
-          final l = nearbyListings[idx];
-          nearbyListings[idx] = NearbyListingModel(
-            id: l.id, roomTypeName: l.roomTypeName, priceMonthly: l.priceMonthly,
-            latitude: l.latitude, longitude: l.longitude,
-            ownerName: l.ownerName, ownerPhone: l.ownerPhone,
-            thumbnailUrl: l.thumbnailUrl, distanceKm: l.distanceKm, isActive: true,
-          );
-        } else {
-          // deactivating — remove from nearby (API only returns active listings)
-          nearbyListings.removeAt(idx);
-        }
-      }
+      if (isActive) nearbyListings.removeWhere((l) => l.id == id);
+      exploreRefreshTrigger.value++;
     } catch (_) {}
   }
 
