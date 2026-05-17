@@ -203,23 +203,32 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   void _showPaymentDialog(String listingId) async {
     final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
 
-    // Check if user already has active membership
     final membership = await _ctrl.getMembershipStatus();
     final hasMembership = membership != null && (membership['hasMembership'] == true);
 
-    // If user already has active membership, activate directly
     if (hasMembership) {
       _activateFreePlanDirect(listingId);
       return;
     }
 
-    // Navigate to payment screen
+    if (!mounted) return;
+
+    final planType = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _PlanSelectionSheet(hasUsedFreePlan: hasUsedFree),
+    );
+
+    if (planType == null) return;
+
     await Get.toNamed(AppRoutes.paymentScreen, arguments: {
       'listingId': listingId,
+      'planType': planType,
       'hasUsedFreePlan': hasUsedFree,
     });
 
-    // Refresh listings when returning from payment screen
     _refresh();
   }
 
@@ -407,6 +416,108 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             child: const Text('Delete', style: TextStyle(fontFamily: 'Poppins')),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PlanSelectionSheet extends StatelessWidget {
+  final bool hasUsedFreePlan;
+  const _PlanSelectionSheet({required this.hasUsedFreePlan});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Make Room Live',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, fontFamily: 'Poppins')),
+          const SizedBox(height: 4),
+          Text('Choose a plan to activate your listing',
+              style: TextStyle(fontSize: 13, color: Colors.grey[600], fontFamily: 'Poppins')),
+          const SizedBox(height: 20),
+          if (!hasUsedFreePlan) ...[
+            _planTile(
+              context,
+              plan: 'FREE',
+              title: 'Free Plan',
+              subtitle: '10 days • 1 room',
+              price: '₹0',
+              icon: Icons.star_rounded,
+              color: const Color(0xFF10B981),
+            ),
+            const SizedBox(height: 12),
+          ],
+          _planTile(
+            context,
+            plan: 'PAID',
+            title: 'Premium Plan',
+            subtitle: '30 days • 2 rooms',
+            price: '₹99',
+            icon: Icons.flash_on_rounded,
+            color: AppColors.primary,
+            isHighlighted: hasUsedFreePlan,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _planTile(
+    BuildContext context, {
+    required String plan,
+    required String title,
+    required String subtitle,
+    required String price,
+    required IconData icon,
+    required Color color,
+    bool isHighlighted = false,
+  }) {
+    return InkWell(
+      onTap: () => Navigator.pop(context, plan),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isHighlighted ? color : color.withValues(alpha: 0.3),
+            width: isHighlighted ? 2 : 1.5,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          color: isHighlighted ? color.withValues(alpha: 0.05) : Colors.grey[50],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600, fontFamily: 'Poppins')),
+                  Text(subtitle,
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey[600], fontFamily: 'Poppins')),
+                ],
+              ),
+            ),
+            Text(price,
+                style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w700, color: color, fontFamily: 'Poppins')),
+          ],
+        ),
       ),
     );
   }
