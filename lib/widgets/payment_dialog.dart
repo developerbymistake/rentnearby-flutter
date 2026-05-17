@@ -85,7 +85,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
                 icon: Icons.star_rounded,
                 color: const Color(0xFF10B981),
                 isLoading: _isLoading,
-                onTap: _activateFreePlan,
+                onTap: () => _activatePlan('FREE'),
               ),
             if (!widget.hasUsedFreePlan) const SizedBox(height: 12),
             _buildPlanButton(
@@ -95,7 +95,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
               icon: Icons.flash_on_rounded,
               color: const Color(0xFF3B82F6),
               isLoading: _isLoading,
-              onTap: _initiatePaidPayment,
+              onTap: () => _activatePlan('PAID'),
               isHighlighted: widget.hasUsedFreePlan,
             ),
           ],
@@ -190,41 +190,40 @@ class _PaymentDialogState extends State<PaymentDialog> {
     );
   }
 
-  void _activateFreePlan() async {
+  void _activatePlan(String planType) async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
+
     try {
       final listingCtrl = Get.find<ListingController>();
-      await listingCtrl.activateFreePlan(widget.listingId);
-      if (mounted) Navigator.pop(context);
-      widget.onPaymentSuccess();
-      AppToast.success('Room is now LIVE! 🎉');
-    } catch (e) {
-      AppToast.error('Could not activate plan: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
 
-  void _initiatePaidPayment() async {
-    if (_isLoading) return;
-    setState(() => _isLoading = true);
-    try {
-      final listingCtrl = Get.find<ListingController>();
-      final authCtrl = Get.find<AuthController>();
+      // Step 1: Create order
+      final orderResponse = await listingCtrl.createPaymentOrder(widget.listingId, planType);
 
-      final res = await listingCtrl.initiatePaidPayment(widget.listingId);
       if (!mounted) return;
 
-      // Validate response (Issue 3: Null checks)
-      final orderId = res['razorpayOrderId'] as String?;
-      final amountRaw = res['amount'];
+      // For FREE plan: Order is auto-activated on backend
+      if (planType == 'FREE') {
+        Navigator.pop(context);
+        widget.onPaymentSuccess();
+        AppToast.success('Room is now LIVE! 🎉');
+        return;
+      }
+
+      // Step 2: For PAID plan, prepare payment
+      final orderId = orderResponse['orderId'] as String?;
+      final keyId = orderResponse['keyId'] as String?;
+      final amountRaw = orderResponse['amount'];
+      final currency = orderResponse['currency'] as String? ?? 'INR';
 
       if (orderId == null || orderId.isEmpty) {
         throw Exception('Invalid order ID from server');
       }
 
-      // Handle amount as int, String, or double
+      if (keyId == null || keyId.isEmpty) {
+        throw Exception('Payment key not available. Please try again.');
+      }
+
       int? amount;
       if (amountRaw is int) {
         amount = amountRaw;
@@ -242,7 +241,9 @@ class _PaymentDialogState extends State<PaymentDialog> {
         throw Exception('Invalid amount from server: $amountRaw');
       }
 
+      final authCtrl = Get.find<AuthController>();
       final user = authCtrl.user.value;
+
       if (user == null) {
         throw Exception('User not found');
       }
@@ -251,7 +252,7 @@ class _PaymentDialogState extends State<PaymentDialog> {
         throw Exception('Phone number is required for payment');
       }
 
-      // Set up callbacks BEFORE opening payment (Issue 2: Handle cancel)
+      // Step 3: Setup callbacks
       _razorpayService.setCallbacks(
         (PaymentSuccessResponse response) {
           _handlePaymentSuccess(response);
@@ -264,29 +265,29 @@ class _PaymentDialogState extends State<PaymentDialog> {
         },
       );
 
-      // Open Razorpay payment form (keep dialog open for error handling)
+      // Step 4: Open Razorpay payment form
       try {
         _razorpayService.initiatePayment(
           orderId: orderId,
           amount: amount,
-          email: user.gmailId!,
+          email: user.gmailId ?? 'noemail@rentnearby.com',
           phone: user.phoneNumber,
           description: 'Premium Plan - 30 days, 2 rooms',
+          keyId: keyId,
         );
-        // Close dialog only AFTER Razorpay opens successfully
+        // Close dialog only after Razorpay form opens successfully
         if (mounted) Navigator.pop(context);
       } catch (razorpayError) {
         throw Exception('Failed to open payment form: $razorpayError');
       }
     } catch (e) {
-      AppToast.error('Payment Error: $e');
+      AppToast.error('Error: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
     try {
-      // Validate response fields (Issue 3: Null checks)
       final orderId = response.orderId;
       final paymentId = response.paymentId;
       final signature = response.signature;

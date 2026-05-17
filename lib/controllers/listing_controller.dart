@@ -242,6 +242,46 @@ class ListingController extends GetxController {
     }
   }
 
+  Future<Map<String, dynamic>> createPaymentOrder(String listingId, String planType) async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.post(
+        '/listings/$listingId/create-order',
+        {'planType': planType},
+      );
+
+      final data = res['data'];
+      if (data == null || data is! Map<String, dynamic>) {
+        throw Exception('Invalid order response from server');
+      }
+
+      final orderId = _safeGetString(data, 'orderId');
+      final keyId = _safeGetString(data, 'keyId');
+      final amountRaw = data['amount'];
+
+      if (orderId == null || amountRaw == null) {
+        throw Exception('Missing order details from server');
+      }
+
+      final amount = _safeGetInt(amountRaw);
+      if (amount == null) {
+        throw Exception('Invalid amount format from server');
+      }
+
+      return {
+        'orderId': orderId,
+        'amount': amount,
+        'currency': _safeGetString(data, 'currency') ?? 'INR',
+        'keyId': keyId ?? '',
+      };
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not create payment order.'));
+      rethrow;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   Future<Map<String, dynamic>> initiatePaidPayment(String listingId) async {
     try {
       isLoading.value = true;
