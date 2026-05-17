@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../config/app_colors.dart';
 import '../utils/app_toast.dart';
@@ -102,15 +103,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
   void _openRazorpay() {
     if (_order == null) return;
 
+    final phone = Get.find<AuthController>().user.value?.phoneNumber ?? '';
     final options = {
       'key': _order!['keyId'],
       'amount': (_order!['amount'] as int) * 100,
       'currency': _order!['currency'],
       'order_id': _order!['orderId'],
-      'name': 'RentNearBy',
+      'name': 'Bakhli',
       'description': 'Premium Plan - 30 days, 2 rooms',
       'prefill': {
-        'contact': '',
+        'contact': phone,
       },
       'theme': {
         'color': '#3399cc',
