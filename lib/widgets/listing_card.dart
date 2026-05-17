@@ -189,19 +189,19 @@ class ListingCard extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                            if (onDelete != null)
-                              GestureDetector(
-                                onTap: onDelete,
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Iconsax.trash, size: 13, color: AppColors.error),
-                                    SizedBox(width: 4),
-                                    Text('Delete', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.error)),
-                                  ],
-                                ),
-                              ),
                           ],
+                        ),
+                      if (onDelete != null)
+                        GestureDetector(
+                          onTap: onDelete,
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Iconsax.trash, size: 13, color: AppColors.error),
+                              SizedBox(width: 4),
+                              Text('Delete', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.error)),
+                            ],
+                          ),
                         ),
                     ],
                   ],
