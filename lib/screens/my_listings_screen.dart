@@ -211,13 +211,23 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     final isPaymentEnabled = await _ctrl.isPaymentFeatureEnabled();
     final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
 
+    // Check if user already has active membership
+    final membership = await _ctrl.getMembershipStatus();
+    final hasMembership = membership != null && (membership['hasMembership'] == true);
+
+    // If user already has active membership, activate directly without dialog
+    if (hasMembership) {
+      _activateFreePlanDirect(listingId);
+      return;
+    }
+
     // If payment not enabled and free plan available, activate directly
     if (!isPaymentEnabled && !hasUsedFree) {
       _activateFreePlanDirect(listingId);
       return;
     }
 
-    // Show payment dialog normally
+    // Show payment dialog to choose plan
     showDialog(
       context: context,
       barrierDismissible: true,
