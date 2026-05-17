@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:pinput/pinput.dart';
 import '../config/app_colors.dart';
@@ -21,14 +20,12 @@ class _OtpScreenState extends State<OtpScreen> {
   final _otpController = TextEditingController();
   final _otpFocusNode = FocusNode();
   final _auth = Get.find<AuthController>();
-  final _box = GetStorage();
   bool _otpSent = false;
   bool _agreed = false;
 
   @override
   void initState() {
     super.initState();
-    _agreed = _box.read<bool>('terms_agreed') ?? false;
   }
 
   @override
@@ -159,8 +156,8 @@ class _OtpScreenState extends State<OtpScreen> {
     if (ok) Get.offAllNamed(AppRoutes.main);
   }
 
-  void _showTerms() {
-    showModalBottomSheet(
+  Future<bool> _showTerms() async {
+    final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -216,7 +213,12 @@ class _OtpScreenState extends State<OtpScreen> {
                     _termSection(
                       Icons.home_rounded,
                       'What Bakhli Does',
-                      'Bakhli connects people looking for rental rooms with room owners. Our goal is to make finding a home near you simple and transparent.',
+                      'Bakhli is a room listing platform built to help people find rental rooms near them — faster and without the hassle of brokers. We simply connect room owners with people looking for a place to stay. Our goal is to make the process easier, more direct, and more transparent for everyone.',
+                    ),
+                    _termSection(
+                      Icons.handshake_rounded,
+                      'Our Role & Limitations',
+                      'Bakhli serves as a connecting platform and directory — we are not a rental agent, broker, or guarantor of any kind. While we strive to provide the best possible experience, we are unable to guarantee that a listed room will be rented or that every user will find a suitable room. Any arrangement, agreement, or interaction between a room owner and a tenant is entirely between those two individuals. Bakhli is not a party to any such arrangement and holds no responsibility for its outcome.',
                     ),
                     _termSection(
                       Icons.visibility_rounded,
@@ -226,22 +228,22 @@ class _OtpScreenState extends State<OtpScreen> {
                     _termSection(
                       Icons.phone_rounded,
                       'Your Contact Number',
-                      'Your mobile number is used to log in and is displayed on your listings so tenants can contact you. Since it is publicly visible on your listings, you should only register with a number you are comfortable sharing.',
+                      'Your mobile number is used to log in and is displayed on your listings so tenants can contact you directly. Since it is publicly visible, we kindly request that you register with a number you are comfortable sharing.',
                     ),
                     _termSection(
                       Icons.location_on_rounded,
                       'Location Access',
-                      'Bakhli uses your device location only to show rooms near you. Your live location is not stored on our servers or shared with other users.',
+                      'Bakhli uses your device location only to show rooms near you. Your live location is never stored on our servers or shared with other users.',
                     ),
                     _termSection(
-                      Icons.person_rounded,
-                      'Your Responsibility',
-                      'You are responsible for the accuracy of any information you post. Room details, photos, and pricing must be truthful. Misleading listings may be removed. Bakhli is a platform only and is not responsible for any disputes between tenants and room owners.',
+                      Icons.fact_check_rounded,
+                      'Listing Accuracy & Our Limits',
+                      'All listings on Bakhli are created and managed by individual users. While we encourage honesty and accuracy, we are not in a position to independently verify every listing. Bakhli and its team will not be held responsible for any inaccurate, misleading, or fraudulent content submitted by users. We kindly request that you report any suspicious listing through the app so we can take appropriate action.',
                     ),
                     _termSection(
                       Icons.security_rounded,
                       'Your Agreement',
-                      'By using Bakhli, you confirm that the information you provide is accurate and that you consent to your listing details being publicly visible to all users. You can delete your listing at any time from the My Rooms section.',
+                      'By using Bakhli, you confirm that the information you provide is accurate and that you consent to your listing details being visible to all users of the platform. You may remove your listing at any time from the My Rooms section. Continued use of the platform indicates your acceptance of these terms.',
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -257,7 +259,7 @@ class _OtpScreenState extends State<OtpScreen> {
                           const SizedBox(width: 10),
                           const Expanded(
                             child: Text(
-                              'These terms keep the platform safe and transparent for both tenants and room owners.',
+                              'Bakhli is built to help people find and list rooms easily. It does not make any guarantees or claims of any kind.',
                               style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5),
                             ),
                           ),
@@ -272,7 +274,7 @@ class _OtpScreenState extends State<OtpScreen> {
             Padding(
               padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom + 16),
               child: GestureDetector(
-                onTap: () => Navigator.pop(context),
+                onTap: () => Navigator.pop(context, true),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -291,6 +293,7 @@ class _OtpScreenState extends State<OtpScreen> {
         ),
       ),
     );
+    return result == true;
   }
 
   Widget _termSection(IconData icon, String title, String body) {
@@ -450,10 +453,13 @@ class _OtpScreenState extends State<OtpScreen> {
           const SizedBox(height: 20),
           // Mandatory checkbox
           GestureDetector(
-            onTap: () {
-              final next = !_agreed;
-              setState(() => _agreed = next);
-              _box.write('terms_agreed', next);
+            onTap: () async {
+              if (_agreed) {
+                setState(() => _agreed = false);
+              } else {
+                final ok = await _showTerms();
+                if (ok && mounted) setState(() => _agreed = true);
+              }
             },
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,10 +468,13 @@ class _OtpScreenState extends State<OtpScreen> {
                   width: 22, height: 22,
                   child: Checkbox(
                     value: _agreed,
-                    onChanged: (v) {
-                      final next = v ?? false;
-                      setState(() => _agreed = next);
-                      _box.write('terms_agreed', next);
+                    onChanged: (v) async {
+                      if (v == true) {
+                        final ok = await _showTerms();
+                        if (ok && mounted) setState(() => _agreed = true);
+                      } else {
+                        setState(() => _agreed = false);
+                      }
                     },
                     activeColor: AppColors.primary,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -476,7 +485,10 @@ class _OtpScreenState extends State<OtpScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: GestureDetector(
-                    onTap: _showTerms,
+                    onTap: () async {
+                      final ok = await _showTerms();
+                      if (ok && mounted) setState(() => _agreed = true);
+                    },
                     child: RichText(
                       text: TextSpan(
                         style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5),

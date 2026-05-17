@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,46 +16,24 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
-  late AnimationController _logoController;
-  late AnimationController _textController;
-  late Animation<double> _logoScale;
-  late Animation<double> _logoOpacity;
-  late Animation<double> _textOpacity;
-  late Animation<Offset> _textSlide;
-
-  // Tracks when user is sent to OS settings — lifecycle observer re-triggers on return.
+class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver {
   bool _waitingForSettings = false;
 
   @override
   void initState() {
     super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WidgetsBinding.instance.addObserver(this);
-
-    _logoController = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
-    _textController = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
-
-    _logoScale = Tween<double>(begin: 0.4, end: 1.0).animate(
-        CurvedAnimation(parent: _logoController, curve: Curves.elasticOut));
-    _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: _logoController, curve: const Interval(0, 0.5)));
-    _textOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(_textController);
-    _textSlide = Tween<Offset>(begin: const Offset(0, 0.4), end: Offset.zero).animate(
-        CurvedAnimation(parent: _textController, curve: Curves.easeOut));
-
-    _startAnimations();
+    _start();
   }
 
   @override
   void dispose() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     WidgetsBinding.instance.removeObserver(this);
-    _logoController.dispose();
-    _textController.dispose();
     super.dispose();
   }
 
-  // Re-enter navigation flow when user returns from OS settings.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _waitingForSettings) {
@@ -63,23 +42,17 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
-  Future<void> _startAnimations() async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _logoController.forward();
-    await Future.delayed(const Duration(milliseconds: 500));
-    _textController.forward();
+  Future<void> _start() async {
     await Future.delayed(const Duration(milliseconds: 1800));
     _navigate();
   }
 
   Future<void> _navigate() async {
-    // Hard block: never navigate anywhere without location permission.
     while (true) {
       final granted = await _ensureLocationPermission();
       if (!mounted) return;
-      if (_waitingForSettings) return; // lifecycle observer resumes on app return
+      if (_waitingForSettings) return;
       if (granted) break;
-      // denied (not forever): explanation dialog was shown, loop re-requests
     }
 
     final isSupported = await _checkDistrictSupport();
@@ -92,7 +65,6 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
-  // Returns true = granted, false = denied (dialog shown; caller should retry or stop).
   Future<bool> _ensureLocationPermission() async {
     LocationPermission permission = await Geolocator.checkPermission();
 
@@ -137,7 +109,6 @@ class _SplashScreenState extends State<SplashScreen>
       return false;
     }
 
-    // Denied but not permanently — explain and dismiss. Loop in _navigate() retries.
     if (!mounted) return false;
     await showDialog(
       context: context,
@@ -170,7 +141,6 @@ class _SplashScreenState extends State<SplashScreen>
   bool _isGranted(LocationPermission p) =>
       p == LocationPermission.whileInUse || p == LocationPermission.always;
 
-  // Returns false and shows a non-dismissible popup if user is outside all supported districts.
   Future<bool> _checkDistrictSupport() async {
     try {
       final pos = await Geolocator.getLastKnownPosition() ??
@@ -254,102 +224,10 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.splashGradient),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
-              AnimatedBuilder(
-                animation: _logoController,
-                builder: (context, child) => Opacity(
-                  opacity: _logoOpacity.value,
-                  child: Transform.scale(
-                    scale: _logoScale.value,
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3), width: 2),
-                      ),
-                      child: const Icon(Icons.volunteer_activism_rounded,
-                          size: 52, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
-              AnimatedBuilder(
-                animation: _textController,
-                builder: (context, child) => FadeTransition(
-                  opacity: _textOpacity,
-                  child: SlideTransition(
-                    position: _textSlide,
-                    child: Column(
-                      children: [
-                        const Text('Bakhli',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 34,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: -0.5,
-                            )),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.handshake_rounded,
-                                size: 15, color: Colors.white.withValues(alpha: 0.75)),
-                            const SizedBox(width: 6),
-                            Text('Find rooms near you. No brokers.',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  color: Colors.white.withValues(alpha: 0.75),
-                                  letterSpacing: 0.2,
-                                )),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const Spacer(flex: 2),
-              AnimatedBuilder(
-                animation: _textController,
-                builder: (context, child) => Opacity(
-                  opacity: _textOpacity.value,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(3, (i) => _dot(i)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 48),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _dot(int index) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.4, end: 1.0),
-      duration: Duration(milliseconds: 600 + index * 200),
-      builder: (context, v, child) => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: v),
-          shape: BoxShape.circle,
+      body: SizedBox.expand(
+        child: Image.asset(
+          'assets/images/splash_screen.png',
+          fit: BoxFit.cover,
         ),
       ),
     );

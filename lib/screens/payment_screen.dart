@@ -23,6 +23,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   late String _listingId;
   late String _planType;
+  late bool _isUpgrade;
 
   @override
   void initState() {
@@ -32,6 +33,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final args = Get.arguments as Map<String, dynamic>?;
     _listingId = args?['listingId'] as String? ?? '';
     _planType = args?['planType'] as String? ?? 'FREE';
+    _isUpgrade = _listingId.isEmpty;
 
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSuccess);
@@ -49,7 +51,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     try {
       final listingCtrl = Get.find<ListingController>();
-      final response = await listingCtrl.createPaymentOrder(_listingId, _planType);
+      final response = _isUpgrade
+          ? await listingCtrl.createUpgradeOrder()
+          : await listingCtrl.createPaymentOrder(_listingId, _planType);
 
       if (!mounted) return;
 
@@ -152,12 +156,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
 
       final listingCtrl = Get.find<ListingController>();
-      await listingCtrl.verifyPayment(
-        listingId: _listingId,
-        razorpayOrderId: orderId,
-        razorpayPaymentId: paymentId,
-        razorpaySignature: signature,
-      );
+      if (_isUpgrade) {
+        await listingCtrl.verifyUpgradePayment(
+          razorpayOrderId: orderId,
+          razorpayPaymentId: paymentId,
+          razorpaySignature: signature,
+        );
+      } else {
+        await listingCtrl.verifyPayment(
+          listingId: _listingId,
+          razorpayOrderId: orderId,
+          razorpayPaymentId: paymentId,
+          razorpaySignature: signature,
+        );
+      }
 
       if (mounted) {
         showDialog(

@@ -330,6 +330,42 @@ class ListingController extends GetxController {
     }
   }
 
+  Future<Map<String, dynamic>> createUpgradeOrder() async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.post('/listings/upgrade-plan/create-order', {});
+      final data = res['data'] as Map<String, dynamic>;
+      return {
+        'orderId': data['orderId'] as String,
+        'amount': (data['amount'] as num).toInt(),
+        'currency': data['currency'] as String? ?? 'INR',
+        'keyId': data['keyId'] as String? ?? '',
+      };
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not create upgrade order.'));
+      rethrow;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> verifyUpgradePayment({
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+  }) async {
+    try {
+      await ApiService.post('/listings/upgrade-plan/verify', {
+        'razorpayOrderId': razorpayOrderId,
+        'razorpayPaymentId': razorpayPaymentId,
+        'razorpaySignature': razorpaySignature,
+      });
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not verify upgrade payment.'));
+      rethrow;
+    }
+  }
+
   Future<bool> isPaymentFeatureEnabled() async {
     try {
       final res = await ApiService.get('/admin/payment-feature');
