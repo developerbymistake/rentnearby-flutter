@@ -101,10 +101,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
+  String _formatPhone(String raw) {
+    final clean = raw.replaceAll(RegExp(r'[\s+\-()]'), '');
+    if (clean.length == 10) return '+91$clean';
+    if (clean.length == 12 && clean.startsWith('91')) return '+$clean';
+    return raw;
+  }
+
   void _openRazorpay() {
     if (_order == null) return;
 
-    final phone = Get.find<AuthController>().user.value?.phoneNumber ?? '';
+    final rawPhone = Get.find<AuthController>().user.value?.phoneNumber ?? '';
     final options = {
       'key': _order!['keyId'],
       'amount': (_order!['amount'] as int) * 100,
@@ -113,7 +120,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       'name': 'Bakhli',
       'description': 'Premium Plan - 30 days, 2 rooms',
       'prefill': {
-        'contact': phone,
+        'contact': _formatPhone(rawPhone),
       },
       'theme': {
         'color': '#3399cc',
@@ -169,7 +176,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _onError(PaymentFailureResponse response) {
-    AppToast.error('Payment failed: ${response.message ?? 'Unknown error'}');
+    if (response.code == Razorpay.PAYMENT_CANCELLED) return;
+    AppToast.error('Payment failed. Please try again.');
   }
 
   void _onExternalWallet(ExternalWalletResponse response) {
@@ -187,12 +195,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.textDark,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Get.back(),
         ),
-        title: const Text('Complete Payment'),
+        title: const Text(
+          'Complete Payment',
+          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 16),
+        ),
       ),
       body: SafeArea(
         child: Padding(
