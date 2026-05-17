@@ -270,7 +270,6 @@ class _PaymentDialogState extends State<PaymentDialog> {
         _razorpayService.initiatePayment(
           orderId: orderId,
           amount: amount,
-          email: user.gmailId ?? 'noemail@rentnearby.com',
           phone: user.phoneNumber,
           description: 'Premium Plan - 30 days, 2 rooms',
           keyId: keyId,

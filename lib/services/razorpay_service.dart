@@ -34,7 +34,6 @@ class RazorpayPaymentService {
   void initiatePayment({
     required String orderId,
     required int amount,
-    required String email,
     required String phone,
     required String description,
     required String keyId,
@@ -46,7 +45,6 @@ class RazorpayPaymentService {
       'name': 'RentNearBy',
       'description': description,
       'prefill': {
-        'email': email,
         'contact': phone,
       },
       'theme': {
