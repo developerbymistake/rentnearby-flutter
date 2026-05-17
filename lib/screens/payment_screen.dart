@@ -65,6 +65,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       // For FREE plan: order creation auto-activates on backend
       if (_planType == 'FREE') {
         if (mounted) {
+          Get.find<ListingController>().listingPostedTrigger.value++;
           showDialog(
             context: context,
             barrierDismissible: false,
