@@ -367,7 +367,16 @@ class ListingController extends GetxController {
         return 'No internet connection. Please check your network.';
       }
       final status = e.response?.statusCode;
-      final message = e.response?.data?['message'] as String?;
+      String? message;
+
+      final responseData = e.response?.data;
+      if (responseData is Map<String, dynamic>) {
+        message = responseData['error']?['message'] as String? ??
+                  responseData['message'] as String?;
+      } else if (responseData is String) {
+        message = responseData;
+      }
+
       if (status == 400 && message != null) return message;
       if (status == 429) return 'Too many attempts. Please try again later.';
       if (status != null && status >= 500) return 'Server error. Please try again.';
