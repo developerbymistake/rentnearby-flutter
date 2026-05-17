@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../config/app_colors.dart';
 import '../utils/app_toast.dart';
+import '../widgets/payment_success_dialog.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -21,7 +21,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   late String _listingId;
   late String _planType;
-  late bool _hasUsedFreePlan;
 
   @override
   void initState() {
@@ -31,7 +30,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final args = Get.arguments as Map<String, dynamic>?;
     _listingId = args?['listingId'] as String? ?? '';
     _planType = args?['planType'] as String? ?? 'FREE';
-    _hasUsedFreePlan = args?['hasUsedFreePlan'] as bool? ?? false;
 
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSuccess);
@@ -66,8 +64,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
       // For FREE plan: order creation auto-activates on backend
       if (_planType == 'FREE') {
         if (mounted) {
-          AppToast.success('Room is now LIVE! 🎉');
-          Get.back();
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => PaymentSuccessDialog(
+              planType: 'FREE',
+              daysValid: 10,
+              maxRooms: 1,
+              onDismiss: () => Get.back(),
+            ),
+          );
         }
         return;
       }
@@ -143,8 +149,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
 
       if (mounted) {
-        AppToast.success('Payment successful! Room is now LIVE! 🎉');
-        Get.back();
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => PaymentSuccessDialog(
+            planType: 'PAID',
+            daysValid: 30,
+            maxRooms: 2,
+            onDismiss: () => Get.back(),
+          ),
+        );
       }
     } catch (e) {
       AppToast.error('Payment verification failed: $e');

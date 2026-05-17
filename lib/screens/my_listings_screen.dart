@@ -201,11 +201,18 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   }
 
   void _showPaymentDialog(String listingId) async {
-    final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
+    // If admin disabled payment feature, skip plan popup and activate FREE directly
+    final paymentEnabled = await _ctrl.isPaymentFeatureEnabled();
+    if (!paymentEnabled) {
+      _activateFreePlanDirect(listingId);
+      return;
+    }
 
+    final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
     final membership = await _ctrl.getMembershipStatus();
     final hasMembership = membership != null && (membership['hasMembership'] == true);
 
+    // User has active membership — re-activate room directly, no payment needed
     if (hasMembership) {
       _activateFreePlanDirect(listingId);
       return;
@@ -235,8 +242,9 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   void _activateFreePlanDirect(String listingId) async {
     try {
       AppToast.info('Activating your listing...');
-      await _ctrl.activateFreePlan(listingId);
-      _refresh();
+      // Use toggleActive (PUT /listings/:id {isActive: true}) — avoids going through
+      // payment service which blocks re-activation for users who already used free plan
+      await _ctrl.toggleActive(listingId, false);
       AppToast.success('Room is now LIVE! 🎉');
     } catch (e) {
       AppToast.error('Could not activate: $e');

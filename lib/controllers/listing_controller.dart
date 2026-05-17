@@ -303,7 +303,6 @@ class ListingController extends GetxController {
         final success = data['success'] == true;
         if (success) {
           listingPostedTrigger.value++;
-          AppToast.success('Payment verified successfully!');
         } else {
           throw Exception(data['message'] ?? 'Payment verification failed');
         }
