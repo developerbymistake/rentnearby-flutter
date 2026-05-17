@@ -43,6 +43,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   bool _checkingPermission = false;
   bool _nearbyLoaded = false; // Flag to prevent duplicate _loadNearby calls
   Timer? _loadNearbyDebounceTimer; // Debounce rapid _loadNearby calls
+  final _selectedRoomTypes = <String>{};
   bool _autoLoading = false; // Prevent concurrent _autoLoad calls
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
@@ -377,14 +378,21 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       markers.add(_buildUserMarker());
     }
 
-    final listings = (_listingCtrl.nearbyListings.toList()
-      ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm)))
-      .take(30)
-      .toList();
+    var listings = _listingCtrl.nearbyListings.toList()
+      ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+
+    if (_selectedRoomTypes.isNotEmpty) {
+      listings = listings
+          .where((l) => l.roomTypeName != null &&
+                        _selectedRoomTypes.contains(l.roomTypeName))
+          .toList();
+    }
+
+    final filtered = listings.take(30).toList();
 
     final clusters = _mapReady
-        ? _computeClusters(listings)
-        : listings.map((l) => _Cluster(l)).toList();
+        ? _computeClusters(filtered)
+        : filtered.map((l) => _Cluster(l)).toList();
 
     for (final cluster in clusters) {
       final count = cluster.listings.length;
@@ -671,6 +679,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                     ]),
                     const SizedBox(height: 12),
                     _buildRadiusChips(),
+                    const SizedBox(height: 8),
+                    _buildRoomTypeChips(),
                   ]),
                 ),
               ),
@@ -845,6 +855,79 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         );
       }).toList(),
     );
+  }
+
+  Widget _buildRoomTypeChips() {
+    return Obx(() {
+      final types = _listingCtrl.roomTypes;
+      if (types.isEmpty) return const SizedBox.shrink();
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: () {
+                if (_selectedRoomTypes.isNotEmpty) {
+                  setState(() => _selectedRoomTypes.clear());
+                  _buildMarkers();
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: _selectedRoomTypes.isEmpty
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text('All',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _selectedRoomTypes.isEmpty ? AppColors.primary : Colors.white,
+                    )),
+              ),
+            ),
+            ...types.map((rt) {
+              final selected = _selectedRoomTypes.contains(rt.name);
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    if (selected) {
+                      _selectedRoomTypes.remove(rt.name);
+                    } else {
+                      _selectedRoomTypes.add(rt.name);
+                    }
+                  });
+                  _buildMarkers();
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(rt.name,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: selected ? AppColors.primary : Colors.white,
+                      )),
+                ),
+              );
+            }),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildLocationFab() {
