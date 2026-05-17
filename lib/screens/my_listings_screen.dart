@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
@@ -186,14 +187,13 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
 
         if (activeRooms >= maxRooms) {
-          AppToast.error('Room limit reached. You can add maximum $maxRooms room${maxRooms > 1 ? 's' : ''} with your plan.');
+          if (mounted) _showRoomLimitDialog(maxRooms: maxRooms, hasPlan: true);
           return;
         }
       } else {
-        // No membership - check if already has 1 free room
         final myRooms = _ctrl.myListings.length;
         if (myRooms >= 1) {
-          AppToast.error('You have reached your free limit. Upgrade your plan to add more rooms.');
+          if (mounted) _showRoomLimitDialog(maxRooms: 1, hasPlan: false);
           return;
         }
       }
@@ -204,6 +204,110 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       AppToast.info('Adding room...');
       Get.toNamed(AppRoutes.addListing);
     }
+  }
+
+  void _showRoomLimitDialog({required int maxRooms, required bool hasPlan}) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.lock_outline_rounded,
+                  size: 30, color: Color(0xFFF59E0B)),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Room Limit Reached',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              hasPlan
+                  ? 'Your current plan allows up to $maxRooms room${maxRooms > 1 ? 's' : ''}. Delete an existing room to add a new one, or contact us to upgrade.'
+                  : 'Free plan allows 1 room. Delete your existing room to replace it, or go live with a Premium plan to add more.',
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                color: AppColors.textMedium,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.list_alt_rounded, size: 16),
+                    label: const Text('Manage Rooms',
+                        style: TextStyle(
+                            fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      final uri = Uri.parse(
+                          'https://wa.me/917060023511?text=Hi%2C%20I%20need%20help%20with%20my%20room%20listing%20on%20Bakhli.');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    icon: const Icon(Icons.headset_mic_rounded, size: 16),
+                    label: const Text('Contact Us',
+                        style: TextStyle(
+                            fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showPaymentDialog(String listingId) async {

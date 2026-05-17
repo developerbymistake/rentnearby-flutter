@@ -231,8 +231,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _launchWhatsApp() async {
-    // TODO: replace with real support number via admin panel
-    const number = '919999999999';
+    const number = '917060023511';
     final uri = Uri.parse(
         'https://wa.me/$number?text=Hi%2C%20I%20want%20Bakhli%20in%20my%20district.');
     if (await canLaunchUrl(uri)) {
