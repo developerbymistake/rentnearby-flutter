@@ -4,6 +4,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../config/app_colors.dart';
+import '../config/app_routes.dart';
 import '../utils/app_toast.dart';
 import '../widgets/payment_success_dialog.dart';
 
@@ -73,7 +74,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               planType: 'FREE',
               daysValid: 2,
               maxRooms: 1,
-              onDismiss: () => Get.back(),
+              onDismiss: () => Get.offNamed(AppRoutes.main),
             ),
           );
         }
@@ -166,7 +167,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             planType: 'PAID',
             daysValid: 30,
             maxRooms: 2,
-            onDismiss: () => Get.back(),
+            onDismiss: () => Get.offNamed(AppRoutes.main),
           ),
         );
       }

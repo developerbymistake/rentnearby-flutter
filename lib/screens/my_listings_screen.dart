@@ -168,7 +168,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       // Check if user can add more rooms based on membership
       final membership = await _ctrl.getMembershipStatus();
 
-      if (membership != null) {
+      if (membership != null && membership['hasMembership'] == true) {
         final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 0;
         final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
 
