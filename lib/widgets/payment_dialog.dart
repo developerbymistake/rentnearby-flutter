@@ -247,11 +247,8 @@ class _PaymentDialogState extends State<PaymentDialog> {
         throw Exception('User not found');
       }
 
-      if (user.gmailId == null || user.gmailId!.isEmpty) {
-        throw Exception('User email is required for payment');
-      }
       if (user.phoneNumber == null || user.phoneNumber.isEmpty) {
-        throw Exception('User phone is required for payment');
+        throw Exception('Phone number is required for payment');
       }
 
       // Set up callbacks BEFORE opening payment (Issue 2: Handle cancel)
