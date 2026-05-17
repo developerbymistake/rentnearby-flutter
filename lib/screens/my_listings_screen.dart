@@ -75,20 +75,6 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                               fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
                     ]),
                     const Spacer(),
-                    Obx(() => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text('${_ctrl.myListings.length} rooms',
-                              style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white)),
-                        )),
-                    const SizedBox(width: 10),
                     GestureDetector(
                       onTap: _onAddRoom,
                       child: Container(
