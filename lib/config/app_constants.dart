@@ -7,6 +7,6 @@ class AppConstants {
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
 
-  static const double defaultRadius = 4.0; // km
+  static const double defaultRadius = 5.0; // km
   static const int maxPhotos = 5;
 }
