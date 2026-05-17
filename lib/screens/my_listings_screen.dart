@@ -8,7 +8,6 @@ import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../utils/app_toast.dart';
 import '../widgets/listing_card.dart';
-import '../widgets/payment_dialog.dart';
 
 class MyListingsScreen extends StatefulWidget {
   const MyListingsScreen({super.key});
@@ -202,37 +201,26 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   }
 
   void _showPaymentDialog(String listingId) async {
-    final isPaymentEnabled = await _ctrl.isPaymentFeatureEnabled();
     final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
 
     // Check if user already has active membership
     final membership = await _ctrl.getMembershipStatus();
     final hasMembership = membership != null && (membership['hasMembership'] == true);
 
-    // If user already has active membership, activate directly without dialog
+    // If user already has active membership, activate directly
     if (hasMembership) {
       _activateFreePlanDirect(listingId);
       return;
     }
 
-    // If payment not enabled and free plan available, activate directly
-    if (!isPaymentEnabled && !hasUsedFree) {
-      _activateFreePlanDirect(listingId);
-      return;
-    }
+    // Navigate to payment screen
+    await Get.toNamed(AppRoutes.paymentScreen, arguments: {
+      'listingId': listingId,
+      'hasUsedFreePlan': hasUsedFree,
+    });
 
-    // Show payment dialog to choose plan
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => PaymentDialog(
-        listingId: listingId,
-        hasUsedFreePlan: hasUsedFree,
-        onPaymentSuccess: () {
-          _refresh();
-        },
-      ),
-    );
+    // Refresh listings when returning from payment screen
+    _refresh();
   }
 
   void _activateFreePlanDirect(String listingId) async {

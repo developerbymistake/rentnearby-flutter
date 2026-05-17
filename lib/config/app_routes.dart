@@ -4,6 +4,7 @@ import '../screens/otp_screen.dart';
 import '../screens/main_screen.dart';
 import '../screens/listing_detail_screen.dart';
 import '../screens/add_listing_screen.dart';
+import '../screens/payment_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -11,6 +12,7 @@ class AppRoutes {
   static const String main = '/main';
   static const String listingDetail = '/listing-detail';
   static const String addListing = '/add-listing';
+  static const String paymentScreen = '/payment-screen';
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
@@ -36,6 +38,12 @@ class AppRoutes {
       name: addListing,
       page: () => const AddListingScreen(),
       transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 350),
+    ),
+    GetPage(
+      name: paymentScreen,
+      page: () => const PaymentScreen(),
+      transition: Transition.upToDown,
       transitionDuration: const Duration(milliseconds: 350),
     ),
   ];

@@ -233,7 +233,6 @@ class ListingController extends GetxController {
       }
 
       listingPostedTrigger.value++;
-      AppToast.success('Your FREE plan activated!');
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not activate free plan.'));
       rethrow;
@@ -276,43 +275,6 @@ class ListingController extends GetxController {
       };
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not create payment order.'));
-      rethrow;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<Map<String, dynamic>> initiatePaidPayment(String listingId) async {
-    try {
-      isLoading.value = true;
-      final res = await ApiService.post(
-        '/listings/$listingId/go-live',
-        {'planType': 'PAID'},
-      );
-
-      final data = res['data'];
-      if (data == null || data is! Map<String, dynamic>) {
-        throw Exception('Invalid payment response from server');
-      }
-
-      final orderId = _safeGetString(data, 'razorpayOrderId');
-      final amountRaw = data['amount'];
-
-      if (orderId == null || amountRaw == null) {
-        throw Exception('Missing payment details: orderId or amount');
-      }
-
-      final amount = _safeGetInt(amountRaw);
-      if (amount == null) {
-        throw Exception('Invalid amount format from server');
-      }
-
-      return {
-        'razorpayOrderId': orderId,
-        'amount': amount,
-      };
-    } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not initiate payment.'));
       rethrow;
     } finally {
       isLoading.value = false;
