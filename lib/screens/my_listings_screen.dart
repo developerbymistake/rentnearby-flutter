@@ -479,7 +479,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         return;
       }
       Get.toNamed(AppRoutes.listingDetail, arguments: listingId);
-      Future.delayed(const Duration(milliseconds: 300), () {
+      Future.delayed(const Duration(milliseconds: 450), () {
         Get.dialog(
           PaymentSuccessDialog(
             planType: 'FREE',

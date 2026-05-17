@@ -158,7 +158,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         if (_isUpgrade) {
           Get.find<AuthController>().tabIndex.value = 1;
           Get.offAllNamed(AppRoutes.main);
-          Future.delayed(const Duration(milliseconds: 300), () {
+          Future.delayed(const Duration(milliseconds: 450), () {
             Get.dialog(
               PaymentSuccessDialog(
                 planType: 'PAID',
@@ -173,7 +173,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           });
         } else {
           Get.offAllNamed(AppRoutes.listingDetail, arguments: _listingId);
-          Future.delayed(const Duration(milliseconds: 300), () {
+          Future.delayed(const Duration(milliseconds: 450), () {
             Get.dialog(
               PaymentSuccessDialog(
                 planType: 'PAID',
@@ -259,9 +259,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Text(
-                _planType == 'FREE' ? 'Activating FREE Plan' : 'Payment Required',
-                style: const TextStyle(
+              const Text(
+                'Payment Required',
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Poppins',
@@ -270,9 +270,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                _planType == 'FREE'
-                    ? 'Your room will be live for 2 days with 1 room limit.'
-                    : 'Complete payment to activate your listing for 30 days with 2 room limit.',
+                'Complete payment to activate your listing for 30 days with 2 room limit.',
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 14,
@@ -295,8 +293,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   onPressed: _createOrder,
                   child: const Text('Retry'),
                 ),
-              ] else if (_planType == 'FREE') ...[
-                const SizedBox(height: 40),
               ] else if (_order != null) ...[
                 Text(
                   '₹${_order!['amount']}',
@@ -358,9 +354,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const SizedBox(height: 24),
               TextButton(
                 onPressed: () => Get.back(),
-                child: Text(
-                  _planType == 'FREE' ? 'Back to listings' : 'Cancel payment',
-                  style: const TextStyle(
+                child: const Text(
+                  'Cancel payment',
+                  style: TextStyle(
                     color: AppColors.textLight,
                     fontFamily: 'Poppins',
                   ),
