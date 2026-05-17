@@ -137,41 +137,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FutureBuilder<Map<String, dynamic>?>(
-        future: _ctrl.getMembershipStatus(),
-        builder: (context, snapshot) {
-          // Show button while loading - don't block UI
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildAddRoomButton();
-          }
-
-          // If error, show button anyway (user can try to add room)
-          if (snapshot.hasError) {
-            return _buildAddRoomButton();
-          }
-
-          final membership = snapshot.data;
-
-          // No membership = user can add 1 free room
-          if (membership == null) {
-            final activeRooms = _ctrl.myListings.length;
-            // If already has 1 room and payment disabled, hide button
-            if (activeRooms >= 1) {
-              return const SizedBox.shrink();
-            }
-          } else {
-            // Has membership, check room limit
-            final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 1;
-            final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
-
-            if (activeRooms >= maxRooms) {
-              return const SizedBox.shrink();
-            }
-          }
-
-          return _buildAddRoomButton();
-        },
-      ),
+      floatingActionButton: _buildAddRoomButton(),
     );
   }
 
@@ -206,19 +172,33 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       return;
     }
 
-    // Check if user can add more rooms based on membership
-    final membership = await _ctrl.getMembershipStatus();
-    if (membership != null) {
-      final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 0;
-      final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
+    try {
+      // Check if user can add more rooms based on membership
+      final membership = await _ctrl.getMembershipStatus();
 
-      if (activeRooms >= maxRooms) {
-        AppToast.error('Room limit reached. You can add maximum $maxRooms room${maxRooms > 1 ? 's' : ''} with your plan.');
-        return;
+      if (membership != null) {
+        final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 0;
+        final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
+
+        if (activeRooms >= maxRooms) {
+          AppToast.error('Room limit reached. You can add maximum $maxRooms room${maxRooms > 1 ? 's' : ''} with your plan.');
+          return;
+        }
+      } else {
+        // No membership - check if already has 1 free room
+        final myRooms = _ctrl.myListings.length;
+        if (myRooms >= 1) {
+          AppToast.error('You have reached your free limit. Upgrade your plan to add more rooms.');
+          return;
+        }
       }
-    }
 
-    Get.toNamed(AppRoutes.addListing);
+      Get.toNamed(AppRoutes.addListing);
+    } catch (e) {
+      // On error, allow user to try adding room anyway
+      AppToast.info('Adding room...');
+      Get.toNamed(AppRoutes.addListing);
+    }
   }
 
   void _showPaymentDialog(String listingId) async {
