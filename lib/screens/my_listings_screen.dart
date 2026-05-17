@@ -140,6 +140,16 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       floatingActionButton: FutureBuilder<Map<String, dynamic>?>(
         future: _ctrl.getMembershipStatus(),
         builder: (context, snapshot) {
+          // Show button while loading - don't block UI
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return _buildAddRoomButton();
+          }
+
+          // If error, show button anyway (user can try to add room)
+          if (snapshot.hasError) {
+            return _buildAddRoomButton();
+          }
+
           final membership = snapshot.data;
 
           // No membership = user can add 1 free room
@@ -159,28 +169,32 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             }
           }
 
-          return Container(
-            decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.4),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6))
-              ],
-            ),
-            child: FloatingActionButton.extended(
-              onPressed: _onAddRoom,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              icon: const Icon(Iconsax.add_square, color: Colors.white),
-              label: const Text('Add Room',
-                  style: TextStyle(
-                      fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Colors.white)),
-            ),
-          );
+          return _buildAddRoomButton();
         },
+      ),
+    );
+  }
+
+  Widget _buildAddRoomButton() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 6))
+        ],
+      ),
+      child: FloatingActionButton.extended(
+        onPressed: _onAddRoom,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        icon: const Icon(Iconsax.add_square, color: Colors.white),
+        label: const Text('Add Room',
+            style: TextStyle(
+                fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Colors.white)),
       ),
     );
   }
