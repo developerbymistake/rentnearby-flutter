@@ -87,6 +87,37 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white)),
                         )),
+                    const SizedBox(width: 10),
+                    GestureDetector(
+                      onTap: _onAddRoom,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
+                            SizedBox(width: 4),
+                            Text('Add Room',
+                                style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary)),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -135,31 +166,6 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             }),
           ),
         ],
-      ),
-      floatingActionButton: _buildAddRoomButton(),
-    );
-  }
-
-  Widget _buildAddRoomButton() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 6))
-        ],
-      ),
-      child: FloatingActionButton.extended(
-        onPressed: _onAddRoom,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        icon: const Icon(Iconsax.add_square, color: Colors.white),
-        label: const Text('Add Room',
-            style: TextStyle(
-                fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: Colors.white)),
       ),
     );
   }
@@ -241,9 +247,6 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
   void _activateFreePlanDirect(String listingId) async {
     try {
-      AppToast.info('Activating your listing...');
-      // Use toggleActive (PUT /listings/:id {isActive: true}) — avoids going through
-      // payment service which blocks re-activation for users who already used free plan
       await _ctrl.toggleActive(listingId, false);
       AppToast.success('Room is now LIVE! 🎉');
     } catch (e) {
