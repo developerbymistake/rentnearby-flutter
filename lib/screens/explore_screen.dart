@@ -782,7 +782,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   Widget _buildRadiusChips() {
-    final radii = [1.0, 5.0, 10.0];
+    final radii = [1.0, 4.0, 8.0];
     return Row(
       children: radii.asMap().entries.map((entry) {
         final i = entry.key;
