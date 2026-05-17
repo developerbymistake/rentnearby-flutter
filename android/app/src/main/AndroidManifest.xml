@@ -11,7 +11,8 @@
     <application
         android:label="Bakhli"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:extractNativeLibs="true">
 
         <activity
             android:name=".MainActivity"
