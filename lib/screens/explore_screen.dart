@@ -43,7 +43,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   bool _checkingPermission = false;
   bool _nearbyLoaded = false; // Flag to prevent duplicate _loadNearby calls
   Timer? _loadNearbyDebounceTimer; // Debounce rapid _loadNearby calls
-  final _selectedRoomTypes = <String>{};
+  String? _selectedRoomType;
   bool _autoLoading = false; // Prevent concurrent _autoLoad calls
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
@@ -381,10 +381,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     var listings = _listingCtrl.nearbyListings.toList()
       ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
 
-    if (_selectedRoomTypes.isNotEmpty) {
+    if (_selectedRoomType != null) {
       listings = listings
-          .where((l) => l.roomTypeName != null &&
-                        _selectedRoomTypes.contains(l.roomTypeName))
+          .where((l) => l.roomTypeName == _selectedRoomType)
           .toList();
     }
 
@@ -694,30 +693,23 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   if (_listingCtrl.isLoading.value) return const SizedBox.shrink();
                   final count = _listingCtrl.nearbyListings.length;
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 16, offset: const Offset(0, 4))],
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 42, height: 42,
-                          decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
-                          child: Center(child: Text('$count', style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white))),
+                          width: 32, height: 32,
+                          decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(9)),
+                          child: Center(child: Text('$count', style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white))),
                         ),
-                        const SizedBox(width: 14),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(count == 0 ? 'No rooms found' : '$count room${count == 1 ? '' : 's'} found',
-                                style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                            Text('within ${_radius.toInt() == _radius ? _radius.toInt() : _radius} km radius',
-                                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                          ],
-                        ),
+                        const SizedBox(width: 10),
+                        Text(count == 0 ? 'No rooms found' : '$count room${count == 1 ? '' : 's'} found',
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                       ],
                     ),
                   );
@@ -729,7 +721,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           ),
 
           Positioned(
-            bottom: 210, right: 20,
+            bottom: 185, right: 20,
             child: _buildLocationFab(),
           ),
         ],
@@ -824,7 +816,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   Widget _buildRadiusChips() {
-    final radii = [1.0, 4.0, 8.0];
+    final radii = [1.0, 5.0, 10.0];
     return Row(
       children: radii.asMap().entries.map((entry) {
         final i = entry.key;
@@ -872,65 +864,42 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           borderRadius: BorderRadius.circular(18),
           boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: () {
-                setState(() => _selectedRoomTypes.clear());
-                _buildMarkers();
-              },
-              child: Container(
-                width: 42, height: 42,
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.restart_alt_rounded, color: Colors.white, size: 20),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: types.map((rt) {
-                  final selected = _selectedRoomTypes.contains(rt.name);
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        if (selected) {
-                          _selectedRoomTypes.remove(rt.name);
-                        } else {
-                          _selectedRoomTypes.add(rt.name);
-                        }
-                      });
-                      _buildMarkers();
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: selected ? AppColors.primary : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: selected ? AppColors.primary : AppColors.divider,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Text(rt.name,
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: selected ? Colors.white : AppColors.textDark,
-                          )),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            children: types.map((rt) {
+              final selected = _selectedRoomType == rt.name;
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedRoomType = selected ? null : rt.name;
+                  });
+                  _buildMarkers();
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: selected ? AppColors.primary : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: selected ? AppColors.primary : AppColors.divider,
+                      width: 1.5,
                     ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ],
+                  ),
+                  child: Text(rt.name,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: selected ? Colors.white : AppColors.textDark,
+                      )),
+                ),
+              );
+            }).toList(),
+          ),
         ),
       );
     });
