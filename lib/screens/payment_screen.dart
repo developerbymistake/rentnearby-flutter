@@ -68,24 +68,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      // For FREE plan: order creation auto-activates on backend
-      if (_planType == 'FREE') {
-        if (mounted) {
-          Get.find<ListingController>().listingPostedTrigger.value++;
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => PaymentSuccessDialog(
-              planType: 'FREE',
-              daysValid: 2,
-              maxRooms: 1,
-              onDismiss: () => Get.offNamed(AppRoutes.main),
-            ),
-          );
-        }
-        return;
-      }
-
       // For PAID plan: prepare Razorpay order details
       if (keyId == null || keyId.isEmpty) {
         setState(() => _error = 'Payment key not available from server');
@@ -173,19 +155,39 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
 
       if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => PaymentSuccessDialog(
-            planType: 'PAID',
-            daysValid: 30,
-            maxRooms: 2,
-            onDismiss: () {
-              Get.offNamed(AppRoutes.main);
-              Get.find<AuthController>().tabIndex.value = 1;
-            },
-          ),
-        );
+        if (_isUpgrade) {
+          Get.find<AuthController>().tabIndex.value = 1;
+          Get.offAllNamed(AppRoutes.main);
+          Future.delayed(const Duration(milliseconds: 300), () {
+            Get.dialog(
+              PaymentSuccessDialog(
+                planType: 'PAID',
+                daysValid: 30,
+                maxRooms: 2,
+                onDismiss: () {
+                  Get.find<AuthController>().tabIndex.value = 0;
+                },
+              ),
+              barrierDismissible: false,
+            );
+          });
+        } else {
+          Get.offAllNamed(AppRoutes.listingDetail, arguments: _listingId);
+          Future.delayed(const Duration(milliseconds: 300), () {
+            Get.dialog(
+              PaymentSuccessDialog(
+                planType: 'PAID',
+                daysValid: 30,
+                maxRooms: 2,
+                onDismiss: () {
+                  Get.find<AuthController>().tabIndex.value = 0;
+                  Get.offAllNamed(AppRoutes.main);
+                },
+              ),
+              barrierDismissible: false,
+            );
+          });
+        }
       }
     } catch (e) {
       AppToast.error('Payment verification failed: $e');
@@ -193,8 +195,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _onError(PaymentFailureResponse response) {
-    if (response.code == Razorpay.PAYMENT_CANCELLED) return;
-    AppToast.error('Payment failed. Please try again.');
+    if (response.code == Razorpay.PAYMENT_CANCELLED) {
+      setState(() => _error = 'Payment was cancelled. Tap "Pay Now" to try again.');
+    } else {
+      setState(() => _error = 'Payment failed. Please try again.');
+    }
   }
 
   void _onExternalWallet(ExternalWalletResponse response) {
@@ -302,7 +307,34 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     fontFamily: 'Poppins',
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7ED),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFB923C), width: 0.8),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFF97316)),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'This is a non-refundable payment. Once processed, the amount cannot be returned.',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 11,
+                            color: Color(0xFF92400E),
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   height: 56,

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
+import '../config/app_colors.dart';
 
 class PaymentSuccessDialog extends StatefulWidget {
   final String planType;
@@ -21,293 +21,241 @@ class PaymentSuccessDialog extends StatefulWidget {
 
 class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
     with TickerProviderStateMixin {
-  late AnimationController _controller;
-  late AnimationController _countdownController;
-  int _countdownSeconds = 3;
+  late AnimationController _scaleCtrl;
+  late AnimationController _progressCtrl;
+  int _seconds = 3;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
 
-    _countdownController = AnimationController(
+    _scaleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..forward();
+
+    _progressCtrl = AnimationController(
+      vsync: this,
       duration: const Duration(seconds: 3),
-      vsync: this,
-    );
+    )..forward();
 
-    _controller.forward();
-
-    _countdownController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        if (mounted) {
-          Navigator.pop(context);
-          widget.onDismiss();
-        }
+    _progressCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        _dismiss();
       }
     });
 
-    _countdownController.forward();
-
-    // Manual countdown for display
     for (int i = 3; i > 0; i--) {
       Future.delayed(Duration(seconds: 4 - i), () {
-        if (mounted) {
-          setState(() => _countdownSeconds = i - 1);
-        }
+        if (mounted) setState(() => _seconds = i - 1);
       });
     }
   }
 
+  void _dismiss() {
+    if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    widget.onDismiss();
+  }
+
   @override
   void dispose() {
-    _controller.dispose();
-    _countdownController.dispose();
+    _scaleCtrl.dispose();
+    _progressCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color planColor = widget.planType == 'FREE' ? Colors.green : Colors.blue;
+    final isPaid = widget.planType == 'PAID';
+    final color = isPaid ? AppColors.primary : const Color(0xFF10B981);
+    final lightColor = isPaid ? const Color(0xFFEFF6FF) : const Color(0xFFECFDF5);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: planColor.withOpacity(0.3),
-              blurRadius: 40,
-              offset: const Offset(0, 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ScaleTransition(
+              scale: CurvedAnimation(
+                parent: _scaleCtrl,
+                curve: Curves.elasticOut,
+              ),
+              child: Container(
+                width: 68,
+                height: 68,
+                decoration: BoxDecoration(color: lightColor, shape: BoxShape.circle),
+                child: Icon(Icons.check_rounded, size: 38, color: color),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              isPaid ? 'Payment Successful!' : 'Plan Activated!',
+              style: const TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Poppins',
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+              decoration: BoxDecoration(
+                color: lightColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: color.withOpacity(0.35)),
+              ),
+              child: Text(
+                '${widget.planType} Plan',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Poppins',
+                  color: color,
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                _statBox(
+                  icon: Icons.calendar_today_rounded,
+                  label: 'Duration',
+                  value: '${widget.daysValid} days',
+                  color: color,
+                  lightColor: lightColor,
+                ),
+                const SizedBox(width: 10),
+                _statBox(
+                  icon: Icons.home_rounded,
+                  label: 'Rooms',
+                  value: '${widget.maxRooms} room${widget.maxRooms > 1 ? 's' : ''}',
+                  color: color,
+                  lightColor: lightColor,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.circle, size: 7, color: Color(0xFF10B981)),
+                  SizedBox(width: 7),
+                  Text(
+                    'Listing is live',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Poppins',
+                      color: Color(0xFF10B981),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            AnimatedBuilder(
+              animation: _progressCtrl,
+              builder: (_, __) => ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: 1 - _progressCtrl.value,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: AlwaysStoppedAnimation(color),
+                  minHeight: 3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Closing in ${_seconds}s',
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.textLight,
+                fontFamily: 'Poppins',
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _dismiss,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: color,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Explore',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ),
             ),
           ],
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 28),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [planColor, planColor.withOpacity(0.8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                ),
-                child: Column(
-                  children: [
-                    ScaleTransition(
-                      scale: Tween<double>(begin: 0, end: 1).animate(
-                        CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-                      ),
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                        child: const Icon(
-                          Icons.check_rounded,
-                          size: 44,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      widget.planType == 'FREE' ? 'Plan Activated!' : 'Payment Successful!',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Poppins',
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+      ),
+    );
+  }
+
+  Widget _statBox({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    required Color lightColor,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        decoration: BoxDecoration(
+          color: lightColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.textLight,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w500,
               ),
-              Padding(
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  children: [
-                    Text(
-                      'Your ${widget.planType} Plan is Live!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Poppins',
-                        color: Colors.grey[900],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: planColor.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: planColor.withOpacity(0.2),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Valid For',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                        fontFamily: 'Poppins',
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '${widget.daysValid} days',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w700,
-                                        fontFamily: 'Poppins',
-                                        color: planColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                width: 1.5,
-                                height: 60,
-                                color: planColor.withOpacity(0.2),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      'Rooms Allowed',
-                                      textAlign: TextAlign.right,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                        fontFamily: 'Poppins',
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '${widget.maxRooms} room${widget.maxRooms > 1 ? 's' : ''}',
-                                      textAlign: TextAlign.right,
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w700,
-                                        fontFamily: 'Poppins',
-                                        color: planColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.check_circle, size: 16, color: Colors.green),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Your listing is now live!',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'Poppins',
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Closing in ${_countdownSeconds}s',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          widget.onDismiss();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: planColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.home_rounded, size: 18),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Go to My Listings',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                fontFamily: 'Poppins',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Poppins',
+                color: color,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

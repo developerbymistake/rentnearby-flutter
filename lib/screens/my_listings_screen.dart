@@ -9,6 +9,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../utils/app_toast.dart';
 import '../widgets/listing_card.dart';
+import '../widgets/payment_success_dialog.dart';
 
 class MyListingsScreen extends StatefulWidget {
   const MyListingsScreen({super.key});
@@ -468,10 +469,36 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
     if (planType == null) return;
 
+    if (planType == 'FREE') {
+      try {
+        await _ctrl.createPaymentOrder(listingId, 'FREE');
+        _ctrl.listingPostedTrigger.value++;
+        await _ctrl.loadMyListings();
+      } catch (e) {
+        AppToast.error('Could not activate plan: $e');
+        return;
+      }
+      Get.toNamed(AppRoutes.listingDetail, arguments: listingId);
+      Future.delayed(const Duration(milliseconds: 300), () {
+        Get.dialog(
+          PaymentSuccessDialog(
+            planType: 'FREE',
+            daysValid: 2,
+            maxRooms: 1,
+            onDismiss: () {
+              Get.find<AuthController>().tabIndex.value = 0;
+              Get.offAllNamed(AppRoutes.main);
+            },
+          ),
+          barrierDismissible: false,
+        );
+      });
+      return;
+    }
+
     await Get.toNamed(AppRoutes.paymentScreen, arguments: {
       'listingId': listingId,
-      'planType': planType,
-      'hasUsedFreePlan': hasUsedFree,
+      'planType': 'PAID',
     });
 
     _refresh();
