@@ -167,7 +167,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
             planType: 'PAID',
             daysValid: 30,
             maxRooms: 2,
-            onDismiss: () => Get.offNamed(AppRoutes.main),
+            onDismiss: () {
+              Get.offNamed(AppRoutes.main);
+              Get.find<AuthController>().tabIndex.value = 1;
+            },
           ),
         );
       }

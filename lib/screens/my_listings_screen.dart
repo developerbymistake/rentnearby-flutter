@@ -433,8 +433,22 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     final membership = await _ctrl.getMembershipStatus();
     final hasMembership = membership != null && (membership['hasMembership'] == true);
 
-    // User has active membership — re-activate room directly, no payment needed
     if (hasMembership) {
+      final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 0;
+      final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
+      final membershipPlanType = membership['planType'] as String? ?? '';
+
+      if (activeRooms >= maxRooms && membershipPlanType == 'FREE') {
+        // FREE plan at capacity → must upgrade to PAID
+        await Get.toNamed(AppRoutes.paymentScreen, arguments: {
+          'listingId': listingId,
+          'planType': 'PAID',
+        });
+        _refresh();
+        return;
+      }
+
+      // Has remaining capacity → activate directly
       _activateFreePlanDirect(listingId);
       return;
     }
