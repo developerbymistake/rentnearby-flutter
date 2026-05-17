@@ -686,42 +686,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
           Positioned(
             bottom: 20, left: 20, right: 20,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Obx(() {
-                  if (_listingCtrl.isLoading.value) return const SizedBox.shrink();
-                  final count = _listingCtrl.nearbyListings.length;
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 16, offset: const Offset(0, 4))],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 32, height: 32,
-                          decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(9)),
-                          child: Center(child: Text('$count', style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white))),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(count == 0 ? 'No rooms found' : '$count room${count == 1 ? '' : 's'} found',
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                      ],
-                    ),
-                  );
-                }),
-                const SizedBox(height: 8),
-                _buildRoomTypeChips(),
-              ],
-            ),
+            child: _buildFilterPanel(),
           ),
 
           Positioned(
-            bottom: 185, right: 20,
+            bottom: 145, right: 20,
             child: _buildLocationFab(),
           ),
         ],
@@ -853,52 +822,105 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildRoomTypeChips() {
+  Widget _buildFilterPanel() {
     return Obx(() {
       final types = _listingCtrl.roomTypes;
       if (types.isEmpty) return const SizedBox.shrink();
+      if (_listingCtrl.isLoading.value) return const SizedBox.shrink();
+
+      final allListings = _listingCtrl.nearbyListings.toList();
+      final filtered = _selectedRoomType != null
+          ? allListings.where((l) => l.roomTypeName == _selectedRoomType).toList()
+          : allListings;
+      final count = filtered.length;
+
+      final rows = <List>[];
+      for (int i = 0; i < types.length; i += 3) {
+        rows.add(types.sublist(i, (i + 3).clamp(0, types.length)));
+      }
+
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
         ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
+        child: IntrinsicHeight(
           child: Row(
-            children: types.map((rt) {
-              final selected = _selectedRoomType == rt.name;
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedRoomType = selected ? null : rt.name;
-                  });
-                  _buildMarkers();
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: selected ? AppColors.primary : Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: selected ? AppColors.primary : AppColors.divider,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Text(rt.name,
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: selected ? Colors.white : AppColors.textDark,
-                      )),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                width: 54,
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              );
-            }).toList(),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('$count',
+                        style: const TextStyle(
+                            fontFamily: 'Poppins', fontSize: 20,
+                            fontWeight: FontWeight.w700, color: Colors.white)),
+                    Text('room${count == 1 ? '' : 's'}',
+                        style: const TextStyle(
+                            fontFamily: 'Poppins', fontSize: 10,
+                            fontWeight: FontWeight.w500, color: Colors.white)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: rows.asMap().entries.map((entry) {
+                    final rowIndex = entry.key;
+                    final row = entry.value;
+                    return Padding(
+                      padding: EdgeInsets.only(top: rowIndex > 0 ? 6 : 0),
+                      child: Row(
+                        children: List.generate(row.length, (colIndex) {
+                          final rt = row[colIndex];
+                          final selected = _selectedRoomType == rt.name;
+                          return Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedRoomType = selected ? null : rt.name;
+                                });
+                                _buildMarkers();
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                margin: EdgeInsets.only(right: colIndex < row.length - 1 ? 6 : 0),
+                                padding: const EdgeInsets.symmetric(vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: selected ? AppColors.primary : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: selected ? AppColors.primary : AppColors.divider,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(rt.name,
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins', fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: selected ? Colors.white : AppColors.textDark,
+                                      )),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
           ),
         ),
       );
