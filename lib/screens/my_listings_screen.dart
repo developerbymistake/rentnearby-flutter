@@ -173,7 +173,12 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
 
         if (activeRooms >= maxRooms) {
-          if (mounted) _showRoomLimitDialog(maxRooms: maxRooms, hasPlan: true);
+          final planType = membership['planType'] as String? ?? '';
+          if (planType == 'FREE') {
+            if (mounted) _showPaidUpgradeSheet();
+          } else {
+            if (mounted) _showRoomLimitDialog(maxRooms: maxRooms, hasPlan: true);
+          }
           return;
         }
       } else {
