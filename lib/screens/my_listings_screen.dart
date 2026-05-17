@@ -137,14 +137,26 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FutureBuilder<bool>(
-        future: _ctrl.isPaymentFeatureEnabled(),
+      floatingActionButton: FutureBuilder<Map<String, dynamic>?>(
+        future: _ctrl.getMembershipStatus(),
         builder: (context, snapshot) {
-          final isPaymentEnabled = snapshot.data ?? false;
+          final membership = snapshot.data;
 
-          // If payment disabled (FREE plan only): Hide "Add Room" button
-          if (!isPaymentEnabled) {
-            return const SizedBox.shrink();
+          // No membership = user can add 1 free room
+          if (membership == null) {
+            final activeRooms = _ctrl.myListings.length;
+            // If already has 1 room and payment disabled, hide button
+            if (activeRooms >= 1) {
+              return const SizedBox.shrink();
+            }
+          } else {
+            // Has membership, check room limit
+            final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 1;
+            final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
+
+            if (activeRooms >= maxRooms) {
+              return const SizedBox.shrink();
+            }
           }
 
           return Container(
@@ -173,13 +185,26 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     );
   }
 
-  void _onAddRoom() {
+  void _onAddRoom() async {
     final name = _auth.user.value?.name?.trim() ?? '';
     if (name.isEmpty) {
       _showProfileRequiredDialog();
-    } else {
-      Get.toNamed(AppRoutes.addListing);
+      return;
     }
+
+    // Check if user can add more rooms based on membership
+    final membership = await _ctrl.getMembershipStatus();
+    if (membership != null) {
+      final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 0;
+      final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
+
+      if (activeRooms >= maxRooms) {
+        AppToast.error('Room limit reached. You can add maximum $maxRooms room${maxRooms > 1 ? 's' : ''} with your plan.');
+        return;
+      }
+    }
+
+    Get.toNamed(AppRoutes.addListing);
   }
 
   void _showPaymentDialog(String listingId) async {
