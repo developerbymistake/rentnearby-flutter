@@ -390,7 +390,10 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  Get.toNamed(AppRoutes.addListing);
+                  Get.toNamed(AppRoutes.paymentScreen, arguments: {
+                    'listingId': '00000000-0000-0000-0000-000000000000',
+                    'planType': 'PAID',
+                  });
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
@@ -398,7 +401,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: const Text(
-                  'Continue to Add Room',
+                  'Continue to Payment',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 15,
