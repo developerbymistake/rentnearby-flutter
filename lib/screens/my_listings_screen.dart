@@ -191,9 +191,14 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           return;
         }
       } else {
+        final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
         final myRooms = _ctrl.myListings.length;
         if (myRooms >= 1) {
-          if (mounted) _showRoomLimitDialog(maxRooms: 1, hasPlan: false);
+          if (hasUsedFree) {
+            if (mounted) _showPaidUpgradeSheet();
+          } else {
+            if (mounted) _showRoomLimitDialog(maxRooms: 1, hasPlan: false);
+          }
           return;
         }
       }
@@ -303,6 +308,121 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPaidUpgradeSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.flash_on_rounded, size: 30, color: AppColors.primary),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Premium Plan Required',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'You\'ve already used your FREE plan. Upgrade to Premium to add more rooms.',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                color: AppColors.textMedium,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primary, width: 0.5),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 18),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '₹99  •  30 days  •  Up to 2 rooms',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Get.toNamed(AppRoutes.addListing);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text(
+                  'Continue to Add Room',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Maybe Later',
+                style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight),
+              ),
             ),
           ],
         ),
