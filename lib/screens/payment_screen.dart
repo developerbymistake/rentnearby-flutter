@@ -272,7 +272,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 child: Text(
                   _planType == 'FREE' ? 'Back to listings' : 'Cancel payment',
                   style: const TextStyle(
-                    color: AppColors.textSecondary,
+                    color: AppColors.textLight,
                     fontFamily: 'Poppins',
                   ),
                 ),
