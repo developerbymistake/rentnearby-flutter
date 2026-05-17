@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="LaunchTheme" parent="Theme.SplashScreen.IconBackground">
-        <item name="windowSplashScreenBackground">#0F172A</item>
+        <item name="windowSplashScreenBackground">#1E3A8A</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-        <item name="windowSplashScreenIconBackgroundColor">#0F172A</item>
+        <item name="windowSplashScreenIconBackgroundColor">#1E3A8A</item>
         <item name="postSplashScreenTheme">@style/PostSplashTheme</item>
     </style>
     <style name="PostSplashTheme" parent="@android:style/Theme.Light.NoTitleBar">
