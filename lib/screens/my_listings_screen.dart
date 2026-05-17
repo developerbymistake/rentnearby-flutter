@@ -452,7 +452,7 @@ class _PlanSelectionSheet extends StatelessWidget {
               context,
               plan: 'FREE',
               title: 'Free Plan',
-              subtitle: '10 days • 1 room',
+              subtitle: '2 days • 1 room',
               price: '₹0',
               icon: Icons.star_rounded,
               color: const Color(0xFF10B981),

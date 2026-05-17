@@ -69,7 +69,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             barrierDismissible: false,
             builder: (_) => PaymentSuccessDialog(
               planType: 'FREE',
-              daysValid: 10,
+              daysValid: 2,
               maxRooms: 1,
               onDismiss: () => Get.back(),
             ),
@@ -223,7 +223,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const SizedBox(height: 12),
               Text(
                 _planType == 'FREE'
-                    ? 'Your room will be live for 10 days with 1 room limit.'
+                    ? 'Your room will be live for 2 days with 1 room limit.'
                     : 'Complete payment to activate your listing for 30 days with 2 room limit.',
                 style: TextStyle(
                   color: Colors.grey[600],
