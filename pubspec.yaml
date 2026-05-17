@@ -25,7 +25,7 @@ dependencies:
   latlong2: ^0.9.1
 
   # Location
-  geolocator: ^13.0.4
+  geolocator: ^14.0.2
 
   # Image picker
   image_picker: ^1.1.2
@@ -42,7 +42,7 @@ dependencies:
   url_launcher: ^6.3.1
 
   # Native share sheet
-  share_plus: ^13.1.0
+  share_plus: ^12.0.2
 
   # Toast notifications
   toastification: ^3.2.0
