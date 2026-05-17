@@ -827,14 +827,46 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     return Obx(() {
       final types = _listingCtrl.roomTypes;
       if (types.isEmpty) return const SizedBox.shrink();
+      final count = _listingCtrl.nearbyListings.length;
+      final visibleCount = _selectedRoomTypes.isEmpty
+          ? count
+          : _listingCtrl.nearbyListings
+              .where((l) => l.roomTypeName != null && _selectedRoomTypes.contains(l.roomTypeName))
+              .length;
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
         ),
-        child: Wrap(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(10)),
+                  child: Center(child: Text('$visibleCount', style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white))),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(visibleCount == 0 ? 'No rooms found' : '$visibleCount room${visibleCount == 1 ? '' : 's'} found',
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                    Text('within ${_radius.toInt() == _radius ? _radius.toInt() : _radius} km radius',
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Divider(height: 1, color: AppColors.divider),
+            const SizedBox(height: 10),
+            Wrap(
           spacing: 8,
           runSpacing: 8,
           children: types.map((rt) {
@@ -871,6 +903,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
               ),
             );
           }).toList(),
+            ),
+          ],
         ),
       );
     });
