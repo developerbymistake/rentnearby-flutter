@@ -893,11 +893,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 child: Row(
                   children: [
                     _filterChip(null, 'All'),
-                    const SizedBox(width: 6),
-                    ..._plotTypes.map((t) => Padding(
-                          padding: const EdgeInsets.only(left: 6),
-                          child: _filterChip(t, t.substring(0, 3)),
-                        )),
+                    ..._plotTypes.expand((t) => [
+                      const SizedBox(width: 6),
+                      _filterChip(t, t.substring(0, 3)),
+                    ]),
                   ],
                 ),
               ),
