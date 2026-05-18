@@ -4,6 +4,7 @@ import '../screens/otp_screen.dart';
 import '../screens/main_screen.dart';
 import '../screens/listing_detail_screen.dart';
 import '../screens/add_listing_screen.dart';
+import '../screens/add_plot_screen.dart';
 import '../screens/payment_screen.dart';
 
 class AppRoutes {
@@ -12,6 +13,7 @@ class AppRoutes {
   static const String main = '/main';
   static const String listingDetail = '/listing-detail';
   static const String addListing = '/add-listing';
+  static const String addPlot = '/add-plot';
   static const String paymentScreen = '/payment-screen';
 
   static final routes = [
@@ -38,6 +40,12 @@ class AppRoutes {
       name: addListing,
       page: () => const AddListingScreen(),
       transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 350),
+    ),
+    GetPage(
+      name: addPlot,
+      page: () => const AddPlotScreen(),
+      transition: Transition.downToUp,
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(

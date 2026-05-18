@@ -8,9 +8,12 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
+import '../controllers/plot_controller.dart';
 import '../widgets/gradient_button.dart';
 import 'explore_screen.dart';
+import 'explore_plots_screen.dart';
 import 'my_listings_screen.dart';
+import 'my_plots_screen.dart';
 import 'profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -28,13 +31,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   StreamSubscription<ServiceStatus>? _gpsStatusSub;
 
-  final _screens = const [ExploreScreen(), MyListingsScreen(), ProfileScreen()];
+  final _screens = const [ExploreScreen(), MyListingsScreen(), ExplorePlotsScreen(), MyPlotsScreen(), ProfileScreen()];
 
   @override
   void initState() {
     super.initState();
     _navController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     Get.put(ListingController());
+    Get.put(PlotController());
     ever(_auth.tabIndex, (i) => setState(() => _currentIndex = i));
     _initConnectivity();
     _initGpsGate();
@@ -214,7 +218,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           children: [
             _navItem(0, Iconsax.map, Iconsax.map5, 'Explore'),
             _navItem(1, Iconsax.building, Iconsax.building5, 'My Rooms'),
-            _navItem(2, Iconsax.user, Iconsax.user5, 'Profile'),
+            _navItem(2, Iconsax.location, Iconsax.location5, 'Plots'),
+            _navItem(3, Iconsax.document, Iconsax.document5, 'My Plots'),
+            _navItem(4, Iconsax.user, Iconsax.user5, 'Profile'),
           ],
         ),
       ),
@@ -231,6 +237,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           }
           setState(() => _currentIndex = index);
         },
+
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
