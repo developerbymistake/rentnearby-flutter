@@ -454,6 +454,7 @@ class _OtpScreenState extends State<OtpScreen> {
           // Mandatory checkbox
           GestureDetector(
             onTap: () async {
+              FocusScope.of(context).unfocus();
               if (_agreed) {
                 setState(() => _agreed = false);
               } else {
@@ -469,6 +470,7 @@ class _OtpScreenState extends State<OtpScreen> {
                   child: Checkbox(
                     value: _agreed,
                     onChanged: (v) async {
+                      FocusScope.of(context).unfocus();
                       if (v == true) {
                         final ok = await _showTerms();
                         if (ok && mounted) setState(() => _agreed = true);
@@ -486,6 +488,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 Expanded(
                   child: GestureDetector(
                     onTap: () async {
+                      FocusScope.of(context).unfocus();
                       final ok = await _showTerms();
                       if (ok && mounted) setState(() => _agreed = true);
                     },
