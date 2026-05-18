@@ -292,22 +292,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF7ED),
+                    color: const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFFB923C), width: 0.8),
                   ),
                   child: const Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFF97316)),
+                      Icon(Icons.lock_outline_rounded, size: 14, color: AppColors.textLight),
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'This is a non-refundable payment. Once processed, the amount cannot be returned.',
+                          'Non-refundable payment. Amount cannot be returned once processed.',
                           style: TextStyle(
                             fontFamily: 'Poppins',
                             fontSize: 11,
-                            color: Color(0xFF92400E),
+                            color: AppColors.textLight,
                             height: 1.5,
                           ),
                         ),

@@ -187,7 +187,7 @@ class ListingCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 5),
-          // Location
+          // Location + expiry (opposite sides)
           Row(
             children: [
               const Icon(Iconsax.location, size: 13, color: AppColors.primaryLight),
@@ -206,6 +206,10 @@ class ListingCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (listing.validUntil != null) ...[
+                const SizedBox(width: 8),
+                _expiryLabel(listing.validUntil!),
+              ],
             ],
           ),
           if (onDelete != null || onToggleActive != null || onGoLive != null) ...[
@@ -338,6 +342,36 @@ class ListingCard extends StatelessWidget {
       decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
       child: const Center(
         child: Icon(Icons.home_rounded, size: 48, color: Colors.white24),
+      ),
+    );
+  }
+
+  Widget _expiryLabel(DateTime validUntil) {
+    final days = validUntil.toUtc().difference(DateTime.now().toUtc()).inDays;
+    final String label;
+    final Color color;
+
+    if (days > 3) {
+      label = '$days days left';
+      color = AppColors.textHint;
+    } else if (days > 0) {
+      label = '$days day${days == 1 ? '' : 's'} left';
+      color = const Color(0xFFF59E0B);
+    } else if (days == 0) {
+      label = 'Expires today';
+      color = AppColors.error;
+    } else {
+      label = 'Expired';
+      color = AppColors.error;
+    }
+
+    return Text(
+      label,
+      style: TextStyle(
+        fontFamily: 'Poppins',
+        fontSize: 11,
+        color: color,
+        fontWeight: FontWeight.w500,
       ),
     );
   }

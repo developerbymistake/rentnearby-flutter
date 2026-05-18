@@ -19,6 +19,7 @@ class ListingModel {
   final String? ownerPhone;
   final List<String> photos;
   final DateTime createdAt;
+  final DateTime? validUntil;
 
   ListingModel({
     required this.id,
@@ -39,6 +40,7 @@ class ListingModel {
     this.ownerPhone,
     required this.photos,
     required this.createdAt,
+    this.validUntil,
   });
 
   factory ListingModel.fromJson(Map<String, dynamic> json) => ListingModel(
@@ -62,6 +64,9 @@ class ListingModel {
             .map((p) => p.toString().startsWith('http') ? p.toString() : '${AppConstants.serverUrl}$p')
             .toList(),
         createdAt: DateTime.parse(json['createdAt']),
+        validUntil: json['validUntil'] != null
+            ? DateTime.parse(json['validUntil'] as String)
+            : null,
       );
 
   String get priceDisplay =>
