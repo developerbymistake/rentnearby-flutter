@@ -471,28 +471,25 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
     if (planType == 'FREE') {
       try {
-        await _ctrl.createPaymentOrder(listingId, 'FREE');
-        _ctrl.listingPostedTrigger.value++;
+        await _ctrl.activateFreePlan(listingId);
         await _ctrl.loadMyListings();
       } catch (e) {
         AppToast.error('Could not activate plan: $e');
         return;
       }
-      Get.toNamed(AppRoutes.listingDetail, arguments: listingId);
-      Future.delayed(const Duration(milliseconds: 450), () {
-        Get.dialog(
-          PaymentSuccessDialog(
-            planType: 'FREE',
-            daysValid: 2,
-            maxRooms: 1,
-            onDismiss: () {
-              Get.find<AuthController>().tabIndex.value = 0;
-              Get.offAllNamed(AppRoutes.main);
-            },
-          ),
-          barrierDismissible: false,
-        );
-      });
+      if (!mounted) return;
+      Get.dialog(
+        PaymentSuccessDialog(
+          planType: 'FREE',
+          daysValid: 2,
+          maxRooms: 1,
+          onDismiss: () {
+            Get.find<AuthController>().tabIndex.value = 0;
+            Get.offAllNamed(AppRoutes.main);
+          },
+        ),
+        barrierDismissible: false,
+      );
       return;
     }
 

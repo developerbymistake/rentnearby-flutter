@@ -19,6 +19,7 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   late Razorpay _razorpay;
   bool _isLoading = false;
+  bool _razorpayOpened = false;
   Map<String, dynamic>? _order;
   String? _error;
 
@@ -45,6 +46,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _createOrder() async {
+    _razorpayOpened = false;
     setState(() {
       _isLoading = true;
       _error = null;
@@ -98,6 +100,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   void _openRazorpay() {
     if (_order == null) return;
+    _razorpayOpened = true;
 
     final rawPhone = Get.find<AuthController>().user.value?.phoneNumber ?? '';
     final options = {
@@ -123,6 +126,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _onSuccess(PaymentSuccessResponse response) async {
+    if (!_razorpayOpened) return;
     try {
       final orderId = response.orderId;
       final paymentId = response.paymentId;
@@ -155,39 +159,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
 
       if (mounted) {
-        if (_isUpgrade) {
-          Get.find<AuthController>().tabIndex.value = 1;
-          Get.offAllNamed(AppRoutes.main);
-          Future.delayed(const Duration(milliseconds: 450), () {
-            Get.dialog(
-              PaymentSuccessDialog(
-                planType: 'PAID',
-                daysValid: 30,
-                maxRooms: 2,
-                onDismiss: () {
-                  Get.find<AuthController>().tabIndex.value = 0;
-                },
-              ),
-              barrierDismissible: false,
-            );
-          });
-        } else {
-          Get.offAllNamed(AppRoutes.listingDetail, arguments: _listingId);
-          Future.delayed(const Duration(milliseconds: 450), () {
-            Get.dialog(
-              PaymentSuccessDialog(
-                planType: 'PAID',
-                daysValid: 30,
-                maxRooms: 2,
-                onDismiss: () {
-                  Get.find<AuthController>().tabIndex.value = 0;
-                  Get.offAllNamed(AppRoutes.main);
-                },
-              ),
-              barrierDismissible: false,
-            );
-          });
-        }
+        Get.dialog(
+          PaymentSuccessDialog(
+            planType: 'PAID',
+            daysValid: 30,
+            maxRooms: 2,
+            onDismiss: () {
+              Get.find<AuthController>().tabIndex.value = 0;
+              Get.offAllNamed(AppRoutes.main);
+            },
+          ),
+          barrierDismissible: false,
+        );
       }
     } catch (e) {
       AppToast.error('Payment verification failed: $e');
@@ -195,6 +178,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _onError(PaymentFailureResponse response) {
+    if (!_razorpayOpened) return;
     if (response.code == Razorpay.PAYMENT_CANCELLED) {
       setState(() => _error = 'Payment was cancelled. Tap "Pay Now" to try again.');
     } else {
@@ -220,10 +204,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textDark,
         surfaceTintColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: AppColors.textDark),
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-          statusBarBrightness: Brightness.light,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
