@@ -918,6 +918,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
+          height: 36,
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: selected ? const Color(0xFF10B981) : Colors.white,
