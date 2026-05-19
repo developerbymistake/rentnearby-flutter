@@ -25,16 +25,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   late String _listingId;
   late String _planType;
+  late Map<String, dynamic> _plan;
   late bool _isUpgrade;
 
   @override
   void initState() {
     super.initState();
 
-    // Extract route arguments
+    // Extract route arguments — callers pass 'plan' (full map) + 'listingId'
     final args = Get.arguments as Map<String, dynamic>?;
     _listingId = args?['listingId'] as String? ?? '';
-    _planType = args?['planType'] as String? ?? 'FREE';
+    _plan = (args?['plan'] as Map<String, dynamic>?) ?? {};
+    _planType = _plan['planType'] as String? ?? args?['planType'] as String? ?? 'PAID';
     _isUpgrade = _listingId.isEmpty;
 
     _razorpay = Razorpay();
@@ -55,7 +57,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     try {
       final listingCtrl = Get.find<ListingController>();
       final response = _isUpgrade
-          ? await listingCtrl.createUpgradeOrder()
+          ? await listingCtrl.createUpgradeOrder(_planType)
           : await listingCtrl.createPaymentOrder(_listingId, _planType);
 
       if (!mounted) return;
@@ -109,7 +111,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       'currency': _order!['currency'],
       'order_id': _order!['orderId'],
       'name': 'Bakhli',
-      'description': 'Premium Plan - 30 days, 2 rooms',
+      'description': '$_planType Plan - ${_plan['days'] ?? 30} days, ${_plan['roomLimit'] ?? 2} rooms',
       'prefill': {
         'contact': _formatPhone(rawPhone),
       },
@@ -161,9 +163,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (mounted) {
         Get.dialog(
           PaymentSuccessDialog(
-            planType: 'PAID',
-            daysValid: 30,
-            maxRooms: 2,
+            planType: _planType,
+            daysValid: (_plan['days'] as num?)?.toInt() ?? 30,
+            maxRooms: (_plan['roomLimit'] as num?)?.toInt() ?? 2,
             onDismiss: () {
               Get.find<AuthController>().tabIndex.value = 0;
               Get.offAllNamed(AppRoutes.main);
@@ -255,7 +257,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Complete payment to activate your listing for 30 days with 2 room limit.',
+                'Complete payment to activate your listing for ${_plan['days'] ?? 30} days with ${_plan['roomLimit'] ?? 2} room limit.',
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 14,

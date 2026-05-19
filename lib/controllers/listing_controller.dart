@@ -205,12 +205,12 @@ class ListingController extends GetxController {
     }
   }
 
-  Future<void> activateFreePlan(String listingId) async {
+  Future<void> activatePlan(String listingId, String planType) async {
     try {
       isLoading.value = true;
       final res = await ApiService.post(
         '/listings/$listingId/go-live',
-        {'planType': 'FREE'},
+        {'planType': planType},
       );
 
       final data = res['data'];
@@ -330,10 +330,10 @@ class ListingController extends GetxController {
     }
   }
 
-  Future<Map<String, dynamic>> createUpgradeOrder() async {
+  Future<Map<String, dynamic>> createUpgradeOrder(String planType) async {
     try {
       isLoading.value = true;
-      final res = await ApiService.post('/listings/upgrade-plan/create-order', {});
+      final res = await ApiService.post('/listings/upgrade-plan/create-order', {'planType': planType});
       final data = res['data'] as Map<String, dynamic>;
       return {
         'orderId': data['orderId'] as String,
@@ -373,6 +373,21 @@ class ListingController extends GetxController {
       return data != null && data is Map<String, dynamic> && (data['isEnabled'] == true);
     } catch (e) {
       return false;
+    }
+  }
+
+  Future<Map<String, Map<String, dynamic>>> getPlans() async {
+    try {
+      final res = await ApiService.get('/admin/plans');
+      final list = res['data'] as List;
+      final result = <String, Map<String, dynamic>>{};
+      for (final item in list) {
+        final p = Map<String, dynamic>.from(item as Map);
+        result[p['planType'] as String] = p;
+      }
+      return result;
+    } catch (_) {
+      return {};
     }
   }
 

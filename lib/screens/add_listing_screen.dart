@@ -524,18 +524,26 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
     await _ctrl.loadMyListings();
 
-    // If FREE plan is at capacity, skip listing detail and go straight to PAID payment
+    // If user is on a free (price=0) plan and at capacity, go straight to paid payment
     try {
-      final membership = await _ctrl.getMembershipStatus();
+      final results = await Future.wait([
+        _ctrl.getMembershipStatus(),
+        _ctrl.getPlans(),
+      ]);
+      final membership = results[0] as Map<String, dynamic>?;
+      final plans = results[1] as Map<String, Map<String, dynamic>>;
       final hasMembership = membership != null && (membership['hasMembership'] == true);
       final planType = membership?['planType'] as String? ?? '';
       final maxRooms = (membership?['maxRooms'] as num?)?.toInt() ?? 0;
       final activeRooms = (membership?['activeRooms'] as num?)?.toInt() ?? 0;
+      final currentPlanIsFree = (plans[planType]?['price'] as num? ?? 0) == 0;
 
-      if (hasMembership && planType == 'FREE' && activeRooms >= maxRooms) {
+      if (hasMembership && currentPlanIsFree && activeRooms >= maxRooms) {
+        final paidPlan = plans.values.firstWhereOrNull((p) => (p['price'] as num? ?? 0) > 0)
+            ?? {'planType': 'PAID', 'price': 99, 'days': 30, 'roomLimit': 2};
         Get.offNamed(AppRoutes.paymentScreen, arguments: {
           'listingId': listingId,
-          'planType': 'PAID',
+          'plan': paidPlan,
         });
         return;
       }

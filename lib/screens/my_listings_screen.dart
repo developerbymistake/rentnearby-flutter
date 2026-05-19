@@ -175,7 +175,9 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
         if (activeRooms >= maxRooms) {
           final planType = membership['planType'] as String? ?? '';
-          if (planType == 'FREE') {
+          final plans = await _ctrl.getPlans();
+          final currentPlanIsFree = (plans[planType]?['price'] as num? ?? 0) == 0;
+          if (currentPlanIsFree) {
             if (mounted) _showPaidUpgradeSheet();
           } else {
             if (mounted) _showRoomLimitDialog(maxRooms: maxRooms, hasPlan: true);
@@ -307,7 +309,13 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     );
   }
 
-  void _showPaidUpgradeSheet() {
+  void _showPaidUpgradeSheet() async {
+    final plans = await _ctrl.getPlans();
+    final paidPlan = plans.values.firstWhereOrNull((p) => (p['price'] as num) > 0)
+        ?? {'planType': 'PAID', 'price': 99, 'days': 30, 'roomLimit': 2};
+
+    if (!mounted) return;
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -348,7 +356,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'You\'ve already used your FREE plan. Upgrade to Premium to add more rooms.',
+              'You\'ve already used your free plan. Upgrade to a paid plan to add more rooms.',
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 13,
@@ -366,14 +374,14 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.primary, width: 0.5),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 18),
-                  SizedBox(width: 10),
+                  const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 18),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '₹99  •  30 days  •  Up to 2 rooms',
-                      style: TextStyle(
+                      '₹${paidPlan['price']}  •  ${paidPlan['days']} days  •  Up to ${paidPlan['roomLimit']} rooms',
+                      style: const TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -393,7 +401,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   Navigator.pop(context);
                   Get.toNamed(AppRoutes.paymentScreen, arguments: {
                     'listingId': '',
-                    'planType': 'PAID',
+                    'plan': paidPlan,
                   });
                 },
                 style: ElevatedButton.styleFrom(
@@ -435,6 +443,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
     final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
     final membership = await _ctrl.getMembershipStatus();
+    final plans = await _ctrl.getPlans();
     final hasMembership = membership != null && (membership['hasMembership'] == true);
 
     if (hasMembership) {
@@ -442,36 +451,44 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
       final membershipPlanType = membership['planType'] as String? ?? '';
 
-      if (activeRooms >= maxRooms && membershipPlanType == 'FREE') {
-        // FREE plan at capacity → must upgrade to PAID
+      // Route by price: if current plan is free (price=0) and at capacity → upgrade to paid
+      final currentPlan = plans[membershipPlanType];
+      final currentPlanIsFree = currentPlan == null || (currentPlan['price'] as num) == 0;
+
+      if (activeRooms >= maxRooms && currentPlanIsFree) {
+        // At capacity on free plan → show first available paid plan for upgrade
+        final paidPlan = plans.values.firstWhereOrNull((p) => (p['price'] as num) > 0);
         await Get.toNamed(AppRoutes.paymentScreen, arguments: {
           'listingId': listingId,
-          'planType': 'PAID',
+          'plan': paidPlan ?? {'planType': 'PAID', 'price': 99, 'days': 30, 'roomLimit': 2},
         });
         _refresh();
         return;
       }
 
-      // Has remaining capacity → activate directly
+      // Has remaining capacity → activate directly (free/no extra charge)
       _activateFreePlanDirect(listingId);
       return;
     }
 
     if (!mounted) return;
 
-    final planType = await showModalBottomSheet<String>(
+    final selectedPlanType = await showModalBottomSheet<String>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _PlanSelectionSheet(hasUsedFreePlan: hasUsedFree),
+      builder: (_) => _PlanSelectionSheet(hasUsedFreePlan: hasUsedFree, plans: plans),
     );
 
-    if (planType == null) return;
+    if (selectedPlanType == null) return;
 
-    if (planType == 'FREE') {
+    final selectedPlan = plans[selectedPlanType] ?? {};
+    final isFree = (selectedPlan['price'] as num? ?? 0) == 0;
+
+    if (isFree) {
       try {
-        await _ctrl.activateFreePlan(listingId);
+        await _ctrl.activatePlan(listingId, selectedPlanType);
         await _ctrl.loadMyListings();
       } catch (e) {
         AppToast.error('Could not activate plan: $e');
@@ -480,9 +497,9 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       if (!mounted) return;
       Get.dialog(
         PaymentSuccessDialog(
-          planType: 'FREE',
-          daysValid: 2,
-          maxRooms: 1,
+          planType: selectedPlanType,
+          daysValid: (selectedPlan['days'] as num?)?.toInt() ?? 2,
+          maxRooms: (selectedPlan['roomLimit'] as num?)?.toInt() ?? 1,
           onDismiss: () {
             Get.find<AuthController>().tabIndex.value = 0;
             Get.offAllNamed(AppRoutes.main);
@@ -495,7 +512,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
     await Get.toNamed(AppRoutes.paymentScreen, arguments: {
       'listingId': listingId,
-      'planType': 'PAID',
+      'plan': selectedPlan,
     });
 
     _refresh();
@@ -690,10 +707,62 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
 class _PlanSelectionSheet extends StatelessWidget {
   final bool hasUsedFreePlan;
-  const _PlanSelectionSheet({required this.hasUsedFreePlan});
+  final Map<String, Map<String, dynamic>> plans;
+  const _PlanSelectionSheet({required this.hasUsedFreePlan, required this.plans});
+
+  String _label(Map<String, dynamic> p) {
+    final raw = (p['planType'] as String? ?? '');
+    if (raw.isEmpty) return '';
+    return raw[0].toUpperCase() + raw.substring(1).toLowerCase();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final freePlans = plans.values
+        .where((p) => (p['price'] as num? ?? 0) == 0)
+        .toList();
+    final paidPlans = plans.values
+        .where((p) => (p['price'] as num? ?? 0) > 0)
+        .toList()
+      ..sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
+
+    final tiles = <Widget>[];
+
+    if (!hasUsedFreePlan) {
+      for (final p in freePlans) {
+        final days = (p['days'] as num?)?.toInt() ?? 2;
+        final rooms = (p['roomLimit'] as num?)?.toInt() ?? 1;
+        tiles.add(_planTile(
+          context,
+          planType: p['planType'] as String,
+          title: '${_label(p)} Plan',
+          subtitle: '$days days • $rooms room${rooms > 1 ? 's' : ''}',
+          price: 'Free',
+          icon: Icons.star_rounded,
+          color: const Color(0xFF10B981),
+        ));
+        tiles.add(const SizedBox(height: 12));
+      }
+    }
+
+    for (int i = 0; i < paidPlans.length; i++) {
+      final p = paidPlans[i];
+      final days = (p['days'] as num?)?.toInt() ?? 30;
+      final rooms = (p['roomLimit'] as num?)?.toInt() ?? 2;
+      final price = (p['price'] as num?)?.toInt() ?? 0;
+      tiles.add(_planTile(
+        context,
+        planType: p['planType'] as String,
+        title: '${_label(p)} Plan',
+        subtitle: '$days days • $rooms rooms',
+        price: '₹$price',
+        icon: Icons.flash_on_rounded,
+        color: AppColors.primary,
+        isHighlighted: hasUsedFreePlan && i == 0,
+      ));
+      if (i < paidPlans.length - 1) tiles.add(const SizedBox(height: 12));
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
       child: Column(
@@ -706,28 +775,7 @@ class _PlanSelectionSheet extends StatelessWidget {
           Text('Choose a plan to activate your listing',
               style: TextStyle(fontSize: 13, color: Colors.grey[600], fontFamily: 'Poppins')),
           const SizedBox(height: 20),
-          if (!hasUsedFreePlan) ...[
-            _planTile(
-              context,
-              plan: 'FREE',
-              title: 'Free Plan',
-              subtitle: '2 days • 1 room',
-              price: '₹0',
-              icon: Icons.star_rounded,
-              color: const Color(0xFF10B981),
-            ),
-            const SizedBox(height: 12),
-          ],
-          _planTile(
-            context,
-            plan: 'PAID',
-            title: 'Premium Plan',
-            subtitle: '30 days • 2 rooms',
-            price: '₹99',
-            icon: Icons.flash_on_rounded,
-            color: AppColors.primary,
-            isHighlighted: hasUsedFreePlan,
-          ),
+          ...tiles,
         ],
       ),
     );
@@ -735,7 +783,7 @@ class _PlanSelectionSheet extends StatelessWidget {
 
   Widget _planTile(
     BuildContext context, {
-    required String plan,
+    required String planType,
     required String title,
     required String subtitle,
     required String price,
@@ -744,7 +792,7 @@ class _PlanSelectionSheet extends StatelessWidget {
     bool isHighlighted = false,
   }) {
     return InkWell(
-      onTap: () => Navigator.pop(context, plan),
+      onTap: () => Navigator.pop(context, planType),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),
