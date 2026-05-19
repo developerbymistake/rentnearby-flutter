@@ -806,7 +806,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   Widget _buildRadiusChips() {
-    final radii = [1.0, 4.0, 8.0];
+    final radii = [1.0, 10.0, 15.0];
     return Row(
       children: radii.asMap().entries.map((entry) {
         final i = entry.key;
