@@ -20,6 +20,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   late Razorpay _razorpay;
   bool _isLoading = false;
   bool _razorpayOpened = false;
+  bool _payNowDisabled = false;
   Map<String, dynamic>? _order;
   String? _error;
 
@@ -102,6 +103,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   void _openRazorpay() {
     if (_order == null) return;
+    setState(() => _payNowDisabled = true);
     _razorpayOpened = true;
 
     final rawPhone = Get.find<AuthController>().user.value?.phoneNumber ?? '';
@@ -181,6 +183,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   void _onError(PaymentFailureResponse response) {
     if (!_razorpayOpened) return;
+    setState(() => _payNowDisabled = false);
     if (response.code == Razorpay.PAYMENT_CANCELLED) {
       setState(() => _error = 'Payment was cancelled. Tap "Pay Now" to try again.');
     } else {
@@ -321,7 +324,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _openRazorpay,
+                    onPressed: _payNowDisabled ? null : _openRazorpay,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,

@@ -93,6 +93,7 @@ class ListingController extends GetxController {
       }
       hasMoreMyListings.value = res['data']['hasMore'] == true;
     } catch (_) {
+      AppToast.error('Could not load your rooms. Pull to refresh.');
     } finally {
       isLoading.value = false;
     }
