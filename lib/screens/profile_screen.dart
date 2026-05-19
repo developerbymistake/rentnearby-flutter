@@ -274,15 +274,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     FocusScope.of(context).unfocus();
     final name = _nameCtrl.text.trim();
     final gmail = _gmailCtrl.text.trim();
-    // Catch the case where the field has whitespace content but no real value
-    if (_nameCtrl.text.isNotEmpty && name.isEmpty) {
-      AppToast.error('Name cannot be blank');
+
+    if (name.isEmpty) {
+      AppToast.error('Name is required.');
       return;
     }
-    _auth.updateProfile(
-      name.isNotEmpty ? name : null,
-      gmail.isNotEmpty ? gmail : null,
-    );
+    if (name.length > 100) {
+      AppToast.error('Name cannot exceed 100 characters.');
+      return;
+    }
+    if (gmail.isNotEmpty && !RegExp(r'^[\w.+-]+@[\w-]+\.[\w.]+$').hasMatch(gmail)) {
+      AppToast.error('Enter a valid email address.');
+      return;
+    }
+
+    _auth.updateProfile(name, gmail.isNotEmpty ? gmail : null);
   }
 
   void _confirmLogout() {

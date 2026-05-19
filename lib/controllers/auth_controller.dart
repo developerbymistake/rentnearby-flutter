@@ -133,10 +133,9 @@ class AuthController extends GetxController {
   Future<bool> updateProfile(String? name, String? gmailId) async {
     try {
       isLoading.value = true;
-      final res = await ApiService.put('/users/profile', {
-        'name': ?name,
-        'gmailId': ?gmailId,
-      });
+      final body = <String, dynamic>{'name': name};
+      if (gmailId != null) body['gmailId'] = gmailId;
+      final res = await ApiService.put('/users/profile', body);
       final updated = UserModel.fromJson(res['data']);
       StorageService.saveUser(updated);
       user.value = updated;
