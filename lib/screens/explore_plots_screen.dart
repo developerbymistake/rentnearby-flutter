@@ -852,14 +852,17 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           : allPlots;
       final count = filtered.length;
 
+      final rows = <List<String>>[];
+      for (int i = 0; i < _plotTypes.length; i += 3) {
+        rows.add(_plotTypes.sublist(i, (i + 3).clamp(0, _plotTypes.length)));
+      }
+
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))
-          ],
+          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
         ),
         child: IntrinsicHeight(
           child: Row(
@@ -880,29 +883,68 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                   children: [
                     Text('$count',
                         style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white)),
+                            fontFamily: 'Poppins', fontSize: 20,
+                            fontWeight: FontWeight.w700, color: Colors.white)),
                     Text('plot${count == 1 ? '' : 's'}',
                         style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white)),
+                            fontFamily: 'Poppins', fontSize: 10,
+                            fontWeight: FontWeight.w500, color: Colors.white)),
                   ],
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Row(
-                  children: [
-                    _filterChip(null, 'All'),
-                    ..._plotTypes.expand((t) => [
-                      const SizedBox(width: 6),
-                      _filterChip(t, t.substring(0, 3)),
-                    ]),
-                  ],
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: rows.asMap().entries.map((entry) {
+                    final rowIndex = entry.key;
+                    final row = entry.value;
+                    return Padding(
+                      padding: EdgeInsets.only(top: rowIndex > 0 ? 6 : 0),
+                      child: Row(
+                        children: List.generate(row.length, (colIndex) {
+                          final type = row[colIndex];
+                          final selected = _selectedPlotType == type;
+                          return Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                final newType = selected ? null : type;
+                                setState(() => _selectedPlotType = newType);
+                                _buildMarkers();
+                                if (newType != null) {
+                                  final hits = _plotCtrl.nearbyPlots
+                                      .where((p) => p.plotType == newType)
+                                      .length;
+                                  if (hits > 0) _playTing();
+                                }
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                margin: EdgeInsets.only(right: colIndex < row.length - 1 ? 6 : 0),
+                                padding: const EdgeInsets.symmetric(vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: selected ? const Color(0xFF10B981) : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: selected ? const Color(0xFF10B981) : AppColors.divider,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(type,
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins', fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: selected ? Colors.white : AppColors.textDark,
+                                      )),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
             ],
@@ -910,42 +952,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         ),
       );
     });
-  }
-
-  Widget _filterChip(String? type, String label) {
-    final selected = _selectedPlotType == type;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() => _selectedPlotType = type);
-          _buildMarkers();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: 36,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFF10B981) : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selected ? const Color(0xFF10B981) : AppColors.divider,
-              width: 1.5,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : AppColors.textDark,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildLocationFab() {
