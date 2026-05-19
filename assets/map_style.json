@@ -7980,18 +7980,15 @@
         ]
       ],
       "layout": {
+        "icon-optional": true,
         "icon-image": [
           "match",
-          [
-            "get",
-            "kind"
-          ],
-          "station",
-          "train_station",
-          [
-            "get",
-            "kind"
-          ]
+          ["get", "kind"],
+          "station", "train_station",
+          "townhall", "townspot",
+          ["aerodrome","animal","artwork","attraction","bar","beach","beauty","bench","books","building","bus_stop","cafe","clothes","convenience","drinking_water","electronics","fast_food","ferry_terminal","forest","garden","library","marina","museum","park","peak","post_office","restaurant","school","stadium","supermarket","theatre","toilets","university","zoo"],
+          ["get", "kind"],
+          ""
         ],
         "text-font": [
           "Noto Sans Regular"
@@ -9007,7 +9004,14 @@
             ]
           ],
           "#EF56BA",
-          "#e2dfda"
+          ["in",["get","kind"],["literal",["hospital","clinic","pharmacy"]]], "#C62828",
+          ["in",["get","kind"],["literal",["place_of_worship","temple","mosque","church"]]], "#D97706",
+          ["in",["get","kind"],["literal",["hotel","guest_house"]]], "#0E7490",
+          ["==",["get","kind"],"fuel"], "#B45309",
+          ["in",["get","kind"],["literal",["bank","atm"]]], "#166534",
+          ["in",["get","kind"],["literal",["police","parking","information","college"]]], "#6A5B8F",
+          ["in",["get","kind"],["literal",["playground","viewpoint","pitch","recreation_ground","camp_site","picnic_site"]]], "#20834D",
+          "#555555"
         ],
         "text-halo-color": "#e2dfda",
         "text-halo-width": 1

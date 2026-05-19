@@ -26,6 +26,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final _ctrl = Get.find<ListingController>();
   MapLibreMapController? _mapController;
   Fill?   _nativeCircle;
+  Line?   _nativeCircleGlow;
   Line?   _nativeCircleLine;
   Circle? _nativeUserDot;
   LatLng? _cameraCenter;
@@ -174,12 +175,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _nativeCircle = await ctrl.addFill(FillOptions(
       geometry: [points],
       fillColor: '#2f64ca',
-      fillOpacity: 0.08,
+      fillOpacity: 0.06,
+    ));
+    _nativeCircleGlow = await ctrl.addLine(LineOptions(
+      geometry: points,
+      lineColor: '#2f64ca',
+      lineWidth: 6.0,
+      lineOpacity: 0.15,
+      lineBlur: 3.0,
     ));
     _nativeCircleLine = await ctrl.addLine(LineOptions(
       geometry: points,
-      lineColor: 'rgba(47, 100, 202, 0.6)',
-      lineWidth: 1.5,
+      lineColor: '#2f64ca',
+      lineWidth: 1.8,
+      lineOpacity: 0.65,
     ));
   }
 
@@ -225,7 +234,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
-    const steps = 64;
+    const steps = 128;
     const earthRadius = 6378137.0;
     final latRad = center.latitude * pi / 180;
     return List.generate(steps + 1, (i) {

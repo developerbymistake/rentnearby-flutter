@@ -27,6 +27,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   LatLng? _cameraCenter;
   Size _screenSize = Size.zero;
   Fill? _nativeCircle;
+  Line? _nativeCircleGlow;
   Line? _nativeCircleLine;
   Circle? _nativeUserDot;
   final _pinsVisible = ValueNotifier<bool>(true);
@@ -316,24 +317,31 @@ class _ExploreScreenState extends State<ExploreScreen>
     final points = _circlePolygonPoints(_searchCenter, _radius);
     _nativeCircle = await ctrl.addFill(FillOptions(
       geometry: [points],
-      fillColor: '#1E3A8A',
-      fillOpacity: 0.08,
+      fillColor: '#2f64ca',
+      fillOpacity: 0.06,
+    ));
+    _nativeCircleGlow = await ctrl.addLine(LineOptions(
+      geometry: points,
+      lineColor: '#2f64ca',
+      lineWidth: 6.0,
+      lineOpacity: 0.15,
+      lineBlur: 3.0,
     ));
     _nativeCircleLine = await ctrl.addLine(LineOptions(
       geometry: points,
-      lineColor: 'rgba(30, 58, 138, 0.7)',
-      lineWidth: 2.0,
+      lineColor: '#2f64ca',
+      lineWidth: 1.8,
+      lineOpacity: 0.65,
     ));
   }
 
   void _updateNativeRadiusCircle() {
     final ctrl = _mapController;
-    final fill = _nativeCircle;
-    final line = _nativeCircleLine;
-    if (ctrl == null || fill == null || line == null) return;
+    if (ctrl == null) return;
     final points = _circlePolygonPoints(_searchCenter, _radius);
-    ctrl.updateFill(fill, FillOptions(geometry: [points]));
-    ctrl.updateLine(line, LineOptions(geometry: points));
+    if (_nativeCircle != null)     ctrl.updateFill(_nativeCircle!, FillOptions(geometry: [points]));
+    if (_nativeCircleGlow != null) ctrl.updateLine(_nativeCircleGlow!, LineOptions(geometry: points));
+    if (_nativeCircleLine != null) ctrl.updateLine(_nativeCircleLine!, LineOptions(geometry: points));
   }
 
   Future<void> _initNativeUserDot() async {
@@ -636,7 +644,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
-    const steps = 64;
+    const steps = 128;
     const earthRadius = 6378137.0;
     final latRad = center.latitude * pi / 180;
     final points = <LatLng>[];
