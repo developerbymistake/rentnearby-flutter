@@ -235,6 +235,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           if (index == 0 && _currentIndex != 0) {
             Get.find<ListingController>().exploreRefreshTrigger.value++;
           }
+          if (index == 2 && _currentIndex != 2) {
+            Get.find<PlotController>().exploreRefreshTrigger.value++;
+          }
           setState(() => _currentIndex = index);
         },
 

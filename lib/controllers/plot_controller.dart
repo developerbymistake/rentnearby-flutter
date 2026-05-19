@@ -21,6 +21,7 @@ class PlotController extends GetxController {
   final isUploading = false.obs;
   final hasMorePlots = false.obs;
   final plotPostedTrigger = 0.obs;
+  final exploreRefreshTrigger = 0.obs;
   int _myPlotsPage = 1;
 
   @override
@@ -173,6 +174,7 @@ class PlotController extends GetxController {
       await ApiService.put('/plots/$id', {'isActive': !currentIsActive});
       await loadMyPlots(reset: true);
       if (currentIsActive) nearbyPlots.removeWhere((p) => p.id == id);
+      exploreRefreshTrigger.value++;
     } catch (_) {}
   }
 

@@ -29,6 +29,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Worker? _districtsWorker;
   Worker? _postedWorker;
   Worker? _loadingWorker;
+  Worker? _refreshWorker;
   StreamSubscription<ServiceStatus>? _serviceStatusSub;
   List<Marker> _markers = [];
   LatLng? _userLocation;
@@ -71,6 +72,9 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     WidgetsBinding.instance.addObserver(this);
     _districtsWorker = ever(_plotCtrl.districts, (_) => _tryAutoLoad());
     _postedWorker = ever(_plotCtrl.plotPostedTrigger, (_) => _loadNearby());
+    _refreshWorker = ever(_plotCtrl.exploreRefreshTrigger, (_) {
+      if (_selectedDistrict != null) _loadNearby();
+    });
     _loadingWorker = ever(_plotCtrl.isLoading, (loading) {
       if (!loading && _radarController.isAnimating) {
         _radarController.stop();
@@ -117,6 +121,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _districtsWorker?.dispose();
     _postedWorker?.dispose();
     _loadingWorker?.dispose();
+    _refreshWorker?.dispose();
     _serviceStatusSub?.cancel();
     _cameraAnimController.dispose();
     _radarController.dispose();
