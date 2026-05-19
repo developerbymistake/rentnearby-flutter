@@ -50,7 +50,6 @@ class _ExploreScreenState extends State<ExploreScreen>
   bool _mapReady = false;
   bool _checkingPermission = false;
   Timer? _loadNearbyDebounceTimer;
-  Timer? _hidePinsTimer;
   String? _selectedRoomType;
   bool _autoLoading = false;
   final _audioPlayer = AudioPlayer();
@@ -112,7 +111,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     _radarController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
-    _hidePinsTimer?.cancel();
     _audioPlayer.dispose();
     if (_mapController != null && _nativeUserDot != null) {
       _mapController!.removeCircle(_nativeUserDot!);
@@ -723,13 +721,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                 onCameraMove: (CameraPosition pos) {
                   _currentZoom = pos.zoom;
                   _cameraCenter = pos.target;
-                  _hidePinsTimer?.cancel();
-                  _hidePinsTimer = Timer(const Duration(milliseconds: 80), () {
-                    if (mounted && _pinsVisible) setState(() => _pinsVisible = false);
-                  });
+                  if (mounted && _pinsVisible) setState(() => _pinsVisible = false);
                 },
                 onCameraIdle: () {
-                  _hidePinsTimer?.cancel();
                   if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
                     _lastClusterZoom = _currentZoom;
                     _buildMarkers(animate: false);
