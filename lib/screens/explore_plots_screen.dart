@@ -55,6 +55,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   double? _animToZoom;
 
   static const _plotTypes = ['Residential', 'Commercial', 'Agricultural'];
+  static const _plotTypeLabels = {
+    'Residential': 'Resi.',
+    'Commercial': 'Comm.',
+    'Agricultural': 'Agri.',
+  };
 
   @override
   void initState() {
@@ -931,7 +936,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                                   ),
                                 ),
                                 child: Center(
-                                  child: Text(type,
+                                  child: Text(_plotTypeLabels[type] ?? type,
                                       style: TextStyle(
                                         fontFamily: 'Poppins', fontSize: 11,
                                         fontWeight: FontWeight.w600,
