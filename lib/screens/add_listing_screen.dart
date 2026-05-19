@@ -30,7 +30,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   Line?   _nativeCircleLine;
   Circle? _nativeUserDot;
   LatLng? _cameraCenter;
-  double  _currentZoom = 15.0;
+  double  _currentZoom = 14.0;
   Size    _mapSize = Size.zero;
   final _descCtrl = TextEditingController();
   final _priceMonthlyCtrl = TextEditingController();
@@ -153,7 +153,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
       if (_mapReady && !_cameraInitialized) {
         _cameraInitialized = true;
-        _animateTo(loc, 15.0);
+        _animateTo(loc, 14.0);
       }
     } catch (_) {}
   }
@@ -171,7 +171,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _initNativeUserDot();
     if (_userLocation != null && !_cameraInitialized) {
       _cameraInitialized = true;
-      _animateTo(_userLocation!, 15.0);
+      _animateTo(_userLocation!, 14.0);
     }
     setState(() {});
   }
@@ -184,20 +184,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _nativeCircle = await ctrl.addFill(FillOptions(
       geometry: [points],
       fillColor: '#2f64ca',
-      fillOpacity: 0.06,
+      fillOpacity: 0.10,
     ));
     _nativeCircleGlow = await ctrl.addLine(LineOptions(
       geometry: points,
       lineColor: '#2f64ca',
-      lineWidth: 6.0,
-      lineOpacity: 0.15,
-      lineBlur: 3.0,
+      lineWidth: 10.0,
+      lineOpacity: 0.20,
+      lineBlur: 4.0,
     ));
     _nativeCircleLine = await ctrl.addLine(LineOptions(
       geometry: points,
       lineColor: '#2f64ca',
-      lineWidth: 1.8,
-      lineOpacity: 0.65,
+      lineWidth: 2.5,
+      lineOpacity: 0.90,
     ));
   }
 
@@ -1062,9 +1062,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       styleString: 'assets/map_style.json',
                       initialCameraPosition: CameraPosition(
                         target: _userLocation ?? const LatLng(30.3165, 78.0322),
-                        zoom: 15.0,
+                        zoom: 14.0,
                       ),
-                      minMaxZoomPreference: const MinMaxZoomPreference(14.0, 18.0),
+                      minMaxZoomPreference: const MinMaxZoomPreference(13.0, 18.0),
                       compassEnabled: false,
                       rotateGesturesEnabled: false,
                       tiltGesturesEnabled: false,
