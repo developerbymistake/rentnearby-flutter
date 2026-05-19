@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../controllers/listing_controller.dart';
@@ -21,17 +19,25 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-// FIX #1 consequence: AutomaticKeepAliveClientMixin removed — IndexedStack in MainScreen
-// keeps this screen alive natively, so KeepAlive mixin is redundant.
-// FIX #6: TickerProviderStateMixin added for vsync-synced camera animation.
-class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateMixin, WidgetsBindingObserver {
-  final _mapController = MapController();
+class _ExploreScreenState extends State<ExploreScreen>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
+  // ── Map ──────────────────────────────────────────────────────────────────
+  MapLibreMapController? _mapController;
+  double _currentZoom = 13.0;
+  LatLng? _cameraCenter;
+  Size _screenSize = Size.zero;
+  Fill? _nativeCircle;
+  Line? _nativeCircleLine;
+  Circle? _nativeUserDot;
+
+  // ── State ─────────────────────────────────────────────────────────────────
   final _listingCtrl = Get.find<ListingController>();
   Worker? _districtsWorker;
   Worker? _postedWorker;
   Worker? _loadingWorker;
   StreamSubscription<ServiceStatus>? _serviceStatusSub;
-  List<Marker> _markers = [];
+
+  List<_MapMarkerData> _markerData = [];
   LatLng? _userLocation;
   double _radius = 1.0;
   double _lastClusterZoom = 0;
@@ -41,29 +47,19 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   bool _locationLoading = true;
   bool _mapReady = false;
   bool _checkingPermission = false;
-  Timer? _loadNearbyDebounceTimer; // Debounce rapid _loadNearby calls
+  Timer? _loadNearbyDebounceTimer;
   String? _selectedRoomType;
-  bool _autoLoading = false; // Prevent concurrent _autoLoad calls
+  bool _autoLoading = false;
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
   late AnimationController _radarController;
 
-  // FIX #6: AnimationController replaces manual Future.delayed loop.
-  // Synced to device display refresh rate (60/90/120 Hz), smooth easeInOut.
-  late AnimationController _cameraAnimController;
-  LatLng? _animFromCenter;
-  double? _animFromZoom;
-  LatLng? _animToCenter;
-  double? _animToZoom;
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    _cameraAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    )..addListener(_onCameraAnimTick);
 
     _radarController = AnimationController(
       vsync: this,
@@ -73,7 +69,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     WidgetsBinding.instance.addObserver(this);
     _districtsWorker = ever(_listingCtrl.districts, (_) => _tryAutoLoad());
     _postedWorker = ever(_listingCtrl.listingPostedTrigger, (_) => _loadNearby());
-    ever(_listingCtrl.exploreRefreshTrigger, (_) { if (_selectedDistrict != null) _loadNearby(); });
+    ever(_listingCtrl.exploreRefreshTrigger, (_) {
+      if (_selectedDistrict != null) _loadNearby();
+    });
     _loadingWorker = ever(_listingCtrl.isLoading, (loading) {
       if (!loading && _radarController.isAnimating) {
         _radarController.stop();
@@ -81,7 +79,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       }
     });
 
-    // React to the user toggling GPS in device Settings without leaving the app.
     _serviceStatusSub = Geolocator.getServiceStatusStream().listen((status) {
       if (!mounted) return;
       if (status == ServiceStatus.enabled) {
@@ -90,7 +87,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           _initLocation();
         }
       } else {
-        // GPS turned off: clear user dot, stop loading state.
         setState(() {
           _userLocation = null;
           _locationLoading = false;
@@ -103,19 +99,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryAutoLoad());
   }
 
-  void _onCameraAnimTick() {
-    if (!_mapReady || !mounted) return;
-    if (_animFromCenter == null || _animToCenter == null) return;
-    final t = Curves.easeInOut.transform(_cameraAnimController.value);
-    _mapController.move(
-      LatLng(
-        _animFromCenter!.latitude + (_animToCenter!.latitude - _animFromCenter!.latitude) * t,
-        _animFromCenter!.longitude + (_animToCenter!.longitude - _animFromCenter!.longitude) * t,
-      ),
-      _animFromZoom! + (_animToZoom! - _animFromZoom!) * t,
-    );
-  }
-
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -123,11 +106,13 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     _postedWorker?.dispose();
     _loadingWorker?.dispose();
     _serviceStatusSub?.cancel();
-    _cameraAnimController.dispose();
     _radarController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
     _audioPlayer.dispose();
+    if (_mapController != null && _nativeUserDot != null) {
+      _mapController!.removeCircle(_nativeUserDot!);
+    }
     super.dispose();
   }
 
@@ -142,9 +127,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     }
   }
 
+  // ── Permission ────────────────────────────────────────────────────────────
+
   Future<void> _checkPermissionOnResume() async {
-    // Guard: prevent concurrent checks and dialog stacking if user
-    // backgrounds the app while the dialog is already showing.
     if (_checkingPermission) return;
     _checkingPermission = true;
     try {
@@ -155,17 +140,17 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         if (_userLocation == null && !_locationLoading) _initLocation();
         return;
       }
-      // Permission was revoked mid-session — block with dialog.
-      // When user returns from Settings, resumed fires again and re-checks.
       await showDialog(
         context: context,
         barrierDismissible: false,
         builder: (_) => PopScope(
           canPop: false,
           child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Text('Location Required',
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                style: TextStyle(
+                    fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
             content: const Text(
                 'Bakhli needs location access to show rooms near you. Please enable it in Settings.',
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
@@ -190,10 +175,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     }
   }
 
+  // ── Location ──────────────────────────────────────────────────────────────
+
   void _tryAutoLoad() {
     if (_selectedDistrict != null) return;
     if (_locationLoading) return;
-    if (_autoLoading) return; // Prevent concurrent _autoLoad calls
+    if (_autoLoading) return;
     _autoLoad();
   }
 
@@ -203,13 +190,15 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     if (_userLocation == null) return;
     _autoLoading = true;
     try {
-      final ctx = await _listingCtrl.loadContext(_userLocation!.latitude, _userLocation!.longitude);
+      final ctx = await _listingCtrl.loadContext(
+          _userLocation!.latitude, _userLocation!.longitude);
       if (!mounted || ctx == null) return;
       setState(() {
         _selectedDistrict = ctx.district;
         _autoCity = ctx.nearestCity;
       });
       _loadNearby();
+      if (_mapReady) _fitToRadius();
     } finally {
       _autoLoading = false;
     }
@@ -239,8 +228,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         return;
       }
 
-      // FIX #4: Use last known position instantly — map appears immediately
-      // without waiting for a fresh GPS fix (which can take 5–10 seconds cold).
+      // Show last known position immediately — map appears without waiting for fresh GPS fix.
       final lastKnown = await Geolocator.getLastKnownPosition();
       setState(() {
         if (lastKnown != null) {
@@ -251,23 +239,35 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       if (_listingCtrl.districts.isNotEmpty && lastKnown != null) {
         _tryAutoLoad();
       }
-      if (_mapReady) _fitToRadius();
+      if (_mapReady) {
+        if (_nativeUserDot == null) _initNativeUserDot();
+        else _updateNativeUserDot();
+        _fitToRadius();
+      }
 
-      // FIX #3 (accuracy): LocationAccuracy.high uses network + GPS — resolves
-      // in <1 second vs LocationAccuracy.best which waits for satellite fix.
+      // High accuracy resolves in <1 s via network+GPS rather than satellite-only fix.
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
       );
       if (!mounted) return;
       setState(() => _userLocation = LatLng(pos.latitude, pos.longitude));
+      if (_mapReady) {
+        if (_nativeUserDot == null) _initNativeUserDot();
+        else _updateNativeUserDot();
+      }
 
-      final ctx = await _listingCtrl.loadContext(pos.latitude, pos.longitude);
+      final ctx =
+          await _listingCtrl.loadContext(pos.latitude, pos.longitude);
       if (!mounted) return;
-      if (ctx != null && (_selectedDistrict == null || _selectedDistrict!.id != ctx.district.id)) {
+      if (ctx != null &&
+          (_selectedDistrict == null ||
+              _selectedDistrict!.id != ctx.district.id)) {
         setState(() {
           _selectedDistrict = ctx.district;
           _autoCity = ctx.nearestCity;
         });
+        _loadNearby();
       }
 
       if (_mapReady) _fitToRadius();
@@ -277,19 +277,20 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     }
   }
 
+  // ── Search center + zoom ──────────────────────────────────────────────────
+
   LatLng get _searchCenter {
-    // Explicit user city selection overrides everything
     if (_selectedCity?.latitude != null && _selectedCity?.longitude != null) {
       return LatLng(_selectedCity!.latitude!, _selectedCity!.longitude!);
     }
-    // Actual GPS position takes priority over any auto-selected city
     if (_userLocation != null) return _userLocation!;
-    // No GPS — fall back to auto-selected nearest city for browsing
     if (_autoCity?.latitude != null && _autoCity?.longitude != null) {
       return LatLng(_autoCity!.latitude!, _autoCity!.longitude!);
     }
-    if (_selectedDistrict?.latitude != null && _selectedDistrict?.longitude != null) {
-      return LatLng(_selectedDistrict!.latitude!, _selectedDistrict!.longitude!);
+    if (_selectedDistrict?.latitude != null &&
+        _selectedDistrict?.longitude != null) {
+      return LatLng(
+          _selectedDistrict!.latitude!, _selectedDistrict!.longitude!);
     }
     final first = _listingCtrl.districts.firstOrNull;
     if (first?.latitude != null && first?.longitude != null) {
@@ -302,47 +303,120 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     if (!_mapReady || !mounted) return;
     final center = _searchCenter;
     _animateTo(center, _zoomForRadius(_radius, center.latitude));
+    _updateNativeRadiusCircle();
   }
 
-  // Calculates zoom so the circle diameter fills ~80% of usable screen height.
-  // Accounts for latitude (tiles shrink toward poles) via cos(lat).
+  Future<void> _initNativeCircle() async {
+    final ctrl = _mapController;
+    if (ctrl == null || !mounted) return;
+    final points = _circlePolygonPoints(_searchCenter, _radius);
+    _nativeCircle = await ctrl.addFill(FillOptions(
+      geometry: [points],
+      fillColor: '#1E3A8A',
+      fillOpacity: 0.08,
+    ));
+    _nativeCircleLine = await ctrl.addLine(LineOptions(
+      geometry: points,
+      lineColor: 'rgba(30, 58, 138, 0.7)',
+      lineWidth: 2.0,
+    ));
+  }
+
+  void _updateNativeRadiusCircle() {
+    final ctrl = _mapController;
+    final fill = _nativeCircle;
+    final line = _nativeCircleLine;
+    if (ctrl == null || fill == null || line == null) return;
+    final points = _circlePolygonPoints(_searchCenter, _radius);
+    ctrl.updateFill(fill, FillOptions(geometry: [points]));
+    ctrl.updateLine(line, LineOptions(geometry: points));
+  }
+
+  Future<void> _initNativeUserDot() async {
+    final ctrl = _mapController;
+    final loc = _userLocation;
+    if (ctrl == null || loc == null || !mounted) return;
+    _nativeUserDot = await ctrl.addCircle(CircleOptions(
+      geometry: loc,
+      circleRadius: 8.0,
+      circleColor: '#1E88E5',
+      circleOpacity: 1.0,
+      circleStrokeColor: '#FFFFFF',
+      circleStrokeWidth: 2.5,
+    ));
+  }
+
+  void _updateNativeUserDot() {
+    final ctrl = _mapController;
+    final dot = _nativeUserDot;
+    final loc = _userLocation;
+    if (ctrl == null || dot == null || loc == null) return;
+    ctrl.updateCircle(dot, CircleOptions(geometry: loc));
+  }
+
+  // Zoom so circle diameter fills ~80% of usable screen height; accounts for latitude.
   double _zoomForRadius(double radiusKm, double lat) {
     const earthCircumference = 2 * pi * 6378137.0;
-    const tileSize = 256.0;
+    const tileSize = 512.0;
     const usablePx = 480.0;
-    final metersPerPxAtZ0 = earthCircumference * cos(lat * pi / 180) / tileSize;
+    final metersPerPxAtZ0 =
+        earthCircumference * cos(lat * pi / 180) / tileSize;
     final targetMetersPerPx = (radiusKm * 1000 * 2) / (usablePx * 0.80);
     final zoom = log(metersPerPxAtZ0 / targetMetersPerPx) / log(2);
     return zoom.clamp(10.0, 17.0);
   }
 
-  Marker _buildUserMarker() => Marker(
-    point: _userLocation!,
-    width: 120, height: 120,
-    alignment: Alignment.center,
-    child: AnimatedBuilder(
-      animation: _radarController,
-      builder: (_, _) => CustomPaint(
-        painter: _RadarPainter(progress: _radarController.value, color: const Color(0xFF1E88E5)),
-        child: Center(
-          child: Container(
-            width: 16, height: 16,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E88E5),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2.5),
-              boxShadow: [BoxShadow(color: const Color(0xFF1E88E5).withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 2)],
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
+  void _animateTo(LatLng target, double zoom) {
+    if (!_mapReady || _mapController == null || !mounted) return;
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngZoom(target, zoom),
+    );
+  }
+
+  // ── Style loaded callback ─────────────────────────────────────────────────
+
+  void _onStyleLoaded() {
+    _mapReady = true;
+    if (!mounted) return;
+    _cameraCenter = _searchCenter;
+    setState(() {});
+    _initNativeCircle();
+    _initNativeUserDot();
+    _buildMarkers(animate: false);
+    _fitToRadius();
+  }
+
+  // ── Marker screen-position projection ────────────────────────────────────
+
+  Offset? _latLngToScreen(LatLng latlng) {
+    final center = _cameraCenter;
+    if (center == null || _screenSize == Size.zero) return null;
+    final scale = 512.0 * pow(2.0, _currentZoom);
+    final px = (latlng.longitude + 180) / 360 * scale;
+    final py = _mercatorY(latlng.latitude) * scale;
+    final cx = (center.longitude + 180) / 360 * scale;
+    final cy = _mercatorY(center.latitude) * scale;
+    return Offset(
+      _screenSize.width / 2 + (px - cx),
+      _screenSize.height / 2 + (py - cy),
+    );
+  }
+
+  void _updateMarkerScreenPositions() {
+    if (!_mapReady || !mounted) return;
+    final snapshot = _markerData.take(_revealedCount).toList();
+    for (final d in snapshot) {
+      d.screenPosition = _latLngToScreen(d.position);
+    }
+    setState(() {});
+  }
+
+  // ── Listings load ─────────────────────────────────────────────────────────
 
   void _loadNearby() {
-    // Debounce rapid calls to prevent duplicate API requests
     _loadNearbyDebounceTimer?.cancel();
-    _loadNearbyDebounceTimer = Timer(const Duration(milliseconds: 300), () async {
+    _loadNearbyDebounceTimer =
+        Timer(const Duration(milliseconds: 300), () async {
       await _executeLoadNearby();
     });
   }
@@ -353,11 +427,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     if (cityId == null) return;
     _revealTimer?.cancel();
     _radarController.repeat();
-    _markers = _userLocation != null ? [_buildUserMarker()] : [];
-    _revealedCount = _markers.length;
+    _markerData = _userLocation != null ? [_buildUserMarkerData()] : [];
+    _revealedCount = _markerData.length;
     setState(() {});
     final center = _searchCenter;
-    await _listingCtrl.loadNearby(center.latitude, center.longitude, _radius, cityId);
+    await _listingCtrl.loadNearby(
+        center.latitude, center.longitude, _radius, cityId);
     _radarController.stop();
     _radarController.reset();
     _buildMarkers();
@@ -365,15 +440,32 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   void _playTing() async {
-    try { await _audioPlayer.play(AssetSource('sounds/tone.mp3')); } catch (_) {}
+    try {
+      await _audioPlayer.play(AssetSource('sounds/tone.mp3'));
+    } catch (_) {}
   }
 
-  void _buildMarkers({bool animate = true}) {
-    final markers = <Marker>[];
+  // ── Marker data building ──────────────────────────────────────────────────
 
-    if (_userLocation != null) {
-      markers.add(_buildUserMarker());
-    }
+  _MapMarkerData _buildUserMarkerData() => _MapMarkerData(
+        position: _userLocation!,
+        width: 120,
+        height: 120,
+        isUser: true,
+        widget: AnimatedBuilder(
+          animation: _radarController,
+          builder: (context2, child2) => CustomPaint(
+            painter: _RadarPainter(
+                progress: _radarController.value,
+                color: const Color(0xFF1E88E5)),
+          ),
+        ),
+      );
+
+  void _buildMarkers({bool animate = true}) {
+    final data = <_MapMarkerData>[];
+
+    if (_userLocation != null) data.add(_buildUserMarkerData());
 
     var listings = _listingCtrl.nearbyListings.toList()
       ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
@@ -385,24 +477,23 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     }
 
     final filtered = listings.take(30).toList();
-
     final clusters = _mapReady
         ? _computeClusters(filtered)
-        : filtered.map((l) => _Cluster(l)).toList();
+        : filtered.map(_Cluster.new).toList();
 
     for (final cluster in clusters) {
       final count = cluster.listings.length;
       final rep = cluster.representative;
 
       if (count == 1) {
-        final priceText = rep.priceMonthly != null ? _pinPrice(rep.priceMonthly!) : 'Call';
+        final priceText =
+            rep.priceMonthly != null ? _pinPrice(rep.priceMonthly!) : 'Call';
         final chipW = _chipWidth(priceText);
-        markers.add(Marker(
-          point: cluster.center,
+        data.add(_MapMarkerData(
+          position: cluster.center,
           width: chipW,
           height: 34,
-          alignment: Alignment.center,
-          child: GestureDetector(
+          widget: GestureDetector(
             onTap: () => _showDetail(rep.id),
             child: _AnimatedPin(
               child: Container(
@@ -411,7 +502,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   borderRadius: BorderRadius.circular(17),
                   border: Border.all(color: AppColors.primary, width: 2),
                   boxShadow: const [
-                    BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+                    BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 6,
+                        offset: Offset(0, 2)),
                   ],
                 ),
                 child: Center(
@@ -430,12 +524,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           ),
         ));
       } else {
-        markers.add(Marker(
-          point: cluster.center,
+        data.add(_MapMarkerData(
+          position: cluster.center,
           width: 48,
           height: 48,
-          alignment: Alignment.center,
-          child: GestureDetector(
+          widget: GestureDetector(
             onTap: () => _showDetail(rep.id),
             child: _AnimatedPin(
               child: Container(
@@ -443,7 +536,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   gradient: AppColors.primaryGradient,
                   shape: BoxShape.circle,
                   boxShadow: const [
-                    BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
+                    BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 3)),
                   ],
                 ),
                 child: Center(
@@ -465,39 +561,50 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     }
 
     _revealTimer?.cancel();
-    _markers = markers;
+    _markerData = data;
 
-    if (!animate || markers.isEmpty) {
-      setState(() => _revealedCount = markers.length);
+    if (!animate || data.isEmpty) {
+      setState(() => _revealedCount = data.length);
+      _updateMarkerScreenPositions();
       return;
     }
 
     final userCount = _userLocation != null ? 1 : 0;
     _revealedCount = userCount;
     setState(() {});
+    _updateMarkerScreenPositions();
 
-    if (markers.length <= userCount) return;
+    if (data.length <= userCount) return;
 
     int i = userCount;
     _revealTimer = Timer.periodic(const Duration(milliseconds: 150), (timer) {
-      if (!mounted) { timer.cancel(); return; }
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       i++;
       setState(() => _revealedCount = i);
-      if (i >= markers.length) timer.cancel();
+      _updateMarkerScreenPositions();
+      if (i >= data.length) timer.cancel();
     });
   }
 
+  // ── Clustering ────────────────────────────────────────────────────────────
+
   List<_Cluster> _computeClusters(List<NearbyListingModel> listings) {
     final clusters = <_Cluster>[];
-    const clusterPx = 56.0;
-    final zoom = _mapController.camera.zoom;
+    const clusterPx = 112.0;
+    final zoom = _currentZoom;
     for (final listing in listings) {
       final pt = LatLng(listing.latitude, listing.longitude);
       _Cluster? best;
       double bestDist = double.infinity;
       for (final c in clusters) {
         final d = _mercatorPixelDist(pt, c.center, zoom);
-        if (d < bestDist) { bestDist = d; best = c; }
+        if (d < bestDist) {
+          bestDist = d;
+          best = c;
+        }
       }
       if (best != null && bestDist <= clusterPx) {
         best.listings.add(listing);
@@ -509,7 +616,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   static double _mercatorPixelDist(LatLng a, LatLng b, double zoom) {
-    final scale = 256.0 * pow(2.0, zoom);
+    final scale = 512.0 * pow(2.0, zoom);
     final ax = (a.longitude + 180) / 360 * scale;
     final ay = _mercatorY(a.latitude) * scale;
     final bx = (b.longitude + 180) / 360 * scale;
@@ -524,12 +631,31 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     return 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
   }
 
+  static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
+    const steps = 64;
+    const earthRadius = 6378137.0;
+    final latRad = center.latitude * pi / 180;
+    final points = <LatLng>[];
+    for (int i = 0; i <= steps; i++) {
+      final angle = 2 * pi * i / steps;
+      final dLat = (radiusKm * 1000 * cos(angle)) / earthRadius * (180 / pi);
+      final dLng = (radiusKm * 1000 * sin(angle)) /
+          (earthRadius * cos(latRad)) * (180 / pi);
+      points.add(LatLng(center.latitude + dLat, center.longitude + dLng));
+    }
+    return points;
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
   double _chipWidth(String text) => (text.length * 9.0 + 26).clamp(52.0, 90.0);
 
   String _pinPrice(int price) {
     if (price >= 100000) {
       final l = price / 100000;
-      return l == l.truncateToDouble() ? '₹${l.toInt()}L' : '₹${l.toStringAsFixed(1)}L';
+      return l == l.truncateToDouble()
+          ? '₹${l.toInt()}L'
+          : '₹${l.toStringAsFixed(1)}L';
     }
     if (price >= 1000) {
       final t = price ~/ 1000;
@@ -540,7 +666,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   void _showDetail(String id) {
-    final listing = _listingCtrl.nearbyListings.firstWhereOrNull((l) => l.id == id);
+    final listing =
+        _listingCtrl.nearbyListings.firstWhereOrNull((l) => l.id == id);
     if (listing == null) return;
     showModalBottomSheet(
       context: context,
@@ -550,126 +677,95 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
-  LatLngBounds? _districtBounds() {
-    final d = _selectedDistrict;
-    if (d?.latitude == null || d?.longitude == null) return null;
-    final points = <LatLng>[LatLng(d!.latitude!, d.longitude!)];
-    for (final city in _listingCtrl.nearbyCities) {
-      if (city.latitude != null && city.longitude != null) {
-        points.add(LatLng(city.latitude!, city.longitude!));
-      }
-    }
-    var minLat = points.map((p) => p.latitude).reduce(min);
-    var maxLat = points.map((p) => p.latitude).reduce(max);
-    var minLng = points.map((p) => p.longitude).reduce(min);
-    var maxLng = points.map((p) => p.longitude).reduce(max);
-    const minSpan = 0.5;
-    if (maxLat - minLat < minSpan) { final mid = (maxLat + minLat) / 2; minLat = mid - minSpan / 2; maxLat = mid + minSpan / 2; }
-    if (maxLng - minLng < minSpan) { final mid = (maxLng + minLng) / 2; minLng = mid - minSpan / 2; maxLng = mid + minSpan / 2; }
-    const pad = 0.2;
-    return LatLngBounds(LatLng(minLat - pad, minLng - pad), LatLng(maxLat + pad, maxLng + pad));
-  }
-
-  CameraConstraint get _cameraConstraint {
-    final b = _districtBounds();
-    return b != null ? CameraConstraint.containCenter(bounds: b) : const CameraConstraint.unconstrained();
-  }
-
-  // FIX #6: Replaced 24-frame Future.delayed loop with AnimationController.
-  // The controller calls _onCameraAnimTick() in sync with display refresh rate.
-  void _animateTo(LatLng target, double zoom) {
-    if (!_mapReady || !mounted) return;
-    _animFromCenter = _mapController.camera.center;
-    _animFromZoom = _mapController.camera.zoom;
-    _animToCenter = target;
-    _animToZoom = zoom;
-    _cameraAnimController.forward(from: 0);
-  }
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          _locationLoading
-              ? _buildMapShimmer()
-              : RepaintBoundary(
-                child: FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: _searchCenter,
-                    initialZoom: 13.0,
-                    minZoom: 8,
-                    maxZoom: 18,
-                    cameraConstraint: _cameraConstraint,
-                    interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                      enableMultiFingerGestureRace: true,
-                      pinchZoomThreshold: 0.3,
-                      pinchMoveThreshold: 30.0,
-                    ),
-                    onMapReady: () {
-                      _mapReady = true;
-                      _fitToRadius();
-                    },
-                    onPositionChanged: (camera, hasGesture) {
-                      if (hasGesture) _cameraAnimController.stop();
-                      if ((camera.zoom - _lastClusterZoom).abs() >= 0.4) {
-                        _lastClusterZoom = camera.zoom;
-                        _buildMarkers(animate: false);
-                      }
-                    },
-                  ),
-                  children: [
-                    // FIX #5: CachedTileProvider stores tiles on disk via flutter_cache_manager.
-                    // Previously tiles were re-fetched from network on every app open.
-                    TileLayer(
-                      urlTemplate: 'https://tiles.developerbymistake.tech/india/{z}/{x}/{y}',
-                      userAgentPackageName: 'com.bakhli.app',
-                      maxNativeZoom: 18,
-                      keepBuffer: 2,
-                      panBuffer: 1,
-                      tileProvider: _CachedTileProvider(),
-                      tileUpdateTransformer: TileUpdateTransformers.throttle(
-                        const Duration(milliseconds: 150),
-                      ),
-                      // Unloaded tiles show app shimmer color instead of OSM's
-                      // grey placeholder — seamless transition from loading shimmer.
-                      tileBuilder: (context, tileWidget, tile) => tile.readyToDisplay
-                          ? tileWidget
-                          : ColoredBox(color: AppColors.shimmerBase),
-                    ),
-                    if (_userLocation != null || _selectedDistrict != null)
-                      CircleLayer(circles: [
-                        CircleMarker(
-                          point: _searchCenter,
-                          radius: _radius * 1000,
-                          useRadiusInMeter: true,
-                          color: AppColors.primary.withValues(alpha: 0.08),
-                          borderColor: AppColors.primary.withValues(alpha: 0.7),
-                          borderStrokeWidth: 2,
-                        ),
-                      ]),
-                    MarkerLayer(markers: _markers.take(_revealedCount).toList()),
-                  ],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          _screenSize = constraints.biggest;
+          return Stack(
+            children: [
+          // ── Layer 1: Map or loading shimmer ─────────────────────────────
+          if (_locationLoading)
+            _buildMapShimmer()
+          else
+            RepaintBoundary(
+              child: MapLibreMap(
+                styleString: "assets/map_style.json",
+                initialCameraPosition: CameraPosition(
+                  target: _searchCenter,
+                  zoom: 13.0,
                 ),
+                minMaxZoomPreference: const MinMaxZoomPreference(8, 18),
+                compassEnabled: false,
+                rotateGesturesEnabled: false,
+                tiltGesturesEnabled: false,
+                myLocationEnabled: false,
+                trackCameraPosition: true,
+                onMapCreated: (MapLibreMapController ctrl) {
+                  _mapController = ctrl;
+                },
+                onStyleLoadedCallback: _onStyleLoaded,
+                onCameraMove: (CameraPosition pos) {
+                  _currentZoom = pos.zoom;
+                  _cameraCenter = pos.target;
+                  if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
+                    _lastClusterZoom = _currentZoom;
+                    _buildMarkers(animate: false);
+                  } else {
+                    _updateMarkerScreenPositions();
+                  }
+                },
+                onCameraIdle: () {
+                  if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
+                    _lastClusterZoom = _currentZoom;
+                    _buildMarkers(animate: false);
+                  } else {
+                    _updateMarkerScreenPositions();
+                  }
+                },
               ),
+            ),
 
 
+          // ── Layer 3: Flutter widget marker overlay ───────────────────────
+          if (!_locationLoading && _mapReady)
+            ..._markerData
+                .take(_revealedCount)
+                .where((d) => d.screenPosition != null)
+                .map((d) => Positioned(
+                      left: d.screenPosition!.dx - d.width / 2,
+                      top: d.screenPosition!.dy - d.height / 2,
+                      width: d.width,
+                      height: d.height,
+                      child: d.widget,
+                    )),
+
+          // ── Layer 4: UI overlays (unchanged) ─────────────────────────────
           Positioned(
-            top: 0, left: 0, right: 0,
+            top: 0,
+            left: 0,
+            right: 0,
             child: Container(
-              decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+              decoration:
+                  const BoxDecoration(gradient: AppColors.primaryGradient),
               child: SafeArea(
                 bottom: false,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                   child: Column(children: [
                     Row(children: [
-                      const Icon(Icons.location_on_rounded, color: Colors.white, size: 22),
+                      const Icon(Icons.location_on_rounded,
+                          color: Colors.white, size: 22),
                       const SizedBox(width: 6),
                       const Text('Bakhli',
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+                          style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
                       const Spacer(),
                       _buildCityDropdown(),
                     ]),
@@ -682,18 +778,25 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           ),
 
           Positioned(
-            bottom: 20, left: 20, right: 20,
+            bottom: 20,
+            left: 20,
+            right: 20,
             child: _buildFilterPanel(),
           ),
 
           Positioned(
-            bottom: 145, right: 20,
+            bottom: 145,
+            right: 20,
             child: _buildLocationFab(),
           ),
         ],
+          );
+        },
       ),
     );
   }
+
+  // ── UI widgets ────────────────────────────────────────────────────────────
 
   Widget _buildCityDropdown() {
     return Obx(() {
@@ -701,17 +804,23 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       if (cs.isEmpty) {
         return _selectedDistrict != null
             ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.4)),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Iconsax.location, color: Colors.white, size: 13),
                   const SizedBox(width: 5),
                   Text(_selectedDistrict!.name,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
+                      style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white)),
                 ]),
               )
             : const SizedBox();
@@ -723,11 +832,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       return PopupMenuButton<String>(
         onSelected: (id) {
           if (id == '__current__') {
-            setState(() { _selectedCity = null; });
+            setState(() => _selectedCity = null);
           } else {
             final city = cs.firstWhereOrNull((c) => c.id == id);
             if (city == null) return;
-            setState(() { _selectedCity = city; });
+            setState(() => _selectedCity = city);
           }
           _loadNearby();
           if (_mapReady) _fitToRadius();
@@ -738,27 +847,39 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           PopupMenuItem<String>(
             value: '__current__',
             child: Row(children: [
-              Icon(Icons.my_location_rounded, size: 14,
-                  color: isCurrent ? AppColors.primary : AppColors.textLight),
+              Icon(Icons.my_location_rounded,
+                  size: 14,
+                  color:
+                      isCurrent ? AppColors.primary : AppColors.textLight),
               const SizedBox(width: 10),
-              Text('Current', style: TextStyle(
-                fontFamily: 'Poppins', fontWeight: FontWeight.w500,
-                color: isCurrent ? AppColors.primary : AppColors.textDark,
-              )),
+              Text('Current',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w500,
+                    color:
+                        isCurrent ? AppColors.primary : AppColors.textDark,
+                  )),
             ]),
           ),
           ...cs.map((c) => PopupMenuItem<String>(
-            value: c.id,
-            child: Row(children: [
-              Icon(Iconsax.location, size: 14,
-                  color: _selectedCity?.id == c.id ? AppColors.primary : AppColors.textLight),
-              const SizedBox(width: 10),
-              Text(c.name, style: TextStyle(
-                fontFamily: 'Poppins', fontWeight: FontWeight.w500,
-                color: _selectedCity?.id == c.id ? AppColors.primary : AppColors.textDark,
+                value: c.id,
+                child: Row(children: [
+                  Icon(Iconsax.location,
+                      size: 14,
+                      color: _selectedCity?.id == c.id
+                          ? AppColors.primary
+                          : AppColors.textLight),
+                  const SizedBox(width: 10),
+                  Text(c.name,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w500,
+                        color: _selectedCity?.id == c.id
+                            ? AppColors.primary
+                            : AppColors.textDark,
+                      )),
+                ]),
               )),
-            ]),
-          )),
         ],
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -772,9 +893,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 color: Colors.white, size: 13),
             const SizedBox(width: 6),
             Text(displayName,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
+                style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white)),
             const SizedBox(width: 4),
-            const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 16),
+            const Icon(Icons.keyboard_arrow_down_rounded,
+                color: Colors.white, size: 16),
           ]),
         ),
       );
@@ -792,7 +918,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           child: GestureDetector(
             onTap: () {
               _listingCtrl.nearbyListings.clear();
-              setState(() { _radius = r; });
+              setState(() => _radius = r);
               _loadNearby();
               if (_mapReady) _fitToRadius();
             },
@@ -802,13 +928,17 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
               margin: EdgeInsets.only(right: i < radii.length - 1 ? 8 : 0),
               padding: const EdgeInsets.symmetric(vertical: 7),
               decoration: BoxDecoration(
-                color: active ? Colors.white : Colors.white.withValues(alpha: 0.15),
+                color: active
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Center(
                 child: Text('${r.toInt()} km',
                     style: TextStyle(
-                      fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600,
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                       color: active ? AppColors.primary : Colors.white,
                     )),
               ),
@@ -827,7 +957,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
       final allListings = _listingCtrl.nearbyListings.toList();
       final filtered = _selectedRoomType != null
-          ? allListings.where((l) => l.roomTypeName == _selectedRoomType).toList()
+          ? allListings
+              .where((l) => l.roomTypeName == _selectedRoomType)
+              .toList()
           : allListings;
       final count = filtered.length;
 
@@ -841,7 +973,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
+          boxShadow: [
+            BoxShadow(
+                color: AppColors.shadow,
+                blurRadius: 20,
+                offset: const Offset(0, 6))
+          ],
         ),
         child: IntrinsicHeight(
           child: Row(
@@ -858,12 +995,16 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   children: [
                     Text('$count',
                         style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 20,
-                            fontWeight: FontWeight.w700, color: Colors.white)),
+                            fontFamily: 'Poppins',
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white)),
                     Text('room${count == 1 ? '' : 's'}',
                         style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 10,
-                            fontWeight: FontWeight.w500, color: Colors.white)),
+                            fontFamily: 'Poppins',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white)),
                   ],
                 ),
               ),
@@ -883,34 +1024,48 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           return Expanded(
                             child: GestureDetector(
                               onTap: () {
-                                final newType = selected ? null : rt.name;
-                                setState(() => _selectedRoomType = newType);
+                                final newType =
+                                    selected ? null : rt.name as String?;
+                                setState(
+                                    () => _selectedRoomType = newType);
                                 _buildMarkers();
                                 if (newType != null) {
                                   final hits = _listingCtrl.nearbyListings
-                                      .where((l) => l.roomTypeName == newType)
+                                      .where(
+                                          (l) => l.roomTypeName == newType)
                                       .length;
                                   if (hits > 0) _playTing();
                                 }
                               },
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
-                                margin: EdgeInsets.only(right: colIndex < row.length - 1 ? 6 : 0),
-                                padding: const EdgeInsets.symmetric(vertical: 7),
+                                margin: EdgeInsets.only(
+                                    right: colIndex < row.length - 1
+                                        ? 6
+                                        : 0),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: selected ? AppColors.primary : Colors.white,
+                                  color: selected
+                                      ? AppColors.primary
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                    color: selected ? AppColors.primary : AppColors.divider,
+                                    color: selected
+                                        ? AppColors.primary
+                                        : AppColors.divider,
                                     width: 1.5,
                                   ),
                                 ),
                                 child: Center(
                                   child: Text(rt.name,
                                       style: TextStyle(
-                                        fontFamily: 'Poppins', fontSize: 11,
+                                        fontFamily: 'Poppins',
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w600,
-                                        color: selected ? Colors.white : AppColors.textDark,
+                                        color: selected
+                                            ? Colors.white
+                                            : AppColors.textDark,
                                       )),
                                 ),
                               ),
@@ -932,24 +1087,25 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   Widget _buildLocationFab() {
     return GestureDetector(
       onTap: () {
-        setState(() { _selectedCity = null; });
+        setState(() => _selectedCity = null);
         _loadNearby();
-        if (_mapReady) {
-          if (_userLocation != null) {
-            _animateTo(_userLocation!, _zoomForRadius(_radius, _userLocation!.latitude));
-          } else {
-            _fitToRadius();
-          }
-        }
+        if (_mapReady) _fitToRadius();
       },
       child: Container(
-        width: 46, height: 46,
+        width: 46,
+        height: 46,
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
+          boxShadow: [
+            BoxShadow(
+                color: AppColors.shadow,
+                blurRadius: 12,
+                offset: const Offset(0, 4))
+          ],
         ),
-        child: const Icon(Icons.my_location_rounded, color: AppColors.primary, size: 22),
+        child: const Icon(Icons.my_location_rounded,
+            color: AppColors.primary, size: 22),
       ),
     );
   }
@@ -963,19 +1119,41 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 }
 
+// ── Data classes ─────────────────────────────────────────────────────────────
+
+class _MapMarkerData {
+  final LatLng position;
+  final Widget widget;
+  final double width;
+  final double height;
+  final bool isUser;
+  Offset? screenPosition;
+
+  _MapMarkerData({
+    required this.position,
+    required this.widget,
+    required this.width,
+    required this.height,
+    this.isUser = false,
+  });
+}
 
 class _Cluster {
   final List<NearbyListingModel> listings;
   _Cluster(NearbyListingModel first) : listings = [first];
 
   LatLng get center => LatLng(
-    listings.map((l) => l.latitude).reduce((a, b) => a + b) / listings.length,
-    listings.map((l) => l.longitude).reduce((a, b) => a + b) / listings.length,
-  );
+        listings.map((l) => l.latitude).reduce((a, b) => a + b) /
+            listings.length,
+        listings.map((l) => l.longitude).reduce((a, b) => a + b) /
+            listings.length,
+      );
 
   NearbyListingModel get representative => listings.reduce((a, b) =>
       (a.priceMonthly ?? 999999999) <= (b.priceMonthly ?? 999999999) ? a : b);
 }
+
+// ── Animation widgets ────────────────────────────────────────────────────────
 
 class _AnimatedPin extends StatefulWidget {
   final Widget child;
@@ -984,14 +1162,16 @@ class _AnimatedPin extends StatefulWidget {
   State<_AnimatedPin> createState() => _AnimatedPinState();
 }
 
-class _AnimatedPinState extends State<_AnimatedPin> with SingleTickerProviderStateMixin {
+class _AnimatedPinState extends State<_AnimatedPin>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 300));
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
     _ctrl.forward();
   }
@@ -1003,7 +1183,8 @@ class _AnimatedPinState extends State<_AnimatedPin> with SingleTickerProviderSta
   }
 
   @override
-  Widget build(BuildContext context) => ScaleTransition(scale: _scale, child: widget.child);
+  Widget build(BuildContext context) =>
+      ScaleTransition(scale: _scale, child: widget.child);
 }
 
 class _RadarPainter extends CustomPainter {
@@ -1021,9 +1202,8 @@ class _RadarPainter extends CustomPainter {
     for (int i = 0; i < 3; i++) {
       final p = (progress + i / 3.0) % 1.0;
       final radius = maxRadius * p;
-      final opacity = (1.0 - p);
+      final opacity = 1.0 - p;
 
-      // Filled glow ring
       canvas.drawCircle(
         center,
         radius,
@@ -1031,7 +1211,6 @@ class _RadarPainter extends CustomPainter {
           ..color = color.withValues(alpha: opacity * 0.12)
           ..style = PaintingStyle.fill,
       );
-      // Stroke ring
       canvas.drawCircle(
         center,
         radius,
@@ -1045,17 +1224,4 @@ class _RadarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RadarPainter old) => old.progress != progress;
-}
-
-// FIX #5: Tile disk cache using flutter_cache_manager (bundled with cached_network_image).
-// Tiles are stored on device and served from disk on subsequent sessions.
-// OSM User-Agent header required to comply with tile usage policy.
-class _CachedTileProvider extends TileProvider {
-  @override
-  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
-    return CachedNetworkImageProvider(
-      getTileUrl(coordinates, options),
-      headers: const {'User-Agent': 'Bakhli/1.0 (Flutter; com.bakhli.app)'},
-    );
-  }
 }

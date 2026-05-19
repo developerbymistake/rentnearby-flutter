@@ -28,3 +28,11 @@
 -dontwarn com.google.android.play.core.tasks.OnFailureListener
 -dontwarn com.google.android.play.core.tasks.OnSuccessListener
 -dontwarn com.google.android.play.core.tasks.Task
+
+# MapLibre GL — JNI bridge classes must not be renamed or removed by R8
+-keep class org.maplibre.** { *; }
+-keep interface org.maplibre.** { *; }
+-keep class com.mapbox.mapboxsdk.** { *; }
+-keep interface com.mapbox.mapboxsdk.** { *; }
+-dontwarn org.maplibre.**
+-dontwarn com.mapbox.**

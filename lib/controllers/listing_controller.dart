@@ -379,7 +379,7 @@ class ListingController extends GetxController {
 
   Future<Map<String, Map<String, dynamic>>> getPlans() async {
     try {
-      final res = await ApiService.get('/admin/plans');
+      final res = await ApiService.get('/listings/plans');
       final list = res['data'] as List;
       final result = <String, Map<String, dynamic>>{};
       for (final item in list) {
