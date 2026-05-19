@@ -45,6 +45,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   LatLng? _userLocation;
   bool _locationBlocked = false; // permission denied forever OR GPS service off
   bool _mapReady = false;
+  bool _cameraInitialized = false;
   bool _isGeocoding = false;
   bool _isUploading = false;
   int _uploadCurrent = 0;
@@ -130,6 +131,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       if (_mapReady) {
         if (_nativeUserDot == null) _initNativeUserDot();
         else _updateNativeUserDot();
+        if (_nativeCircle == null) _initNativeCircle();
       }
 
       // Auto-fetch address from accurate GPS if not already filled
@@ -149,7 +151,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
         }
       }
 
-      if (_mapReady) _animateTo(loc, 15.0);
+      if (_mapReady && !_cameraInitialized) {
+        _cameraInitialized = true;
+        _animateTo(loc, 15.0);
+      }
     } catch (_) {}
   }
 
@@ -161,9 +166,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
   void _onStyleLoaded() {
     _mapReady = true;
     if (!mounted) return;
+    _cameraCenter = _userLocation ?? const LatLng(30.3165, 78.0322);
     _initNativeCircle();
     _initNativeUserDot();
-    if (_userLocation != null) _animateTo(_userLocation!, 15.0);
+    if (_userLocation != null && !_cameraInitialized) {
+      _cameraInitialized = true;
+      _animateTo(_userLocation!, 15.0);
+    }
     setState(() {});
   }
 
@@ -1055,7 +1064,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         target: _userLocation ?? const LatLng(30.3165, 78.0322),
                         zoom: 15.0,
                       ),
-                      minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
+                      minMaxZoomPreference: const MinMaxZoomPreference(14.0, 18.0),
                       compassEnabled: false,
                       rotateGesturesEnabled: false,
                       tiltGesturesEnabled: false,
@@ -1067,7 +1076,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       onCameraMove: (pos) {
                         _currentZoom = pos.zoom;
                         _cameraCenter = pos.target;
-                        if (mounted && _selectedLocation != null) setState(() {});
                       },
                       onCameraIdle: () {
                         if (mounted) setState(() {});

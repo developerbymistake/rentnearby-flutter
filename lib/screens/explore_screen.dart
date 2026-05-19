@@ -30,7 +30,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Line? _nativeCircleGlow;
   Line? _nativeCircleLine;
   Circle? _nativeUserDot;
-  final _pinsVisible = ValueNotifier<bool>(true);
+  bool _pinsVisible = true;
 
   // ── State ─────────────────────────────────────────────────────────────────
   final _listingCtrl = Get.find<ListingController>();
@@ -117,7 +117,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     if (_mapController != null && _nativeUserDot != null) {
       _mapController!.removeCircle(_nativeUserDot!);
     }
-    _pinsVisible.dispose();
     super.dispose();
   }
 
@@ -726,7 +725,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                   _cameraCenter = pos.target;
                   _hidePinsTimer?.cancel();
                   _hidePinsTimer = Timer(const Duration(milliseconds: 80), () {
-                    if (_pinsVisible.value) _pinsVisible.value = false;
+                    if (mounted && _pinsVisible) setState(() => _pinsVisible = false);
                   });
                 },
                 onCameraIdle: () {
@@ -737,7 +736,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                   } else {
                     _updateMarkerScreenPositions();
                   }
-                  if (!_pinsVisible.value) _pinsVisible.value = true;
+                  if (mounted && !_pinsVisible) setState(() => _pinsVisible = true);
                 },
               ),
             ),
@@ -745,11 +744,12 @@ class _ExploreScreenState extends State<ExploreScreen>
 
           // ── Layer 3: Flutter widget marker overlay ───────────────────────
           if (!_locationLoading && _mapReady)
-            ValueListenableBuilder<bool>(
-              valueListenable: _pinsVisible,
-              builder: (_, visible, __) {
-                if (!visible) return const SizedBox.shrink();
-                return Stack(
+            IgnorePointer(
+              ignoring: !_pinsVisible,
+              child: AnimatedOpacity(
+                opacity: _pinsVisible ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 100),
+                child: Stack(
                   fit: StackFit.expand,
                   children: _markerData
                       .take(_revealedCount)
@@ -762,8 +762,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                             child: d.widget,
                           ))
                       .toList(),
-                );
-              },
+                ),
+              ),
             ),
 
           // ── Layer 4: UI overlays (unchanged) ─────────────────────────────
