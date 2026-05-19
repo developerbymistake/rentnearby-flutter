@@ -311,13 +311,16 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
   void _showPaidUpgradeSheet() async {
     final plans = await _ctrl.getPlans();
-    final paidPlan = plans.values.firstWhereOrNull((p) => (p['price'] as num) > 0)
-        ?? {'planType': 'PAID', 'price': 99, 'days': 30, 'roomLimit': 2};
+    final paidPlans = plans.values
+        .where((p) => (p['price'] as num? ?? 0) > 0)
+        .toList()
+      ..sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
 
     if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -325,106 +328,148 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: 20),
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(16),
+            Center(
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.flash_on_rounded, size: 30, color: AppColors.primary),
               ),
-              child: const Icon(Icons.flash_on_rounded, size: 30, color: AppColors.primary),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Premium Plan Required',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textDark,
+            const Center(
+              child: Text(
+                'Upgrade Your Plan',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'You\'ve already used your free plan. Upgrade to a paid plan to add more rooms.',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 13,
-                color: AppColors.textMedium,
-                height: 1.5,
+            const SizedBox(height: 6),
+            const Center(
+              child: Text(
+                'Choose a plan to add more rooms.',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 13,
+                  color: AppColors.textMedium,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary, width: 0.5),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 18),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      '₹${paidPlan['price']}  •  ${paidPlan['days']} days  •  Up to ${paidPlan['roomLimit']} rooms',
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
+            const SizedBox(height: 20),
+            if (paidPlans.isEmpty)
+              const Center(
+                child: Text(
+                  'No paid plans available. Please contact support.',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else
+              ...paidPlans.asMap().entries.map((entry) {
+                final i = entry.key;
+                final p = entry.value;
+                final days = (p['days'] as num?)?.toInt() ?? 30;
+                final rooms = (p['roomLimit'] as num?)?.toInt() ?? 2;
+                final price = (p['price'] as num?)?.toInt() ?? 0;
+                final raw = (p['planType'] as String? ?? '');
+                final label = raw.isEmpty ? raw : raw[0].toUpperCase() + raw.substring(1).toLowerCase();
+                return Padding(
+                  padding: EdgeInsets.only(bottom: i < paidPlans.length - 1 ? 12 : 0),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pop(_);
+                      Get.toNamed(AppRoutes.paymentScreen, arguments: {
+                        'listingId': '',
+                        'plan': p,
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: i == 0
+                              ? AppColors.primary
+                              : AppColors.primary.withValues(alpha: 0.3),
+                          width: i == 0 ? 2 : 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        color: i == 0
+                            ? AppColors.primary.withValues(alpha: 0.05)
+                            : Colors.grey[50],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.flash_on_rounded,
+                                color: AppColors.primary, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('$label Plan',
+                                    style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'Poppins',
+                                        color: AppColors.textDark)),
+                                Text('$days days • $rooms rooms',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                        fontFamily: 'Poppins')),
+                              ],
+                            ),
+                          ),
+                          Text('₹$price',
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                  fontFamily: 'Poppins')),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Get.toNamed(AppRoutes.paymentScreen, arguments: {
-                    'listingId': '',
-                    'plan': paidPlan,
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+                );
+              }),
+            const SizedBox(height: 16),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.pop(_),
                 child: const Text(
-                  'Continue to Payment',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  'Maybe Later',
+                  style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight),
                 ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Maybe Later',
-                style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight),
               ),
             ),
           ],
