@@ -2,12 +2,11 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:dio/dio.dart' as http_dio;
 import 'dart:io';
@@ -25,7 +24,13 @@ class AddListingScreen extends StatefulWidget {
 
 class _AddListingScreenState extends State<AddListingScreen> {
   final _ctrl = Get.find<ListingController>();
-  final _mapController = MapController();
+  MapLibreMapController? _mapController;
+  Fill?   _nativeCircle;
+  Line?   _nativeCircleLine;
+  Circle? _nativeUserDot;
+  LatLng? _cameraCenter;
+  double  _currentZoom = 15.0;
+  Size    _mapSize = Size.zero;
   final _descCtrl = TextEditingController();
   final _priceMonthlyCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
@@ -39,7 +44,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
   LatLng? _userLocation;
   bool _locationBlocked = false; // permission denied forever OR GPS service off
   bool _mapReady = false;
-  bool _animateCancelled = false;
   bool _isGeocoding = false;
   bool _isUploading = false;
   int _uploadCurrent = 0;
@@ -122,6 +126,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
           _selectedLocation = loc;
         }
       });
+      if (_mapReady) {
+        if (_nativeUserDot == null) _initNativeUserDot();
+        else _updateNativeUserDot();
+      }
 
       // Auto-fetch address from accurate GPS if not already filled
       if (addressWasEmpty && _selectedLocation != null) {
@@ -144,49 +152,88 @@ class _AddListingScreenState extends State<AddListingScreen> {
     } catch (_) {}
   }
 
-  LatLngBounds? _districtBounds() {
-    final d = _ctrl.districts.firstWhereOrNull((d) => d.id == _selectedDistrictId);
-    if (d?.latitude == null || d?.longitude == null) return null;
-    final points = <LatLng>[LatLng(d!.latitude!, d.longitude!)];
-    for (final city in _ctrl.cities) {
-      if (city.latitude != null && city.longitude != null) {
-        points.add(LatLng(city.latitude!, city.longitude!));
-      }
-    }
-    var minLat = points.map((p) => p.latitude).reduce(min);
-    var maxLat = points.map((p) => p.latitude).reduce(max);
-    var minLng = points.map((p) => p.longitude).reduce(min);
-    var maxLng = points.map((p) => p.longitude).reduce(max);
-    const minSpan = 0.5;
-    if (maxLat - minLat < minSpan) { final mid = (maxLat + minLat) / 2; minLat = mid - minSpan / 2; maxLat = mid + minSpan / 2; }
-    if (maxLng - minLng < minSpan) { final mid = (maxLng + minLng) / 2; minLng = mid - minSpan / 2; maxLng = mid + minSpan / 2; }
-    const pad = 0.2;
-    return LatLngBounds(LatLng(minLat - pad, minLng - pad), LatLng(maxLat + pad, maxLng + pad));
+  void _animateTo(LatLng target, double zoom) {
+    if (!_mapReady || _mapController == null || !mounted) return;
+    _mapController!.animateCamera(CameraUpdate.newLatLngZoom(target, zoom));
   }
 
-  CameraConstraint get _cameraConstraint {
-    final b = _districtBounds();
-    return b != null ? CameraConstraint.containCenter(bounds: b) : const CameraConstraint.unconstrained();
+  void _onStyleLoaded() {
+    _mapReady = true;
+    if (!mounted) return;
+    _initNativeCircle();
+    _initNativeUserDot();
+    if (_userLocation != null) _animateTo(_userLocation!, 15.0);
+    setState(() {});
   }
 
-  Future<void> _animateTo(LatLng target, double zoom) async {
-    if (!_mapReady || !mounted) return;
-    _animateCancelled = false;
-    final startCenter = _mapController.camera.center;
-    final startZoom = _mapController.camera.zoom;
-    const frames = 24;
-    for (var i = 1; i <= frames; i++) {
-      if (!mounted || _animateCancelled) return;
-      final t = Curves.easeInOut.transform(i / frames);
-      _mapController.move(
-        LatLng(
-          startCenter.latitude + (target.latitude - startCenter.latitude) * t,
-          startCenter.longitude + (target.longitude - startCenter.longitude) * t,
-        ),
-        startZoom + (zoom - startZoom) * t,
-      );
-      await Future.delayed(const Duration(milliseconds: 16));
-    }
+  Future<void> _initNativeCircle() async {
+    final ctrl = _mapController;
+    final loc = _userLocation;
+    if (ctrl == null || loc == null || !mounted) return;
+    final points = _circlePolygonPoints(loc, 0.5);
+    _nativeCircle = await ctrl.addFill(FillOptions(
+      geometry: [points],
+      fillColor: '#2f64ca',
+      fillOpacity: 0.08,
+    ));
+    _nativeCircleLine = await ctrl.addLine(LineOptions(
+      geometry: points,
+      lineColor: 'rgba(47, 100, 202, 0.6)',
+      lineWidth: 1.5,
+    ));
+  }
+
+  Future<void> _initNativeUserDot() async {
+    final ctrl = _mapController;
+    final loc = _userLocation;
+    if (ctrl == null || loc == null || !mounted) return;
+    _nativeUserDot = await ctrl.addCircle(CircleOptions(
+      geometry: loc,
+      circleRadius: 8.0,
+      circleColor: '#1E88E5',
+      circleOpacity: 1.0,
+      circleStrokeColor: '#FFFFFF',
+      circleStrokeWidth: 2.5,
+    ));
+  }
+
+  void _updateNativeUserDot() {
+    final ctrl = _mapController;
+    final dot = _nativeUserDot;
+    final loc = _userLocation;
+    if (ctrl == null || dot == null || loc == null) return;
+    ctrl.updateCircle(dot, CircleOptions(geometry: loc));
+  }
+
+  Offset? _latLngToScreen(LatLng pos) {
+    final center = _cameraCenter;
+    if (center == null || _mapSize == Size.zero) return null;
+    final scale = 512.0 * pow(2.0, _currentZoom);
+    final px = (pos.longitude + 180) / 360 * scale;
+    final py = _mercatorY(pos.latitude) * scale;
+    final cx = (center.longitude + 180) / 360 * scale;
+    final cy = _mercatorY(center.latitude) * scale;
+    return Offset(
+      _mapSize.width / 2 + (px - cx),
+      _mapSize.height / 2 + (py - cy),
+    );
+  }
+
+  static double _mercatorY(double lat) {
+    final sinLat = sin(lat * pi / 180);
+    return 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
+  }
+
+  static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
+    const steps = 64;
+    const earthRadius = 6378137.0;
+    final latRad = center.latitude * pi / 180;
+    return List.generate(steps + 1, (i) {
+      final angle = 2 * pi * i / steps;
+      final dLat = (radiusKm * 1000 * cos(angle)) / earthRadius * (180 / pi);
+      final dLng = (radiusKm * 1000 * sin(angle)) / (earthRadius * cos(latRad)) * (180 / pi);
+      return LatLng(center.latitude + dLat, center.longitude + dLng);
+    });
   }
 
   @override
@@ -987,84 +1034,57 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ] else
           ClipRRect(
             borderRadius: BorderRadius.circular(14),
-            child: Stack(children: [
-              SizedBox(
-                height: 280,
-                child: FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: _userLocation!,
-                    initialZoom: 15.0,
-                    minZoom: 13.0,
-                    maxZoom: 18,
-                    cameraConstraint: _cameraConstraint,
-                    interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                      enableMultiFingerGestureRace: true,
-                      pinchZoomThreshold: 0.3,
-                      pinchMoveThreshold: 30.0,
-                    ),
-                    onMapReady: () {
-                      _mapReady = true;
-                    },
-                    onPositionChanged: (_, hasGesture) {
-                      if (hasGesture) _animateCancelled = true;
-                    },
-                    onTap: (_, pos) {
-                      if (_userLocation != null) {
-                        final distM = Geolocator.distanceBetween(
-                          _userLocation!.latitude, _userLocation!.longitude,
-                          pos.latitude, pos.longitude,
-                        );
-                        if (distM > 500) {
-                          AppToast.warning('You can only pin within 500 m of your current location');
-                          return;
-                        }
-                      }
-                      setState(() => _selectedLocation = pos);
-                      _reverseGeocode(pos);
-                    },
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.bakhli.app',
-                      maxNativeZoom: 18,
-                      keepBuffer: 2,
-                      panBuffer: 1,
-                      tileUpdateTransformer: TileUpdateTransformers.throttle(
-                        const Duration(milliseconds: 150),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                _mapSize = Size(constraints.maxWidth, 280);
+                return SizedBox(
+                  height: 280,
+                  child: Stack(children: [
+                    MapLibreMap(
+                      styleString: 'assets/map_style.json',
+                      initialCameraPosition: CameraPosition(
+                        target: _userLocation ?? const LatLng(30.3165, 78.0322),
+                        zoom: 15.0,
                       ),
+                      minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
+                      compassEnabled: false,
+                      rotateGesturesEnabled: false,
+                      tiltGesturesEnabled: false,
+                      myLocationEnabled: false,
+                      trackCameraPosition: true,
+                      attributionButtonMargins: const Point(-200.0, 0.0),
+                      onMapCreated: (ctrl) => _mapController = ctrl,
+                      onStyleLoadedCallback: _onStyleLoaded,
+                      onCameraMove: (pos) {
+                        _currentZoom = pos.zoom;
+                        _cameraCenter = pos.target;
+                        if (mounted && _selectedLocation != null) setState(() {});
+                      },
+                      onCameraIdle: () {
+                        if (mounted) setState(() {});
+                      },
+                      onMapClick: (_, latLng) {
+                        if (_userLocation != null) {
+                          final distM = Geolocator.distanceBetween(
+                            _userLocation!.latitude, _userLocation!.longitude,
+                            latLng.latitude, latLng.longitude,
+                          );
+                          if (distM > 500) {
+                            AppToast.warning('You can only pin within 500 m of your current location');
+                            return;
+                          }
+                        }
+                        setState(() => _selectedLocation = latLng);
+                        _reverseGeocode(latLng);
+                      },
                     ),
-                    if (_userLocation != null)
-                      CircleLayer(circles: [
-                        CircleMarker(
-                          point: _userLocation!,
-                          radius: 500,
-                          useRadiusInMeter: true,
-                          color: AppColors.primary.withValues(alpha: 0.08),
-                          borderColor: AppColors.primary.withValues(alpha: 0.6),
-                          borderStrokeWidth: 1.5,
-                        ),
-                      ]),
-                    MarkerLayer(markers: [
-                      if (_userLocation != null)
-                        Marker(
-                          point: _userLocation!,
-                          width: 18, height: 18,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE53935),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2.5),
-                              boxShadow: [BoxShadow(color: const Color(0xFFE53935).withValues(alpha: 0.4), blurRadius: 6, spreadRadius: 2)],
-                            ),
-                          ),
-                        ),
-                      if (_selectedLocation != null)
-                        Marker(
-                          point: _selectedLocation!,
-                          width: 40, height: 48,
+                    if (_selectedLocation != null)
+                      Builder(builder: (_) {
+                        final screen = _latLngToScreen(_selectedLocation!);
+                        if (screen == null) return const SizedBox.shrink();
+                        return Positioned(
+                          left: screen.dx - 20,
+                          top:  screen.dy - 46,
                           child: Column(mainAxisSize: MainAxisSize.min, children: [
                             Container(
                               width: 36, height: 36,
@@ -1077,26 +1097,26 @@ class _AddListingScreenState extends State<AddListingScreen> {
                             ),
                             Container(width: 2, height: 10, color: AppColors.primary),
                           ]),
+                        );
+                      }),
+                    Positioned(
+                      bottom: 10, right: 10,
+                      child: GestureDetector(
+                        onTap: () { if (_userLocation != null) _animateTo(_userLocation!, 15.0); },
+                        child: Container(
+                          width: 38, height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white, shape: BoxShape.circle,
+                            boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+                          ),
+                          child: const Icon(Iconsax.location, color: AppColors.primary, size: 18),
                         ),
-                    ]),
-                  ],
-                ),
-              ),
-              Positioned(
-                bottom: 10, right: 10,
-                child: GestureDetector(
-                  onTap: () { if (_userLocation != null) _animateTo(_userLocation!, 15.0); },
-                  child: Container(
-                    width: 38, height: 38,
-                    decoration: BoxDecoration(
-                      color: Colors.white, shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+                      ),
                     ),
-                    child: const Icon(Iconsax.location, color: AppColors.primary, size: 18),
-                  ),
-                ),
-              ),
-            ]),
+                  ]),
+                );
+              },
+            ),
           ),
           if (_selectedLocation != null)
             Padding(
