@@ -624,7 +624,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                     // FIX #5: CachedTileProvider stores tiles on disk via flutter_cache_manager.
                     // Previously tiles were re-fetched from network on every app open.
                     TileLayer(
-                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      urlTemplate: 'https://tiles.developerbymistake.tech/india/{z}/{x}/{y}',
                       userAgentPackageName: 'com.bakhli.app',
                       maxNativeZoom: 18,
                       keepBuffer: 2,

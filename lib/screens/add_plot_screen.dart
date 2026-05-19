@@ -1299,8 +1299,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate:
-                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            urlTemplate: 'https://tiles.developerbymistake.tech/india/{z}/{x}/{y}',
                             userAgentPackageName: 'com.bakhli.app',
                             maxNativeZoom: 18,
                             keepBuffer: 2,
