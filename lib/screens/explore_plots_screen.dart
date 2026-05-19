@@ -874,7 +874,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                width: 54,
+                width: 58,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF10B981), Color(0xFF059669)],
@@ -888,11 +888,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                   children: [
                     Text('$count',
                         style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 20,
+                            fontFamily: 'Poppins', fontSize: 22,
                             fontWeight: FontWeight.w700, color: Colors.white)),
                     Text('plot${count == 1 ? '' : 's'}',
                         style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 10,
+                            fontFamily: 'Poppins', fontSize: 11,
                             fontWeight: FontWeight.w500, color: Colors.white)),
                   ],
                 ),
@@ -926,7 +926,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 margin: EdgeInsets.only(right: colIndex < row.length - 1 ? 6 : 0),
-                                padding: const EdgeInsets.symmetric(vertical: 7),
+                                padding: const EdgeInsets.symmetric(vertical: 13),
                                 decoration: BoxDecoration(
                                   color: selected ? const Color(0xFF10B981) : Colors.white,
                                   borderRadius: BorderRadius.circular(10),
@@ -938,7 +938,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                                 child: Center(
                                   child: Text(_plotTypeLabels[type] ?? type,
                                       style: TextStyle(
-                                        fontFamily: 'Poppins', fontSize: 11,
+                                        fontFamily: 'Poppins', fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                         color: selected ? Colors.white : AppColors.textDark,
                                       )),
