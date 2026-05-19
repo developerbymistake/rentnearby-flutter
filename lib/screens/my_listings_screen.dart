@@ -211,7 +211,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => Padding(
+      builder: (ctx) => Padding(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -324,7 +324,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => Padding(
+      builder: (ctx) => Padding(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -399,7 +399,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   padding: EdgeInsets.only(bottom: i < paidPlans.length - 1 ? 12 : 0),
                   child: InkWell(
                     onTap: () {
-                      Navigator.pop(_);
+                      Navigator.pop(ctx);
                       Get.toNamed(AppRoutes.paymentScreen, arguments: {
                         'listingId': '',
                         'plan': p,
@@ -465,7 +465,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             const SizedBox(height: 16),
             Center(
               child: TextButton(
-                onPressed: () => Navigator.pop(_),
+                onPressed: () => Navigator.pop(ctx),
                 child: const Text(
                   'Maybe Later',
                   style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight),
@@ -502,7 +502,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
       if (activeRooms >= maxRooms && currentPlanIsFree) {
         // At capacity on free plan → show first available paid plan for upgrade
-        final paidPlan = plans.values.firstWhereOrNull((p) => (p['price'] as num) > 0);
+        final _paidMatches = plans.values.cast<Map<String, dynamic>>().where((p) => (p['price'] as num) > 0);
+        final paidPlan = _paidMatches.isEmpty ? null : _paidMatches.first;
         await Get.toNamed(AppRoutes.paymentScreen, arguments: {
           'listingId': listingId,
           'plan': paidPlan ?? {'planType': 'PAID', 'price': 99, 'days': 30, 'roomLimit': 2},

@@ -539,8 +539,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
       final currentPlanIsFree = (plans[planType]?['price'] as num? ?? 0) == 0;
 
       if (hasMembership && currentPlanIsFree && activeRooms >= maxRooms) {
-        final paidPlan = plans.values.firstWhereOrNull((p) => (p['price'] as num? ?? 0) > 0)
-            ?? {'planType': 'PAID', 'price': 99, 'days': 30, 'roomLimit': 2};
+        final _paidMatches = plans.values.cast<Map<String, dynamic>>().where((p) => (p['price'] as num? ?? 0) > 0);
+        final paidPlan = _paidMatches.isEmpty ? {'planType': 'PAID', 'price': 99, 'days': 30, 'roomLimit': 2} : _paidMatches.first;
         Get.offNamed(AppRoutes.paymentScreen, arguments: {
           'listingId': listingId,
           'plan': paidPlan,
