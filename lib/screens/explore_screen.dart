@@ -29,6 +29,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Fill? _nativeCircle;
   Line? _nativeCircleLine;
   Circle? _nativeUserDot;
+  final _pinsVisible = ValueNotifier<bool>(true);
 
   // ── State ─────────────────────────────────────────────────────────────────
   final _listingCtrl = Get.find<ListingController>();
@@ -48,6 +49,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   bool _mapReady = false;
   bool _checkingPermission = false;
   Timer? _loadNearbyDebounceTimer;
+  Timer? _hidePinsTimer;
   String? _selectedRoomType;
   bool _autoLoading = false;
   final _audioPlayer = AudioPlayer();
@@ -109,10 +111,12 @@ class _ExploreScreenState extends State<ExploreScreen>
     _radarController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
+    _hidePinsTimer?.cancel();
     _audioPlayer.dispose();
     if (_mapController != null && _nativeUserDot != null) {
       _mapController!.removeCircle(_nativeUserDot!);
     }
+    _pinsVisible.dispose();
     super.dispose();
   }
 
@@ -704,6 +708,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                 tiltGesturesEnabled: false,
                 myLocationEnabled: false,
                 trackCameraPosition: true,
+                attributionButtonMargins: const Point(-200.0, 0.0),
                 onMapCreated: (MapLibreMapController ctrl) {
                   _mapController = ctrl;
                 },
@@ -711,20 +716,20 @@ class _ExploreScreenState extends State<ExploreScreen>
                 onCameraMove: (CameraPosition pos) {
                   _currentZoom = pos.zoom;
                   _cameraCenter = pos.target;
-                  if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
-                    _lastClusterZoom = _currentZoom;
-                    _buildMarkers(animate: false);
-                  } else {
-                    _updateMarkerScreenPositions();
-                  }
+                  _hidePinsTimer?.cancel();
+                  _hidePinsTimer = Timer(const Duration(milliseconds: 80), () {
+                    if (_pinsVisible.value) _pinsVisible.value = false;
+                  });
                 },
                 onCameraIdle: () {
+                  _hidePinsTimer?.cancel();
                   if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
                     _lastClusterZoom = _currentZoom;
                     _buildMarkers(animate: false);
                   } else {
                     _updateMarkerScreenPositions();
                   }
+                  if (!_pinsVisible.value) _pinsVisible.value = true;
                 },
               ),
             ),
@@ -732,16 +737,26 @@ class _ExploreScreenState extends State<ExploreScreen>
 
           // ── Layer 3: Flutter widget marker overlay ───────────────────────
           if (!_locationLoading && _mapReady)
-            ..._markerData
-                .take(_revealedCount)
-                .where((d) => d.screenPosition != null)
-                .map((d) => Positioned(
-                      left: d.screenPosition!.dx - d.width / 2,
-                      top: d.screenPosition!.dy - d.height / 2,
-                      width: d.width,
-                      height: d.height,
-                      child: d.widget,
-                    )),
+            ValueListenableBuilder<bool>(
+              valueListenable: _pinsVisible,
+              builder: (_, visible, __) {
+                if (!visible) return const SizedBox.shrink();
+                return Stack(
+                  fit: StackFit.expand,
+                  children: _markerData
+                      .take(_revealedCount)
+                      .where((d) => d.screenPosition != null)
+                      .map((d) => Positioned(
+                            left: d.screenPosition!.dx - d.width / 2,
+                            top: d.screenPosition!.dy - d.height / 2,
+                            width: d.width,
+                            height: d.height,
+                            child: d.widget,
+                          ))
+                      .toList(),
+                );
+              },
+            ),
 
           // ── Layer 4: UI overlays (unchanged) ─────────────────────────────
           Positioned(
