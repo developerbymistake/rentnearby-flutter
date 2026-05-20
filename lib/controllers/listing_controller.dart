@@ -220,6 +220,7 @@ class ListingController extends GetxController {
       }
 
       listingPostedTrigger.value++;
+      await loadMyListings();
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not activate free plan.'));
       rethrow;
@@ -290,6 +291,7 @@ class ListingController extends GetxController {
         final success = data['success'] == true;
         if (success) {
           listingPostedTrigger.value++;
+          await loadMyListings();
         } else {
           throw Exception(data['message'] ?? 'Payment verification failed');
         }
@@ -361,6 +363,8 @@ class ListingController extends GetxController {
         'razorpayPaymentId': razorpayPaymentId,
         'razorpaySignature': razorpaySignature,
       });
+      listingPostedTrigger.value++;
+      await loadMyListings();
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not verify upgrade payment.'));
       rethrow;
