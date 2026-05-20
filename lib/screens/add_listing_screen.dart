@@ -635,7 +635,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
       }
     } catch (_) {}
 
-    Get.offNamed(AppRoutes.listingDetail, arguments: listingId);
+    if (mounted) Get.back();
+    AppToast.success('Room listed successfully!');
   }
 
   InputDecoration _inputDec(String hint, {Widget? prefixIcon, String? prefix}) => InputDecoration(

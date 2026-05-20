@@ -55,7 +55,7 @@ class ListingCard extends StatelessWidget {
           child: listing.photos.isNotEmpty
               ? CachedNetworkImage(
                   imageUrl: listing.photos.first,
-                  height: 160,
+                  height: 100,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   placeholder: (_, _) => _photoPlaceholder(),
@@ -212,6 +212,19 @@ class ListingCard extends StatelessWidget {
               ],
             ],
           ),
+          if (listing.address != null && listing.address!.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              listing.address!,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                color: AppColors.textLight,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
           if (onDelete != null || onToggleActive != null || onGoLive != null) ...[
             const SizedBox(height: 12),
             const Divider(height: 1, color: AppColors.divider),
@@ -226,12 +239,12 @@ class ListingCard extends StatelessWidget {
   Widget _buildActions() {
     return Row(
       children: [
-        if (onDelete != null) _deleteButton(),
-        const Spacer(),
         if (!listing.isActive && onGoLive != null)
           _makeItLiveButton()
         else if (listing.isActive && onToggleActive != null)
           _liveToggle(),
+        const Spacer(),
+        if (onDelete != null) _deleteButton(),
       ],
     );
   }
@@ -337,7 +350,7 @@ class ListingCard extends StatelessWidget {
 
   Widget _photoPlaceholder() {
     return Container(
-      height: 160,
+      height: 100,
       width: double.infinity,
       decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
       child: const Center(
