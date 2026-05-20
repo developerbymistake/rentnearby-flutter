@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
@@ -24,14 +22,25 @@ class ExplorePlotsScreen extends StatefulWidget {
 
 class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  final _mapController = MapController();
+  // ── Map ──────────────────────────────────────────────────────────────────
+  MapLibreMapController? _mapController;
+  double _currentZoom = 13.0;
+  LatLng? _cameraCenter;
+  Size _screenSize = Size.zero;
+  Fill? _nativeCircle;
+  Line? _nativeCircleGlow;
+  Line? _nativeCircleLine;
+  Circle? _nativeUserDot;
+  bool _pinsVisible = true;
+
+  // ── State ─────────────────────────────────────────────────────────────────
   final _plotCtrl = Get.find<PlotController>();
   Worker? _districtsWorker;
   Worker? _postedWorker;
   Worker? _loadingWorker;
   Worker? _refreshWorker;
   StreamSubscription<ServiceStatus>? _serviceStatusSub;
-  List<Marker> _markers = [];
+  List<_MapMarkerData> _markerData = [];
   LatLng? _userLocation;
   double _radius = 1.0;
   double _lastClusterZoom = 0;
@@ -48,11 +57,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   int _revealedCount = 0;
   Timer? _revealTimer;
   late AnimationController _radarController;
-  late AnimationController _cameraAnimController;
-  LatLng? _animFromCenter;
-  double? _animFromZoom;
-  LatLng? _animToCenter;
-  double? _animToZoom;
 
   static const _plotTypes = ['Residential', 'Commercial', 'Agricultural'];
   static const _plotTypeLabels = {
@@ -64,10 +68,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   @override
   void initState() {
     super.initState();
-    _cameraAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    )..addListener(_onCameraAnimTick);
 
     _radarController = AnimationController(
       vsync: this,
@@ -107,19 +107,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryAutoLoad());
   }
 
-  void _onCameraAnimTick() {
-    if (!_mapReady || !mounted) return;
-    if (_animFromCenter == null || _animToCenter == null) return;
-    final t = Curves.easeInOut.transform(_cameraAnimController.value);
-    _mapController.move(
-      LatLng(
-        _animFromCenter!.latitude + (_animToCenter!.latitude - _animFromCenter!.latitude) * t,
-        _animFromCenter!.longitude + (_animToCenter!.longitude - _animFromCenter!.longitude) * t,
-      ),
-      _animFromZoom! + (_animToZoom! - _animFromZoom!) * t,
-    );
-  }
-
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -128,11 +115,13 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _loadingWorker?.dispose();
     _refreshWorker?.dispose();
     _serviceStatusSub?.cancel();
-    _cameraAnimController.dispose();
     _radarController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
     _audioPlayer.dispose();
+    if (_mapController != null && _nativeUserDot != null) {
+      _mapController!.removeCircle(_nativeUserDot!);
+    }
     super.dispose();
   }
 
@@ -211,6 +200,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         _autoCity = ctx.nearestCity;
       });
       _loadNearby();
+      if (_mapReady) _fitToRadius();
     } finally {
       _autoLoading = false;
     }
@@ -248,13 +238,21 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         _locationLoading = false;
       });
       if (_plotCtrl.districts.isNotEmpty && lastKnown != null) _tryAutoLoad();
-      if (_mapReady) _fitToRadius();
+      if (_mapReady) {
+        if (_nativeUserDot == null) _initNativeUserDot();
+        else _updateNativeUserDot();
+        _fitToRadius();
+      }
 
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       if (!mounted) return;
       setState(() => _userLocation = LatLng(pos.latitude, pos.longitude));
+      if (_mapReady) {
+        if (_nativeUserDot == null) _initNativeUserDot();
+        else _updateNativeUserDot();
+      }
 
       final ctx = await _plotCtrl.loadContext(pos.latitude, pos.longitude);
       if (!mounted) return;
@@ -263,6 +261,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           _selectedDistrict = ctx.district;
           _autoCity = ctx.nearestCity;
         });
+        _loadNearby();
       }
 
       if (_mapReady) _fitToRadius();
@@ -294,11 +293,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     if (!_mapReady || !mounted) return;
     final center = _searchCenter;
     _animateTo(center, _zoomForRadius(_radius, center.latitude));
+    _updateNativeRadiusCircle();
   }
 
   double _zoomForRadius(double radiusKm, double lat) {
     const earthCircumference = 2 * pi * 6378137.0;
-    const tileSize = 256.0;
+    const tileSize = 512.0;
     const usablePx = 480.0;
     final metersPerPxAtZ0 = earthCircumference * cos(lat * pi / 180) / tileSize;
     final targetMetersPerPx = (radiusKm * 1000 * 2) / (usablePx * 0.80);
@@ -306,37 +306,101 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     return zoom.clamp(10.0, 17.0);
   }
 
-  Marker _buildUserMarker() => Marker(
-        point: _userLocation!,
-        width: 120,
-        height: 120,
-        alignment: Alignment.center,
-        child: AnimatedBuilder(
-          animation: _radarController,
-          builder: (_, _) => CustomPaint(
-            painter: _RadarPainter(
-                progress: _radarController.value,
-                color: const Color(0xFF10B981)),
-            child: Center(
-              child: Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2.5),
-                  boxShadow: [
-                    BoxShadow(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.5),
-                        blurRadius: 8,
-                        spreadRadius: 2)
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
+  void _animateTo(LatLng target, double zoom) {
+    if (!_mapReady || _mapController == null || !mounted) return;
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngZoom(target, zoom),
+    );
+  }
+
+  void _onStyleLoaded() {
+    _mapReady = true;
+    if (!mounted) return;
+    _cameraCenter = _searchCenter;
+    setState(() {});
+    _initNativeCircle();
+    _initNativeUserDot();
+    _buildMarkers(animate: false);
+    _fitToRadius();
+  }
+
+  Future<void> _initNativeCircle() async {
+    final ctrl = _mapController;
+    if (ctrl == null || !mounted) return;
+    final points = _circlePolygonPoints(_searchCenter, _radius);
+    _nativeCircle = await ctrl.addFill(FillOptions(
+      geometry: [points],
+      fillColor: '#10B981',
+      fillOpacity: 0.06,
+    ));
+    _nativeCircleGlow = await ctrl.addLine(LineOptions(
+      geometry: points,
+      lineColor: '#10B981',
+      lineWidth: 6.0,
+      lineOpacity: 0.15,
+      lineBlur: 3.0,
+    ));
+    _nativeCircleLine = await ctrl.addLine(LineOptions(
+      geometry: points,
+      lineColor: '#10B981',
+      lineWidth: 1.8,
+      lineOpacity: 0.65,
+    ));
+  }
+
+  void _updateNativeRadiusCircle() {
+    final ctrl = _mapController;
+    if (ctrl == null) return;
+    final points = _circlePolygonPoints(_searchCenter, _radius);
+    if (_nativeCircle != null)     ctrl.updateFill(_nativeCircle!, FillOptions(geometry: [points]));
+    if (_nativeCircleGlow != null) ctrl.updateLine(_nativeCircleGlow!, LineOptions(geometry: points));
+    if (_nativeCircleLine != null) ctrl.updateLine(_nativeCircleLine!, LineOptions(geometry: points));
+  }
+
+  Future<void> _initNativeUserDot() async {
+    final ctrl = _mapController;
+    final loc = _userLocation;
+    if (ctrl == null || loc == null || !mounted) return;
+    _nativeUserDot = await ctrl.addCircle(CircleOptions(
+      geometry: loc,
+      circleRadius: 8.0,
+      circleColor: '#10B981',
+      circleOpacity: 1.0,
+      circleStrokeColor: '#FFFFFF',
+      circleStrokeWidth: 2.5,
+    ));
+  }
+
+  void _updateNativeUserDot() {
+    final ctrl = _mapController;
+    final dot = _nativeUserDot;
+    final loc = _userLocation;
+    if (ctrl == null || dot == null || loc == null) return;
+    ctrl.updateCircle(dot, CircleOptions(geometry: loc));
+  }
+
+  Offset? _latLngToScreen(LatLng latlng) {
+    final center = _cameraCenter;
+    if (center == null || _screenSize == Size.zero) return null;
+    final scale = 512.0 * pow(2.0, _currentZoom);
+    final px = (latlng.longitude + 180) / 360 * scale;
+    final py = _mercatorY(latlng.latitude) * scale;
+    final cx = (center.longitude + 180) / 360 * scale;
+    final cy = _mercatorY(center.latitude) * scale;
+    return Offset(
+      _screenSize.width / 2 + (px - cx),
+      _screenSize.height / 2 + (py - cy),
+    );
+  }
+
+  void _updateMarkerScreenPositions() {
+    if (!_mapReady || !mounted) return;
+    final snapshot = _markerData.take(_revealedCount).toList();
+    for (final d in snapshot) {
+      d.screenPosition = _latLngToScreen(d.position);
+    }
+    setState(() {});
+  }
 
   void _loadNearby() {
     _loadNearbyDebounceTimer?.cancel();
@@ -351,8 +415,8 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     if (cityId == null) return;
     _revealTimer?.cancel();
     _radarController.repeat();
-    _markers = _userLocation != null ? [_buildUserMarker()] : [];
-    _revealedCount = _markers.length;
+    _markerData = _userLocation != null ? [_buildUserMarkerData()] : [];
+    _revealedCount = _markerData.length;
     setState(() {});
     final center = _searchCenter;
     await _plotCtrl.loadNearby(center.latitude, center.longitude, _radius, cityId);
@@ -368,10 +432,25 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     } catch (_) {}
   }
 
-  void _buildMarkers({bool animate = true}) {
-    final markers = <Marker>[];
+  _MapMarkerData _buildUserMarkerData() => _MapMarkerData(
+        position: _userLocation!,
+        width: 120,
+        height: 120,
+        isUser: true,
+        widget: AnimatedBuilder(
+          animation: _radarController,
+          builder: (context2, child2) => CustomPaint(
+            painter: _RadarPainter(
+                progress: _radarController.value,
+                color: const Color(0xFF10B981)),
+          ),
+        ),
+      );
 
-    if (_userLocation != null) markers.add(_buildUserMarker());
+  void _buildMarkers({bool animate = true}) {
+    final data = <_MapMarkerData>[];
+
+    if (_userLocation != null) data.add(_buildUserMarkerData());
 
     var plots = _plotCtrl.nearbyPlots.toList()
       ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
@@ -381,7 +460,9 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     }
 
     final filtered = plots.take(30).toList();
-    final clusters = _mapReady ? _computeClusters(filtered) : filtered.map((p) => _PlotCluster(p)).toList();
+    final clusters = _mapReady
+        ? _computeClusters(filtered)
+        : filtered.map((p) => _PlotCluster(p)).toList();
 
     for (final cluster in clusters) {
       final count = cluster.plots.length;
@@ -390,12 +471,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       if (count == 1) {
         final areaText = rep.areaDisplay;
         final chipW = (areaText.length * 8.5 + 28).clamp(60.0, 110.0);
-        markers.add(Marker(
-          point: cluster.center,
+        data.add(_MapMarkerData(
+          position: cluster.center,
           width: chipW,
           height: 34,
-          alignment: Alignment.center,
-          child: GestureDetector(
+          widget: GestureDetector(
             onTap: () => _showDetail(rep),
             child: _AnimatedPin(
               child: Container(
@@ -423,12 +503,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           ),
         ));
       } else {
-        markers.add(Marker(
-          point: cluster.center,
+        data.add(_MapMarkerData(
+          position: cluster.center,
           width: 48,
           height: 48,
-          alignment: Alignment.center,
-          child: GestureDetector(
+          widget: GestureDetector(
             onTap: () => _showDetail(rep),
             child: _AnimatedPin(
               child: Container(
@@ -462,18 +541,20 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     }
 
     _revealTimer?.cancel();
-    _markers = markers;
+    _markerData = data;
 
-    if (!animate || markers.isEmpty) {
-      setState(() => _revealedCount = markers.length);
+    if (!animate || data.isEmpty) {
+      setState(() => _revealedCount = data.length);
+      _updateMarkerScreenPositions();
       return;
     }
 
     final userCount = _userLocation != null ? 1 : 0;
     _revealedCount = userCount;
     setState(() {});
+    _updateMarkerScreenPositions();
 
-    if (markers.length <= userCount) return;
+    if (data.length <= userCount) return;
 
     int i = userCount;
     _revealTimer = Timer.periodic(const Duration(milliseconds: 150), (timer) {
@@ -483,14 +564,15 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       }
       i++;
       setState(() => _revealedCount = i);
-      if (i >= markers.length) timer.cancel();
+      _updateMarkerScreenPositions();
+      if (i >= data.length) timer.cancel();
     });
   }
 
   List<_PlotCluster> _computeClusters(List<NearbyPlotModel> plots) {
     final clusters = <_PlotCluster>[];
-    const clusterPx = 56.0;
-    final zoom = _mapController.camera.zoom;
+    const clusterPx = 112.0;
+    final zoom = _currentZoom;
     for (final plot in plots) {
       final pt = LatLng(plot.latitude, plot.longitude);
       _PlotCluster? best;
@@ -512,7 +594,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   static double _mercatorPixelDist(LatLng a, LatLng b, double zoom) {
-    final scale = 256.0 * pow(2.0, zoom);
+    final scale = 512.0 * pow(2.0, zoom);
     final ax = (a.longitude + 180) / 360 * scale;
     final ay = _mercatorY(a.latitude) * scale;
     final bx = (b.longitude + 180) / 360 * scale;
@@ -527,6 +609,21 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     return 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
   }
 
+  static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
+    const steps = 128;
+    const earthRadius = 6378137.0;
+    final latRad = center.latitude * pi / 180;
+    final points = <LatLng>[];
+    for (int i = 0; i <= steps; i++) {
+      final angle = 2 * pi * i / steps;
+      final dLat = (radiusKm * 1000 * cos(angle)) / earthRadius * (180 / pi);
+      final dLng = (radiusKm * 1000 * sin(angle)) /
+          (earthRadius * cos(latRad)) * (180 / pi);
+      points.add(LatLng(center.latitude + dLat, center.longitude + dLng));
+    }
+    return points;
+  }
+
   void _showDetail(NearbyPlotModel plot) {
     final auth = Get.find<AuthController>();
     final isAuth = auth.user.value != null;
@@ -538,168 +635,132 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     );
   }
 
-  LatLngBounds? _districtBounds() {
-    final d = _selectedDistrict;
-    if (d?.latitude == null || d?.longitude == null) return null;
-    final points = <LatLng>[LatLng(d!.latitude!, d.longitude!)];
-    for (final city in _plotCtrl.nearbyCities) {
-      if (city.latitude != null && city.longitude != null) {
-        points.add(LatLng(city.latitude!, city.longitude!));
-      }
-    }
-    var minLat = points.map((p) => p.latitude).reduce(min);
-    var maxLat = points.map((p) => p.latitude).reduce(max);
-    var minLng = points.map((p) => p.longitude).reduce(min);
-    var maxLng = points.map((p) => p.longitude).reduce(max);
-    const minSpan = 0.5;
-    if (maxLat - minLat < minSpan) {
-      final mid = (maxLat + minLat) / 2;
-      minLat = mid - minSpan / 2;
-      maxLat = mid + minSpan / 2;
-    }
-    if (maxLng - minLng < minSpan) {
-      final mid = (maxLng + minLng) / 2;
-      minLng = mid - minSpan / 2;
-      maxLng = mid + minSpan / 2;
-    }
-    const pad = 0.2;
-    return LatLngBounds(
-        LatLng(minLat - pad, minLng - pad), LatLng(maxLat + pad, maxLng + pad));
-  }
-
-  CameraConstraint get _cameraConstraint {
-    final b = _districtBounds();
-    return b != null
-        ? CameraConstraint.containCenter(bounds: b)
-        : const CameraConstraint.unconstrained();
-  }
-
-  void _animateTo(LatLng target, double zoom) {
-    if (!_mapReady || !mounted) return;
-    _animFromCenter = _mapController.camera.center;
-    _animFromZoom = _mapController.camera.zoom;
-    _animToCenter = target;
-    _animToZoom = zoom;
-    _cameraAnimController.forward(from: 0);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          _locationLoading
-              ? _buildMapShimmer()
-              : RepaintBoundary(
-                  child: FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: _searchCenter,
-                      initialZoom: 13.0,
-                      minZoom: 8,
-                      maxZoom: 18,
-                      cameraConstraint: _cameraConstraint,
-                      interactionOptions: const InteractionOptions(
-                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                        enableMultiFingerGestureRace: true,
-                        pinchZoomThreshold: 0.3,
-                        pinchMoveThreshold: 30.0,
-                      ),
-                      onMapReady: () {
-                        _mapReady = true;
-                        _fitToRadius();
-                      },
-                      onPositionChanged: (camera, hasGesture) {
-                        if (hasGesture) _cameraAnimController.stop();
-                        if ((camera.zoom - _lastClusterZoom).abs() >= 0.4) {
-                          _lastClusterZoom = camera.zoom;
-                          _buildMarkers(animate: false);
-                        }
-                      },
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          _screenSize = constraints.biggest;
+          return Stack(
+            children: [
+              // ── Layer 1: Map or loading shimmer ────────────────────────────
+              if (_locationLoading)
+                _buildMapShimmer()
+              else
+                RepaintBoundary(
+                  child: MapLibreMap(
+                    styleString: "assets/map_style.json",
+                    initialCameraPosition: CameraPosition(
+                      target: _searchCenter,
+                      zoom: 13.0,
                     ),
-                    children: [
-                      TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.bakhli.app',
-                        maxNativeZoom: 18,
-                        keepBuffer: 2,
-                        panBuffer: 1,
-                        tileProvider: _CachedTileProvider(),
-                        tileUpdateTransformer:
-                            TileUpdateTransformers.throttle(const Duration(milliseconds: 150)),
-                        tileBuilder: (context, tileWidget, tile) => tile.readyToDisplay
-                            ? tileWidget
-                            : ColoredBox(color: AppColors.shimmerBase),
-                      ),
-                      if (_userLocation != null || _selectedDistrict != null)
-                        CircleLayer(circles: [
-                          CircleMarker(
-                            point: _searchCenter,
-                            radius: _radius * 1000,
-                            useRadiusInMeter: true,
-                            color: const Color(0xFF10B981).withValues(alpha: 0.08),
-                            borderColor: const Color(0xFF10B981).withValues(alpha: 0.7),
-                            borderStrokeWidth: 2,
-                          ),
-                        ]),
-                      MarkerLayer(markers: _markers.take(_revealedCount).toList()),
-                    ],
+                    minMaxZoomPreference: const MinMaxZoomPreference(8, 18),
+                    compassEnabled: false,
+                    rotateGesturesEnabled: false,
+                    tiltGesturesEnabled: false,
+                    myLocationEnabled: false,
+                    trackCameraPosition: true,
+                    attributionButtonMargins: const Point(-200.0, 0.0),
+                    onMapCreated: (MapLibreMapController ctrl) {
+                      _mapController = ctrl;
+                    },
+                    onStyleLoadedCallback: _onStyleLoaded,
+                    onCameraMove: (CameraPosition pos) {
+                      _currentZoom = pos.zoom;
+                      _cameraCenter = pos.target;
+                      if (mounted && _pinsVisible) setState(() => _pinsVisible = false);
+                    },
+                    onCameraIdle: () {
+                      if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
+                        _lastClusterZoom = _currentZoom;
+                        _buildMarkers(animate: false);
+                      } else {
+                        _updateMarkerScreenPositions();
+                      }
+                      if (mounted && !_pinsVisible) setState(() => _pinsVisible = true);
+                    },
                   ),
                 ),
 
-          // Header
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF10B981), Color(0xFF059669)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+              // ── Layer 2: Flutter widget marker overlay ──────────────────────
+              if (!_locationLoading && _mapReady)
+                IgnorePointer(
+                  ignoring: !_pinsVisible,
+                  child: AnimatedOpacity(
+                    opacity: _pinsVisible ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 100),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: _markerData
+                          .take(_revealedCount)
+                          .where((d) => d.screenPosition != null)
+                          .map((d) => Positioned(
+                                left: d.screenPosition!.dx - d.width / 2,
+                                top: d.screenPosition!.dy - d.height / 2,
+                                width: d.width,
+                                height: d.height,
+                                child: d.widget,
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                ),
+
+              // ── Header ──────────────────────────────────────────────────────
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF10B981), Color(0xFF059669)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                      child: Column(children: [
+                        Row(children: [
+                          const Icon(Icons.terrain_rounded, color: Colors.white, size: 22),
+                          const SizedBox(width: 6),
+                          const Text('Explore Plots',
+                              style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white)),
+                          const Spacer(),
+                          _buildCityDropdown(),
+                        ]),
+                        const SizedBox(height: 12),
+                        _buildRadiusChips(),
+                      ]),
+                    ),
+                  ),
                 ),
               ),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                  child: Column(children: [
-                    Row(children: [
-                      const Icon(Icons.terrain_rounded, color: Colors.white, size: 22),
-                      const SizedBox(width: 6),
-                      const Text('Explore Plots',
-                          style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white)),
-                      const Spacer(),
-                      _buildCityDropdown(),
-                    ]),
-                    const SizedBox(height: 12),
-                    _buildRadiusChips(),
-                  ]),
-                ),
+
+              // ── Filter panel ────────────────────────────────────────────────
+              Positioned(
+                bottom: 20,
+                left: 20,
+                right: 20,
+                child: _buildFilterPanel(),
               ),
-            ),
-          ),
 
-          // Filter panel
-          Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
-            child: _buildFilterPanel(),
-          ),
-
-          // Location FAB
-          Positioned(
-            bottom: 145,
-            right: 20,
-            child: _buildLocationFab(),
-          ),
-        ],
+              // ── Location FAB ────────────────────────────────────────────────
+              Positioned(
+                bottom: 145,
+                right: 20,
+                child: _buildLocationFab(),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -996,7 +1057,24 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 }
 
-// --- Data Classes ---
+// ── Data classes ──────────────────────────────────────────────────────────────
+
+class _MapMarkerData {
+  final LatLng position;
+  final Widget widget;
+  final double width;
+  final double height;
+  final bool isUser;
+  Offset? screenPosition;
+
+  _MapMarkerData({
+    required this.position,
+    required this.widget,
+    required this.width,
+    required this.height,
+    this.isUser = false,
+  });
+}
 
 class _PlotCluster {
   final List<NearbyPlotModel> plots;
@@ -1010,7 +1088,7 @@ class _PlotCluster {
   NearbyPlotModel get representative => plots.first;
 }
 
-// --- Shared Widgets ---
+// ── Animation widgets ─────────────────────────────────────────────────────────
 
 class _AnimatedPin extends StatefulWidget {
   final Widget child;
@@ -1080,17 +1158,7 @@ class _RadarPainter extends CustomPainter {
   bool shouldRepaint(_RadarPainter old) => old.progress != progress;
 }
 
-class _CachedTileProvider extends TileProvider {
-  @override
-  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) {
-    return CachedNetworkImageProvider(
-      getTileUrl(coordinates, options),
-      headers: const {'User-Agent': 'Bakhli/1.0 (Flutter; com.bakhli.app)'},
-    );
-  }
-}
-
-// --- Bottom Sheet ---
+// ── Bottom Sheet ──────────────────────────────────────────────────────────────
 
 class _PlotBottomSheet extends StatelessWidget {
   final NearbyPlotModel plot;

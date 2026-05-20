@@ -21,8 +21,6 @@ dependencies:
   flutter_secure_storage: ^10.2.0
 
   # Maps
-  flutter_map: ^8.3.0
-  latlong2: ^0.9.1
   maplibre_gl: ^0.26.0
 
   # Location
