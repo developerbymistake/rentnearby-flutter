@@ -470,6 +470,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
       }
     }
     if (_step == 1) {
+      final loc = _selectedLocation ?? _userLocation;
+      if (loc == null) {
+        AppToast.error('Waiting for GPS location. Please enable location and try again.');
+        return;
+      }
+      if (_selectedLocation == null) setState(() => _selectedLocation = _userLocation);
+    }
+    if (_step == 2) {
       if (_selectedDistrictId == null) {
         AppToast.error('Please select a district to continue');
         return;
@@ -480,10 +488,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
         return;
       }
     }
-    if (_step < 2) {
+    if (_step < 3) {
       setState(() => _step++);
-      // Auto-fetch address when entering Step 1 (location step)
-      if (_step == 1 && _addressCtrl.text.trim().isEmpty && _selectedLocation != null) {
+      if (_step == 2 && _addressCtrl.text.trim().isEmpty && _selectedLocation != null) {
         _reverseGeocode(_selectedLocation!);
       }
     } else {
@@ -794,7 +801,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
             Expanded(child: Container(height: 2, color: _step >= 1 ? AppColors.primary : AppColors.divider)),
             _stepDot(1, 'Location'),
             Expanded(child: Container(height: 2, color: _step >= 2 ? AppColors.primary : AppColors.divider)),
-            _stepDot(2, 'Photos'),
+            _stepDot(2, 'Address'),
+            Expanded(child: Container(height: 2, color: _step >= 3 ? AppColors.primary : AppColors.divider)),
+            _stepDot(3, 'Photos'),
           ]),
         ),
 
@@ -805,7 +814,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
               position: Tween<Offset>(begin: const Offset(0.08, 0), end: Offset.zero).animate(anim),
               child: FadeTransition(opacity: anim, child: child),
             ),
-            child: _step == 0 ? _detailsStep() : _step == 1 ? _locationStep() : _photosStep(),
+            child: _step == 0 ? _detailsStep() : _step == 1 ? _locationStep() : _step == 2 ? _addressStep() : _photosStep(),
           ),
         ),
 
@@ -831,11 +840,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
               flex: 2,
               child: Obx(() {
                 final isButtonDisabled = _ctrl.isLoading.value ||
-                    (_step == 1 && (_isGeocoding || _addressCtrl.text.trim().isEmpty));
+                    (_step == 2 && (_isGeocoding || _selectedDistrictId == null || _addressCtrl.text.trim().isEmpty));
                 return GradientButton(
                   onPressed: isButtonDisabled ? null : _handleNext,
                   isLoading: _ctrl.isLoading.value,
-                  label: _step == 0 ? 'Next: Location' : _step == 1 ? 'Next: Photos' : 'Post Listing',
+                  label: _step == 0 ? 'Next: Location' : _step == 1 ? 'Next: Address' : _step == 2 ? 'Next: Photos' : 'Post Listing',
                 );
               }),
             ),
@@ -959,15 +968,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
     ]),
   );
 
-  Widget _locationStep() => Column(
+  Widget _locationStep() => SingleChildScrollView(
     key: const ValueKey(1),
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        child: _sectionCard(
-          title: 'Pin Your Location *',
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    padding: const EdgeInsets.all(16),
+    child: _sectionCard(
+      title: 'Pin Your Location *',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (_locationBlocked) ...[
             Container(
               padding: const EdgeInsets.all(14),
@@ -1135,13 +1141,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 ),
               ]),
             ),
-        ]),
-        ),
-      ),
-      Expanded(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      ]),
+    ),
+  );
+
+  Widget _addressStep() => SingleChildScrollView(
+    key: const ValueKey(2),
+    padding: const EdgeInsets.all(16),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _sectionCard(
         title: 'District & City',
         child: Obx(() {
@@ -1207,10 +1214,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ),
         ),
       ),
-          ]),
-        ),
-      ),
-    ],
+    ]),
   );
 
   Widget _readOnlyField(IconData icon, String value) => Container(
@@ -1231,7 +1235,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   );
 
   Widget _photosStep() => SingleChildScrollView(
-    key: const ValueKey(2),
+    key: const ValueKey(3),
     padding: const EdgeInsets.all(16),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _sectionCard(
