@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -38,7 +36,8 @@ class _ExploreScreenState extends State<ExploreScreen>
   static const _sourceId = 'listings-source';
   static const _clusterLayerId = 'cluster-circles';
   static const _clusterCountLayerId = 'cluster-count';
-  static const _pinLayerId = 'listing-pins';
+  static const _pinBgLayerId = 'listing-pin-bg';
+  static const _pinTextLayerId = 'listing-pin-text';
 
   // ── State ─────────────────────────────────────────────────────────────────
   final _listingCtrl = Get.find<ListingController>();
@@ -396,31 +395,11 @@ class _ExploreScreenState extends State<ExploreScreen>
     _fitToRadius();
   }
 
-  // ── Badge image ───────────────────────────────────────────────────────────
-
-  Future<Uint8List> _createBadgeImage(Color color) async {
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(0, 0, 80, 30),
-        const Radius.circular(8),
-      ),
-      Paint()..color = color,
-    );
-    final img = await recorder.endRecording().toImage(80, 30);
-    final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
-    return bytes!.buffer.asUint8List();
-  }
-
   // ── Layer setup ───────────────────────────────────────────────────────────
 
   Future<void> _setupMapLayers() async {
     if (_mapController == null) return;
     try {
-      await _mapController!.addImage(
-          'pin-badge', await _createBadgeImage(AppColors.primary));
-
       await _mapController!.addSource(
         _sourceId,
         GeojsonSourceProperties(
@@ -458,24 +437,35 @@ class _ExploreScreenState extends State<ExploreScreen>
         filter: ['has', 'point_count'],
       );
 
+      await _mapController!.addCircleLayer(
+        _sourceId,
+        _pinBgLayerId,
+        CircleLayerProperties(
+          circleRadius: 18.0,
+          circleColor: '#1E88E5',
+          circleStrokeWidth: 1.5,
+          circleStrokeColor: '#FFFFFF',
+        ),
+        filter: ['!', ['has', 'point_count']],
+      );
+
       await _mapController!.addSymbolLayer(
         _sourceId,
-        _pinLayerId,
+        _pinTextLayerId,
         SymbolLayerProperties(
-          iconImage: 'pin-badge',
-          iconTextFit: 'both',
-          iconTextFitPadding: [5.0, 10.0, 5.0, 10.0],
           textField: '{label}',
-          textSize: 11.0,
+          textSize: 10.0,
           textColor: '#FFFFFF',
-          iconAllowOverlap: false,
-          textAllowOverlap: false,
+          textAllowOverlap: true,
+          iconAllowOverlap: true,
         ),
         filter: ['!', ['has', 'point_count']],
       );
 
       _layersReady = true;
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('_setupMapLayers error: $e');
+    }
   }
 
   // ── GeoJSON update ────────────────────────────────────────────────────────
@@ -529,7 +519,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Future<void> _onMapTap(Point<double> point, LatLng latLng) async {
     if (_mapController == null || !_layersReady) return;
     final features = await _mapController!.queryRenderedFeatures(
-        point, [_clusterLayerId, _pinLayerId], null);
+        point, [_clusterLayerId, _pinBgLayerId], null);
     if (features.isEmpty) return;
     final props = Map<String, dynamic>.from(
         (features.first['properties'] as Map?) ?? {});
