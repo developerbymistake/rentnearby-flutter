@@ -19,6 +19,7 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   late Razorpay _razorpay;
   bool _isLoading = false;
+  bool _isVerifying = false;
   bool _razorpayOpened = false;
   bool _payNowDisabled = false;
   Map<String, dynamic>? _order;
@@ -131,6 +132,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   void _onSuccess(PaymentSuccessResponse response) async {
     if (!_razorpayOpened) return;
+    if (mounted) setState(() => _isVerifying = true);
     try {
       final orderId = response.orderId;
       final paymentId = response.paymentId;
@@ -163,6 +165,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
 
       if (mounted) {
+        setState(() => _isVerifying = false);
         Get.dialog(
           PaymentSuccessDialog(
             planType: _planType,
@@ -177,6 +180,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         );
       }
     } catch (e) {
+      if (mounted) setState(() => _isVerifying = false);
       AppToast.error('Payment verification failed: $e');
     }
   }
@@ -320,25 +324,52 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _payNowDisabled ? null : _openRazorpay,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text(
-                      'Pay Now',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
+                if (_isVerifying)
+                  Column(
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Verifying your payment...',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          color: AppColors.textMedium,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Please wait, do not close this screen.',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          color: AppColors.textLight,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  )
+                else
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _payNowDisabled ? null : _openRazorpay,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text(
+                        'Pay Now',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins',
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
               const SizedBox(height: 24),
               TextButton(

@@ -248,7 +248,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             const SizedBox(height: 8),
             Text(
               hasPlan
-                  ? 'Your current plan allows up to $maxRooms room${maxRooms > 1 ? 's' : ''}. Delete an existing room to add a new one, or contact us to upgrade.'
+                  ? 'Your current plan allows up to $maxRooms room${maxRooms > 1 ? 's' : ''}. Delete an existing room to add a new one.'
                   : 'Free plan allows 1 room. Delete your existing room to replace it, or go live with a Premium plan to add more.',
               style: const TextStyle(
                 fontFamily: 'Poppins',
@@ -259,49 +259,22 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.list_alt_rounded, size: 16),
-                    label: const Text('Manage Rooms',
-                        style: TextStyle(
-                            fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.list_alt_rounded, size: 16),
+                label: const Text('Manage Rooms',
+                    style: TextStyle(
+                        fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      final uri = Uri.parse(
-                          'https://wa.me/917060023511?text=Hi%2C%20I%20need%20help%20with%20my%20room%20listing%20on%20Bakhli.');
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
-                      }
-                    },
-                    icon: const Icon(Icons.headset_mic_rounded, size: 16),
-                    label: const Text('Contact Us',
-                        style: TextStyle(
-                            fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),

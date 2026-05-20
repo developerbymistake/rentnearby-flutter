@@ -46,6 +46,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   bool _locationBlocked = false; // permission denied forever OR GPS service off
   bool _mapReady = false;
   bool _cameraInitialized = false;
+  bool _pinsVisible = true;
   bool _isGeocoding = false;
   bool _isUploading = false;
   int _uploadCurrent = 0;
@@ -1076,9 +1077,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       onCameraMove: (pos) {
                         _currentZoom = pos.zoom;
                         _cameraCenter = pos.target;
+                        if (mounted && _pinsVisible) setState(() => _pinsVisible = false);
                       },
                       onCameraIdle: () {
-                        if (mounted) setState(() {});
+                        if (mounted && !_pinsVisible) setState(() => _pinsVisible = true);
                       },
                       onMapClick: (_, latLng) {
                         if (_userLocation != null) {
@@ -1102,18 +1104,24 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         return Positioned(
                           left: screen.dx - 20,
                           top:  screen.dy - 46,
-                          child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            Container(
-                              width: 36, height: 36,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                                boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 6, offset: const Offset(0, 3))],
-                              ),
-                              child: const Icon(Icons.home_rounded, color: Colors.white, size: 18),
+                          child: IgnorePointer(
+                            child: AnimatedOpacity(
+                              opacity: _pinsVisible ? 1.0 : 0.0,
+                              duration: const Duration(milliseconds: 100),
+                              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                Container(
+                                  width: 36, height: 36,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 6, offset: const Offset(0, 3))],
+                                  ),
+                                  child: const Icon(Icons.home_rounded, color: Colors.white, size: 18),
+                                ),
+                                Container(width: 2, height: 10, color: AppColors.primary),
+                              ]),
                             ),
-                            Container(width: 2, height: 10, color: AppColors.primary),
-                          ]),
+                          ),
                         );
                       }),
                     Positioned(
