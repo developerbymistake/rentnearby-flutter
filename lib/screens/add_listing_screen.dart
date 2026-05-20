@@ -67,7 +67,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
   @override
   void initState() {
     super.initState();
+    _addressCtrl.addListener(_onAddressChanged);
     _fetchUserLocation();
+  }
+
+  void _onAddressChanged() {
+    if (mounted) setState(() {});
   }
 
 
@@ -267,6 +272,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _nominatimTimer?.cancel();
     _descCtrl.dispose();
     _priceMonthlyCtrl.dispose();
+    _addressCtrl.removeListener(_onAddressChanged);
     _addressCtrl.dispose();
     _priceFocusNode.dispose();
     _addressFocusNode.dispose();
@@ -968,7 +974,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     ]),
   );
 
-  Widget _locationStep() => SingleChildScrollView(
+  Widget _locationStep() => Padding(
     key: const ValueKey(1),
     padding: const EdgeInsets.all(16),
     child: _sectionCard(

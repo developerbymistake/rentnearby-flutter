@@ -2,12 +2,11 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:dio/dio.dart' as http_dio;
 import 'dart:io';
@@ -58,7 +57,14 @@ class AddPlotScreen extends StatefulWidget {
 
 class _AddPlotScreenState extends State<AddPlotScreen> {
   final _ctrl = Get.find<PlotController>();
-  final _mapController = MapController();
+  MapLibreMapController? _mapController;
+  Line?   _nativeCircleGlow;
+  Line?   _nativeCircleLine;
+  Circle? _nativeUserDot;
+  Circle? _nativePin;
+  double  _currentZoom = 14.0;
+  Size    _mapSize = Size.zero;
+  double  _minZoom = 13.0;
   final _areaCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
@@ -73,7 +79,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   LatLng? _userLocation;
   bool _locationBlocked = false;
   bool _mapReady = false;
-  bool _animateCancelled = false;
+  bool _cameraInitialized = false;
   bool _isGeocoding = false;
   bool _isUploading = false;
   int _uploadCurrent = 0;
@@ -97,7 +103,12 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   void initState() {
     super.initState();
     _areaCtrl.addListener(_updateSqftPreview);
+    _addressCtrl.addListener(_onAddressChanged);
     _fetchUserLocation();
+  }
+
+  void _onAddressChanged() {
+    if (mounted) setState(() {});
   }
 
   void _updateSqftPreview() {
@@ -148,14 +159,22 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       if (!mounted) return;
       final loc = LatLng(pos.latitude, pos.longitude);
       final addressWasEmpty = _addressCtrl.text.trim().isEmpty;
+      bool pinMoved = false;
       setState(() {
         _userLocation = loc;
         if (_selectedLocation == null ||
             (_selectedLocation!.latitude == lastKnown?.latitude &&
                 _selectedLocation!.longitude == lastKnown?.longitude)) {
           _selectedLocation = loc;
+          pinMoved = true;
         }
       });
+      if (_mapReady) {
+        if (_nativeUserDot == null) _initNativeUserDot();
+        else _updateNativeUserDot();
+        if (_nativeCircleLine == null) _initNativeCircle();
+        if (pinMoved && _selectedLocation != null) _setNativePin(_selectedLocation!);
+      }
 
       if (addressWasEmpty && _selectedLocation != null) _reverseGeocode(_selectedLocation!);
 
@@ -172,70 +191,119 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
         }
       }
 
-      if (_mapReady) _animateTo(loc, 15.0);
+      if (_mapReady && !_cameraInitialized) {
+        _cameraInitialized = true;
+        _animateTo(loc, 14.0);
+      }
     } catch (_) {}
   }
 
-  LatLngBounds? _districtBounds() {
-    final d = _ctrl.districts.firstWhereOrNull((d) => d.id == _selectedDistrictId);
-    if (d?.latitude == null || d?.longitude == null) return null;
-    final points = <LatLng>[LatLng(d!.latitude!, d.longitude!)];
-    for (final city in _ctrl.cities) {
-      if (city.latitude != null && city.longitude != null) {
-        points.add(LatLng(city.latitude!, city.longitude!));
-      }
-    }
-    var minLat = points.map((p) => p.latitude).reduce(min);
-    var maxLat = points.map((p) => p.latitude).reduce(max);
-    var minLng = points.map((p) => p.longitude).reduce(min);
-    var maxLng = points.map((p) => p.longitude).reduce(max);
-    const minSpan = 0.5;
-    if (maxLat - minLat < minSpan) {
-      final mid = (maxLat + minLat) / 2;
-      minLat = mid - minSpan / 2;
-      maxLat = mid + minSpan / 2;
-    }
-    if (maxLng - minLng < minSpan) {
-      final mid = (maxLng + minLng) / 2;
-      minLng = mid - minSpan / 2;
-      maxLng = mid + minSpan / 2;
-    }
-    const pad = 0.2;
-    return LatLngBounds(
-        LatLng(minLat - pad, minLng - pad), LatLng(maxLat + pad, maxLng + pad));
+  void _animateTo(LatLng target, double zoom) {
+    if (!_mapReady || _mapController == null || !mounted) return;
+    _mapController!.animateCamera(CameraUpdate.newLatLngZoom(target, zoom));
   }
 
-  CameraConstraint get _cameraConstraint {
-    final b = _districtBounds();
-    return b != null
-        ? CameraConstraint.containCenter(bounds: b)
-        : const CameraConstraint.unconstrained();
+  Future<void> _onStyleLoaded() async {
+    _mapReady = true;
+    if (!mounted) return;
+    if (_userLocation != null && _mapSize.width > 0) {
+      _minZoom = _calcMinZoom(0.5, _userLocation!.latitude, _mapSize.width);
+    }
+    _initNativeCircle();
+    _initNativeUserDot();
+    if (_selectedLocation != null) await _setNativePin(_selectedLocation!);
+    if (_userLocation != null && !_cameraInitialized) {
+      _cameraInitialized = true;
+      _animateTo(_userLocation!, 14.0);
+    }
+    if (mounted) setState(() {});
   }
 
-  Future<void> _animateTo(LatLng target, double zoom) async {
-    if (!_mapReady || !mounted) return;
-    _animateCancelled = false;
-    final startCenter = _mapController.camera.center;
-    final startZoom = _mapController.camera.zoom;
-    const frames = 24;
-    for (var i = 1; i <= frames; i++) {
-      if (!mounted || _animateCancelled) return;
-      final t = Curves.easeInOut.transform(i / frames);
-      _mapController.move(
-        LatLng(
-          startCenter.latitude + (target.latitude - startCenter.latitude) * t,
-          startCenter.longitude + (target.longitude - startCenter.longitude) * t,
-        ),
-        startZoom + (zoom - startZoom) * t,
-      );
-      await Future.delayed(const Duration(milliseconds: 16));
+  Future<void> _initNativeCircle() async {
+    final ctrl = _mapController;
+    final loc = _userLocation;
+    if (ctrl == null || loc == null || !mounted) return;
+    final points = _circlePolygonPoints(loc, 0.5);
+    _nativeCircleGlow = await ctrl.addLine(LineOptions(
+      geometry: points,
+      lineColor: '#10B981',
+      lineWidth: 10.0,
+      lineOpacity: 0.20,
+      lineBlur: 4.0,
+    ));
+    _nativeCircleLine = await ctrl.addLine(LineOptions(
+      geometry: points,
+      lineColor: '#10B981',
+      lineWidth: 2.5,
+      lineOpacity: 0.90,
+    ));
+  }
+
+  Future<void> _initNativeUserDot() async {
+    final ctrl = _mapController;
+    final loc = _userLocation;
+    if (ctrl == null || loc == null || !mounted) return;
+    _nativeUserDot = await ctrl.addCircle(CircleOptions(
+      geometry: loc,
+      circleRadius: 8.0,
+      circleColor: '#E53935',
+      circleOpacity: 1.0,
+      circleStrokeColor: '#FFFFFF',
+      circleStrokeWidth: 2.5,
+    ));
+  }
+
+  void _updateNativeUserDot() {
+    final ctrl = _mapController;
+    final dot = _nativeUserDot;
+    final loc = _userLocation;
+    if (ctrl == null || dot == null || loc == null) return;
+    ctrl.updateCircle(dot, CircleOptions(geometry: loc));
+  }
+
+  double _calcMinZoom(double radiusKm, double lat, double screenWidthPx) {
+    const earthCircumference = 2 * pi * 6378137.0;
+    const tileSize = 512.0;
+    final metersPerPxAtZ0 = earthCircumference * cos(lat * pi / 180) / tileSize;
+    final targetMetersPerPx = (radiusKm * 1000 * 2) / (screenWidthPx * 0.85);
+    final zoom = log(metersPerPxAtZ0 / targetMetersPerPx) / log(2);
+    return zoom.clamp(11.0, 15.0);
+  }
+
+  Future<void> _setNativePin(LatLng latLng) async {
+    final ctrl = _mapController;
+    if (ctrl == null || !mounted) return;
+    if (_nativePin != null) {
+      await ctrl.updateCircle(_nativePin!, CircleOptions(geometry: latLng));
+    } else {
+      _nativePin = await ctrl.addCircle(CircleOptions(
+        geometry: latLng,
+        circleRadius: 12.0,
+        circleColor: '#10B981',
+        circleOpacity: 1.0,
+        circleStrokeColor: '#FFFFFF',
+        circleStrokeWidth: 2.5,
+      ));
     }
+  }
+
+  static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
+    const steps = 128;
+    const earthRadius = 6378137.0;
+    final latRad = center.latitude * pi / 180;
+    return List.generate(steps + 1, (i) {
+      final angle = 2 * pi * i / steps;
+      final dLat = (radiusKm * 1000 * cos(angle)) / earthRadius * (180 / pi);
+      final dLng = (radiusKm * 1000 * sin(angle)) / (earthRadius * cos(latRad)) * (180 / pi);
+      return LatLng(center.latitude + dLat, center.longitude + dLng);
+    });
   }
 
   @override
   void dispose() {
     _nominatimTimer?.cancel();
     _areaCtrl.removeListener(_updateSqftPreview);
+    _addressCtrl.removeListener(_onAddressChanged);
     _areaCtrl.dispose();
     _descCtrl.dispose();
     _addressCtrl.dispose();
@@ -483,6 +551,14 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       }
     }
     if (_step == 1) {
+      final loc = _selectedLocation ?? _userLocation;
+      if (loc == null) {
+        AppToast.error('Waiting for GPS location. Please enable location and try again.');
+        return;
+      }
+      if (_selectedLocation == null) setState(() => _selectedLocation = _userLocation);
+    }
+    if (_step == 2) {
       if (_selectedDistrictId == null) {
         AppToast.error('Please select a district to continue');
         return;
@@ -493,9 +569,9 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
         return;
       }
     }
-    if (_step < 2) {
+    if (_step < 3) {
       setState(() => _step++);
-      if (_step == 1 && _addressCtrl.text.trim().isEmpty && _selectedLocation != null) {
+      if (_step == 2 && _addressCtrl.text.trim().isEmpty && _selectedLocation != null) {
         _reverseGeocode(_selectedLocation!);
       }
     } else {
@@ -844,20 +920,12 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                 child: Row(children: [
                   _stepDot(0, 'Details'),
-                  Expanded(
-                      child: Container(
-                          height: 2,
-                          color: _step >= 1
-                              ? const Color(0xFF10B981)
-                              : AppColors.divider)),
+                  Expanded(child: Container(height: 2, color: _step >= 1 ? const Color(0xFF10B981) : AppColors.divider)),
                   _stepDot(1, 'Location'),
-                  Expanded(
-                      child: Container(
-                          height: 2,
-                          color: _step >= 2
-                              ? const Color(0xFF10B981)
-                              : AppColors.divider)),
-                  _stepDot(2, 'Photos'),
+                  Expanded(child: Container(height: 2, color: _step >= 2 ? const Color(0xFF10B981) : AppColors.divider)),
+                  _stepDot(2, 'Address'),
+                  Expanded(child: Container(height: 2, color: _step >= 3 ? const Color(0xFF10B981) : AppColors.divider)),
+                  _stepDot(3, 'Photos'),
                 ]),
               ),
 
@@ -870,11 +938,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                         .animate(anim),
                     child: FadeTransition(opacity: anim, child: child),
                   ),
-                  child: _step == 0
-                      ? _detailsStep()
-                      : _step == 1
-                          ? _locationStep()
-                          : _photosStep(),
+                  child: _step == 0 ? _detailsStep() : _step == 1 ? _locationStep() : _step == 2 ? _addressStep() : _photosStep(),
                 ),
               ),
 
@@ -906,17 +970,11 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                     flex: 2,
                     child: Obx(() {
                       final isButtonDisabled = _ctrl.isLoading.value ||
-                          (_step == 1 &&
-                              (_isGeocoding ||
-                                  _addressCtrl.text.trim().isEmpty));
+                          (_step == 2 && (_isGeocoding || _selectedDistrictId == null || _addressCtrl.text.trim().isEmpty));
                       return GradientButton(
                         onPressed: isButtonDisabled ? null : _handleNext,
                         isLoading: _ctrl.isLoading.value,
-                        label: _step == 0
-                            ? 'Next: Location'
-                            : _step == 1
-                                ? 'Next: Photos'
-                                : 'Post Plot',
+                        label: _step == 0 ? 'Next: Location' : _step == 1 ? 'Next: Address' : _step == 2 ? 'Next: Photos' : 'Post Plot',
                       );
                     }),
                   ),
@@ -1130,411 +1188,241 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
         ]),
       );
 
-  Widget _locationStep() => SingleChildScrollView(
-        key: const ValueKey(1),
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _sectionCard(
-            title: 'Pin Your Plot Location *',
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (_locationBlocked) ...[
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
-                  ),
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Icon(Icons.location_off_rounded,
-                        color: AppColors.error, size: 18),
+  Widget _locationStep() => Padding(
+    key: const ValueKey(1),
+    padding: const EdgeInsets.all(16),
+    child: _sectionCard(
+      title: 'Pin Your Plot Location *',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (_locationBlocked) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.error.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
+            ),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.location_off_rounded, color: AppColors.error, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Location access required',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.error)),
+                  const SizedBox(height: 4),
+                  const Text('Please enable GPS and grant location permission.',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5)),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    GestureDetector(
+                      onTap: () async {
+                        await Geolocator.openLocationSettings();
+                        if (mounted) setState(() => _locationBlocked = false);
+                        _fetchUserLocation();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(color: const Color(0xFF10B981), borderRadius: BorderRadius.circular(8)),
+                        child: const Text('Enable GPS',
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text('Location access required',
-                            style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.error)),
-                        const SizedBox(height: 4),
-                        const Text('Please enable GPS and grant location permission.',
-                            style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 12,
-                                color: AppColors.textMedium,
-                                height: 1.5)),
-                        const SizedBox(height: 10),
-                        Row(children: [
-                          GestureDetector(
-                            onTap: () async {
-                              await Geolocator.openLocationSettings();
-                              if (mounted) setState(() => _locationBlocked = false);
-                              _fetchUserLocation();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF10B981),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text('Enable GPS',
-                                  style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white)),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          GestureDetector(
-                            onTap: () async {
-                              await Geolocator.openAppSettings();
-                              if (mounted) setState(() => _locationBlocked = false);
-                              _fetchUserLocation();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: const Color(0xFF10B981)),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text('App Settings',
-                                  style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF10B981))),
-                            ),
-                          ),
-                        ]),
-                      ]),
+                    GestureDetector(
+                      onTap: () async {
+                        await Geolocator.openAppSettings();
+                        if (mounted) setState(() => _locationBlocked = false);
+                        _fetchUserLocation();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(border: Border.all(color: const Color(0xFF10B981)), borderRadius: BorderRadius.circular(8)),
+                        child: const Text('App Settings',
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF10B981))),
+                      ),
                     ),
                   ]),
-                ),
-                const SizedBox(height: 12),
-              ] else
-                Row(children: [
-                  const Icon(Icons.info_outline_rounded,
-                      color: AppColors.primaryLight, size: 15),
-                  const SizedBox(width: 6),
-                  Expanded(
-                      child: Text(
-                    _userLocation != null
-                        ? (_selectedLocation != null
-                            ? 'Pinned — tap inside the circle to adjust'
-                            : 'Tap inside the 500 m circle to pin your plot')
-                        : 'Waiting for your GPS location...',
-                    style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        color: AppColors.textLight),
-                  )),
                 ]),
-              const SizedBox(height: 12),
-              if (_userLocation == null) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    height: 280,
-                    color: AppColors.surface,
-                    child: const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(
-                              color: Color(0xFF10B981), strokeWidth: 2),
-                          SizedBox(height: 14),
-                          Text('Getting your location...',
-                              style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 13,
-                                  color: AppColors.textLight)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ] else
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Stack(children: [
-                    SizedBox(
-                      height: 280,
-                      child: FlutterMap(
-                        mapController: _mapController,
-                        options: MapOptions(
-                          initialCenter: _userLocation!,
-                          initialZoom: 15.0,
-                          minZoom: 13.0,
-                          maxZoom: 18,
-                          cameraConstraint: _cameraConstraint,
-                          interactionOptions: const InteractionOptions(
-                            flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                            enableMultiFingerGestureRace: true,
-                            pinchZoomThreshold: 0.3,
-                            pinchMoveThreshold: 30.0,
-                          ),
-                          onMapReady: () => _mapReady = true,
-                          onPositionChanged: (_, hasGesture) {
-                            if (hasGesture) _animateCancelled = true;
-                          },
-                          onTap: (_, pos) {
-                            if (_userLocation != null) {
-                              final distM = Geolocator.distanceBetween(
-                                _userLocation!.latitude,
-                                _userLocation!.longitude,
-                                pos.latitude,
-                                pos.longitude,
-                              );
-                              if (distM > 500) {
-                                AppToast.warning(
-                                    'You can only pin within 500 m of your current location');
-                                return;
-                              }
-                            }
-                            setState(() => _selectedLocation = pos);
-                            _reverseGeocode(pos);
-                          },
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.bakhli.app',
-                            maxNativeZoom: 18,
-                            keepBuffer: 2,
-                            panBuffer: 1,
-                            tileUpdateTransformer:
-                                TileUpdateTransformers.throttle(
-                                    const Duration(milliseconds: 150)),
-                          ),
-                          if (_userLocation != null)
-                            CircleLayer(circles: [
-                              CircleMarker(
-                                point: _userLocation!,
-                                radius: 500,
-                                useRadiusInMeter: true,
-                                color: const Color(0xFF10B981)
-                                    .withValues(alpha: 0.08),
-                                borderColor: const Color(0xFF10B981)
-                                    .withValues(alpha: 0.6),
-                                borderStrokeWidth: 1.5,
-                              ),
-                            ]),
-                          MarkerLayer(markers: [
-                            if (_userLocation != null)
-                              Marker(
-                                point: _userLocation!,
-                                width: 18,
-                                height: 18,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE53935),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: Colors.white, width: 2.5),
-                                    boxShadow: [
-                                      BoxShadow(
-                                          color: const Color(0xFFE53935)
-                                              .withValues(alpha: 0.4),
-                                          blurRadius: 6,
-                                          spreadRadius: 2)
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            if (_selectedLocation != null)
-                              Marker(
-                                point: _selectedLocation!,
-                                width: 40,
-                                height: 48,
-                                child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 36,
-                                        height: 36,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF10B981),
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                                color: const Color(0xFF10B981)
-                                                    .withValues(alpha: 0.4),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 3))
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                            Icons.terrain_rounded,
-                                            color: Colors.white,
-                                            size: 18),
-                                      ),
-                                      Container(
-                                          width: 2,
-                                          height: 10,
-                                          color: const Color(0xFF10B981)),
-                                    ]),
-                              ),
-                          ]),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 10,
-                      right: 10,
-                      child: GestureDetector(
-                        onTap: () {
-                          if (_userLocation != null) _animateTo(_userLocation!, 15.0);
-                        },
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                  color: AppColors.shadow,
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2))
-                            ],
-                          ),
-                          child: const Icon(Iconsax.location,
-                              color: Color(0xFF10B981), size: 18),
-                        ),
-                      ),
-                    ),
-                  ]),
-                ),
-              if (_selectedLocation != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Row(children: [
-                    const Icon(Icons.check_circle_rounded,
-                        color: AppColors.success, size: 16),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${_selectedLocation!.latitude.toStringAsFixed(5)}, ${_selectedLocation!.longitude.toStringAsFixed(5)}',
-                      style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 12,
-                          color: AppColors.success,
-                          fontWeight: FontWeight.w500),
-                    ),
-                  ]),
-                ),
+              ),
             ]),
           ),
-
-          _sectionCard(
-            title: 'District & City',
-            child: Obx(() {
-              final gpsAvailable = _userLocation != null;
-              final districtName = _ctrl.districts
-                  .firstWhereOrNull((d) => d.id == _selectedDistrictId)
-                  ?.name;
-              final cityName = _ctrl.cities
-                  .firstWhereOrNull((c) => c.id == _selectedCityId)
-                  ?.name;
-              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('District *',
-                    style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textMedium)),
-                const SizedBox(height: 6),
-                if (gpsAvailable && districtName != null)
-                  _readOnlyField(Iconsax.location, districtName)
-                else
-                  DropdownButtonFormField<String>(
-                    key: ValueKey('district-${_ctrl.districts.length}'),
-                    initialValue: _selectedDistrictId,
-                    decoration: _inputDec('Select your district',
-                        prefixIcon: const Icon(Iconsax.location,
-                            color: AppColors.primaryLight, size: 18)),
-                    style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        color: AppColors.textDark),
-                    items: _ctrl.districts
-                        .map((d) => DropdownMenuItem(
-                            value: d.id,
-                            child: Text(d.name,
-                                style:
-                                    const TextStyle(fontFamily: 'Poppins'))))
-                        .toList(),
-                    onChanged: (v) {
-                      setState(() {
-                        _selectedDistrictId = v;
-                        _selectedCityId = null;
-                      });
-                      if (v != null) _ctrl.loadCities(v);
-                    },
-                  ),
-                const SizedBox(height: 16),
-                const Text('City / Area (Optional)',
-                    style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textMedium)),
-                const SizedBox(height: 6),
-                if (gpsAvailable && cityName != null)
-                  _readOnlyField(Iconsax.map, cityName)
-                else
-                  DropdownButtonFormField<String>(
-                    key: ValueKey(
-                        'city-$_selectedDistrictId-${_ctrl.cities.length}'),
-                    initialValue: _selectedCityId,
-                    decoration: _inputDec('Select city or area',
-                        prefixIcon: const Icon(Iconsax.map,
-                            color: AppColors.primaryLight, size: 18)),
-                    style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        color: AppColors.textDark),
-                    items: _ctrl.cities
-                        .map((c) => DropdownMenuItem(
-                            value: c.id,
-                            child: Text(c.name,
-                                style:
-                                    const TextStyle(fontFamily: 'Poppins'))))
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedCityId = v),
-                  ),
-              ]);
-            }),
-          ),
-
-          _sectionCard(
-            title: 'Address *',
-            child: TextFormField(
-              controller: _addressCtrl,
-              focusNode: _addressFocusNode,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-              decoration: _inputDec(
-                'Street, landmark, nearby place...',
-                prefixIcon: const Icon(Icons.terrain_rounded,
-                    color: AppColors.primaryLight, size: 18),
-              ).copyWith(
-                suffixIcon: _isGeocoding
-                    ? const Padding(
-                        padding: EdgeInsets.all(14),
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Color(0xFF10B981)),
-                        ),
-                      )
-                    : null,
+          const SizedBox(height: 12),
+        ] else
+        Row(children: [
+          const Icon(Icons.info_outline_rounded, color: AppColors.primaryLight, size: 15),
+          const SizedBox(width: 6),
+          Expanded(child: Text(
+            _userLocation != null
+                ? (_selectedLocation != null
+                    ? 'Pinned — tap inside the circle to adjust'
+                    : 'Tap inside the 500 m circle to pin your plot')
+                : 'Waiting for your GPS location...',
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+          )),
+        ]),
+        const SizedBox(height: 12),
+        if (_userLocation == null) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              height: 280,
+              color: AppColors.surface,
+              child: const Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  CircularProgressIndicator(color: Color(0xFF10B981), strokeWidth: 2),
+                  SizedBox(height: 14),
+                  Text('Getting your location...', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+                ]),
               ),
             ),
           ),
-        ]),
-      );
+        ] else
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              _mapSize = Size(constraints.maxWidth, 280);
+              return SizedBox(
+                height: 280,
+                child: Stack(children: [
+                  MapLibreMap(
+                    styleString: 'assets/map_style.json',
+                    initialCameraPosition: CameraPosition(
+                      target: _userLocation ?? const LatLng(30.3165, 78.0322),
+                      zoom: 14.0,
+                    ),
+                    compassEnabled: false,
+                    rotateGesturesEnabled: false,
+                    tiltGesturesEnabled: false,
+                    myLocationEnabled: false,
+                    trackCameraPosition: true,
+                    attributionButtonMargins: const Point(-200.0, 0.0),
+                    onMapCreated: (ctrl) => _mapController = ctrl,
+                    onStyleLoadedCallback: _onStyleLoaded,
+                    onCameraMove: (pos) { _currentZoom = pos.zoom; },
+                    onCameraIdle: () {
+                      if (_currentZoom < _minZoom && _mapController != null && mounted) {
+                        _mapController!.animateCamera(CameraUpdate.zoomTo(_minZoom));
+                      }
+                    },
+                    onMapClick: (_, latLng) {
+                      if (_userLocation != null) {
+                        final distM = Geolocator.distanceBetween(
+                          _userLocation!.latitude, _userLocation!.longitude,
+                          latLng.latitude, latLng.longitude,
+                        );
+                        if (distM > 500) {
+                          AppToast.warning('You can only pin within 500 m of your current location');
+                          return;
+                        }
+                      }
+                      setState(() => _selectedLocation = latLng);
+                      _setNativePin(latLng);
+                      _reverseGeocode(latLng);
+                    },
+                  ),
+                  Positioned(
+                    bottom: 10, right: 10,
+                    child: GestureDetector(
+                      onTap: () { if (_userLocation != null) _animateTo(_userLocation!, 15.0); },
+                      child: Container(
+                        width: 38, height: 38,
+                        decoration: BoxDecoration(
+                          color: Colors.white, shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+                        ),
+                        child: const Icon(Iconsax.location, color: Color(0xFF10B981), size: 18),
+                      ),
+                    ),
+                  ),
+                ]),
+              );
+            },
+          ),
+        ),
+        if (_selectedLocation != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Row(children: [
+              const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                '${_selectedLocation!.latitude.toStringAsFixed(5)}, ${_selectedLocation!.longitude.toStringAsFixed(5)}',
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w500),
+              ),
+            ]),
+          ),
+      ]),
+    ),
+  );
+
+  Widget _addressStep() => SingleChildScrollView(
+    key: const ValueKey(2),
+    padding: const EdgeInsets.all(16),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _sectionCard(
+        title: 'District & City',
+        child: Obx(() {
+          final gpsAvailable = _userLocation != null;
+          final districtName = _ctrl.districts.firstWhereOrNull((d) => d.id == _selectedDistrictId)?.name;
+          final cityName = _ctrl.cities.firstWhereOrNull((c) => c.id == _selectedCityId)?.name;
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('District *', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+            const SizedBox(height: 6),
+            if (gpsAvailable && districtName != null)
+              _readOnlyField(Iconsax.location, districtName)
+            else
+              DropdownButtonFormField<String>(
+                key: ValueKey('district-${_ctrl.districts.length}'),
+                initialValue: _selectedDistrictId,
+                decoration: _inputDec('Select your district', prefixIcon: const Icon(Iconsax.location, color: AppColors.primaryLight, size: 18)),
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
+                items: _ctrl.districts.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name, style: const TextStyle(fontFamily: 'Poppins')))).toList(),
+                onChanged: (v) {
+                  setState(() { _selectedDistrictId = v; _selectedCityId = null; });
+                  if (v != null) _ctrl.loadCities(v);
+                },
+              ),
+            const SizedBox(height: 16),
+            const Text('City / Area (Optional)', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+            const SizedBox(height: 6),
+            if (gpsAvailable && cityName != null)
+              _readOnlyField(Iconsax.map, cityName)
+            else
+              DropdownButtonFormField<String>(
+                key: ValueKey('city-$_selectedDistrictId-${_ctrl.cities.length}'),
+                initialValue: _selectedCityId,
+                decoration: _inputDec('Select city or area', prefixIcon: const Icon(Iconsax.map, color: AppColors.primaryLight, size: 18)),
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
+                items: _ctrl.cities.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: const TextStyle(fontFamily: 'Poppins')))).toList(),
+                onChanged: (v) => setState(() => _selectedCityId = v),
+              ),
+          ]);
+        }),
+      ),
+
+      _sectionCard(
+        title: 'Address *',
+        child: TextFormField(
+          controller: _addressCtrl,
+          focusNode: _addressFocusNode,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+          decoration: _inputDec(
+            'Street, landmark, nearby place...',
+            prefixIcon: const Icon(Icons.terrain_rounded, color: AppColors.primaryLight, size: 18),
+          ).copyWith(
+            suffixIcon: _isGeocoding
+                ? const Padding(
+                    padding: EdgeInsets.all(14),
+                    child: SizedBox(width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981))),
+                  )
+                : null,
+          ),
+        ),
+      ),
+    ]),
+  );
 
   Widget _readOnlyField(IconData icon, String value) => Container(
         width: double.infinity,
@@ -1558,7 +1446,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       );
 
   Widget _photosStep() => SingleChildScrollView(
-        key: const ValueKey(2),
+        key: const ValueKey(3),
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _sectionCard(
