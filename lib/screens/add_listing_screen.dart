@@ -25,7 +25,6 @@ class AddListingScreen extends StatefulWidget {
 class _AddListingScreenState extends State<AddListingScreen> {
   final _ctrl = Get.find<ListingController>();
   MapLibreMapController? _mapController;
-  Fill?   _nativeCircle;
   Line?   _nativeCircleGlow;
   Line?   _nativeCircleLine;
   Circle? _nativeUserDot;
@@ -134,7 +133,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       if (_mapReady) {
         if (_nativeUserDot == null) _initNativeUserDot();
         else _updateNativeUserDot();
-        if (_nativeCircle == null) _initNativeCircle();
+        if (_nativeCircleLine == null) _initNativeCircle();
         if (pinMoved && _selectedLocation != null) _setNativePin(_selectedLocation!);
       }
 
@@ -188,11 +187,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
     final loc = _userLocation;
     if (ctrl == null || loc == null || !mounted) return;
     final points = _circlePolygonPoints(loc, 0.5);
-    _nativeCircle = await ctrl.addFill(FillOptions(
-      geometry: [points],
-      fillColor: '#2f64ca',
-      fillOpacity: 0.10,
-    ));
     _nativeCircleGlow = await ctrl.addLine(LineOptions(
       geometry: points,
       lineColor: '#2f64ca',
@@ -248,7 +242,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _nativePin = await ctrl.addCircle(CircleOptions(
         geometry: latLng,
         circleRadius: 12.0,
-        circleColor: '#2F64CA',
+        circleColor: '#E53935',
         circleOpacity: 1.0,
         circleStrokeColor: '#FFFFFF',
         circleStrokeWidth: 2.5,
