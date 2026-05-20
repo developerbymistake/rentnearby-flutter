@@ -99,6 +99,7 @@ class PlotModel {
   final String? ownerName;
   final String? ownerPhone;
   final List<String> photos;
+  final DateTime? validUntil;
   final DateTime createdAt;
 
   PlotModel({
@@ -120,6 +121,7 @@ class PlotModel {
     this.ownerName,
     this.ownerPhone,
     required this.photos,
+    this.validUntil,
     required this.createdAt,
   });
 
@@ -144,6 +146,7 @@ class PlotModel {
         photos: (json['photos'] as List? ?? [])
             .map((p) => p.toString().startsWith('http') ? p.toString() : '${AppConstants.serverUrl}$p')
             .toList(),
+        validUntil: json['validUntil'] != null ? DateTime.parse(json['validUntil']) : null,
         createdAt: DateTime.parse(json['createdAt']),
       );
 

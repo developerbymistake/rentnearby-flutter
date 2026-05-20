@@ -8,6 +8,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../models/plot_model.dart';
 import '../utils/app_toast.dart';
+import '../widgets/payment_success_dialog.dart';
 
 const _kGreen = Color(0xFF10B981);
 const _kGreenDark = Color(0xFF059669);
@@ -126,6 +127,96 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
     );
   }
 
+  void _showPaymentDialog(String plotId) async {
+    final paymentEnabled = await _ctrl.isPlotPaymentFeatureEnabled();
+    if (!paymentEnabled) {
+      await _ctrl.toggleActive(plotId, false);
+      AppToast.success('Plot is now LIVE!');
+      return;
+    }
+
+    final membership = await _ctrl.getPlotMembershipStatus();
+    final hasMembership = membership != null && (membership['hasMembership'] == true);
+    final canActivate = (membership ?? {})['canActivate'] as bool? ?? false;
+
+    if (hasMembership && canActivate) {
+      // Existing membership with capacity — just toggle active directly
+      await _ctrl.toggleActive(plotId, false);
+      AppToast.success('Plot is now LIVE! 🎉');
+      return;
+    }
+
+    if (hasMembership && !canActivate) {
+      // At capacity — show upgrade plans
+      final plans = await _ctrl.getPlotPlans();
+      if (!mounted) return;
+      final paidPlans = plans.where((p) => (p['price'] as num? ?? 0) > 0).toList()
+        ..sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
+      final upgradePlan = paidPlans.isNotEmpty
+          ? paidPlans.first
+          : {'planType': 'PAID', 'price': 99, 'days': 30, 'plotLimit': 2};
+      await Get.toNamed(AppRoutes.paymentScreen, arguments: {
+        'isPlot': true,
+        'plotId': '',
+        'plan': upgradePlan,
+      });
+      _ctrl.loadMyPlots(reset: true);
+      return;
+    }
+
+    final plans = await _ctrl.getPlotPlans();
+    if (!mounted) return;
+
+    final selectedPlan = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _PlotPlanSelectionSheet(
+        plans: plans,
+        hasUsedFreePlotPlan: _auth.user.value?.hasUsedFreePlotPlan ?? false,
+      ),
+    );
+
+    if (selectedPlan == null) return;
+
+    final isFree = (selectedPlan['price'] as num? ?? 0) == 0;
+    if (isFree) {
+      await _activateFreePlotPlanDirect(plotId, selectedPlan);
+      return;
+    }
+
+    if (!mounted) return;
+    await Get.toNamed(AppRoutes.paymentScreen, arguments: {
+      'isPlot': true,
+      'plotId': plotId,
+      'plan': selectedPlan,
+    });
+    _ctrl.loadMyPlots(reset: true);
+  }
+
+  Future<void> _activateFreePlotPlanDirect(String plotId, Map<String, dynamic> plan) async {
+    final planType = plan['planType'] as String? ?? 'FREE';
+    final result = await _ctrl.activatePlotPlan(plotId, planType);
+    if (result == null) {
+      AppToast.error('Could not activate plot. Please try again.');
+      return;
+    }
+    await _ctrl.loadMyPlots(reset: true);
+    if (!mounted) return;
+    Get.dialog(
+      PaymentSuccessDialog(
+        planType: planType,
+        daysValid: (plan['days'] as num?)?.toInt() ?? 2,
+        maxRooms: 0,
+        maxPlots: (plan['plotLimit'] as num?)?.toInt() ?? 1,
+        isPlot: true,
+        onDismiss: () {
+          Get.find<AuthController>().tabIndex.value = 0;
+        },
+      ),
+      barrierDismissible: false,
+    );
+  }
+
   void _confirmDelete(String id) {
     showDialog(
       context: context,
@@ -186,6 +277,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                       child: _PlotCard(
                         plot: plots[i],
                         onToggleActive: () => _ctrl.toggleActive(plots[i].id, plots[i].isActive),
+                        onGoLive: () => _showPaymentDialog(plots[i].id),
                         onDelete: () => _confirmDelete(plots[i].id),
                       ),
                     );
@@ -282,9 +374,15 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
 class _PlotCard extends StatelessWidget {
   final PlotModel plot;
   final VoidCallback onToggleActive;
+  final VoidCallback onGoLive;
   final VoidCallback onDelete;
 
-  const _PlotCard({required this.plot, required this.onToggleActive, required this.onDelete});
+  const _PlotCard({
+    required this.plot,
+    required this.onToggleActive,
+    required this.onGoLive,
+    required this.onDelete,
+  });
 
   Color _typeColor(String type) => switch (type) {
     'Commercial'   => const Color(0xFFF59E0B),
@@ -382,24 +480,48 @@ class _PlotCard extends StatelessWidget {
 
                 Row(
                   children: [
-                    // Active toggle
-                    Row(
-                      children: [
-                        Switch(
-                          value: plot.isActive,
-                          onChanged: (_) => onToggleActive(),
-                          activeColor: _kGreen,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    if (plot.isActive) ...[
+                      // Active: show deactivate switch
+                      Switch(
+                        value: true,
+                        onChanged: (_) => onToggleActive(),
+                        activeColor: _kGreen,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      const SizedBox(width: 4),
+                      const Text('Active',
+                          style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _kGreen)),
+                    ] else ...[
+                      // Inactive: show "Make it Live" button
+                      GestureDetector(
+                        onTap: onGoLive,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _kGreen.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: _kGreen.withValues(alpha: 0.4)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.rocket_launch_rounded, size: 14, color: _kGreen),
+                              SizedBox(width: 4),
+                              Text('Make it Live',
+                                  style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: _kGreen)),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: 4),
-                        Text(plot.isActive ? 'Active' : 'Inactive',
-                            style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: plot.isActive ? _kGreen : AppColors.textLight)),
-                      ],
-                    ),
+                      ),
+                    ],
                     const Spacer(),
                     // Delete button
                     GestureDetector(
@@ -442,4 +564,131 @@ class _PlotCard extends StatelessWidget {
         ),
         child: const Center(child: Icon(Icons.terrain_rounded, size: 40, color: Colors.white54)),
       );
+}
+
+class _PlotPlanSelectionSheet extends StatelessWidget {
+  final List<Map<String, dynamic>> plans;
+  final bool hasUsedFreePlotPlan;
+
+  const _PlotPlanSelectionSheet({required this.plans, required this.hasUsedFreePlotPlan});
+
+  String _label(Map<String, dynamic> p) {
+    final raw = (p['planType'] as String? ?? '');
+    if (raw.isEmpty) return '';
+    return raw[0].toUpperCase() + raw.substring(1).toLowerCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final freePlans = plans.where((p) => (p['price'] as num? ?? 0) == 0).toList();
+    final paidPlans = plans.where((p) => (p['price'] as num? ?? 0) > 0).toList()
+      ..sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
+
+    final tiles = <Widget>[];
+
+    if (!hasUsedFreePlotPlan) {
+      for (final p in freePlans) {
+        final days = (p['days'] as num?)?.toInt() ?? 2;
+        final plots = (p['plotLimit'] as num?)?.toInt() ?? 1;
+        tiles.add(_planTile(
+          context,
+          plan: p,
+          title: '${_label(p)} Plan',
+          subtitle: '$days days • $plots plot${plots > 1 ? 's' : ''}',
+          price: 'Free',
+          icon: Icons.star_rounded,
+          color: const Color(0xFF10B981),
+        ));
+        tiles.add(const SizedBox(height: 12));
+      }
+    }
+
+    for (int i = 0; i < paidPlans.length; i++) {
+      final p = paidPlans[i];
+      final days = (p['days'] as num?)?.toInt() ?? 30;
+      final plots = (p['plotLimit'] as num?)?.toInt() ?? 1;
+      final price = (p['price'] as num?)?.toInt() ?? 0;
+      tiles.add(_planTile(
+        context,
+        plan: p,
+        title: '${_label(p)} Plan',
+        subtitle: '$days days • $plots plot${plots > 1 ? 's' : ''}',
+        price: '₹$price',
+        icon: Icons.flash_on_rounded,
+        color: AppColors.primary,
+        isHighlighted: hasUsedFreePlotPlan && i == 0,
+      ));
+      if (i < paidPlans.length - 1) tiles.add(const SizedBox(height: 12));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Make Plot Live',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, fontFamily: 'Poppins')),
+          const SizedBox(height: 4),
+          Text('Choose a plan to activate your plot',
+              style: TextStyle(fontSize: 13, color: Colors.grey[600], fontFamily: 'Poppins')),
+          const SizedBox(height: 20),
+          ...tiles,
+        ],
+      ),
+    );
+  }
+
+  Widget _planTile(
+    BuildContext context, {
+    required Map<String, dynamic> plan,
+    required String title,
+    required String subtitle,
+    required String price,
+    required IconData icon,
+    required Color color,
+    bool isHighlighted = false,
+  }) {
+    return InkWell(
+      onTap: () => Navigator.pop(context, plan),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isHighlighted ? color : color.withValues(alpha: 0.3),
+            width: isHighlighted ? 2 : 1.5,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          color: isHighlighted ? color.withValues(alpha: 0.05) : Colors.grey[50],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, fontFamily: 'Poppins')),
+                  Text(subtitle,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600], fontFamily: 'Poppins')),
+                ],
+              ),
+            ),
+            Text(price,
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color, fontFamily: 'Poppins')),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -5,6 +5,7 @@ class UserModel {
   final String? gmailId;
   final bool isAdmin;
   final bool hasUsedFreePlan;
+  final bool hasUsedFreePlotPlan;
   final DateTime createdAt;
 
   UserModel({
@@ -14,6 +15,7 @@ class UserModel {
     this.gmailId,
     required this.isAdmin,
     required this.hasUsedFreePlan,
+    this.hasUsedFreePlotPlan = false,
     required this.createdAt,
   });
 
@@ -24,6 +26,7 @@ class UserModel {
         gmailId: json['gmailId'],
         isAdmin: json['isAdmin'] ?? false,
         hasUsedFreePlan: json['hasUsedFreePlan'] ?? false,
+        hasUsedFreePlotPlan: json['hasUsedFreePlotPlan'] ?? false,
         createdAt: DateTime.parse(json['createdAt']),
       );
 
@@ -34,6 +37,7 @@ class UserModel {
         'gmailId': gmailId,
         'isAdmin': isAdmin,
         'hasUsedFreePlan': hasUsedFreePlan,
+        'hasUsedFreePlotPlan': hasUsedFreePlotPlan,
         'createdAt': createdAt.toIso8601String(),
       };
 

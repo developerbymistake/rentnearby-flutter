@@ -5,12 +5,16 @@ class PaymentSuccessDialog extends StatefulWidget {
   final String planType;
   final int daysValid;
   final int maxRooms;
+  final int maxPlots;
+  final bool isPlot;
   final VoidCallback onDismiss;
 
   const PaymentSuccessDialog({
     required this.planType,
     required this.daysValid,
     required this.maxRooms,
+    this.maxPlots = 0,
+    this.isPlot = false,
     required this.onDismiss,
     Key? key,
   }) : super(key: key);
@@ -130,13 +134,21 @@ class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
                   lightColor: lightColor,
                 ),
                 const SizedBox(width: 10),
-                _statBox(
-                  icon: Icons.home_rounded,
-                  label: 'Rooms',
-                  value: '${widget.maxRooms} room${widget.maxRooms > 1 ? 's' : ''}',
-                  color: color,
-                  lightColor: lightColor,
-                ),
+                widget.isPlot
+                    ? _statBox(
+                        icon: Icons.landscape_rounded,
+                        label: 'Plots',
+                        value: '${widget.maxPlots} plot${widget.maxPlots > 1 ? 's' : ''}',
+                        color: color,
+                        lightColor: lightColor,
+                      )
+                    : _statBox(
+                        icon: Icons.home_rounded,
+                        label: 'Rooms',
+                        value: '${widget.maxRooms} room${widget.maxRooms > 1 ? 's' : ''}',
+                        color: color,
+                        lightColor: lightColor,
+                      ),
               ],
             ),
             const SizedBox(height: 12),
@@ -147,14 +159,14 @@ class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
                 color: const Color(0xFFECFDF5),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.circle, size: 7, color: Color(0xFF10B981)),
-                  SizedBox(width: 7),
+                  const Icon(Icons.circle, size: 7, color: Color(0xFF10B981)),
+                  const SizedBox(width: 7),
                   Text(
-                    'Listing is live',
-                    style: TextStyle(
+                    widget.isPlot ? 'Plot is live' : 'Listing is live',
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Poppins',

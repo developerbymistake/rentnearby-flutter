@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
+import '../controllers/plot_controller.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../utils/app_toast.dart';
@@ -26,20 +27,24 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String? _error;
 
   late String _listingId;
+  late String _plotId;
   late String _planType;
   late Map<String, dynamic> _plan;
   late bool _isUpgrade;
+  late bool _isPlot;
 
   @override
   void initState() {
     super.initState();
 
-    // Extract route arguments — callers pass 'plan' (full map) + 'listingId'
+    // Extract route arguments — callers pass 'plan' (full map) + 'listingId' or 'plotId'
     final args = Get.arguments as Map<String, dynamic>?;
+    _isPlot = args?['isPlot'] as bool? ?? false;
     _listingId = args?['listingId'] as String? ?? '';
+    _plotId = args?['plotId'] as String? ?? '';
     _plan = (args?['plan'] as Map<String, dynamic>?) ?? {};
     _planType = _plan['planType'] as String? ?? args?['planType'] as String? ?? 'PAID';
-    _isUpgrade = _listingId.isEmpty;
+    _isUpgrade = _isPlot ? _plotId.isEmpty : _listingId.isEmpty;
 
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSuccess);
@@ -57,12 +62,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
     });
 
     try {
-      final listingCtrl = Get.find<ListingController>();
-      final response = _isUpgrade
-          ? await listingCtrl.createUpgradeOrder(_planType)
-          : await listingCtrl.createPaymentOrder(_listingId, _planType);
+      Map<String, dynamic>? response;
+      if (_isPlot) {
+        final plotCtrl = Get.find<PlotController>();
+        response = _isUpgrade
+            ? await plotCtrl.createPlotUpgradeOrder(_planType)
+            : await plotCtrl.activatePlotPlan(_plotId, _planType);
+      } else {
+        final listingCtrl = Get.find<ListingController>();
+        response = _isUpgrade
+            ? await listingCtrl.createUpgradeOrder(_planType)
+            : await listingCtrl.createPaymentOrder(_listingId, _planType);
+      }
 
       if (!mounted) return;
+
+      if (response == null) {
+        setState(() => _error = 'Could not create payment order. Please try again.');
+        return;
+      }
 
       final orderId = response['orderId'] as String?;
       final amount = response['amount'] as int?;
@@ -114,7 +132,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       'currency': _order!['currency'],
       'order_id': _order!['orderId'],
       'name': 'Bakhli',
-      'description': '$_planType Plan - ${_plan['days'] ?? 30} days, ${_plan['roomLimit'] ?? 2} rooms',
+      'description': _isPlot
+          ? '$_planType Plan - ${_plan['days'] ?? 30} days, ${_plan['plotLimit'] ?? 1} plots'
+          : '$_planType Plan - ${_plan['days'] ?? 30} days, ${_plan['roomLimit'] ?? 2} rooms',
       'prefill': {
         'contact': _formatPhone(rawPhone),
       },
@@ -148,20 +168,38 @@ class _PaymentScreenState extends State<PaymentScreen> {
         throw Exception('Invalid signature from payment gateway');
       }
 
-      final listingCtrl = Get.find<ListingController>();
-      if (_isUpgrade) {
-        await listingCtrl.verifyUpgradePayment(
-          razorpayOrderId: orderId,
-          razorpayPaymentId: paymentId,
-          razorpaySignature: signature,
-        );
+      if (_isPlot) {
+        final plotCtrl = Get.find<PlotController>();
+        if (_isUpgrade) {
+          await plotCtrl.verifyPlotUpgradePayment({
+            'razorpayOrderId': orderId,
+            'razorpayPaymentId': paymentId,
+            'razorpaySignature': signature,
+          });
+        } else {
+          await plotCtrl.verifyPlotPayment({
+            'plotId': _plotId,
+            'razorpayOrderId': orderId,
+            'razorpayPaymentId': paymentId,
+            'razorpaySignature': signature,
+          });
+        }
       } else {
-        await listingCtrl.verifyPayment(
-          listingId: _listingId,
-          razorpayOrderId: orderId,
-          razorpayPaymentId: paymentId,
-          razorpaySignature: signature,
-        );
+        final listingCtrl = Get.find<ListingController>();
+        if (_isUpgrade) {
+          await listingCtrl.verifyUpgradePayment(
+            razorpayOrderId: orderId,
+            razorpayPaymentId: paymentId,
+            razorpaySignature: signature,
+          );
+        } else {
+          await listingCtrl.verifyPayment(
+            listingId: _listingId,
+            razorpayOrderId: orderId,
+            razorpayPaymentId: paymentId,
+            razorpaySignature: signature,
+          );
+        }
       }
 
       if (mounted) {
@@ -171,7 +209,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
             planType: _planType,
             daysValid: (_plan['days'] as num?)?.toInt() ?? 30,
             maxRooms: (_plan['roomLimit'] as num?)?.toInt() ?? 2,
+            maxPlots: (_plan['plotLimit'] as num?)?.toInt() ?? 1,
+            isPlot: _isPlot,
             onDismiss: () {
+              if (_isPlot) {
+                Get.find<PlotController>().loadMyPlots(reset: true);
+              }
               Get.find<AuthController>().tabIndex.value = 0;
               Get.offAllNamed(AppRoutes.main);
             },
@@ -264,7 +307,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Complete payment to activate your listing for ${_plan['days'] ?? 30} days with ${_plan['roomLimit'] ?? 2} room limit.',
+                _isPlot
+                    ? 'Complete payment to activate your plot for ${_plan['days'] ?? 30} days with ${_plan['plotLimit'] ?? 1} plot limit.'
+                    : 'Complete payment to activate your listing for ${_plan['days'] ?? 30} days with ${_plan['roomLimit'] ?? 2} room limit.',
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 14,

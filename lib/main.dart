@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:toastification/toastification.dart';
 import 'config/app_theme.dart';
 import 'config/app_routes.dart';
@@ -11,6 +12,7 @@ import 'services/storage_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MapLibreMap.useHybridComposition = false;
   await GetStorage.init();
   await StorageService.init();
   ApiService.init();

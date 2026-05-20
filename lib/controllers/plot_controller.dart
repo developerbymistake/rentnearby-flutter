@@ -178,6 +178,56 @@ class PlotController extends GetxController {
     }
   }
 
+  Future<bool> isPlotPaymentFeatureEnabled() async {
+    try {
+      final res = await ApiService.get('/admin/plot-payment-feature');
+      final data = res['data'];
+      return data != null && data is Map<String, dynamic> && (data['isEnabled'] == true);
+    } catch (_) { return false; }
+  }
+
+  Future<List<Map<String, dynamic>>> getPlotPlans() async {
+    try {
+      final res = await ApiService.get('/plots/plans');
+      return List<Map<String, dynamic>>.from(res['data'] ?? []);
+    } catch (_) { return []; }
+  }
+
+  Future<Map<String, dynamic>?> getPlotMembershipStatus() async {
+    try {
+      final res = await ApiService.get('/plots/payment/status');
+      return res['data'];
+    } catch (_) { return null; }
+  }
+
+  Future<Map<String, dynamic>?> activatePlotPlan(String plotId, String planType) async {
+    try {
+      final res = await ApiService.post('/plots/$plotId/create-order?planType=$planType', {});
+      return res['data'];
+    } catch (_) { return null; }
+  }
+
+  Future<bool> verifyPlotPayment(Map<String, dynamic> body) async {
+    try {
+      await ApiService.post('/plots/${body['plotId']}/verify-payment', body);
+      return true;
+    } catch (_) { return false; }
+  }
+
+  Future<Map<String, dynamic>?> createPlotUpgradeOrder(String planType) async {
+    try {
+      final res = await ApiService.post('/plots/upgrade-plan/create-order?planType=$planType', {});
+      return res['data'];
+    } catch (_) { return null; }
+  }
+
+  Future<bool> verifyPlotUpgradePayment(Map<String, dynamic> body) async {
+    try {
+      await ApiService.post('/plots/upgrade-plan/verify', body);
+      return true;
+    } catch (_) { return false; }
+  }
+
   Future<void> toggleActive(String id, bool currentIsActive) async {
     try {
       await ApiService.put('/plots/$id', {'isActive': !currentIsActive});
