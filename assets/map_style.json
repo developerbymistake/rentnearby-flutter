@@ -2,7 +2,7 @@
   "version": 8,
   "name": "Bakhli",
   "glyphs": "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf",
-  "sprite": "asset://assets/sprites/light",
+  "sprite": "https://protomaps.github.io/basemaps-assets/sprites/v4/light",
   "sources": {
     "protomaps": {
       "type": "vector",
@@ -10304,11 +10304,11 @@
           5,
           2,
           8,
-          4,
+          2,
           12,
-          18,
+          4,
           15,
-          20
+          4
         ],
         "text-size": [
           "interpolate",
