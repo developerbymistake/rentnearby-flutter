@@ -373,7 +373,7 @@ class ListingController extends GetxController {
 
   Future<bool> isPaymentFeatureEnabled() async {
     try {
-      final res = await ApiService.get('/admin/payment-feature');
+      final res = await ApiService.get('/admin/features/room_payment');
       final data = res['data'];
       return data != null && data is Map<String, dynamic> && (data['isEnabled'] == true);
     } catch (e) {

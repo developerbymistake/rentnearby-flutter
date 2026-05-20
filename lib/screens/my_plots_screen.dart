@@ -46,12 +46,22 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
 
   Future<void> _refresh() => _ctrl.loadMyPlots(reset: true);
 
-  void _onAddPlot() {
+  void _onAddPlot() async {
     final name = _auth.user.value?.name?.trim() ?? '';
     if (name.isEmpty) {
       _showNameDialog();
       return;
     }
+    try {
+      final paymentEnabled = await _ctrl.isPlotPaymentFeatureEnabled();
+      if (!paymentEnabled) {
+        final activeCount = _ctrl.myPlots.where((p) => p.isActive).length;
+        if (activeCount >= 2) {
+          AppToast.error('Free mode limit: deactivate a plot before adding a new one.');
+          return;
+        }
+      }
+    } catch (_) {}
     Get.toNamed(AppRoutes.addPlot);
   }
 

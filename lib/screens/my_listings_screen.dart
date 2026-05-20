@@ -166,6 +166,17 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     }
 
     try {
+      final paymentEnabled = await _ctrl.isPaymentFeatureEnabled();
+      if (!paymentEnabled) {
+        final activeCount = _ctrl.myListings.where((l) => l.isActive).length;
+        if (activeCount >= 2) {
+          AppToast.error('Free mode limit: deactivate a listing before adding a new one.');
+          return;
+        }
+        Get.toNamed(AppRoutes.addListing);
+        return;
+      }
+
       // Check if user can add more rooms based on membership
       final membership = await _ctrl.getMembershipStatus();
 

@@ -180,7 +180,7 @@ class PlotController extends GetxController {
 
   Future<bool> isPlotPaymentFeatureEnabled() async {
     try {
-      final res = await ApiService.get('/admin/plot-payment-feature');
+      final res = await ApiService.get('/admin/features/plot_payment');
       final data = res['data'];
       return data != null && data is Map<String, dynamic> && (data['isEnabled'] == true);
     } catch (_) { return false; }
