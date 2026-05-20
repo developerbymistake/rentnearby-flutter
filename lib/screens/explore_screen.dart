@@ -372,7 +372,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         earthCircumference * cos(lat * pi / 180) / tileSize;
     final targetMetersPerPx = (radiusKm * 1000 * 2) / (usablePx * 0.80);
     final zoom = log(metersPerPxAtZ0 / targetMetersPerPx) / log(2);
-    return zoom.clamp(10.0, 17.0);
+    return (zoom + 0.5).clamp(10.0, 17.0);
   }
 
   void _animateTo(LatLng target, double zoom) {
