@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -30,7 +29,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
   Line?   _nativeCircleGlow;
   Line?   _nativeCircleLine;
   Circle? _nativeUserDot;
-  Symbol? _nativePin;
+  Circle? _nativePin;
+  double  _currentZoom = 14.0;
+  Size    _mapSize = Size.zero;
   double  _minZoom = 13.0;
   final _descCtrl = TextEditingController();
   final _priceMonthlyCtrl = TextEditingController();
@@ -169,7 +170,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
   Future<void> _onStyleLoaded() async {
     _mapReady = true;
     if (!mounted) return;
-    await _addPinImage();
+    if (_userLocation != null && _mapSize.width > 0) {
+      _minZoom = _calcMinZoom(0.5, _userLocation!.latitude, _mapSize.width);
+    }
     _initNativeCircle();
     _initNativeUserDot();
     if (_selectedLocation != null) await _setNativePin(_selectedLocation!);
@@ -236,63 +239,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
     return zoom.clamp(11.0, 15.0);
   }
 
-  Future<void> _addPinImage() async {
-    if (_mapController == null) return;
-    try {
-      const size = 80.0;
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-
-      final fillPaint = Paint()..color = AppColors.primary;
-      final strokePaint = Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3;
-
-      const cx = size / 2;
-      const cy = 28.0;
-      const r = 22.0;
-      canvas.drawCircle(const Offset(cx, cy), r, fillPaint);
-      canvas.drawCircle(const Offset(cx, cy), r, strokePaint);
-
-      final stemPath = Path()
-        ..moveTo(cx - 7, cy + r - 4)
-        ..lineTo(cx + 7, cy + r - 4)
-        ..lineTo(cx, size - 4)
-        ..close();
-      canvas.drawPath(stemPath, fillPaint);
-
-      final whitePaint = Paint()..color = Colors.white;
-      final roofPath = Path()
-        ..moveTo(cx, cy - 13)
-        ..lineTo(cx - 10, cy - 2)
-        ..lineTo(cx + 10, cy - 2)
-        ..close();
-      canvas.drawPath(roofPath, whitePaint);
-      canvas.drawRect(Rect.fromLTWH(cx - 7, cy - 2, 14, 12), whitePaint);
-
-      final picture = recorder.endRecording();
-      final image = await picture.toImage(size.toInt(), size.toInt());
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData != null) {
-        await _mapController!.addImage('home-pin', byteData.buffer.asUint8List());
-      }
-    } catch (_) {}
-  }
-
   Future<void> _setNativePin(LatLng latLng) async {
     final ctrl = _mapController;
     if (ctrl == null || !mounted) return;
     if (_nativePin != null) {
-      await ctrl.removeSymbol(_nativePin!);
-      _nativePin = null;
+      await ctrl.updateCircle(_nativePin!, CircleOptions(geometry: latLng));
+    } else {
+      _nativePin = await ctrl.addCircle(CircleOptions(
+        geometry: latLng,
+        circleRadius: 12.0,
+        circleColor: '#2F64CA',
+        circleOpacity: 1.0,
+        circleStrokeColor: '#FFFFFF',
+        circleStrokeWidth: 2.5,
+      ));
     }
-    _nativePin = await ctrl.addSymbol(SymbolOptions(
-      geometry: latLng,
-      iconImage: 'home-pin',
-      iconSize: 1.0,
-      iconAnchor: 'bottom',
-    ));
   }
 
   static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
@@ -1107,9 +1068,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             borderRadius: BorderRadius.circular(14),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                if (_userLocation != null) {
-                  _minZoom = _calcMinZoom(0.5, _userLocation!.latitude, constraints.maxWidth);
-                }
+                _mapSize = Size(constraints.maxWidth, 280);
                 return SizedBox(
                   height: 280,
                   child: Stack(children: [
@@ -1119,15 +1078,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         target: _userLocation ?? const LatLng(30.3165, 78.0322),
                         zoom: 14.0,
                       ),
-                      minMaxZoomPreference: MinMaxZoomPreference(_minZoom, 18.0),
                       compassEnabled: false,
                       rotateGesturesEnabled: false,
                       tiltGesturesEnabled: false,
                       myLocationEnabled: false,
-                      trackCameraPosition: false,
+                      trackCameraPosition: true,
                       attributionButtonMargins: const Point(-200.0, 0.0),
                       onMapCreated: (ctrl) => _mapController = ctrl,
                       onStyleLoadedCallback: _onStyleLoaded,
+                      onCameraMove: (pos) { _currentZoom = pos.zoom; },
+                      onCameraIdle: () {
+                        if (_currentZoom < _minZoom && _mapController != null && mounted) {
+                          _mapController!.animateCamera(CameraUpdate.zoomTo(_minZoom));
+                        }
+                      },
                       onMapClick: (_, latLng) {
                         if (_userLocation != null) {
                           final distM = Geolocator.distanceBetween(
