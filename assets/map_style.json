@@ -2,7 +2,7 @@
   "version": 8,
   "name": "Bakhli",
   "glyphs": "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf",
-  "sprite": "https://protomaps.github.io/basemaps-assets/sprites/v4/light",
+  "sprite": "asset://assets/sprites/light",
   "sources": {
     "protomaps": {
       "type": "vector",
@@ -219,6 +219,74 @@
       }
     },
     {
+      "id": "natural_wood",
+      "type": "fill",
+      "source": "protomaps",
+      "source-layer": "natural",
+      "filter": [
+        "in",
+        "kind",
+        "wood",
+        "forest"
+      ],
+      "paint": {
+        "fill-color": "#d4e8c2",
+        "fill-opacity": 0.9
+      }
+    },
+    {
+      "id": "natural_wood_outline",
+      "type": "line",
+      "source": "protomaps",
+      "source-layer": "natural",
+      "filter": [
+        "in",
+        "kind",
+        "wood",
+        "forest"
+      ],
+      "paint": {
+        "line-color": "#b8d49a",
+        "line-width": 0.5
+      }
+    },
+    {
+      "id": "natural_scrub",
+      "type": "fill",
+      "source": "protomaps",
+      "source-layer": "natural",
+      "filter": [
+        "in",
+        "kind",
+        "scrub",
+        "grassland",
+        "meadow"
+      ],
+      "paint": {
+        "fill-color": "#e8f0d0",
+        "fill-opacity": 0.7
+      }
+    },
+    {
+      "id": "landuse_farmland",
+      "type": "fill",
+      "source": "protomaps",
+      "source-layer": "landuse",
+      "filter": [
+        "in",
+        "kind",
+        "farmland",
+        "farm",
+        "orchard",
+        "vineyard",
+        "allotments"
+      ],
+      "paint": {
+        "fill-color": "#eef0d4",
+        "fill-opacity": 0.8
+      }
+    },
+    {
       "id": "landuse_hospital",
       "type": "fill",
       "source": "protomaps",
@@ -381,7 +449,7 @@
       ],
       "paint": {
         "line-color": "#b5a060",
-        "line-width": 1.0,
+        "line-width": 1,
         "line-dasharray": [
           4,
           3
@@ -6012,7 +6080,9 @@
         "lake",
         "water",
         "reservoir",
-        "pond"
+        "pond",
+        "tank",
+        "basin"
       ],
       "layout": {
         "text-font": [
@@ -6973,6 +7043,32 @@
           [
             "concat",
             "NL:S-road-",
+            [
+              "length",
+              [
+                "get",
+                "shield_text"
+              ]
+            ],
+            "char"
+          ],
+          "IN:NH",
+          [
+            "concat",
+            "generic_shield-",
+            [
+              "length",
+              [
+                "get",
+                "shield_text"
+              ]
+            ],
+            "char"
+          ],
+          "IN:SH",
+          [
+            "concat",
+            "generic_shield-",
             [
               "length",
               [
@@ -8007,11 +8103,54 @@
         "icon-optional": true,
         "icon-image": [
           "match",
-          ["get", "kind"],
-          "station", "train_station",
-          "townhall", "townspot",
-          ["aerodrome","animal","artwork","attraction","bar","beach","beauty","bench","books","building","bus_stop","cafe","clothes","convenience","drinking_water","electronics","fast_food","ferry_terminal","forest","garden","library","marina","museum","park","peak","post_office","restaurant","school","stadium","supermarket","theatre","toilets","university","zoo"],
-          ["get", "kind"],
+          [
+            "get",
+            "kind"
+          ],
+          "station",
+          "train_station",
+          "townhall",
+          "townspot",
+          [
+            "aerodrome",
+            "animal",
+            "artwork",
+            "attraction",
+            "bar",
+            "beach",
+            "beauty",
+            "bench",
+            "books",
+            "building",
+            "bus_stop",
+            "cafe",
+            "clothes",
+            "convenience",
+            "drinking_water",
+            "electronics",
+            "fast_food",
+            "ferry_terminal",
+            "forest",
+            "garden",
+            "library",
+            "marina",
+            "museum",
+            "park",
+            "peak",
+            "post_office",
+            "restaurant",
+            "school",
+            "stadium",
+            "supermarket",
+            "theatre",
+            "toilets",
+            "university",
+            "zoo"
+          ],
+          [
+            "get",
+            "kind"
+          ],
           ""
         ],
         "text-font": [
@@ -8909,7 +9048,8 @@
         "text-variable-anchor": [
           "left",
           "right"
-        ]
+        ],
+        "text-optional": true
       },
       "paint": {
         "text-color": [
@@ -9028,16 +9168,191 @@
             ]
           ],
           "#EF56BA",
-          ["in",["get","kind"],["literal",["hospital","clinic","pharmacy"]]], "#C62828",
-          ["in",["get","kind"],["literal",["place_of_worship","temple","mosque","church"]]], "#D97706",
-          ["in",["get","kind"],["literal",["hotel","guest_house"]]], "#0E7490",
-          ["==",["get","kind"],"fuel"], "#B45309",
-          ["in",["get","kind"],["literal",["bank","atm"]]], "#166534",
-          ["in",["get","kind"],["literal",["police","parking","information","college"]]], "#6A5B8F",
-          ["in",["get","kind"],["literal",["playground","viewpoint","pitch","recreation_ground","camp_site","picnic_site"]]], "#20834D",
+          [
+            "in",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "literal",
+              [
+                "hospital",
+                "clinic",
+                "pharmacy"
+              ]
+            ]
+          ],
+          "#C62828",
+          [
+            "in",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "literal",
+              [
+                "place_of_worship",
+                "temple",
+                "mosque",
+                "church"
+              ]
+            ]
+          ],
+          "#D97706",
+          [
+            "in",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "literal",
+              [
+                "hotel",
+                "guest_house"
+              ]
+            ]
+          ],
+          "#0E7490",
+          [
+            "==",
+            [
+              "get",
+              "kind"
+            ],
+            "fuel"
+          ],
+          "#B45309",
+          [
+            "in",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "literal",
+              [
+                "bank",
+                "atm"
+              ]
+            ]
+          ],
+          "#166534",
+          [
+            "in",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "literal",
+              [
+                "police",
+                "parking",
+                "information",
+                "college"
+              ]
+            ]
+          ],
+          "#6A5B8F",
+          [
+            "in",
+            [
+              "get",
+              "kind"
+            ],
+            [
+              "literal",
+              [
+                "playground",
+                "viewpoint",
+                "pitch",
+                "recreation_ground",
+                "camp_site",
+                "picnic_site"
+              ]
+            ]
+          ],
+          "#20834D",
           "#555555"
         ],
         "text-halo-color": "#e2dfda",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "natural_label",
+      "type": "symbol",
+      "source": "protomaps",
+      "source-layer": "natural",
+      "minzoom": 12,
+      "filter": [
+        "in",
+        "kind",
+        "wood",
+        "forest",
+        "grassland",
+        "meadow"
+      ],
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-size": 11,
+        "text-max-width": 6,
+        "text-optional": true
+      },
+      "paint": {
+        "text-color": "#5a7a3a",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "building_labels",
+      "type": "symbol",
+      "source": "protomaps",
+      "source-layer": "buildings",
+      "minzoom": 17,
+      "filter": [
+        "has",
+        "name"
+      ],
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-size": 10,
+        "text-max-width": 5,
+        "text-optional": true
+      },
+      "paint": {
+        "text-color": "#666666",
+        "text-halo-color": "#ffffff",
         "text-halo-width": 1
       }
     },

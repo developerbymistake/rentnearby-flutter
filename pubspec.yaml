@@ -83,6 +83,7 @@ flutter:
     - assets/animations/
     - assets/sounds/
     - assets/map_style.json
+    - assets/sprites/
   fonts:
     - family: Poppins
       fonts:
