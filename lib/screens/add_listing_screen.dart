@@ -965,12 +965,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
     ]),
   );
 
-  Widget _locationStep() => SingleChildScrollView(
+  Widget _locationStep() => Column(
     key: const ValueKey(1),
-    padding: const EdgeInsets.all(16),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _sectionCard(
-        title: 'Pin Your Location *',
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: _sectionCard(
+          title: 'Pin Your Location *',
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (_locationBlocked) ...[
             Container(
@@ -1140,8 +1142,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ]),
             ),
         ]),
+        ),
       ),
-
+      Expanded(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _sectionCard(
         title: 'District & City',
         child: Obx(() {
@@ -1207,7 +1213,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ),
         ),
       ),
-    ]),
+          ]),
+        ),
+      ),
+    ],
   );
 
   Widget _readOnlyField(IconData icon, String value) => Container(
