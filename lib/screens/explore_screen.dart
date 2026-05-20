@@ -30,14 +30,8 @@ class _ExploreScreenState extends State<ExploreScreen>
   Line? _nativeCircleGlow;
   Line? _nativeCircleLine;
   Circle? _nativeUserDot;
+  bool _pinsVisible = true;
   bool _styleLoaded = false;
-  bool _layersReady = false;
-
-  static const _sourceId = 'listings-source';
-  static const _clusterLayerId = 'cluster-circles';
-  static const _clusterCountLayerId = 'cluster-count';
-  static const _pinBgLayerId = 'listing-pin-bg';
-  static const _pinTextLayerId = 'listing-pin-text';
 
   // ── State ─────────────────────────────────────────────────────────────────
   final _listingCtrl = Get.find<ListingController>();
@@ -46,8 +40,10 @@ class _ExploreScreenState extends State<ExploreScreen>
   Worker? _loadingWorker;
   StreamSubscription<ServiceStatus>? _serviceStatusSub;
 
+  List<_MapMarkerData> _markerData = [];
   LatLng? _userLocation;
   double _radius = 1.0;
+  double _lastClusterZoom = 0;
   DistrictModel? _selectedDistrict;
   CityModel? _selectedCity;
   CityModel? _autoCity;
@@ -58,6 +54,8 @@ class _ExploreScreenState extends State<ExploreScreen>
   String? _selectedRoomType;
   bool _autoLoading = false;
   final _audioPlayer = AudioPlayer();
+  int _revealedCount = 0;
+  Timer? _revealTimer;
   late AnimationController _radarController;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -96,6 +94,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           _userLocation = null;
           _locationLoading = false;
         });
+        _buildMarkers(animate: false);
       }
     });
 
@@ -111,6 +110,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     _loadingWorker?.dispose();
     _serviceStatusSub?.cancel();
     _radarController.dispose();
+    _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
     _audioPlayer.dispose();
     if (_mapController != null && _nativeUserDot != null) {
@@ -231,6 +231,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         return;
       }
 
+      // Show last known position immediately — map appears without waiting for fresh GPS fix.
       final lastKnown = await Geolocator.getLastKnownPosition();
       setState(() {
         if (lastKnown != null) {
@@ -247,6 +248,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         _fitToRadius();
       }
 
+      // High accuracy resolves in <1 s via network+GPS rather than satellite-only fix.
       final pos = await Geolocator.getCurrentPosition(
         locationSettings:
             const LocationSettings(accuracy: LocationAccuracy.high),
@@ -362,6 +364,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     ctrl.updateCircle(dot, CircleOptions(geometry: loc));
   }
 
+  // Zoom so circle diameter fills ~80% of usable screen height; accounts for latitude.
   double _zoomForRadius(double radiusKm, double lat) {
     const earthCircumference = 2 * pi * 6378137.0;
     const tileSize = 512.0;
@@ -380,7 +383,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
   }
 
-  // ── Style loaded ──────────────────────────────────────────────────────────
+  // ── Style loaded callback ─────────────────────────────────────────────────
 
   void _onStyleLoaded() {
     if (_styleLoaded) return;
@@ -391,145 +394,33 @@ class _ExploreScreenState extends State<ExploreScreen>
     setState(() {});
     _initNativeCircle();
     _initNativeUserDot();
-    _setupMapLayers().then((_) => _updateGeoJsonSource());
+    _buildMarkers(animate: false);
     _fitToRadius();
   }
 
-  // ── Layer setup ───────────────────────────────────────────────────────────
+  // ── Marker screen-position projection ────────────────────────────────────
 
-  Future<void> _setupMapLayers() async {
-    if (_mapController == null) return;
-    try {
-      await _mapController!.addSource(
-        _sourceId,
-        GeojsonSourceProperties(
-          data: '{"type":"FeatureCollection","features":[]}',
-          cluster: true,
-          clusterMaxZoom: 13,
-          clusterRadius: 50,
-        ),
-      );
-
-      await _mapController!.addCircleLayer(
-        _sourceId,
-        _clusterLayerId,
-        CircleLayerProperties(
-          circleRadius: [
-            'step', ['get', 'point_count'], 22, 10, 28, 50, 34
-          ],
-          circleColor: '#1E88E5',
-          circleStrokeWidth: 2.0,
-          circleStrokeColor: '#FFFFFF',
-        ),
-        filter: ['has', 'point_count'],
-      );
-
-      await _mapController!.addSymbolLayer(
-        _sourceId,
-        _clusterCountLayerId,
-        SymbolLayerProperties(
-          textField: '{point_count}',
-          textSize: 13.0,
-          textColor: '#FFFFFF',
-          textAllowOverlap: true,
-          iconAllowOverlap: true,
-        ),
-        filter: ['has', 'point_count'],
-      );
-
-      await _mapController!.addCircleLayer(
-        _sourceId,
-        _pinBgLayerId,
-        CircleLayerProperties(
-          circleRadius: 18.0,
-          circleColor: '#1E88E5',
-          circleStrokeWidth: 1.5,
-          circleStrokeColor: '#FFFFFF',
-        ),
-        filter: ['!', ['has', 'point_count']],
-      );
-
-      await _mapController!.addSymbolLayer(
-        _sourceId,
-        _pinTextLayerId,
-        SymbolLayerProperties(
-          textField: '{label}',
-          textSize: 10.0,
-          textColor: '#FFFFFF',
-          textAllowOverlap: true,
-          iconAllowOverlap: true,
-        ),
-        filter: ['!', ['has', 'point_count']],
-      );
-
-      _layersReady = true;
-    } catch (e) {
-      debugPrint('_setupMapLayers error: $e');
-    }
+  Offset? _latLngToScreen(LatLng latlng) {
+    final center = _cameraCenter;
+    if (center == null || _screenSize == Size.zero) return null;
+    final scale = 512.0 * pow(2.0, _currentZoom);
+    final px = (latlng.longitude + 180) / 360 * scale;
+    final py = _mercatorY(latlng.latitude) * scale;
+    final cx = (center.longitude + 180) / 360 * scale;
+    final cy = _mercatorY(center.latitude) * scale;
+    return Offset(
+      _screenSize.width / 2 + (px - cx),
+      _screenSize.height / 2 + (py - cy),
+    );
   }
 
-  // ── GeoJSON update ────────────────────────────────────────────────────────
-
-  Future<void> _updateGeoJsonSource() async {
-    if (_mapController == null || !_layersReady) return;
-    final all = _listingCtrl.nearbyListings.toList();
-    final filtered = _selectedRoomType == null
-        ? all
-        : all.where((l) => l.roomTypeName == _selectedRoomType).toList();
-    final geojson = {
-      'type': 'FeatureCollection',
-      'features': filtered
-          .map((l) => {
-                'type': 'Feature',
-                'id': l.id,
-                'geometry': {
-                  'type': 'Point',
-                  'coordinates': [l.longitude, l.latitude]
-                },
-                'properties': {
-                  'id': l.id,
-                  'label': _formatLabel(l),
-                  'roomType': l.roomTypeName ?? '',
-                },
-              })
-          .toList(),
-    };
-    await _mapController!.setGeoJsonSource(_sourceId, geojson);
-  }
-
-  String _formatLabel(NearbyListingModel l) {
-    final p = l.priceMonthly;
-    if (p == null || p == 0) return 'Call';
-    if (p >= 100000) {
-      final lakh = p / 100000;
-      return lakh == lakh.truncateToDouble()
-          ? '₹${lakh.toInt()}L'
-          : '₹${lakh.toStringAsFixed(1)}L';
+  void _updateMarkerScreenPositions() {
+    if (!_mapReady || !mounted) return;
+    final snapshot = _markerData.take(_revealedCount).toList();
+    for (final d in snapshot) {
+      d.screenPosition = _latLngToScreen(d.position);
     }
-    if (p >= 1000) {
-      final t = p ~/ 1000;
-      final h = p % 1000;
-      return h == 0 ? '₹${t}k' : '₹$t,${h.toString().padLeft(3, '0')}';
-    }
-    return '₹$p';
-  }
-
-  // ── Tap handler ───────────────────────────────────────────────────────────
-
-  Future<void> _onMapTap(Point<double> point, LatLng latLng) async {
-    if (_mapController == null || !_layersReady) return;
-    final features = await _mapController!.queryRenderedFeatures(
-        point, [_clusterLayerId, _pinBgLayerId], null);
-    if (features.isEmpty) return;
-    final props = Map<String, dynamic>.from(
-        (features.first['properties'] as Map?) ?? {});
-    if (props['cluster'] == true) {
-      await _mapController!.animateCamera(
-          CameraUpdate.newLatLngZoom(latLng, (_currentZoom + 2).clamp(0.0, 18.0)));
-    } else {
-      final id = props['id'] as String?;
-      if (id != null) _showDetail(id);
-    }
+    setState(() {});
   }
 
   // ── Listings load ─────────────────────────────────────────────────────────
@@ -546,14 +437,17 @@ class _ExploreScreenState extends State<ExploreScreen>
     if (_selectedDistrict == null) return;
     final cityId = _effectiveCityId;
     if (cityId == null) return;
+    _revealTimer?.cancel();
     _radarController.repeat();
+    _markerData = _userLocation != null ? [_buildUserMarkerData()] : [];
+    _revealedCount = _markerData.length;
     setState(() {});
     final center = _searchCenter;
     await _listingCtrl.loadNearby(
         center.latitude, center.longitude, _radius, cityId);
     _radarController.stop();
     _radarController.reset();
-    await _updateGeoJsonSource();
+    _buildMarkers();
     if (_listingCtrl.nearbyListings.isNotEmpty) _playTing();
   }
 
@@ -563,32 +457,185 @@ class _ExploreScreenState extends State<ExploreScreen>
     } catch (_) {}
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Marker data building ──────────────────────────────────────────────────
 
-  void _showDetail(String id) {
-    final listing =
-        _listingCtrl.nearbyListings.firstWhereOrNull((l) => l.id == id);
-    if (listing == null) return;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => ListingBottomSheet(listing: listing),
-    );
+  _MapMarkerData _buildUserMarkerData() => _MapMarkerData(
+        position: _userLocation!,
+        width: 120,
+        height: 120,
+        isUser: true,
+        widget: AnimatedBuilder(
+          animation: _radarController,
+          builder: (context2, child2) => CustomPaint(
+            painter: _RadarPainter(
+                progress: _radarController.value,
+                color: const Color(0xFF1E88E5)),
+          ),
+        ),
+      );
+
+  void _buildMarkers({bool animate = true}) {
+    final data = <_MapMarkerData>[];
+
+    if (_userLocation != null) data.add(_buildUserMarkerData());
+
+    var listings = _listingCtrl.nearbyListings.toList()
+      ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+
+    if (_selectedRoomType != null) {
+      listings = listings
+          .where((l) => l.roomTypeName == _selectedRoomType)
+          .toList();
+    }
+
+    final filtered = listings.take(30).toList();
+    final clusters = _mapReady
+        ? _computeClusters(filtered)
+        : filtered.map(_Cluster.new).toList();
+
+    for (final cluster in clusters) {
+      final count = cluster.listings.length;
+      final rep = cluster.representative;
+
+      if (count == 1) {
+        final priceText =
+            rep.priceMonthly != null ? _pinPrice(rep.priceMonthly!) : 'Call';
+        final chipW = _chipWidth(priceText);
+        data.add(_MapMarkerData(
+          position: cluster.center,
+          width: chipW,
+          height: 34,
+          widget: GestureDetector(
+            onTap: () => _showDetail(rep.id),
+            child: _AnimatedPin(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(color: AppColors.primary, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 6,
+                        offset: Offset(0, 2)),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    priceText,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ));
+      } else {
+        data.add(_MapMarkerData(
+          position: cluster.center,
+          width: 48,
+          height: 48,
+          widget: GestureDetector(
+            onTap: () => _showDetail(rep.id),
+            child: _AnimatedPin(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  shape: BoxShape.circle,
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 3)),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    '$count',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ));
+      }
+    }
+
+    _revealTimer?.cancel();
+    _markerData = data;
+
+    if (!animate || data.isEmpty) {
+      setState(() => _revealedCount = data.length);
+      _updateMarkerScreenPositions();
+      return;
+    }
+
+    final userCount = _userLocation != null ? 1 : 0;
+    _revealedCount = userCount;
+    setState(() {});
+    _updateMarkerScreenPositions();
+
+    if (data.length <= userCount) return;
+
+    int i = userCount;
+    _revealTimer = Timer.periodic(const Duration(milliseconds: 150), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      i++;
+      setState(() => _revealedCount = i);
+      _updateMarkerScreenPositions();
+      if (i >= data.length) timer.cancel();
+    });
   }
 
-  Offset? _latLngToScreen(LatLng latlng) {
-    final center = _cameraCenter;
-    if (center == null || _screenSize == Size.zero) return null;
-    final scale = 512.0 * pow(2.0, _currentZoom);
-    final px = (latlng.longitude + 180) / 360 * scale;
-    final py = _mercatorY(latlng.latitude) * scale;
-    final cx = (center.longitude + 180) / 360 * scale;
-    final cy = _mercatorY(center.latitude) * scale;
-    return Offset(
-      _screenSize.width / 2 + (px - cx),
-      _screenSize.height / 2 + (py - cy),
-    );
+  // ── Clustering ────────────────────────────────────────────────────────────
+
+  List<_Cluster> _computeClusters(List<NearbyListingModel> listings) {
+    final clusters = <_Cluster>[];
+    const clusterPx = 112.0;
+    final zoom = _currentZoom;
+    for (final listing in listings) {
+      final pt = LatLng(listing.latitude, listing.longitude);
+      _Cluster? best;
+      double bestDist = double.infinity;
+      for (final c in clusters) {
+        final d = _mercatorPixelDist(pt, c.center, zoom);
+        if (d < bestDist) {
+          bestDist = d;
+          best = c;
+        }
+      }
+      if (best != null && bestDist <= clusterPx) {
+        best.listings.add(listing);
+      } else {
+        clusters.add(_Cluster(listing));
+      }
+    }
+    return clusters;
+  }
+
+  static double _mercatorPixelDist(LatLng a, LatLng b, double zoom) {
+    final scale = 512.0 * pow(2.0, zoom);
+    final ax = (a.longitude + 180) / 360 * scale;
+    final ay = _mercatorY(a.latitude) * scale;
+    final bx = (b.longitude + 180) / 360 * scale;
+    final by = _mercatorY(b.latitude) * scale;
+    final dx = ax - bx;
+    final dy = ay - by;
+    return sqrt(dx * dx + dy * dy);
   }
 
   static double _mercatorY(double lat) {
@@ -609,6 +656,37 @@ class _ExploreScreenState extends State<ExploreScreen>
       points.add(LatLng(center.latitude + dLat, center.longitude + dLng));
     }
     return points;
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  double _chipWidth(String text) => (text.length * 9.0 + 26).clamp(52.0, 90.0);
+
+  String _pinPrice(int price) {
+    if (price >= 100000) {
+      final l = price / 100000;
+      return l == l.truncateToDouble()
+          ? '₹${l.toInt()}L'
+          : '₹${l.toStringAsFixed(1)}L';
+    }
+    if (price >= 1000) {
+      final t = price ~/ 1000;
+      final h = price % 1000;
+      return h == 0 ? '₹${t}k' : '₹$t,${h.toString().padLeft(3, '0')}';
+    }
+    return '₹$price';
+  }
+
+  void _showDetail(String id) {
+    final listing =
+        _listingCtrl.nearbyListings.firstWhereOrNull((l) => l.id == id);
+    if (listing == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ListingBottomSheet(listing: listing),
+    );
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -643,23 +721,49 @@ class _ExploreScreenState extends State<ExploreScreen>
                   _mapController = ctrl;
                 },
                 onStyleLoadedCallback: _onStyleLoaded,
-                onMapClick: _onMapTap,
                 onCameraMove: (CameraPosition pos) {
                   _currentZoom = pos.zoom;
                   _cameraCenter = pos.target;
-                  if (mounted) setState(() {});
+                  if (mounted && _pinsVisible) setState(() => _pinsVisible = false);
                 },
                 onCameraIdle: () {
-                  if (mounted) setState(() {});
+                  if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
+                    _lastClusterZoom = _currentZoom;
+                    _buildMarkers(animate: false);
+                  } else {
+                    _updateMarkerScreenPositions();
+                  }
+                  if (mounted && !_pinsVisible) setState(() => _pinsVisible = true);
                 },
               ),
             ),
 
-          // ── Layer 2: Radar overlay (user location loading animation) ─────
-          if (!_locationLoading && _mapReady && _userLocation != null)
-            _buildRadarOverlay(),
 
-          // ── Layer 3: UI overlays ─────────────────────────────────────────
+          // ── Layer 3: Flutter widget marker overlay ───────────────────────
+          if (!_locationLoading && _mapReady)
+            IgnorePointer(
+              ignoring: !_pinsVisible,
+              child: AnimatedOpacity(
+                opacity: _pinsVisible ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 100),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: _markerData
+                      .take(_revealedCount)
+                      .where((d) => d.screenPosition != null)
+                      .map((d) => Positioned(
+                            left: d.screenPosition!.dx - d.width / 2,
+                            top: d.screenPosition!.dy - d.height / 2,
+                            width: d.width,
+                            height: d.height,
+                            child: d.widget,
+                          ))
+                      .toList(),
+                ),
+              ),
+            ),
+
+          // ── Layer 4: UI overlays (unchanged) ─────────────────────────────
           Positioned(
             top: 0,
             left: 0,
@@ -708,29 +812,6 @@ class _ExploreScreenState extends State<ExploreScreen>
         ],
           );
         },
-      ),
-    );
-  }
-
-  // ── Radar overlay ─────────────────────────────────────────────────────────
-
-  Widget _buildRadarOverlay() {
-    final pos = _latLngToScreen(_userLocation!);
-    if (pos == null) return const SizedBox.shrink();
-    return Positioned(
-      left: pos.dx - 60,
-      top: pos.dy - 60,
-      width: 120,
-      height: 120,
-      child: IgnorePointer(
-        child: AnimatedBuilder(
-          animation: _radarController,
-          builder: (_, __) => CustomPaint(
-            painter: _RadarPainter(
-                progress: _radarController.value,
-                color: const Color(0xFF1E88E5)),
-          ),
-        ),
       ),
     );
   }
@@ -967,7 +1048,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     selected ? null : rt.name as String?;
                                 setState(
                                     () => _selectedRoomType = newType);
-                                _updateGeoJsonSource();
+                                _buildMarkers();
                                 if (newType != null) {
                                   final hits = _listingCtrl.nearbyListings
                                       .where(
@@ -1058,7 +1139,73 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 }
 
-// ── Radar animation ───────────────────────────────────────────────────────────
+// ── Data classes ─────────────────────────────────────────────────────────────
+
+class _MapMarkerData {
+  final LatLng position;
+  final Widget widget;
+  final double width;
+  final double height;
+  final bool isUser;
+  Offset? screenPosition;
+
+  _MapMarkerData({
+    required this.position,
+    required this.widget,
+    required this.width,
+    required this.height,
+    this.isUser = false,
+  });
+}
+
+class _Cluster {
+  final List<NearbyListingModel> listings;
+  _Cluster(NearbyListingModel first) : listings = [first];
+
+  LatLng get center => LatLng(
+        listings.map((l) => l.latitude).reduce((a, b) => a + b) /
+            listings.length,
+        listings.map((l) => l.longitude).reduce((a, b) => a + b) /
+            listings.length,
+      );
+
+  NearbyListingModel get representative => listings.reduce((a, b) =>
+      (a.priceMonthly ?? 999999999) <= (b.priceMonthly ?? 999999999) ? a : b);
+}
+
+// ── Animation widgets ────────────────────────────────────────────────────────
+
+class _AnimatedPin extends StatefulWidget {
+  final Widget child;
+  const _AnimatedPin({required this.child});
+  @override
+  State<_AnimatedPin> createState() => _AnimatedPinState();
+}
+
+class _AnimatedPinState extends State<_AnimatedPin>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 300));
+    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ScaleTransition(scale: _scale, child: widget.child);
+}
 
 class _RadarPainter extends CustomPainter {
   final double progress;
