@@ -25,7 +25,6 @@ const _unitConfig = {
   'kanal': (hint: 'e.g., 2.0',   decimal: true),
 };
 
-const _plotTypes = ['Residential', 'Commercial', 'Agricultural'];
 const _units = ['sqft', 'sqm', 'bigha', 'marla', 'acre', 'kanal'];
 
 // Same conversion factors as backend
@@ -609,7 +608,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     final data = {
       'areaValue': areaValue,
       'areaUnit': _selectedUnit,
-      'plotType': _selectedPlotType,
+      'plotTypeId': _selectedPlotType,
       'description':
           _descCtrl.text.trim().isNotEmpty ? _descCtrl.text.trim() : null,
       'latitude': pinLocation.latitude,
@@ -1055,13 +1054,13 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
           // Plot Type
           _sectionCard(
             title: 'Plot Type *',
-            child: Wrap(
+            child: Obx(() => Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _plotTypes.map((type) {
-                final active = _selectedPlotType == type;
+              children: _ctrl.plotTypes.map((type) {
+                final active = _selectedPlotType == type.id;
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedPlotType = type),
+                  onTap: () => setState(() => _selectedPlotType = type.id),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     width: (MediaQuery.of(context).size.width - 40 - 32 - 16) / 3,
@@ -1074,7 +1073,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                           width: 1.5),
                     ),
                     child: Center(
-                      child: Text(type,
+                      child: Text(type.name,
                           style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 12,
@@ -1084,7 +1083,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                   ),
                 );
               }).toList(),
-            ),
+            )),
           ),
 
           // Area Unit

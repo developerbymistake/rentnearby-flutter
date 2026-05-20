@@ -67,6 +67,15 @@ class NearbyPlotModel {
         isActive: json['isActive'] ?? true,
       );
 
+  double get areaSqft => switch (areaUnit) {
+    'sqm'   => areaValue * 10.764,
+    'marla' => areaValue * 272.25,
+    'bigha' => areaValue * 27000,
+    'acre'  => areaValue * 43560,
+    'kanal' => areaValue * 5445,
+    _       => areaValue,
+  };
+
   String get areaDisplay => _formatArea(areaValue, areaUnit);
   String get sqftLabel => _toSqftLabel(areaValue, areaUnit);
 }

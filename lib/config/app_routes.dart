@@ -6,12 +6,14 @@ import '../screens/listing_detail_screen.dart';
 import '../screens/add_listing_screen.dart';
 import '../screens/add_plot_screen.dart';
 import '../screens/payment_screen.dart';
+import '../screens/plot_detail_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
   static const String otp = '/otp';
   static const String main = '/main';
   static const String listingDetail = '/listing-detail';
+  static const String plotDetail = '/plot-detail';
   static const String addListing = '/add-listing';
   static const String addPlot = '/add-plot';
   static const String paymentScreen = '/payment-screen';
@@ -33,6 +35,12 @@ class AppRoutes {
     GetPage(
       name: listingDetail,
       page: () => const ListingDetailScreen(),
+      transition: Transition.downToUp,
+      transitionDuration: const Duration(milliseconds: 350),
+    ),
+    GetPage(
+      name: plotDetail,
+      page: () => const PlotDetailScreen(),
       transition: Transition.downToUp,
       transitionDuration: const Duration(milliseconds: 350),
     ),

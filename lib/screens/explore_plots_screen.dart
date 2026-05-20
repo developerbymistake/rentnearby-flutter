@@ -7,8 +7,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../models/city_model.dart';
@@ -59,12 +61,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Timer? _revealTimer;
   late AnimationController _radarController;
 
-  static const _plotTypes = ['Residential', 'Commercial', 'Agricultural'];
-  static const _plotTypeLabels = {
-    'Residential': 'Resi.',
-    'Commercial': 'Comm.',
-    'Agricultural': 'Agri.',
-  };
 
   @override
   void initState() {
@@ -253,6 +249,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       if (_mapReady) {
         if (_nativeUserDot == null) _initNativeUserDot();
         else _updateNativeUserDot();
+        if (_nativeCircle != null) _updateNativeRadiusCircle();
       }
 
       final ctx = await _plotCtrl.loadContext(pos.latitude, pos.longitude);
@@ -921,9 +918,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           : allPlots;
       final count = filtered.length;
 
-      final rows = <List<String>>[];
-      for (int i = 0; i < _plotTypes.length; i += 3) {
-        rows.add(_plotTypes.sublist(i, (i + 3).clamp(0, _plotTypes.length)));
+      final types = _plotCtrl.plotTypes.toList();
+      final rows = <List<dynamic>>[];
+      for (int i = 0; i < types.length; i += 3) {
+        rows.add(types.sublist(i, (i + 3).clamp(0, types.length)));
       }
 
       return Container(
@@ -972,12 +970,15 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                       padding: EdgeInsets.only(top: rowIndex > 0 ? 6 : 0),
                       child: Row(
                         children: List.generate(row.length, (colIndex) {
-                          final type = row[colIndex];
-                          final selected = _selectedPlotType == type;
+                          final type = row[colIndex] as PlotTypeModel;
+                          final selected = _selectedPlotType == type.name;
+                          final label = type.name.length > 5
+                              ? '${type.name.substring(0, 4)}.'
+                              : type.name;
                           return Expanded(
                             child: GestureDetector(
                               onTap: () {
-                                final newType = selected ? null : type;
+                                final newType = selected ? null : type.name;
                                 setState(() => _selectedPlotType = newType);
                                 _buildMarkers();
                                 if (newType != null) {
@@ -1000,7 +1001,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                                   ),
                                 ),
                                 child: Center(
-                                  child: Text(_plotTypeLabels[type] ?? type,
+                                  child: Text(label,
                                       style: TextStyle(
                                         fontFamily: 'Poppins', fontSize: 13,
                                         fontWeight: FontWeight.w600,
@@ -1028,13 +1029,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       onTap: () {
         setState(() => _selectedCity = null);
         _loadNearby();
-        if (_mapReady) {
-          if (_userLocation != null) {
-            _animateTo(_userLocation!, _zoomForRadius(_radius, _userLocation!.latitude));
-          } else {
-            _fitToRadius();
-          }
-        }
+        if (_mapReady) _fitToRadius();
       },
       child: Container(
         width: 46,
@@ -1088,7 +1083,7 @@ class _PlotCluster {
         plots.map((p) => p.longitude).reduce((a, b) => a + b) / plots.length,
       );
 
-  NearbyPlotModel get representative => plots.first;
+  NearbyPlotModel get representative => plots.reduce((a, b) => a.areaSqft <= b.areaSqft ? a : b);
 }
 
 // ── Animation widgets ─────────────────────────────────────────────────────────
@@ -1176,6 +1171,26 @@ class _PlotBottomSheet extends StatelessWidget {
         _ => AppColors.primary,
       };
 
+  Widget _photoPlaceholder() => Container(
+        color: AppColors.surface,
+        child: const Center(
+          child: Icon(Icons.landscape_rounded, size: 40, color: AppColors.textHint),
+        ),
+      );
+
+  void _call() {
+    final phone = plot.ownerPhone;
+    if (phone == null) return;
+    final uri = Uri(scheme: 'tel', path: phone);
+    canLaunchUrl(uri).then((ok) { if (ok) launchUrl(uri); });
+  }
+
+  void _whatsapp() {
+    final phone = plot.ownerPhone;
+    if (phone == null) return;
+    launchUrl(Uri.parse('https://wa.me/91$phone'), mode: LaunchMode.externalApplication);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1183,149 +1198,244 @@ class _PlotBottomSheet extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Type chip
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: _typeColor(plot.plotType).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              plot.plotType,
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: _typeColor(plot.plotType),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Area display
-          Text(
-            plot.areaDisplay,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
-            ),
-          ),
-          if (plot.areaUnit != 'sqft') ...[
-            const SizedBox(height: 2),
-            Text(
-              plot.sqftLabel,
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 13,
-                color: AppColors.textMedium,
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          const SizedBox(height: 14),
-
-          // Distance
-          Row(children: [
-            const Icon(Icons.near_me_rounded, size: 15, color: AppColors.textLight),
-            const SizedBox(width: 6),
-            Text(
-              '${plot.distanceKm.toStringAsFixed(1)} km away',
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
-            ),
-          ]),
-
-          if (plot.ownerName != null) ...[
-            const SizedBox(height: 10),
-            Row(children: [
-              const Icon(Icons.person_outline_rounded, size: 15, color: AppColors.textLight),
-              const SizedBox(width: 6),
-              Text(
-                plot.ownerName!,
-                style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark),
-              ),
-            ]),
-          ],
-
-          const SizedBox(height: 20),
-
-          // Call button
-          if (isAuthenticated && plot.ownerPhone != null)
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final uri = Uri(scheme: 'tel', path: plot.ownerPhone);
-                  if (await canLaunchUrl(uri)) launchUrl(uri);
-                },
-                icon: const Icon(Icons.call_rounded, size: 18),
-                label: const Text(
-                  'Call Owner',
-                  style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Thumbnail with availability overlay
+            Stack(
+              children: [
+                SizedBox(
+                  height: 180,
+                  width: double.infinity,
+                  child: plot.thumbnailUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: plot.thumbnailUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(color: AppColors.surface),
+                          errorWidget: (context, url, err) => _photoPlaceholder(),
+                        )
+                      : _photoPlaceholder(),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-            )
-          else if (!isAuthenticated)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.lock_outline_rounded, size: 16, color: Color(0xFF10B981)),
-                  SizedBox(width: 8),
-                  Text(
-                    'Login to contact owner',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF059669),
+                Positioned(
+                  bottom: 10,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: plot.isActive ? const Color(0xFF2E7D32) : Colors.red.shade700,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      plot.isActive ? 'Available' : 'Not Available',
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
                     ),
                   ),
+                ),
+              ],
+            ),
+
+            // Content
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Type chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _typeColor(plot.plotType).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      plot.plotType,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _typeColor(plot.plotType),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Area display
+                  Text(
+                    plot.areaDisplay,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  if (plot.areaUnit != 'sqft') ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      plot.sqftLabel,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        color: AppColors.textMedium,
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 14),
+
+                  // Distance
+                  Row(children: [
+                    const Icon(Icons.near_me_rounded, size: 15, color: AppColors.textLight),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${plot.distanceKm.toStringAsFixed(1)} km away',
+                      style: const TextStyle(
+                          fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
+                    ),
+                  ]),
+
+                  if (plot.ownerName != null) ...[
+                    const SizedBox(height: 10),
+                    Row(children: [
+                      const Icon(Icons.person_outline_rounded, size: 15, color: AppColors.textLight),
+                      const SizedBox(width: 6),
+                      Text(
+                        plot.ownerName!,
+                        style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark),
+                      ),
+                    ]),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  // View Details
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Get.toNamed(AppRoutes.plotDetail, arguments: plot.id);
+                      },
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                      label: const Text(
+                        'View Details',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Action buttons
+                  if (isAuthenticated && plot.ownerPhone != null)
+                    SizedBox(
+                      height: 50,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _call,
+                              icon: const Icon(Icons.call_rounded, size: 18),
+                              label: const Text(
+                                'Call Owner',
+                                style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2E7D32),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _whatsapp,
+                              icon: const Icon(Icons.chat_rounded, size: 18),
+                              label: const Text(
+                                'WhatsApp',
+                                style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF25D366),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (!isAuthenticated)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.lock_outline_rounded,
+                              size: 16, color: Color(0xFF10B981)),
+                          SizedBox(width: 8),
+                          Text(
+                            'Login to contact owner',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF059669),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

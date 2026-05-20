@@ -45,3 +45,19 @@ class RoomTypeModel {
         description: json['description'],
       );
 }
+
+class PlotTypeModel {
+  final String id;
+  final String name;
+  final String? description;
+  final int sortOrder;
+
+  PlotTypeModel({required this.id, required this.name, this.description, required this.sortOrder});
+
+  factory PlotTypeModel.fromJson(Map<String, dynamic> json) => PlotTypeModel(
+        id: json['id'],
+        name: json['name'],
+        description: json['description'],
+        sortOrder: json['sortOrder'] ?? 0,
+      );
+}

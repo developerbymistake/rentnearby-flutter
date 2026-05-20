@@ -17,6 +17,7 @@ class PlotController extends GetxController {
   final districts = <DistrictModel>[].obs;
   final cities = <CityModel>[].obs;
   final nearbyCities = <CityModel>[].obs;
+  final plotTypes = <PlotTypeModel>[].obs;
   final isLoading = false.obs;
   final isUploading = false.obs;
   final hasMorePlots = false.obs;
@@ -28,6 +29,14 @@ class PlotController extends GetxController {
   void onInit() {
     super.onInit();
     _loadDistricts();
+    loadPlotTypes();
+  }
+
+  Future<void> loadPlotTypes() async {
+    try {
+      final res = await ApiService.get('/admin/plot-types');
+      plotTypes.value = (res['data'] as List).map((e) => PlotTypeModel.fromJson(e)).toList();
+    } catch (_) {}
   }
 
   Future<void> _loadDistricts() async {
@@ -186,6 +195,24 @@ class PlotController extends GetxController {
       AppToast.success('Plot removed successfully.');
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not delete plot.'));
+    }
+  }
+
+  Future<PlotModel?> getById(String id) async {
+    try {
+      final res = await ApiService.get('/plots/$id');
+      return PlotModel.fromJson(res['data']);
+    } catch (e) {
+      if (e is DioException) {
+        if (e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout ||
+            e.type == DioExceptionType.connectionError) {
+          AppToast.error('No internet connection. Please check your network.');
+        } else if (e.response?.statusCode != 404) {
+          AppToast.error('Could not load plot. Please try again.');
+        }
+      }
+      return null;
     }
   }
 
