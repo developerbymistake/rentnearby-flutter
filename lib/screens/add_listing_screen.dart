@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -29,9 +30,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
   Line?   _nativeCircleGlow;
   Line?   _nativeCircleLine;
   Circle? _nativeUserDot;
-  LatLng? _cameraCenter;
-  double  _currentZoom = 14.0;
-  Size    _mapSize = Size.zero;
+  Symbol? _nativePin;
+  double  _minZoom = 13.0;
   final _descCtrl = TextEditingController();
   final _priceMonthlyCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
@@ -46,7 +46,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
   bool _locationBlocked = false; // permission denied forever OR GPS service off
   bool _mapReady = false;
   bool _cameraInitialized = false;
-  bool _pinsVisible = true;
   bool _isGeocoding = false;
   bool _isUploading = false;
   int _uploadCurrent = 0;
@@ -121,18 +120,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
       if (!mounted) return;
       final loc = LatLng(pos.latitude, pos.longitude);
       final addressWasEmpty = _addressCtrl.text.trim().isEmpty;
+      bool pinMoved = false;
       setState(() {
         _userLocation = loc;
         if (_selectedLocation == null ||
             (_selectedLocation!.latitude == lastKnown?.latitude &&
              _selectedLocation!.longitude == lastKnown?.longitude)) {
           _selectedLocation = loc;
+          pinMoved = true;
         }
       });
       if (_mapReady) {
         if (_nativeUserDot == null) _initNativeUserDot();
         else _updateNativeUserDot();
         if (_nativeCircle == null) _initNativeCircle();
+        if (pinMoved && _selectedLocation != null) _setNativePin(_selectedLocation!);
       }
 
       // Auto-fetch address from accurate GPS if not already filled
@@ -164,17 +166,18 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _mapController!.animateCamera(CameraUpdate.newLatLngZoom(target, zoom));
   }
 
-  void _onStyleLoaded() {
+  Future<void> _onStyleLoaded() async {
     _mapReady = true;
     if (!mounted) return;
-    _cameraCenter = _userLocation ?? const LatLng(30.3165, 78.0322);
+    await _addPinImage();
     _initNativeCircle();
     _initNativeUserDot();
+    if (_selectedLocation != null) await _setNativePin(_selectedLocation!);
     if (_userLocation != null && !_cameraInitialized) {
       _cameraInitialized = true;
       _animateTo(_userLocation!, 14.0);
     }
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   Future<void> _initNativeCircle() async {
@@ -224,23 +227,72 @@ class _AddListingScreenState extends State<AddListingScreen> {
     ctrl.updateCircle(dot, CircleOptions(geometry: loc));
   }
 
-  Offset? _latLngToScreen(LatLng pos) {
-    final center = _cameraCenter;
-    if (center == null || _mapSize == Size.zero) return null;
-    final scale = 512.0 * pow(2.0, _currentZoom);
-    final px = (pos.longitude + 180) / 360 * scale;
-    final py = _mercatorY(pos.latitude) * scale;
-    final cx = (center.longitude + 180) / 360 * scale;
-    final cy = _mercatorY(center.latitude) * scale;
-    return Offset(
-      _mapSize.width / 2 + (px - cx),
-      _mapSize.height / 2 + (py - cy),
-    );
+  double _calcMinZoom(double radiusKm, double lat, double screenWidthPx) {
+    const earthCircumference = 2 * pi * 6378137.0;
+    const tileSize = 512.0;
+    final metersPerPxAtZ0 = earthCircumference * cos(lat * pi / 180) / tileSize;
+    final targetMetersPerPx = (radiusKm * 1000 * 2) / (screenWidthPx * 0.85);
+    final zoom = log(metersPerPxAtZ0 / targetMetersPerPx) / log(2);
+    return zoom.clamp(11.0, 15.0);
   }
 
-  static double _mercatorY(double lat) {
-    final sinLat = sin(lat * pi / 180);
-    return 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
+  Future<void> _addPinImage() async {
+    if (_mapController == null) return;
+    try {
+      const size = 80.0;
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      final fillPaint = Paint()..color = AppColors.primary;
+      final strokePaint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3;
+
+      const cx = size / 2;
+      const cy = 28.0;
+      const r = 22.0;
+      canvas.drawCircle(const Offset(cx, cy), r, fillPaint);
+      canvas.drawCircle(const Offset(cx, cy), r, strokePaint);
+
+      final stemPath = Path()
+        ..moveTo(cx - 7, cy + r - 4)
+        ..lineTo(cx + 7, cy + r - 4)
+        ..lineTo(cx, size - 4)
+        ..close();
+      canvas.drawPath(stemPath, fillPaint);
+
+      final whitePaint = Paint()..color = Colors.white;
+      final roofPath = Path()
+        ..moveTo(cx, cy - 13)
+        ..lineTo(cx - 10, cy - 2)
+        ..lineTo(cx + 10, cy - 2)
+        ..close();
+      canvas.drawPath(roofPath, whitePaint);
+      canvas.drawRect(Rect.fromLTWH(cx - 7, cy - 2, 14, 12), whitePaint);
+
+      final picture = recorder.endRecording();
+      final image = await picture.toImage(size.toInt(), size.toInt());
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData != null) {
+        await _mapController!.addImage('home-pin', byteData.buffer.asUint8List());
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _setNativePin(LatLng latLng) async {
+    final ctrl = _mapController;
+    if (ctrl == null || !mounted) return;
+    if (_nativePin != null) {
+      await ctrl.removeSymbol(_nativePin!);
+      _nativePin = null;
+    }
+    _nativePin = await ctrl.addSymbol(SymbolOptions(
+      geometry: latLng,
+      iconImage: 'home-pin',
+      iconSize: 1.0,
+      iconAnchor: 'bottom',
+    ));
   }
 
   static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
@@ -1055,7 +1107,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
             borderRadius: BorderRadius.circular(14),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                _mapSize = Size(constraints.maxWidth, 280);
+                if (_userLocation != null) {
+                  _minZoom = _calcMinZoom(0.5, _userLocation!.latitude, constraints.maxWidth);
+                }
                 return SizedBox(
                   height: 280,
                   child: Stack(children: [
@@ -1065,23 +1119,15 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         target: _userLocation ?? const LatLng(30.3165, 78.0322),
                         zoom: 14.0,
                       ),
-                      minMaxZoomPreference: const MinMaxZoomPreference(13.0, 18.0),
+                      minMaxZoomPreference: MinMaxZoomPreference(_minZoom, 18.0),
                       compassEnabled: false,
                       rotateGesturesEnabled: false,
                       tiltGesturesEnabled: false,
                       myLocationEnabled: false,
-                      trackCameraPosition: true,
+                      trackCameraPosition: false,
                       attributionButtonMargins: const Point(-200.0, 0.0),
                       onMapCreated: (ctrl) => _mapController = ctrl,
                       onStyleLoadedCallback: _onStyleLoaded,
-                      onCameraMove: (pos) {
-                        _currentZoom = pos.zoom;
-                        _cameraCenter = pos.target;
-                        if (mounted && _pinsVisible) setState(() => _pinsVisible = false);
-                      },
-                      onCameraIdle: () {
-                        if (mounted && !_pinsVisible) setState(() => _pinsVisible = true);
-                      },
                       onMapClick: (_, latLng) {
                         if (_userLocation != null) {
                           final distM = Geolocator.distanceBetween(
@@ -1094,36 +1140,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                           }
                         }
                         setState(() => _selectedLocation = latLng);
+                        _setNativePin(latLng);
                         _reverseGeocode(latLng);
                       },
                     ),
-                    if (_selectedLocation != null)
-                      Builder(builder: (_) {
-                        final screen = _latLngToScreen(_selectedLocation!);
-                        if (screen == null) return const SizedBox.shrink();
-                        return Positioned(
-                          left: screen.dx - 20,
-                          top:  screen.dy - 46,
-                          child: IgnorePointer(
-                            child: AnimatedOpacity(
-                              opacity: _pinsVisible ? 1.0 : 0.0,
-                              duration: const Duration(milliseconds: 100),
-                              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                                Container(
-                                  width: 36, height: 36,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 6, offset: const Offset(0, 3))],
-                                  ),
-                                  child: const Icon(Icons.home_rounded, color: Colors.white, size: 18),
-                                ),
-                                Container(width: 2, height: 10, color: AppColors.primary),
-                              ]),
-                            ),
-                          ),
-                        );
-                      }),
                     Positioned(
                       bottom: 10, right: 10,
                       child: GestureDetector(
