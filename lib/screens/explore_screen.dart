@@ -31,6 +31,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Line? _nativeCircleLine;
   Circle? _nativeUserDot;
   bool _pinsVisible = true;
+  bool _styleLoaded = false;
 
   // ── State ─────────────────────────────────────────────────────────────────
   final _listingCtrl = Get.find<ListingController>();
@@ -385,6 +386,8 @@ class _ExploreScreenState extends State<ExploreScreen>
   // ── Style loaded callback ─────────────────────────────────────────────────
 
   void _onStyleLoaded() {
+    if (_styleLoaded) return;
+    _styleLoaded = true;
     _mapReady = true;
     if (!mounted) return;
     _cameraCenter = _searchCenter;

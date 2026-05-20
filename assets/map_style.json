@@ -1,8 +1,8 @@
 {
   "version": 8,
   "name": "Bakhli",
-  "glyphs": "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf",
-  "sprite": "https://protomaps.github.io/basemaps-assets/sprites/v4/light",
+  "glyphs": "https://fonts.developerbymistake.tech/fonts/{fontstack}/{range}.pbf",
+  "sprite": "asset://assets/sprites/light",
   "sources": {
     "protomaps": {
       "type": "vector",

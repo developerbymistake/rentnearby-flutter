@@ -32,6 +32,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Line? _nativeCircleLine;
   Circle? _nativeUserDot;
   bool _pinsVisible = true;
+  bool _styleLoaded = false;
 
   // ── State ─────────────────────────────────────────────────────────────────
   final _plotCtrl = Get.find<PlotController>();
@@ -314,6 +315,8 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   void _onStyleLoaded() {
+    if (_styleLoaded) return;
+    _styleLoaded = true;
     _mapReady = true;
     if (!mounted) return;
     _cameraCenter = _searchCenter;
