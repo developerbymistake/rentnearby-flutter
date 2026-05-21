@@ -721,8 +721,6 @@ class _PlotCard extends StatelessWidget {
                           Text(plot.areaDisplay,
                               style: const TextStyle(
                                   fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                          Text(plot.sqftLabel,
-                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
                         ],
                       ),
                     ),
@@ -781,15 +779,15 @@ class _PlotCard extends StatelessWidget {
                               fontFamily: 'Poppins',
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: _kBrown)),
+                              color: Color(0xFF10B981))),
                       const SizedBox(width: 4),
                       Transform.scale(
                         scale: 0.85,
                         child: Switch(
                           value: true,
                           onChanged: (_) => onToggleActive(),
-                          activeColor: _kBrown,
-                          activeTrackColor: const Color(0xFFFFF7ED),
+                          activeColor: const Color(0xFF10B981),
+                          activeTrackColor: const Color(0xFFD1FAE5),
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                       ),
@@ -800,21 +798,21 @@ class _PlotCard extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: _kBrown.withValues(alpha: 0.1),
+                            color: const Color(0xFF10B981).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: _kBrown.withValues(alpha: 0.4)),
+                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.rocket_launch_rounded, size: 14, color: _kBrown),
+                              Icon(Icons.rocket_launch_rounded, size: 14, color: Color(0xFF10B981)),
                               SizedBox(width: 4),
                               Text('Make it Live',
                                   style: TextStyle(
                                       fontFamily: 'Poppins',
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: _kBrown)),
+                                      color: Color(0xFF10B981))),
                             ],
                           ),
                         ),
@@ -859,7 +857,7 @@ class _PlotCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isLive
-              ? [const Color(0xFF92400E), const Color(0xFF78350F)]
+              ? [const Color(0xFF10B981), const Color(0xFF059669)]
               : [const Color(0xFFF59E0B), const Color(0xFFD97706)],
         ),
         borderRadius: BorderRadius.circular(20),
