@@ -144,6 +144,44 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     );
   }
 
+  void _showExitConfirmation() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Exit Bakhli?',
+          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark),
+        ),
+        content: const Text(
+          'Are you sure you want to exit?',
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => SystemNavigator.pop(),
+            child: const Text(
+              'Exit',
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -153,7 +191,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         if (_currentIndex != 0) {
           setState(() => _currentIndex = 0);
         } else {
-          SystemNavigator.pop();
+          _showExitConfirmation();
         }
       },
       child: Stack(
