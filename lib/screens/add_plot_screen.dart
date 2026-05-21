@@ -226,14 +226,14 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     final points = _circlePolygonPoints(loc, 0.5);
     _nativeCircleGlow = await ctrl.addLine(LineOptions(
       geometry: points,
-      lineColor: '#10B981',
+      lineColor: '#92400E',
       lineWidth: 10.0,
       lineOpacity: 0.20,
       lineBlur: 4.0,
     ));
     _nativeCircleLine = await ctrl.addLine(LineOptions(
       geometry: points,
-      lineColor: '#10B981',
+      lineColor: '#92400E',
       lineWidth: 2.5,
       lineOpacity: 0.90,
     ));
@@ -279,7 +279,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       _nativePin = await ctrl.addCircle(CircleOptions(
         geometry: latLng,
         circleRadius: 12.0,
-        circleColor: '#10B981',
+        circleColor: '#92400E',
         circleOpacity: 1.0,
         circleStrokeColor: '#FFFFFF',
         circleStrokeWidth: 2.5,
@@ -369,7 +369,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
             child: const Text('Keep Editing',
                 style: TextStyle(
                     fontFamily: 'Poppins',
-                    color: Color(0xFF10B981),
+                    color: Color(0xFF92400E),
                     fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
@@ -749,7 +749,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide:
-                const BorderSide(color: Color(0xFF10B981), width: 1.5)),
+                const BorderSide(color: Color(0xFF92400E), width: 1.5)),
       );
 
   Widget _buildUploadOverlay() {
@@ -788,7 +788,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                 height: 68,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    colors: [Color(0xFF92400E), Color(0xFF78350F)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -829,7 +829,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                     height: 8,
                     decoration: BoxDecoration(
                       color: isDone || isCurrent
-                          ? const Color(0xFF10B981)
+                          ? const Color(0xFF92400E)
                           : AppColors.divider,
                       borderRadius: BorderRadius.circular(4),
                     ),
@@ -853,7 +853,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                             height: 10,
                             decoration: const BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [Color(0xFF10B981), Color(0xFF059669)],
+                                colors: [Color(0xFF92400E), Color(0xFF78350F)],
                                 begin: Alignment.centerLeft,
                                 end: Alignment.centerRight,
                               ),
@@ -877,7 +877,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                                 fontFamily: 'Poppins',
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF10B981),
+                                color: Color(0xFF92400E),
                                 decoration: TextDecoration.none)),
                       ],
                     ),
@@ -912,7 +912,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
               Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    colors: [Color(0xFF92400E), Color(0xFF78350F)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -951,11 +951,11 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                 child: Row(children: [
                   _stepDot(0, 'Details'),
-                  Expanded(child: Container(height: 2, color: _step >= 1 ? const Color(0xFF10B981) : AppColors.divider)),
+                  Expanded(child: Container(height: 2, color: _step >= 1 ? const Color(0xFF92400E) : AppColors.divider)),
                   _stepDot(1, 'Location'),
-                  Expanded(child: Container(height: 2, color: _step >= 2 ? const Color(0xFF10B981) : AppColors.divider)),
+                  Expanded(child: Container(height: 2, color: _step >= 2 ? const Color(0xFF92400E) : AppColors.divider)),
                   _stepDot(2, 'Address'),
-                  Expanded(child: Container(height: 2, color: _step >= 3 ? const Color(0xFF10B981) : AppColors.divider)),
+                  Expanded(child: Container(height: 2, color: _step >= 3 ? const Color(0xFF92400E) : AppColors.divider)),
                   _stepDot(3, 'Photos'),
                 ]),
               ),
@@ -984,14 +984,14 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                         onPressed: () => setState(() => _step--),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(0, 52),
-                          side: const BorderSide(color: Color(0xFF10B981)),
+                          side: const BorderSide(color: Color(0xFF92400E)),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14)),
                         ),
                         child: const Text('Back',
                             style: TextStyle(
                                 fontFamily: 'Poppins',
-                                color: Color(0xFF10B981),
+                                color: Color(0xFF92400E),
                                 fontWeight: FontWeight.w600)),
                       ),
                     ),
@@ -1030,7 +1030,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: (active || done) ? const Color(0xFF10B981) : AppColors.divider,
+            color: (active || done) ? const Color(0xFF92400E) : AppColors.divider,
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -1050,7 +1050,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: (active || done)
-                    ? const Color(0xFF10B981)
+                    ? const Color(0xFF92400E)
                     : AppColors.textLight)),
       ],
     );
@@ -1098,10 +1098,10 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                     width: (MediaQuery.of(context).size.width - 40 - 32 - 16) / 3,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: active ? const Color(0xFF10B981) : Colors.white,
+                      color: active ? const Color(0xFF92400E) : Colors.white,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                          color: active ? const Color(0xFF10B981) : AppColors.divider,
+                          color: active ? const Color(0xFF92400E) : AppColors.divider,
                           width: 1.5),
                     ),
                     child: Center(
@@ -1138,10 +1138,10 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: active ? const Color(0xFF10B981) : Colors.white,
+                      color: active ? const Color(0xFF92400E) : Colors.white,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                          color: active ? const Color(0xFF10B981) : AppColors.divider,
+                          color: active ? const Color(0xFF92400E) : AppColors.divider,
                           width: 1.5),
                     ),
                     child: Text(
@@ -1253,7 +1253,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(color: const Color(0xFF10B981), borderRadius: BorderRadius.circular(8)),
+                        decoration: BoxDecoration(color: const Color(0xFF92400E), borderRadius: BorderRadius.circular(8)),
                         child: const Text('Enable GPS',
                             style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
                       ),
@@ -1267,9 +1267,9 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(border: Border.all(color: const Color(0xFF10B981)), borderRadius: BorderRadius.circular(8)),
+                        decoration: BoxDecoration(border: Border.all(color: const Color(0xFF92400E)), borderRadius: BorderRadius.circular(8)),
                         child: const Text('App Settings',
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF10B981))),
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF92400E))),
                       ),
                     ),
                   ]),
@@ -1300,7 +1300,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
               color: AppColors.surface,
               child: const Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  CircularProgressIndicator(color: Color(0xFF10B981), strokeWidth: 2),
+                  CircularProgressIndicator(color: Color(0xFF92400E), strokeWidth: 2),
                   SizedBox(height: 14),
                   Text('Getting your location...', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
                 ]),
@@ -1362,7 +1362,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                           color: Colors.white, shape: BoxShape.circle,
                           boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
                         ),
-                        child: const Icon(Iconsax.location, color: Color(0xFF10B981), size: 18),
+                        child: const Icon(Iconsax.location, color: Color(0xFF92400E), size: 18),
                       ),
                     ),
                   ),
@@ -1446,7 +1446,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                 ? const Padding(
                     padding: EdgeInsets.all(14),
                     child: SizedBox(width: 16, height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981))),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF92400E))),
                   )
                 : null,
           ),
@@ -1501,7 +1501,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                   style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 12,
-                      color: Color(0xFF10B981))),
+                      color: Color(0xFF92400E))),
               const SizedBox(height: 16),
               if (_photos.isEmpty)
                 GestureDetector(
@@ -1513,7 +1513,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                          color: const Color(0xFF92400E).withValues(alpha: 0.3),
                           width: 1.5),
                     ),
                     child: Column(
@@ -1522,10 +1522,10 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                           Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                                color: const Color(0xFF92400E).withValues(alpha: 0.1),
                                 shape: BoxShape.circle),
                             child: const Icon(Icons.add_a_photo_rounded,
-                                color: Color(0xFF10B981), size: 28),
+                                color: Color(0xFF92400E), size: 28),
                           ),
                           const SizedBox(height: 10),
                           const Text('Add Plot Photos',
@@ -1533,7 +1533,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                                   fontFamily: 'Poppins',
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF10B981))),
+                                  color: Color(0xFF92400E))),
                           const SizedBox(height: 4),
                           const Text('Camera or Gallery',
                               style: TextStyle(
@@ -1566,13 +1566,13 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.add_rounded,
-                                    color: Color(0xFF10B981), size: 28),
+                                    color: Color(0xFF92400E), size: 28),
                                 SizedBox(height: 4),
                                 Text('Add',
                                     style: TextStyle(
                                         fontFamily: 'Poppins',
                                         fontSize: 11,
-                                        color: Color(0xFF10B981),
+                                        color: Color(0xFF92400E),
                                         fontWeight: FontWeight.w500)),
                               ]),
                         ),
@@ -1594,7 +1594,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.8),
+                              color: const Color(0xFF92400E).withValues(alpha: 0.8),
                               borderRadius: const BorderRadius.vertical(
                                   bottom: Radius.circular(12)),
                             ),
@@ -1633,14 +1633,14 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(Icons.add_a_photo_rounded,
-                            color: Color(0xFF10B981), size: 16),
+                            color: Color(0xFF92400E), size: 16),
                         const SizedBox(width: 6),
                         Text(
                             'Add ${5 - _photos.length} more photo${5 - _photos.length == 1 ? '' : 's'}',
                             style: const TextStyle(
                                 fontFamily: 'Poppins',
                                 fontSize: 13,
-                                color: Color(0xFF10B981),
+                                color: Color(0xFF92400E),
                                 fontWeight: FontWeight.w500)),
                       ]),
                 ),

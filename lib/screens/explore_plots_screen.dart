@@ -336,19 +336,19 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     final points = _circlePolygonPoints(_searchCenter, _radius);
     _nativeCircle = await ctrl.addFill(FillOptions(
       geometry: [points],
-      fillColor: '#10B981',
+      fillColor: '#92400E',
       fillOpacity: 0.06,
     ));
     _nativeCircleGlow = await ctrl.addLine(LineOptions(
       geometry: points,
-      lineColor: '#10B981',
+      lineColor: '#92400E',
       lineWidth: 6.0,
       lineOpacity: 0.15,
       lineBlur: 3.0,
     ));
     _nativeCircleLine = await ctrl.addLine(LineOptions(
       geometry: points,
-      lineColor: '#10B981',
+      lineColor: '#92400E',
       lineWidth: 1.8,
       lineOpacity: 0.65,
     ));
@@ -370,7 +370,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _nativeUserDot = await ctrl.addCircle(CircleOptions(
       geometry: loc,
       circleRadius: 8.0,
-      circleColor: '#10B981',
+      circleColor: '#92400E',
       circleOpacity: 1.0,
       circleStrokeColor: '#FFFFFF',
       circleStrokeWidth: 2.5,
@@ -454,7 +454,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           builder: (context2, child2) => CustomPaint(
             painter: _RadarPainter(
                 progress: _radarController.value,
-                color: const Color(0xFF10B981)),
+                color: const Color(0xFF92400E)),
           ),
         ),
       );
@@ -494,7 +494,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(17),
-                  border: Border.all(color: const Color(0xFF10B981), width: 2),
+                  border: Border.all(color: const Color(0xFF92400E), width: 2),
                   boxShadow: const [
                     BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
                   ],
@@ -506,7 +506,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                       fontFamily: 'Poppins',
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF059669),
+                      color: Color(0xFF78350F),
                     ),
                   ),
                 ),
@@ -525,7 +525,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
               child: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    colors: [Color(0xFF92400E), Color(0xFF78350F)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -742,7 +742,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 child: Container(
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Color(0xFF10B981), Color(0xFF059669)],
+                      colors: [Color(0xFF92400E), Color(0xFF78350F)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -841,13 +841,13 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
             value: '__current__',
             child: Row(children: [
               Icon(Icons.my_location_rounded,
-                  size: 14, color: isCurrent ? const Color(0xFF10B981) : AppColors.textLight),
+                  size: 14, color: isCurrent ? const Color(0xFF92400E) : AppColors.textLight),
               const SizedBox(width: 10),
               Text('Current',
                   style: TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w500,
-                      color: isCurrent ? const Color(0xFF10B981) : AppColors.textDark)),
+                      color: isCurrent ? const Color(0xFF92400E) : AppColors.textDark)),
             ]),
           ),
           ...cs.map((c) => PopupMenuItem<String>(
@@ -856,7 +856,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                   Icon(Iconsax.location,
                       size: 14,
                       color: _selectedCity?.id == c.id
-                          ? const Color(0xFF10B981)
+                          ? const Color(0xFF92400E)
                           : AppColors.textLight),
                   const SizedBox(width: 10),
                   Text(c.name,
@@ -864,7 +864,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                           fontFamily: 'Poppins',
                           fontWeight: FontWeight.w500,
                           color: _selectedCity?.id == c.id
-                              ? const Color(0xFF10B981)
+                              ? const Color(0xFF92400E)
                               : AppColors.textDark)),
                 ]),
               )),
@@ -925,7 +925,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                     fontFamily: 'Poppins',
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: active ? const Color(0xFF059669) : Colors.white,
+                    color: active ? const Color(0xFF78350F) : Colors.white,
                   ),
                 ),
               ),
@@ -968,7 +968,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 constraints: const BoxConstraints(minHeight: 52),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    colors: [Color(0xFF92400E), Color(0xFF78350F)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -1022,10 +1022,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                                 margin: EdgeInsets.only(right: colIndex < row.length - 1 ? 6 : 0),
                                 padding: const EdgeInsets.symmetric(vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: selected ? const Color(0xFF10B981) : Colors.white,
+                                  color: selected ? const Color(0xFF92400E) : Colors.white,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                    color: selected ? const Color(0xFF10B981) : AppColors.divider,
+                                    color: selected ? const Color(0xFF92400E) : AppColors.divider,
                                     width: 1.5,
                                   ),
                                 ),
@@ -1070,7 +1070,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
             BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))
           ],
         ),
-        child: const Icon(Icons.my_location_rounded, color: Color(0xFF10B981), size: 22),
+        child: const Icon(Icons.my_location_rounded, color: Color(0xFF92400E), size: 22),
       ),
     );
   }
@@ -1196,7 +1196,7 @@ class _PlotBottomSheet extends StatelessWidget {
   Color _typeColor(String type) => switch (type) {
         'Residential' => const Color(0xFF3B82F6),
         'Commercial' => const Color(0xFFF59E0B),
-        'Agricultural' => const Color(0xFF10B981),
+        'Agricultural' => const Color(0xFF92400E),
         _ => AppColors.primary,
       };
 
@@ -1371,7 +1371,7 @@ class _PlotBottomSheet extends StatelessWidget {
                         style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
+                        backgroundColor: const Color(0xFF92400E),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
@@ -1433,16 +1433,16 @@ class _PlotBottomSheet extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
+                        color: const Color(0xFFFFF7ED),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                            color: const Color(0xFF92400E).withValues(alpha: 0.3)),
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.lock_outline_rounded,
-                              size: 16, color: Color(0xFF10B981)),
+                              size: 16, color: Color(0xFF92400E)),
                           SizedBox(width: 8),
                           Text(
                             'Login to contact owner',
@@ -1450,7 +1450,7 @@ class _PlotBottomSheet extends StatelessWidget {
                               fontFamily: 'Poppins',
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF059669),
+                              color: Color(0xFF78350F),
                             ),
                           ),
                         ],

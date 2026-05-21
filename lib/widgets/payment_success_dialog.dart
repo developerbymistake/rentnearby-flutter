@@ -71,8 +71,12 @@ class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
   @override
   Widget build(BuildContext context) {
     final isPaid = widget.planType == 'PAID';
-    final color = isPaid ? AppColors.primary : const Color(0xFF10B981);
-    final lightColor = isPaid ? const Color(0xFFEFF6FF) : const Color(0xFFECFDF5);
+    final color = isPaid
+        ? AppColors.primary
+        : (widget.isPlot ? const Color(0xFF92400E) : const Color(0xFF10B981));
+    final lightColor = isPaid
+        ? const Color(0xFFEFF6FF)
+        : (widget.isPlot ? const Color(0xFFFFF7ED) : const Color(0xFFECFDF5));
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -156,21 +160,21 @@ class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
+                color: lightColor,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.circle, size: 7, color: Color(0xFF10B981)),
+                  Icon(Icons.circle, size: 7, color: color),
                   const SizedBox(width: 7),
                   Text(
                     widget.isPlot ? 'Plot is live' : 'Listing is live',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Poppins',
-                      color: Color(0xFF10B981),
+                      color: color,
                     ),
                   ),
                 ],

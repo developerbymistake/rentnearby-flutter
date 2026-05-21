@@ -13,14 +13,14 @@ class AreaMapPin extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF10B981), Color(0xFF059669)],
+              colors: [Color(0xFF92400E), Color(0xFF78350F)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                color: const Color(0xFF92400E).withValues(alpha: 0.4),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -45,7 +45,7 @@ class AreaMapPin extends StatelessWidget {
 class _AreaPinTailPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = const Color(0xFF059669);
+    final paint = Paint()..color = const Color(0xFF78350F);
     final path = Path()
       ..moveTo(0, 0)
       ..lineTo(size.width, 0)

@@ -10,8 +10,8 @@ import '../models/plot_model.dart';
 import '../utils/app_toast.dart';
 import '../widgets/payment_success_dialog.dart';
 
-const _kGreen = Color(0xFF10B981);
-const _kGreenDark = Color(0xFF059669);
+const _kBrown = Color(0xFF92400E);
+const _kBrownDark = Color(0xFF78350F);
 
 class MyPlotsScreen extends StatefulWidget {
   const MyPlotsScreen({super.key});
@@ -134,11 +134,11 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                 decoration: InputDecoration(
                   hintText: 'Full name',
                   hintStyle: const TextStyle(fontFamily: 'Poppins', color: AppColors.textHint),
-                  prefixIcon: const Icon(Icons.person_rounded, color: _kGreen, size: 20),
+                  prefixIcon: const Icon(Icons.person_rounded, color: _kBrown, size: 20),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _kGreen, width: 1.5)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _kBrown, width: 1.5)),
                 ),
                 onSubmitted: (_) => save(),
               ),
@@ -151,7 +151,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kGreen,
+                backgroundColor: _kBrown,
                 foregroundColor: Colors.white,
                 minimumSize: Size.zero,
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -275,10 +275,10 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: _kGreen.withValues(alpha: 0.1),
+                  color: _kBrown.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.flash_on_rounded, size: 30, color: _kGreen),
+                child: const Icon(Icons.flash_on_rounded, size: 30, color: _kBrown),
               ),
             ),
             const SizedBox(height: 16),
@@ -331,21 +331,21 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: i == 0 ? _kGreen : _kGreen.withValues(alpha: 0.3),
+                          color: i == 0 ? _kBrown : _kBrown.withValues(alpha: 0.3),
                           width: i == 0 ? 2 : 1.5,
                         ),
                         borderRadius: BorderRadius.circular(12),
-                        color: i == 0 ? _kGreen.withValues(alpha: 0.05) : Colors.grey[50],
+                        color: i == 0 ? _kBrown.withValues(alpha: 0.05) : Colors.grey[50],
                       ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: _kGreen.withValues(alpha: 0.15),
+                              color: _kBrown.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.flash_on_rounded, color: _kGreen, size: 20),
+                            child: const Icon(Icons.flash_on_rounded, color: _kBrown, size: 20),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -360,7 +360,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                             ),
                           ),
                           Text('₹$price',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kGreen, fontFamily: 'Poppins')),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kBrown, fontFamily: 'Poppins')),
                         ],
                       ),
                     ),
@@ -427,7 +427,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                   label: const Text('Upgrade Plan',
                       style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _kGreen,
+                    backgroundColor: _kBrown,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 13),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -459,8 +459,8 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                   label: const Text('Manage Plots',
                       style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: _kGreen,
-                    side: const BorderSide(color: _kGreen),
+                    foregroundColor: _kBrown,
+                    side: const BorderSide(color: _kBrown),
                     padding: const EdgeInsets.symmetric(vertical: 13),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -538,7 +538,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
               if (plots.isEmpty) return _buildEmpty();
 
               return RefreshIndicator(
-                color: _kGreen,
+                color: _kBrown,
                 onRefresh: _refresh,
                 child: ListView.builder(
                   controller: _scrollCtrl,
@@ -548,7 +548,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                     if (i == plots.length) {
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: _kGreen)),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: _kBrown)),
                       );
                     }
                     return Padding(
@@ -573,7 +573,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   Widget _buildHeader() => Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [_kGreen, _kGreenDark],
+            colors: [_kBrown, _kBrownDark],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -604,10 +604,10 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.add_rounded, size: 16, color: _kGreen),
+                        Icon(Icons.add_rounded, size: 16, color: _kBrown),
                         SizedBox(width: 4),
                         Text('Add Plot',
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _kGreen)),
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _kBrown)),
                       ],
                     ),
                   ),
@@ -623,8 +623,8 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
           Container(
             width: 90,
             height: 90,
-            decoration: BoxDecoration(color: _kGreen.withValues(alpha: 0.1), shape: BoxShape.circle),
-            child: const Icon(Iconsax.map, size: 40, color: _kGreen),
+            decoration: BoxDecoration(color: _kBrown.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: const Icon(Iconsax.map, size: 40, color: _kBrown),
           ),
           const SizedBox(height: 20),
           const Text('No plots yet',
@@ -665,7 +665,7 @@ class _PlotCard extends StatelessWidget {
 
   Color _typeColor(String type) => switch (type) {
     'Commercial'   => const Color(0xFFF59E0B),
-    'Agricultural' => const Color(0xFF10B981),
+    'Agricultural' => const Color(0xFF92400E),
     _              => const Color(0xFF3B82F6),
   };
 
@@ -764,7 +764,7 @@ class _PlotCard extends StatelessWidget {
                       Switch(
                         value: true,
                         onChanged: (_) => onToggleActive(),
-                        activeColor: _kGreen,
+                        activeColor: _kBrown,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       const SizedBox(width: 4),
@@ -773,7 +773,7 @@ class _PlotCard extends StatelessWidget {
                               fontFamily: 'Poppins',
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: _kGreen)),
+                              color: _kBrown)),
                     ] else ...[
                       // Inactive: show "Make it Live" button
                       GestureDetector(
@@ -781,21 +781,21 @@ class _PlotCard extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: _kGreen.withValues(alpha: 0.1),
+                            color: _kBrown.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: _kGreen.withValues(alpha: 0.4)),
+                            border: Border.all(color: _kBrown.withValues(alpha: 0.4)),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.rocket_launch_rounded, size: 14, color: _kGreen),
+                              Icon(Icons.rocket_launch_rounded, size: 14, color: _kBrown),
                               SizedBox(width: 4),
                               Text('Make it Live',
                                   style: TextStyle(
                                       fontFamily: 'Poppins',
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: _kGreen)),
+                                      color: _kBrown)),
                             ],
                           ),
                         ),
@@ -836,7 +836,7 @@ class _PlotCard extends StatelessWidget {
   Widget _placeholder() => Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF10B981), Color(0xFF059669)],
+            colors: [Color(0xFF92400E), Color(0xFF78350F)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -876,7 +876,7 @@ class _PlotPlanSelectionSheet extends StatelessWidget {
           subtitle: '$days days • $plots plot${plots > 1 ? 's' : ''}',
           price: 'Free',
           icon: Icons.star_rounded,
-          color: const Color(0xFF10B981),
+          color: const Color(0xFF92400E),
         ));
         tiles.add(const SizedBox(height: 12));
       }
@@ -894,7 +894,7 @@ class _PlotPlanSelectionSheet extends StatelessWidget {
         subtitle: '$days days • $plots plot${plots > 1 ? 's' : ''}',
         price: '₹$price',
         icon: Icons.flash_on_rounded,
-        color: _kGreen,
+        color: _kBrown,
         isHighlighted: hasUsedFreePlotPlan && i == 0,
       ));
       if (i < paidPlans.length - 1) tiles.add(const SizedBox(height: 12));
