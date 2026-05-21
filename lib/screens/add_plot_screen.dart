@@ -216,7 +216,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       _cameraInitialized = true;
       _animateTo(_userLocation!, 14.0);
     }
-    if (mounted) setState(() {});
   }
 
   Future<void> _initNativeCircle() async {
