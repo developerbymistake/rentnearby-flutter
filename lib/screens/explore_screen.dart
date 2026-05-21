@@ -53,6 +53,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Timer? _loadNearbyDebounceTimer;
   String? _selectedRoomType;
   bool _autoLoading = false;
+  bool _loadingNearby = false;
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
@@ -86,7 +87,12 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (!mounted) return;
       if (status == ServiceStatus.enabled) {
         if (_userLocation == null && !_locationLoading) {
-          setState(() => _locationLoading = true);
+          setState(() {
+            _locationLoading = true;
+            _styleLoaded = false;
+            _mapReady = false;
+          });
+          _nativeUserDot = null;
           _initLocation();
         }
       } else {
@@ -434,21 +440,27 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   Future<void> _executeLoadNearby() async {
+    if (_loadingNearby) return;
     if (_selectedDistrict == null) return;
     final cityId = _effectiveCityId;
     if (cityId == null) return;
-    _revealTimer?.cancel();
-    _radarController.repeat();
-    _markerData = _userLocation != null ? [_buildUserMarkerData()] : [];
-    _revealedCount = _markerData.length;
-    setState(() {});
-    final center = _searchCenter;
-    await _listingCtrl.loadNearby(
-        center.latitude, center.longitude, _radius, cityId);
-    _radarController.stop();
-    _radarController.reset();
-    _buildMarkers();
-    if (_listingCtrl.nearbyListings.isNotEmpty) _playTing();
+    _loadingNearby = true;
+    try {
+      _revealTimer?.cancel();
+      _radarController.repeat();
+      _markerData = _userLocation != null ? [_buildUserMarkerData()] : [];
+      _revealedCount = _markerData.length;
+      setState(() {});
+      final center = _searchCenter;
+      await _listingCtrl.loadNearby(
+          center.latitude, center.longitude, _radius, cityId);
+      _radarController.stop();
+      _radarController.reset();
+      _buildMarkers();
+      if (_listingCtrl.nearbyListings.isNotEmpty) _playTing();
+    } finally {
+      _loadingNearby = false;
+    }
   }
 
   void _playTing() async {
@@ -541,7 +553,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           width: 48,
           height: 48,
           widget: GestureDetector(
-            onTap: () => _showDetail(rep.id),
+            onTap: () => _zoomToCluster(cluster),
             child: _AnimatedPin(
               child: Container(
                 decoration: BoxDecoration(
@@ -603,10 +615,29 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   // ── Clustering ────────────────────────────────────────────────────────────
 
+  // Zoom in on cluster center so markers spread apart at the new zoom level.
+  void _zoomToCluster(_Cluster cluster) {
+    _animateTo(cluster.center, (_currentZoom + 2.5).clamp(10.0, 18.0));
+  }
+
+  // Hybrid threshold: cap at 48 px so clusters never visually overlap,
+  // but never exceed 50 m physical distance so distant items don't merge.
+  static double _metersToPixels(double meters, double zoom, double lat) {
+    const earthCircumference = 40075016.686;
+    const tileSize = 512.0;
+    final metersPerPixel =
+        earthCircumference * cos(lat * pi / 180) / (tileSize * pow(2.0, zoom));
+    return meters / metersPerPixel;
+  }
+
   List<_Cluster> _computeClusters(List<NearbyListingModel> listings) {
     final clusters = <_Cluster>[];
-    const clusterPx = 112.0;
+    const clusterMeters = 50.0;
+    const clusterPxCap = 48.0;
     final zoom = _currentZoom;
+    final refLat = _userLocation?.latitude ?? _searchCenter.latitude;
+    final clusterPx =
+        _metersToPixels(clusterMeters, zoom, refLat).clamp(0.0, clusterPxCap);
     for (final listing in listings) {
       final pt = LatLng(listing.latitude, listing.longitude);
       _Cluster? best;
@@ -973,7 +1004,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     return Obx(() {
       final types = _listingCtrl.roomTypes;
       if (types.isEmpty) return const SizedBox.shrink();
-      if (_listingCtrl.isLoading.value) return const SizedBox.shrink();
 
       final allListings = _listingCtrl.nearbyListings.toList();
       final filtered = _selectedRoomType != null

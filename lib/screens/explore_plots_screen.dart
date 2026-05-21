@@ -56,6 +56,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Timer? _loadNearbyDebounceTimer;
   String? _selectedPlotType;
   bool _autoLoading = false;
+  bool _loadingNearby = false;
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
@@ -88,7 +89,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       if (!mounted) return;
       if (status == ServiceStatus.enabled) {
         if (_userLocation == null && !_locationLoading) {
-          setState(() => _locationLoading = true);
+          setState(() {
+            _locationLoading = true;
+            _styleLoaded = false;
+            _mapReady = false;
+          });
+          _nativeUserDot = null;
           _initLocation();
         }
       } else {
@@ -410,20 +416,26 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   Future<void> _executeLoadNearby() async {
+    if (_loadingNearby) return;
     if (_selectedDistrict == null) return;
     final cityId = _effectiveCityId;
     if (cityId == null) return;
-    _revealTimer?.cancel();
-    _radarController.repeat();
-    _markerData = _userLocation != null ? [_buildUserMarkerData()] : [];
-    _revealedCount = _markerData.length;
-    setState(() {});
-    final center = _searchCenter;
-    await _plotCtrl.loadNearby(center.latitude, center.longitude, _radius, cityId);
-    _radarController.stop();
-    _radarController.reset();
-    _buildMarkers();
-    if (_plotCtrl.nearbyPlots.isNotEmpty) _playTing();
+    _loadingNearby = true;
+    try {
+      _revealTimer?.cancel();
+      _radarController.repeat();
+      _markerData = _userLocation != null ? [_buildUserMarkerData()] : [];
+      _revealedCount = _markerData.length;
+      setState(() {});
+      final center = _searchCenter;
+      await _plotCtrl.loadNearby(center.latitude, center.longitude, _radius, cityId);
+      _radarController.stop();
+      _radarController.reset();
+      _buildMarkers();
+      if (_plotCtrl.nearbyPlots.isNotEmpty) _playTing();
+    } finally {
+      _loadingNearby = false;
+    }
   }
 
   void _playTing() async {
@@ -508,7 +520,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           width: 48,
           height: 48,
           widget: GestureDetector(
-            onTap: () => _showDetail(rep),
+            onTap: () => _zoomToCluster(cluster),
             child: _AnimatedPin(
               child: Container(
                 decoration: const BoxDecoration(
@@ -569,10 +581,26 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     });
   }
 
+  void _zoomToCluster(_PlotCluster cluster) {
+    _animateTo(cluster.center, (_currentZoom + 2.5).clamp(10.0, 18.0));
+  }
+
+  static double _metersToPixels(double meters, double zoom, double lat) {
+    const earthCircumference = 40075016.686;
+    const tileSize = 512.0;
+    final metersPerPixel =
+        earthCircumference * cos(lat * pi / 180) / (tileSize * pow(2.0, zoom));
+    return meters / metersPerPixel;
+  }
+
   List<_PlotCluster> _computeClusters(List<NearbyPlotModel> plots) {
     final clusters = <_PlotCluster>[];
-    const clusterPx = 112.0;
+    const clusterMeters = 50.0;
+    const clusterPxCap = 48.0;
     final zoom = _currentZoom;
+    final refLat = _userLocation?.latitude ?? _searchCenter.latitude;
+    final clusterPx =
+        _metersToPixels(clusterMeters, zoom, refLat).clamp(0.0, clusterPxCap);
     for (final plot in plots) {
       final pt = LatLng(plot.latitude, plot.longitude);
       _PlotCluster? best;
@@ -910,7 +938,8 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
 
   Widget _buildFilterPanel() {
     return Obx(() {
-      if (_plotCtrl.isLoading.value) return const SizedBox.shrink();
+      final types = _plotCtrl.plotTypes.toList();
+      if (types.isEmpty) return const SizedBox.shrink();
 
       final allPlots = _plotCtrl.nearbyPlots.toList();
       final filtered = _selectedPlotType != null
@@ -918,7 +947,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           : allPlots;
       final count = filtered.length;
 
-      final types = _plotCtrl.plotTypes.toList();
       final rows = <List<dynamic>>[];
       for (int i = 0; i < types.length; i += 3) {
         rows.add(types.sublist(i, (i + 3).clamp(0, types.length)));
