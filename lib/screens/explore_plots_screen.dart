@@ -10,6 +10,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../config/app_map_state.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/plot_controller.dart';
@@ -34,6 +35,8 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   bool _pinsVisible = true;
   bool _styleLoaded = false;
   LatLng? _cameraCenter;
+  bool _mapActive = true;
+  Worker? _mapPauseWorker;
 
   // ── State ─────────────────────────────────────────────────────────────────
   final _plotCtrl = Get.find<PlotController>();
@@ -84,6 +87,24 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       }
     });
 
+    _mapPauseWorker = ever(mapShouldPause, (bool paused) {
+      if (!mounted) return;
+      if (paused) {
+        setState(() {
+          _mapActive = false;
+          _styleLoaded = false;
+          _mapReady = false;
+          _mapController = null;
+          _nativeCircle = null;
+          _nativeCircleGlow = null;
+          _nativeCircleLine = null;
+          _nativeUserDot = null;
+        });
+      } else {
+        setState(() => _mapActive = true);
+      }
+    });
+
     _serviceStatusSub = Geolocator.getServiceStatusStream().listen((status) {
       if (!mounted) return;
       if (status == ServiceStatus.enabled) {
@@ -116,6 +137,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _postedWorker?.dispose();
     _loadingWorker?.dispose();
     _refreshWorker?.dispose();
+    _mapPauseWorker?.dispose();
     _serviceStatusSub?.cancel();
     _radarController.dispose();
     _revealTimer?.cancel();
@@ -337,6 +359,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       fillColor: '#92400E',
       fillOpacity: 0.06,
     ));
+    if (!_mapActive) return;
     _nativeCircleGlow = await ctrl.addLine(LineOptions(
       geometry: points,
       lineColor: '#92400E',
@@ -344,6 +367,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       lineOpacity: 0.15,
       lineBlur: 3.0,
     ));
+    if (!_mapActive) return;
     _nativeCircleLine = await ctrl.addLine(LineOptions(
       geometry: points,
       lineColor: '#92400E',
@@ -373,6 +397,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       circleStrokeColor: '#FFFFFF',
       circleStrokeWidth: 2.5,
     ));
+    if (!_mapActive) return;
   }
 
   void _updateNativeUserDot() {
@@ -663,7 +688,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           return Stack(
             children: [
               // ── Layer 1: Map or loading shimmer ────────────────────────────
-              if (_locationLoading)
+              if (_locationLoading || !_mapActive)
                 _buildMapShimmer()
               else
                 RepaintBoundary(

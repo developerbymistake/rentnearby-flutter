@@ -7,6 +7,7 @@ import 'config/app_theme.dart';
 import 'config/app_routes.dart';
 import 'controllers/auth_controller.dart';
 import 'services/api_service.dart';
+import 'services/map_pause_observer.dart';
 import 'services/storage_service.dart';
 
 Future<void> main() async {
@@ -41,6 +42,7 @@ class BakhliApp extends StatelessWidget {
       getPages: AppRoutes.routes,
       defaultTransition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
+      navigatorObservers: [MapPauseObserver()],
       builder: (context, child) => ToastificationWrapper(
         child: MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
