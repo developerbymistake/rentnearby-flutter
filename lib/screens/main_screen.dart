@@ -254,7 +254,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + bottomInset),
         child: Row(
           children: [
-            _navItem(0, Iconsax.map, Iconsax.map5, 'Rooms'),
+            _navItem(0, Iconsax.location, Iconsax.location5, 'Rooms'),
             _navItem(1, Iconsax.building, Iconsax.building5, 'My Rooms'),
             _navItem(2, Iconsax.location, Iconsax.location5, 'Plots'),
             _navItem(3, Iconsax.document, Iconsax.document5, 'My Plots'),
