@@ -621,10 +621,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
       final hasMembership = membership != null && (membership['hasMembership'] == true);
       final planType = membership?['planType'] as String? ?? '';
       final maxRooms = (membership?['maxRooms'] as num?)?.toInt() ?? 0;
-      final activeRooms = (membership?['activeRooms'] as num?)?.toInt() ?? 0;
       final currentPlanIsFree = (plans[planType]?['price'] as num? ?? 0) == 0;
 
-      if (hasMembership && currentPlanIsFree && activeRooms >= maxRooms) {
+      if (hasMembership && currentPlanIsFree && _ctrl.myListings.length > maxRooms) {
         final _paidMatches = plans.values.cast<Map<String, dynamic>>().where((p) => (p['price'] as num? ?? 0) > 0);
         final paidPlan = _paidMatches.isEmpty ? {'planType': 'PAID', 'price': 99, 'days': 30, 'roomLimit': 2} : _paidMatches.first;
         Get.offNamed(AppRoutes.paymentScreen, arguments: {

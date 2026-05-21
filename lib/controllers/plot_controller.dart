@@ -178,12 +178,24 @@ class PlotController extends GetxController {
     }
   }
 
-  Future<bool> isPlotPaymentFeatureEnabled() async {
+  Future<Map<String, dynamic>> getPlotPaymentFeatureConfig() async {
     try {
       final res = await ApiService.get('/admin/features/plot_payment');
       final data = res['data'];
-      return data != null && data is Map<String, dynamic> && (data['isEnabled'] == true);
-    } catch (_) { return false; }
+      if (data != null && data is Map<String, dynamic>) {
+        return {
+          'isEnabled': data['isEnabled'] == true,
+          'freeLimit': (data['freeLimit'] as num?)?.toInt() ?? 1,
+          'freeDays': (data['freeDays'] as num?)?.toInt() ?? 2,
+        };
+      }
+    } catch (_) {}
+    return {'isEnabled': false, 'freeLimit': 1, 'freeDays': 2};
+  }
+
+  Future<bool> isPlotPaymentFeatureEnabled() async {
+    final config = await getPlotPaymentFeatureConfig();
+    return config['isEnabled'] as bool;
   }
 
   Future<List<Map<String, dynamic>>> getPlotPlans() async {

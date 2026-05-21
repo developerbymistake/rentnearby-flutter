@@ -50,10 +50,12 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
     final name = _auth.user.value?.name?.trim() ?? '';
     if (name.isEmpty) { _showNameDialog(); return; }
     try {
-      final paymentEnabled = await _ctrl.isPlotPaymentFeatureEnabled();
+      final featureConfig = await _ctrl.getPlotPaymentFeatureConfig();
+      final paymentEnabled = featureConfig['isEnabled'] as bool;
+      final freeLimit = featureConfig['freeLimit'] as int;
       if (!paymentEnabled) {
-        if (_ctrl.myPlots.length >= 2) {
-          AppToast.error('Free mode limit: delete a plot before adding a new one.');
+        if (_ctrl.myPlots.length >= freeLimit) {
+          AppToast.error('Free mode limit: delete your existing plot before adding a new one.');
           return;
         }
         Get.toNamed(AppRoutes.addPlot);

@@ -166,10 +166,12 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     }
 
     try {
-      final paymentEnabled = await _ctrl.isPaymentFeatureEnabled();
+      final featureConfig = await _ctrl.getPaymentFeatureConfig();
+      final paymentEnabled = featureConfig['isEnabled'] as bool;
+      final freeLimit = featureConfig['freeLimit'] as int;
       if (!paymentEnabled) {
-        if (_ctrl.myListings.length >= 2) {
-          AppToast.error('Free mode limit: delete a listing before adding a new one.');
+        if (_ctrl.myListings.length >= freeLimit) {
+          AppToast.error('Free mode limit: delete your existing listing before adding a new one.');
           return;
         }
         Get.toNamed(AppRoutes.addListing);

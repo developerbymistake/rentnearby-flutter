@@ -707,13 +707,12 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       final hasMembership = membership != null && (membership['hasMembership'] == true);
       final planType = membership?['planType'] as String? ?? '';
       final maxPlots = (membership?['maxPlots'] as num?)?.toInt() ?? 0;
-      final activePlots = (membership?['activePlots'] as num?)?.toInt() ?? 0;
       final plansMap = <String, Map<String, dynamic>>{};
       for (final p in plans) {
         plansMap[p['planType'] as String] = p;
       }
       final currentPlanIsFree = (plansMap[planType]?['price'] as num? ?? 0) == 0;
-      if (hasMembership && currentPlanIsFree && activePlots >= maxPlots) {
+      if (hasMembership && currentPlanIsFree && _ctrl.myPlots.length > maxPlots) {
         final paidPlans = plans.where((p) => (p['price'] as num? ?? 0) > 0).toList();
         final paidPlan = paidPlans.isEmpty
             ? {'planType': 'PAID', 'price': 99, 'days': 30, 'plotLimit': 2}
