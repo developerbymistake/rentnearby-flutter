@@ -197,7 +197,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       } else {
         final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
         final plans = await _ctrl.getPlans();
-        final freePlan = plans.values.firstWhereOrNull((p) => (p['price'] as num? ?? 0) == 0);
+        final freePlan = plans.values.toList().firstWhereOrNull((p) => (p['price'] as num? ?? 0) == 0);
         final freeLimit = (freePlan?['roomLimit'] as num?)?.toInt() ?? 1;
         if (_ctrl.myListings.length >= freeLimit) {
           if (hasUsedFree) {
