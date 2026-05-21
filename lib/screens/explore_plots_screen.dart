@@ -1398,7 +1398,7 @@ class _PlotBottomSheet extends StatelessWidget {
                                     fontWeight: FontWeight.w700),
                               ),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2E7D32),
+                                backgroundColor: const Color(0xFFF59E0B),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14)),

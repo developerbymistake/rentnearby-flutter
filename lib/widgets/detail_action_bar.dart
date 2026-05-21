@@ -78,7 +78,7 @@ class DetailActionBar extends StatelessWidget {
                         style: TextStyle(
                             fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E7D32),
+                      backgroundColor: const Color(0xFFF59E0B),
                       foregroundColor: Colors.white,
                       minimumSize: const Size(0, 48),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
