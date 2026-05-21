@@ -2,15 +2,12 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <gradient
-                android:startColor="#1E3A8A"
-                android:endColor="#1E40AF"
-                android:angle="135" />
+            <solid android:color="#FFFFFF" />
         </shape>
     </item>
     <item>
         <bitmap
             android:gravity="center"
-            android:src="@drawable/ic_logo" />
+            android:src="@drawable/before_splash_logo" />
     </item>
 </layer-list>

@@ -977,69 +977,76 @@ class _AddListingScreenState extends State<AddListingScreen> {
   Widget _locationStep() => Padding(
     key: const ValueKey(1),
     padding: const EdgeInsets.all(16),
-    child: _sectionCard(
-      title: 'Pin Your Location *',
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (_locationBlocked) ...[
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
-              ),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Icon(Icons.location_off_rounded, color: AppColors.error, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Location access required',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.error)),
-                    const SizedBox(height: 4),
-                    const Text('Please enable GPS and grant location permission to pin your room.',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5)),
-                    const SizedBox(height: 10),
-                    Row(children: [
-                      GestureDetector(
-                        onTap: () async {
-                          await Geolocator.openLocationSettings();
-                          if (mounted) setState(() => _locationBlocked = false);
-                          _fetchUserLocation();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text('Enable GPS',
-                              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      GestureDetector(
-                        onTap: () async {
-                          await Geolocator.openAppSettings();
-                          if (mounted) setState(() => _locationBlocked = false);
-                          _fetchUserLocation();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.primary),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text('App Settings',
-                              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                        ),
-                      ),
-                    ]),
-                  ]),
-                ),
-              ]),
+        const Text('Pin Your Location *',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        const SizedBox(height: 14),
+        if (_locationBlocked) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.error.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
             ),
-            const SizedBox(height: 12),
-          ] else
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.location_off_rounded, color: AppColors.error, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Location access required',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.error)),
+                  const SizedBox(height: 4),
+                  const Text('Please enable GPS and grant location permission to pin your room.',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5)),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    GestureDetector(
+                      onTap: () async {
+                        await Geolocator.openLocationSettings();
+                        if (mounted) setState(() => _locationBlocked = false);
+                        _fetchUserLocation();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text('Enable GPS',
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    GestureDetector(
+                      onTap: () async {
+                        await Geolocator.openAppSettings();
+                        if (mounted) setState(() => _locationBlocked = false);
+                        _fetchUserLocation();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.primary),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text('App Settings',
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                      ),
+                    ),
+                  ]),
+                ]),
+              ),
+            ]),
+          ),
+        ] else ...[
           Row(children: [
             const Icon(Icons.info_outline_rounded, color: AppColors.primaryLight, size: 15),
             const SizedBox(width: 6),
@@ -1053,86 +1060,80 @@ class _AddListingScreenState extends State<AddListingScreen> {
             )),
           ]),
           const SizedBox(height: 12),
-          if (_userLocation == null) ...[
-            ClipRRect(
+          Expanded(
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: Container(
-                height: 280,
-                color: AppColors.surface,
-                child: const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
-                      SizedBox(height: 14),
-                      Text('Getting your location...', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ] else
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                _mapSize = Size(constraints.maxWidth, 280);
-                return SizedBox(
-                  height: 280,
-                  child: Stack(children: [
-                    MapLibreMap(
-                      styleString: 'assets/map_style.json',
-                      initialCameraPosition: CameraPosition(
-                        target: _userLocation ?? const LatLng(30.3165, 78.0322),
-                        zoom: 14.0,
+              child: _userLocation == null
+                ? Container(
+                    color: AppColors.surface,
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
+                          SizedBox(height: 14),
+                          Text('Getting your location...', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+                        ],
                       ),
-                      compassEnabled: false,
-                      rotateGesturesEnabled: false,
-                      tiltGesturesEnabled: false,
-                      myLocationEnabled: false,
-                      trackCameraPosition: true,
-                      attributionButtonMargins: const Point(-200.0, 0.0),
-                      onMapCreated: (ctrl) => _mapController = ctrl,
-                      onStyleLoadedCallback: _onStyleLoaded,
-                      onCameraMove: (pos) { _currentZoom = pos.zoom; },
-                      onCameraIdle: () {
-                        if (_currentZoom < _minZoom && _mapController != null && mounted) {
-                          _mapController!.animateCamera(CameraUpdate.zoomTo(_minZoom));
-                        }
-                      },
-                      onMapClick: (_, latLng) {
-                        if (_userLocation != null) {
-                          final distM = Geolocator.distanceBetween(
-                            _userLocation!.latitude, _userLocation!.longitude,
-                            latLng.latitude, latLng.longitude,
-                          );
-                          if (distM > 500) {
-                            AppToast.warning('You can only pin within 500 m of your current location');
-                            return;
-                          }
-                        }
-                        setState(() => _selectedLocation = latLng);
-                        _setNativePin(latLng);
-                        _reverseGeocode(latLng);
-                      },
                     ),
-                    Positioned(
-                      bottom: 10, right: 10,
-                      child: GestureDetector(
-                        onTap: () { if (_userLocation != null) _animateTo(_userLocation!, 15.0); },
-                        child: Container(
-                          width: 38, height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.white, shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      _mapSize = Size(constraints.maxWidth, constraints.maxHeight);
+                      return Stack(children: [
+                        MapLibreMap(
+                          styleString: 'assets/map_style.json',
+                          initialCameraPosition: CameraPosition(
+                            target: _userLocation ?? const LatLng(30.3165, 78.0322),
+                            zoom: 14.0,
                           ),
-                          child: const Icon(Iconsax.location, color: AppColors.primary, size: 18),
+                          compassEnabled: false,
+                          rotateGesturesEnabled: false,
+                          tiltGesturesEnabled: false,
+                          myLocationEnabled: false,
+                          trackCameraPosition: true,
+                          attributionButtonMargins: const Point(-200.0, 0.0),
+                          onMapCreated: (ctrl) => _mapController = ctrl,
+                          onStyleLoadedCallback: _onStyleLoaded,
+                          onCameraMove: (pos) { _currentZoom = pos.zoom; },
+                          onCameraIdle: () {
+                            if (_currentZoom < _minZoom && _mapController != null && mounted) {
+                              _mapController!.animateCamera(CameraUpdate.zoomTo(_minZoom));
+                            }
+                          },
+                          onMapClick: (_, latLng) {
+                            if (_userLocation != null) {
+                              final distM = Geolocator.distanceBetween(
+                                _userLocation!.latitude, _userLocation!.longitude,
+                                latLng.latitude, latLng.longitude,
+                              );
+                              if (distM > 500) {
+                                AppToast.warning('You can only pin within 500 m of your current location');
+                                return;
+                              }
+                            }
+                            setState(() => _selectedLocation = latLng);
+                            _setNativePin(latLng);
+                            _reverseGeocode(latLng);
+                          },
                         ),
-                      ),
-                    ),
-                  ]),
-                );
-              },
+                        Positioned(
+                          bottom: 10, right: 10,
+                          child: GestureDetector(
+                            onTap: () { if (_userLocation != null) _animateTo(_userLocation!, 15.0); },
+                            child: Container(
+                              width: 38, height: 38,
+                              decoration: BoxDecoration(
+                                color: Colors.white, shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+                              ),
+                              child: const Icon(Iconsax.location, color: AppColors.primary, size: 18),
+                            ),
+                          ),
+                        ),
+                      ]);
+                    },
+                  ),
             ),
           ),
           if (_selectedLocation != null)
@@ -1147,6 +1148,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 ),
               ]),
             ),
+        ],
       ]),
     ),
   );

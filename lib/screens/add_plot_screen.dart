@@ -1221,9 +1221,17 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   Widget _locationStep() => Padding(
     key: const ValueKey(1),
     padding: const EdgeInsets.all(16),
-    child: _sectionCard(
-      title: 'Pin Your Plot Location *',
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Pin Your Plot Location *',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        const SizedBox(height: 14),
         if (_locationBlocked) ...[
           Container(
             padding: const EdgeInsets.all(14),
@@ -1276,112 +1284,109 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
               ),
             ]),
           ),
+        ] else ...[
+          Row(children: [
+            const Icon(Icons.info_outline_rounded, color: AppColors.primaryLight, size: 15),
+            const SizedBox(width: 6),
+            Expanded(child: Text(
+              _userLocation != null
+                  ? (_selectedLocation != null
+                      ? 'Pinned — tap inside the circle to adjust'
+                      : 'Tap inside the 500 m circle to pin your plot')
+                  : 'Waiting for your GPS location...',
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+            )),
+          ]),
           const SizedBox(height: 12),
-        ] else
-        Row(children: [
-          const Icon(Icons.info_outline_rounded, color: AppColors.primaryLight, size: 15),
-          const SizedBox(width: 6),
-          Expanded(child: Text(
-            _userLocation != null
-                ? (_selectedLocation != null
-                    ? 'Pinned — tap inside the circle to adjust'
-                    : 'Tap inside the 500 m circle to pin your plot')
-                : 'Waiting for your GPS location...',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-          )),
-        ]),
-        const SizedBox(height: 12),
-        if (_userLocation == null) ...[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              height: 280,
-              color: AppColors.surface,
-              child: const Center(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  CircularProgressIndicator(color: Color(0xFF92400E), strokeWidth: 2),
-                  SizedBox(height: 14),
-                  Text('Getting your location...', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-                ]),
-              ),
-            ),
-          ),
-        ] else
-        ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              _mapSize = Size(constraints.maxWidth, 280);
-              return SizedBox(
-                height: 280,
-                child: Stack(children: [
-                  MapLibreMap(
-                    styleString: 'assets/map_style.json',
-                    initialCameraPosition: CameraPosition(
-                      target: _userLocation ?? const LatLng(30.3165, 78.0322),
-                      zoom: 14.0,
-                    ),
-                    compassEnabled: false,
-                    rotateGesturesEnabled: false,
-                    tiltGesturesEnabled: false,
-                    myLocationEnabled: false,
-                    trackCameraPosition: true,
-                    attributionButtonMargins: const Point(-200.0, 0.0),
-                    onMapCreated: (ctrl) => _mapController = ctrl,
-                    onStyleLoadedCallback: _onStyleLoaded,
-                    onCameraMove: (pos) { _currentZoom = pos.zoom; },
-                    onCameraIdle: () {
-                      if (_currentZoom < _minZoom && _mapController != null && mounted) {
-                        _mapController!.animateCamera(CameraUpdate.zoomTo(_minZoom));
-                      }
-                    },
-                    onMapClick: (_, latLng) {
-                      if (_userLocation != null) {
-                        final distM = Geolocator.distanceBetween(
-                          _userLocation!.latitude, _userLocation!.longitude,
-                          latLng.latitude, latLng.longitude,
-                        );
-                        if (distM > 500) {
-                          AppToast.warning('You can only pin within 500 m of your current location');
-                          return;
-                        }
-                      }
-                      setState(() => _selectedLocation = latLng);
-                      _setNativePin(latLng);
-                      _reverseGeocode(latLng);
-                    },
-                  ),
-                  Positioned(
-                    bottom: 10, right: 10,
-                    child: GestureDetector(
-                      onTap: () { if (_userLocation != null) _animateTo(_userLocation!, 15.0); },
-                      child: Container(
-                        width: 38, height: 38,
-                        decoration: BoxDecoration(
-                          color: Colors.white, shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
-                        ),
-                        child: const Icon(Iconsax.location, color: Color(0xFF92400E), size: 18),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: _userLocation == null
+                ? Container(
+                    color: AppColors.surface,
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(color: Color(0xFF92400E), strokeWidth: 2),
+                          SizedBox(height: 14),
+                          Text('Getting your location...', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+                        ],
                       ),
                     ),
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      _mapSize = Size(constraints.maxWidth, constraints.maxHeight);
+                      return Stack(children: [
+                        MapLibreMap(
+                          styleString: 'assets/map_style.json',
+                          initialCameraPosition: CameraPosition(
+                            target: _userLocation ?? const LatLng(30.3165, 78.0322),
+                            zoom: 14.0,
+                          ),
+                          compassEnabled: false,
+                          rotateGesturesEnabled: false,
+                          tiltGesturesEnabled: false,
+                          myLocationEnabled: false,
+                          trackCameraPosition: true,
+                          attributionButtonMargins: const Point(-200.0, 0.0),
+                          onMapCreated: (ctrl) => _mapController = ctrl,
+                          onStyleLoadedCallback: _onStyleLoaded,
+                          onCameraMove: (pos) { _currentZoom = pos.zoom; },
+                          onCameraIdle: () {
+                            if (_currentZoom < _minZoom && _mapController != null && mounted) {
+                              _mapController!.animateCamera(CameraUpdate.zoomTo(_minZoom));
+                            }
+                          },
+                          onMapClick: (_, latLng) {
+                            if (_userLocation != null) {
+                              final distM = Geolocator.distanceBetween(
+                                _userLocation!.latitude, _userLocation!.longitude,
+                                latLng.latitude, latLng.longitude,
+                              );
+                              if (distM > 500) {
+                                AppToast.warning('You can only pin within 500 m of your current location');
+                                return;
+                              }
+                            }
+                            setState(() => _selectedLocation = latLng);
+                            _setNativePin(latLng);
+                            _reverseGeocode(latLng);
+                          },
+                        ),
+                        Positioned(
+                          bottom: 10, right: 10,
+                          child: GestureDetector(
+                            onTap: () { if (_userLocation != null) _animateTo(_userLocation!, 15.0); },
+                            child: Container(
+                              width: 38, height: 38,
+                              decoration: BoxDecoration(
+                                color: Colors.white, shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+                              ),
+                              child: const Icon(Iconsax.location, color: Color(0xFF92400E), size: 18),
+                            ),
+                          ),
+                        ),
+                      ]);
+                    },
                   ),
-                ]),
-              );
-            },
+            ),
           ),
-        ),
-        if (_selectedLocation != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Row(children: [
-              const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                '${_selectedLocation!.latitude.toStringAsFixed(5)}, ${_selectedLocation!.longitude.toStringAsFixed(5)}',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w500),
-              ),
-            ]),
-          ),
+          if (_selectedLocation != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Row(children: [
+                const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  '${_selectedLocation!.latitude.toStringAsFixed(5)}, ${_selectedLocation!.longitude.toStringAsFixed(5)}',
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w500),
+                ),
+              ]),
+            ),
+        ],
       ]),
     ),
   );
