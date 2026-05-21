@@ -572,7 +572,6 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           maxRooms: (selectedPlan['roomLimit'] as num?)?.toInt() ?? 1,
           onDismiss: () {
             Get.find<AuthController>().tabIndex.value = 0;
-            Get.offAllNamed(AppRoutes.main);
           },
         ),
         barrierDismissible: false,

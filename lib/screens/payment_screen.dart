@@ -216,7 +216,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 Get.find<PlotController>().loadMyPlots(reset: true);
               }
               Get.find<AuthController>().tabIndex.value = 0;
-              Get.offAllNamed(AppRoutes.main);
+              Get.until((route) => route.settings.name == AppRoutes.main);
             },
           ),
           barrierDismissible: false,
