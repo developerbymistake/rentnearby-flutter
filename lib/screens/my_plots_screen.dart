@@ -588,7 +588,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                   Text('My Plots',
                       style: TextStyle(
                           fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                  Text('Manage your land listings',
+                  Text('Manage your listings',
                       style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
                 ]),
                 const Spacer(),
@@ -682,17 +682,26 @@ class _PlotCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Thumbnail strip (or gradient placeholder)
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: SizedBox(
-              height: 100,
-              width: double.infinity,
-              child: plot.photos.isNotEmpty
-                  ? Image.network(plot.photos.first, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder())
-                  : _placeholder(),
-            ),
+          // Thumbnail strip with status badge overlay
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: SizedBox(
+                  height: 100,
+                  width: double.infinity,
+                  child: plot.photos.isNotEmpty
+                      ? Image.network(plot.photos.first, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _placeholder())
+                      : _placeholder(),
+                ),
+              ),
+              Positioned(
+                top: 10,
+                left: 10,
+                child: _statusBadge(),
+              ),
+            ],
           ),
 
           Padding(
@@ -741,6 +750,10 @@ class _PlotCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis),
                       ),
+                      if (plot.validUntil != null) ...[
+                        const SizedBox(width: 8),
+                        _expiryLabel(plot.validUntil!),
+                      ],
                     ],
                   ),
                 ],
@@ -761,19 +774,23 @@ class _PlotCard extends StatelessWidget {
                   children: [
                     if (plot.isActive) ...[
                       // Active: show deactivate switch
-                      Switch(
-                        value: true,
-                        onChanged: (_) => onToggleActive(),
-                        activeColor: _kBrown,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      const SizedBox(width: 4),
-                      const Text('Active',
+                      const Text('Live',
                           style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: _kBrown)),
+                      const SizedBox(width: 4),
+                      Transform.scale(
+                        scale: 0.85,
+                        child: Switch(
+                          value: true,
+                          onChanged: (_) => onToggleActive(),
+                          activeColor: _kBrown,
+                          activeTrackColor: const Color(0xFFFFF7ED),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
                     ] else ...[
                       // Inactive: show "Make it Live" button
                       GestureDetector(
@@ -830,6 +847,58 @@ class _PlotCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _statusBadge() {
+    final isLive = plot.isActive;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isLive
+              ? [const Color(0xFF92400E), const Color(0xFF78350F)]
+              : [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+          const SizedBox(width: 5),
+          Text(
+            isLive ? 'LIVE' : 'OFFLINE',
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _expiryLabel(DateTime validUntil) {
+    final days = validUntil.toUtc().difference(DateTime.now().toUtc()).inDays;
+    final String label;
+    final Color color;
+    if (days > 3) {
+      label = '$days days left';
+      color = AppColors.textHint;
+    } else if (days > 0) {
+      label = '$days day${days == 1 ? '' : 's'} left';
+      color = const Color(0xFFF59E0B);
+    } else if (days == 0) {
+      label = 'Expires today';
+      color = AppColors.error;
+    } else {
+      label = 'Expired';
+      color = AppColors.error;
+    }
+    return Text(
+      label,
+      style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: color, fontWeight: FontWeight.w500),
     );
   }
 
