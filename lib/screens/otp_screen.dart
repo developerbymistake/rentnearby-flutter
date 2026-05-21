@@ -114,7 +114,10 @@ class _OtpScreenState extends State<OtpScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context, true),
+                        onPressed: () {
+                          FocusScope.of(context).unfocus();
+                          Navigator.pop(context, true);
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
