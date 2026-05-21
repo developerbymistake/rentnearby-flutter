@@ -196,12 +196,14 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         }
       } else {
         final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
-        final myRooms = _ctrl.myListings.length;
-        if (myRooms >= 1) {
+        final plans = await _ctrl.getPlans();
+        final freePlan = plans.values.firstWhereOrNull((p) => (p['price'] as num? ?? 0) == 0);
+        final freeLimit = (freePlan?['roomLimit'] as num?)?.toInt() ?? 1;
+        if (_ctrl.myListings.length >= freeLimit) {
           if (hasUsedFree) {
             if (mounted) _showPaidUpgradeSheet();
           } else {
-            if (mounted) _showRoomLimitDialog(maxRooms: 1, hasPlan: false);
+            if (mounted) _showRoomLimitDialog(maxRooms: freeLimit, hasPlan: false);
           }
           return;
         }

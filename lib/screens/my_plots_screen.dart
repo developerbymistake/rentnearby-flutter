@@ -80,11 +80,14 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
         }
       } else {
         final hasUsedFree = _auth.user.value?.hasUsedFreePlotPlan ?? false;
-        if (_ctrl.myPlots.length >= 1) {
+        final plans = await _ctrl.getPlotPlans();
+        final freePlan = plans.firstWhereOrNull((p) => (p['price'] as num? ?? 0) == 0);
+        final freeLimit = (freePlan?['plotLimit'] as num?)?.toInt() ?? 1;
+        if (_ctrl.myPlots.length >= freeLimit) {
           if (hasUsedFree) {
             if (mounted) _showPaidUpgradePlotSheet();
           } else {
-            if (mounted) _showPlotLimitDialog(maxPlots: 1, hasPlan: false);
+            if (mounted) _showPlotLimitDialog(maxPlots: freeLimit, hasPlan: false);
           }
           return;
         }
