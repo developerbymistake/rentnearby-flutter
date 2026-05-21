@@ -332,7 +332,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     );
   }
 
-  void _showPaidUpgradeSheet() async {
+  void _showPaidUpgradeSheet({String listingId = ''}) async {
     final plans = await _ctrl.getPlans();
     final paidPlans = plans.values
         .where((p) => (p['price'] as num? ?? 0) > 0)
@@ -424,7 +424,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                     onTap: () {
                       Navigator.pop(ctx);
                       Get.toNamed(AppRoutes.paymentScreen, arguments: {
-                        'listingId': '',
+                        'listingId': listingId,
                         'plan': p,
                       });
                     },
@@ -537,6 +537,11 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
       // Has remaining capacity → activate directly (free/no extra charge)
       _activateFreePlanDirect(listingId);
+      return;
+    }
+
+    if (hasUsedFree) {
+      if (mounted) _showPaidUpgradeSheet(listingId: listingId);
       return;
     }
 

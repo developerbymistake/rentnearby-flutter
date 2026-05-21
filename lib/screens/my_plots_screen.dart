@@ -205,6 +205,12 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
       return;
     }
 
+    final hasUsedFreePlot = _auth.user.value?.hasUsedFreePlotPlan ?? false;
+    if (hasUsedFreePlot) {
+      if (mounted) _showPaidUpgradePlotSheet(plotId: plotId);
+      return;
+    }
+
     final plans = await _ctrl.getPlotPlans();
     if (!mounted) return;
 
@@ -213,7 +219,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _PlotPlanSelectionSheet(
         plans: plans,
-        hasUsedFreePlotPlan: _auth.user.value?.hasUsedFreePlotPlan ?? false,
+        hasUsedFreePlotPlan: false,
       ),
     );
 
