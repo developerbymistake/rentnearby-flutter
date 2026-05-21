@@ -65,19 +65,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
         final hasMembership = status != null && (status['hasMembership'] == true);
         final canActivate = (status ?? {})['canActivate'] as bool? ?? false;
         if (hasMembership && !canActivate) {
-          final plans = await _ctrl.getPlotPlans();
-          if (!mounted) return;
-          final paidPlans = plans.where((p) => (p['price'] as num? ?? 0) > 0).toList()
-            ..sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
-          final upgradePlan = paidPlans.isNotEmpty
-              ? paidPlans.first
-              : {'planType': 'PAID', 'price': 99, 'days': 30, 'plotLimit': 2};
-          await Get.toNamed(AppRoutes.paymentScreen, arguments: {
-            'isPlot': true,
-            'plotId': '',
-            'plan': upgradePlan,
-          });
-          _ctrl.loadMyPlots(reset: true);
+          if (mounted) _showPaidUpgradePlotSheet();
           return;
         }
       }
@@ -177,20 +165,8 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
     }
 
     if (hasMembership && !canActivate) {
-      // At capacity — show upgrade plans
-      final plans = await _ctrl.getPlotPlans();
-      if (!mounted) return;
-      final paidPlans = plans.where((p) => (p['price'] as num? ?? 0) > 0).toList()
-        ..sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
-      final upgradePlan = paidPlans.isNotEmpty
-          ? paidPlans.first
-          : {'planType': 'PAID', 'price': 99, 'days': 30, 'plotLimit': 2};
-      await Get.toNamed(AppRoutes.paymentScreen, arguments: {
-        'isPlot': true,
-        'plotId': '',
-        'plan': upgradePlan,
-      });
-      _ctrl.loadMyPlots(reset: true);
+      // At capacity — show upgrade plan sheet (pass plotId so it activates after payment)
+      if (mounted) _showPaidUpgradePlotSheet(plotId: plotId);
       return;
     }
 
@@ -221,6 +197,143 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
       'plan': selectedPlan,
     });
     _ctrl.loadMyPlots(reset: true);
+  }
+
+  void _showPaidUpgradePlotSheet({String plotId = ''}) async {
+    final plans = await _ctrl.getPlotPlans();
+    final paidPlans = plans.where((p) => (p['price'] as num? ?? 0) > 0).toList()
+      ..sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Center(
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: _kGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.flash_on_rounded, size: 30, color: _kGreen),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Center(
+              child: Text(
+                'Upgrade Your Plan',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Center(
+              child: Text(
+                'Choose a plan to add more plots.',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 20),
+            if (paidPlans.isEmpty)
+              const Center(
+                child: Text(
+                  'No paid plans available. Please contact support.',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else
+              ...paidPlans.asMap().entries.map((entry) {
+                final i = entry.key;
+                final p = entry.value;
+                final days = (p['days'] as num?)?.toInt() ?? 30;
+                final plots = (p['plotLimit'] as num?)?.toInt() ?? 2;
+                final price = (p['price'] as num?)?.toInt() ?? 0;
+                final raw = (p['planType'] as String? ?? '');
+                final label = raw.isEmpty ? raw : raw[0].toUpperCase() + raw.substring(1).toLowerCase();
+                return Padding(
+                  padding: EdgeInsets.only(bottom: i < paidPlans.length - 1 ? 12 : 0),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      Get.toNamed(AppRoutes.paymentScreen, arguments: {
+                        'isPlot': true,
+                        'plotId': plotId,
+                        'plan': p,
+                      });
+                      _ctrl.loadMyPlots(reset: true);
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: i == 0 ? _kGreen : _kGreen.withValues(alpha: 0.3),
+                          width: i == 0 ? 2 : 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        color: i == 0 ? _kGreen.withValues(alpha: 0.05) : Colors.grey[50],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: _kGreen.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.flash_on_rounded, color: _kGreen, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('$label Plan',
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, fontFamily: 'Poppins', color: AppColors.textDark)),
+                                Text('$days days • $plots plot${plots > 1 ? 's' : ''}',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[600], fontFamily: 'Poppins')),
+                              ],
+                            ),
+                          ),
+                          Text('₹$price',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kGreen, fontFamily: 'Poppins')),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            const SizedBox(height: 16),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Maybe Later', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _activateFreePlotPlanDirect(String plotId, Map<String, dynamic> plan) async {
