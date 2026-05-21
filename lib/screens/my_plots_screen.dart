@@ -52,9 +52,8 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
     try {
       final paymentEnabled = await _ctrl.isPlotPaymentFeatureEnabled();
       if (!paymentEnabled) {
-        final activeCount = _ctrl.myPlots.where((p) => p.isActive).length;
-        if (activeCount >= 2) {
-          AppToast.error('Free mode limit: deactivate a plot before adding a new one.');
+        if (_ctrl.myPlots.length >= 2) {
+          AppToast.error('Free mode limit: delete a plot before adding a new one.');
           return;
         }
         Get.toNamed(AppRoutes.addPlot);
