@@ -27,8 +27,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   // ── Map ──────────────────────────────────────────────────────────────────
   MapLibreMapController? _mapController;
   double _currentZoom = 13.0;
-  LatLng? _cameraCenter;
-  Size _screenSize = Size.zero;
   Fill? _nativeCircle;
   Line? _nativeCircleGlow;
   Line? _nativeCircleLine;
@@ -322,7 +320,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _styleLoaded = true;
     _mapReady = true;
     if (!mounted) return;
-    _cameraCenter = _searchCenter;
     setState(() {});
     _initNativeCircle();
     _initNativeUserDot();
@@ -385,27 +382,39 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     ctrl.updateCircle(dot, CircleOptions(geometry: loc));
   }
 
-  Offset? _latLngToScreen(LatLng latlng) {
-    final center = _cameraCenter;
-    if (center == null || _screenSize == Size.zero) return null;
-    final scale = 512.0 * pow(2.0, _currentZoom);
-    final px = (latlng.longitude + 180) / 360 * scale;
-    final py = _mercatorY(latlng.latitude) * scale;
-    final cx = (center.longitude + 180) / 360 * scale;
-    final cy = _mercatorY(center.latitude) * scale;
-    return Offset(
-      _screenSize.width / 2 + (px - cx),
-      _screenSize.height / 2 + (py - cy),
-    );
+  Future<void> _fetchAllScreenPositions(List<_MapMarkerData> data) async {
+    final ctrl = _mapController;
+    if (ctrl == null || !_mapReady || data.isEmpty) return;
+    try {
+      final points = await Future.wait(data.map((d) => ctrl.toScreenLocation(d.position)));
+      for (int i = 0; i < data.length; i++) {
+        data[i].screenPosition = Offset(points[i].x.toDouble(), points[i].y.toDouble());
+      }
+    } catch (_) {}
   }
 
-  void _updateMarkerScreenPositions() {
-    if (!_mapReady || !mounted) return;
+  Future<void> _updateMarkerScreenPositions() async {
+    final ctrl = _mapController;
+    if (ctrl == null || !_mapReady || !mounted) return;
     final snapshot = _markerData.take(_revealedCount).toList();
-    for (final d in snapshot) {
-      d.screenPosition = _latLngToScreen(d.position);
+    if (snapshot.isEmpty) return;
+    try {
+      final points = await Future.wait(snapshot.map((d) => ctrl.toScreenLocation(d.position)));
+      for (int i = 0; i < snapshot.length; i++) {
+        snapshot[i].screenPosition = Offset(points[i].x.toDouble(), points[i].y.toDouble());
+      }
+      if (mounted) setState(() {});
+    } catch (_) {}
+  }
+
+  Future<void> _onCameraIdle() async {
+    if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
+      _lastClusterZoom = _currentZoom;
+      await _buildMarkers(animate: false);
+    } else {
+      await _updateMarkerScreenPositions();
     }
-    setState(() {});
+    if (mounted && !_pinsVisible) setState(() => _pinsVisible = true);
   }
 
   void _loadNearby() {
@@ -459,7 +468,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         ),
       );
 
-  void _buildMarkers({bool animate = true}) {
+  Future<void> _buildMarkers({bool animate = true}) async {
     final data = <_MapMarkerData>[];
 
     if (_userLocation != null) data.add(_buildUserMarkerData());
@@ -555,16 +564,17 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _revealTimer?.cancel();
     _markerData = data;
 
+    // Pre-fetch all positions from native SDK (exact, not approximated)
+    await _fetchAllScreenPositions(data);
+    if (!mounted) return;
+
     if (!animate || data.isEmpty) {
       setState(() => _revealedCount = data.length);
-      _updateMarkerScreenPositions();
       return;
     }
 
     final userCount = _userLocation != null ? 1 : 0;
-    _revealedCount = userCount;
-    setState(() {});
-    _updateMarkerScreenPositions();
+    setState(() => _revealedCount = userCount);
 
     if (data.length <= userCount) return;
 
@@ -576,7 +586,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       }
       i++;
       setState(() => _revealedCount = i);
-      _updateMarkerScreenPositions();
       if (i >= data.length) timer.cancel();
     });
   }
@@ -668,7 +677,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     return Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
-          _screenSize = constraints.biggest;
           return Stack(
             children: [
               // ── Layer 1: Map or loading shimmer ────────────────────────────
@@ -695,18 +703,9 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                     onStyleLoadedCallback: _onStyleLoaded,
                     onCameraMove: (CameraPosition pos) {
                       _currentZoom = pos.zoom;
-                      _cameraCenter = pos.target;
                       if (mounted && _pinsVisible) setState(() => _pinsVisible = false);
                     },
-                    onCameraIdle: () {
-                      if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
-                        _lastClusterZoom = _currentZoom;
-                        _buildMarkers(animate: false);
-                      } else {
-                        _updateMarkerScreenPositions();
-                      }
-                      if (mounted && !_pinsVisible) setState(() => _pinsVisible = true);
-                    },
+                    onCameraIdle: () => _onCameraIdle(),
                   ),
                 ),
 
