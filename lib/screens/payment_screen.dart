@@ -212,11 +212,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
             maxPlots: (_plan['plotLimit'] as num?)?.toInt() ?? 1,
             isPlot: _isPlot,
             onDismiss: () {
-              if (_isPlot) {
-                Get.find<PlotController>().loadMyPlots(reset: true);
-              }
-              Get.find<AuthController>().tabIndex.value = 0;
               Get.until((route) => route.settings.name == AppRoutes.main);
+              Get.find<AuthController>().tabIndex.value = _isPlot ? 3 : 1;
             },
           ),
           barrierDismissible: false,

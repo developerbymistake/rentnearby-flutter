@@ -489,7 +489,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
         maxPlots: (plan['plotLimit'] as num?)?.toInt() ?? 1,
         isPlot: true,
         onDismiss: () {
-          Get.find<AuthController>().tabIndex.value = 0;
+          Get.find<AuthController>().tabIndex.value = 3;
         },
       ),
       barrierDismissible: false,

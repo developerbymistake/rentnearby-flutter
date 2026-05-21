@@ -577,7 +577,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           daysValid: (selectedPlan['days'] as num?)?.toInt() ?? 2,
           maxRooms: (selectedPlan['roomLimit'] as num?)?.toInt() ?? 1,
           onDismiss: () {
-            Get.find<AuthController>().tabIndex.value = 0;
+            Get.find<AuthController>().tabIndex.value = 1;
           },
         ),
         barrierDismissible: false,
