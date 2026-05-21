@@ -1355,6 +1355,26 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                             _reverseGeocode(latLng);
                           },
                         ),
+                        if (_selectedLocation != null)
+                          Positioned(
+                            bottom: 10, left: 10,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.92),
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 6, offset: const Offset(0, 2))],
+                              ),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 14),
+                                const SizedBox(width: 5),
+                                Text(
+                                  '${_selectedLocation!.latitude.toStringAsFixed(5)}, ${_selectedLocation!.longitude.toStringAsFixed(5)}',
+                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.success, fontWeight: FontWeight.w500),
+                                ),
+                              ]),
+                            ),
+                          ),
                         Positioned(
                           bottom: 10, right: 10,
                           child: GestureDetector(
@@ -1374,18 +1394,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                   ),
             ),
           ),
-          if (_selectedLocation != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Row(children: [
-                const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  '${_selectedLocation!.latitude.toStringAsFixed(5)}, ${_selectedLocation!.longitude.toStringAsFixed(5)}',
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w500),
-                ),
-              ]),
-            ),
         ],
       ]),
     ),
