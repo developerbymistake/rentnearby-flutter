@@ -48,10 +48,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
 
   void _onAddPlot() async {
     final name = _auth.user.value?.name?.trim() ?? '';
-    if (name.isEmpty) {
-      _showNameDialog();
-      return;
-    }
+    if (name.isEmpty) { _showNameDialog(); return; }
     try {
       final paymentEnabled = await _ctrl.isPlotPaymentFeatureEnabled();
       if (!paymentEnabled) {
@@ -60,12 +57,36 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
           AppToast.error('Free mode limit: deactivate a plot before adding a new one.');
           return;
         }
+        Get.toNamed(AppRoutes.addPlot);
+        return;
+      }
+
+      final status = await _ctrl.getPlotMembershipStatus();
+      final hasMembership = status != null && (status['hasMembership'] == true);
+
+      if (hasMembership) {
+        final maxPlots = (status!['maxPlots'] as num?)?.toInt() ?? 0;
+        final activePlots = (status['activePlots'] as num?)?.toInt() ?? 0;
+        if (activePlots >= maxPlots) {
+          final planType = status['planType'] as String? ?? '';
+          final plans = await _ctrl.getPlotPlans();
+          final currentPlan = plans.firstWhereOrNull((p) => p['planType'] == planType);
+          final currentPlanIsFree = currentPlan == null || (currentPlan['price'] as num? ?? 0) == 0;
+          if (currentPlanIsFree) {
+            if (mounted) _showPaidUpgradePlotSheet();
+          } else {
+            if (mounted) _showPlotLimitDialog(maxPlots: maxPlots, hasPlan: true);
+          }
+          return;
+        }
       } else {
-        final status = await _ctrl.getPlotMembershipStatus();
-        final hasMembership = status != null && (status['hasMembership'] == true);
-        final canActivate = (status ?? {})['canActivate'] as bool? ?? false;
-        if (hasMembership && !canActivate) {
-          if (mounted) _showPaidUpgradePlotSheet();
+        final hasUsedFree = _auth.user.value?.hasUsedFreePlotPlan ?? false;
+        if (_ctrl.myPlots.length >= 1) {
+          if (hasUsedFree) {
+            if (mounted) _showPaidUpgradePlotSheet();
+          } else {
+            if (mounted) _showPlotLimitDialog(maxPlots: 1, hasPlan: false);
+          }
           return;
         }
       }
@@ -165,8 +186,23 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
     }
 
     if (hasMembership && !canActivate) {
-      // At capacity — show upgrade plan sheet (pass plotId so it activates after payment)
-      if (mounted) _showPaidUpgradePlotSheet(plotId: plotId);
+      final maxPlots = (membership!['maxPlots'] as num?)?.toInt() ?? 0;
+      final planType = membership['planType'] as String? ?? '';
+      final plans = await _ctrl.getPlotPlans();
+      final currentPlan = plans.firstWhereOrNull((p) => p['planType'] == planType);
+      final currentPlanIsFree = currentPlan == null || (currentPlan['price'] as num? ?? 0) == 0;
+      if (currentPlanIsFree) {
+        final paidPlan = plans.firstWhereOrNull((p) => (p['price'] as num? ?? 0) > 0);
+        if (!mounted) return;
+        await Get.toNamed(AppRoutes.paymentScreen, arguments: {
+          'isPlot': true,
+          'plotId': plotId,
+          'plan': paidPlan ?? {'planType': 'PAID', 'price': 99, 'days': 30, 'plotLimit': 2},
+        });
+        _ctrl.loadMyPlots(reset: true);
+      } else {
+        if (mounted) _showPlotLimitDialog(maxPlots: maxPlots, hasPlan: true);
+      }
       return;
     }
 
@@ -330,6 +366,98 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                 child: const Text('Maybe Later', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPlotLimitDialog({required int maxPlots, required bool hasPlan}) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: 60, height: 60,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.lock_outline_rounded, size: 30, color: Color(0xFFF59E0B)),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Plot Limit Reached',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              hasPlan
+                  ? 'Your current plan allows up to $maxPlots plot${maxPlots > 1 ? 's' : ''}. Delete an existing plot to add a new one.'
+                  : 'Free plan allows 1 plot. Delete your existing plot to replace it, or go live with a Premium plan to add more.',
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            if (!hasPlan) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () { Navigator.pop(context); _showPaidUpgradePlotSheet(); },
+                  icon: const Icon(Icons.flash_on_rounded, size: 16),
+                  label: const Text('Upgrade Plan',
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.list_alt_rounded, size: 16),
+                  label: const Text('Manage Plots',
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textMedium,
+                    side: BorderSide(color: Colors.grey.shade300),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ] else
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.list_alt_rounded, size: 16),
+                  label: const Text('Manage Plots',
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _kGreen,
+                    side: const BorderSide(color: _kGreen),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
