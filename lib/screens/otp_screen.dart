@@ -293,6 +293,10 @@ class _OtpScreenState extends State<OtpScreen> {
         ),
       ),
     );
+    // After modal closes Flutter restores focus to the last field — prevent that
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) FocusScope.of(context).unfocus();
+    });
     return result == true;
   }
 
@@ -435,6 +439,9 @@ class _OtpScreenState extends State<OtpScreen> {
             controller: _phoneController,
             keyboardType: TextInputType.phone,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
+            onChanged: (v) {
+              if (v.length == 10) FocusScope.of(context).unfocus();
+            },
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w500),
             decoration: InputDecoration(
               prefixIcon: Container(
