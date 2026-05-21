@@ -595,7 +595,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
 
   List<_PlotCluster> _computeClusters(List<NearbyPlotModel> plots) {
     final clusters = <_PlotCluster>[];
-    const clusterMeters = 50.0;
+    const clusterMeters = 500.0;
     const clusterPxCap = 48.0;
     final zoom = _currentZoom;
     final refLat = _userLocation?.latitude ?? _searchCenter.latitude;

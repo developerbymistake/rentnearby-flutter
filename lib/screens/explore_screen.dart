@@ -632,7 +632,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   List<_Cluster> _computeClusters(List<NearbyListingModel> listings) {
     final clusters = <_Cluster>[];
-    const clusterMeters = 50.0;
+    const clusterMeters = 500.0;
     const clusterPxCap = 48.0;
     final zoom = _currentZoom;
     final refLat = _userLocation?.latitude ?? _searchCenter.latitude;
