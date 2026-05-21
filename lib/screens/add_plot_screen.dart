@@ -695,6 +695,37 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
     _ctrl.notifyPlotPosted();
     await _ctrl.loadMyPlots(reset: true);
+
+    try {
+      final results = await Future.wait([
+        _ctrl.getPlotMembershipStatus(),
+        _ctrl.getPlotPlans(),
+      ]);
+      final membership = results[0] as Map<String, dynamic>?;
+      final plans = results[1] as List<Map<String, dynamic>>;
+      final hasMembership = membership != null && (membership['hasMembership'] == true);
+      final planType = membership?['planType'] as String? ?? '';
+      final maxPlots = (membership?['maxPlots'] as num?)?.toInt() ?? 0;
+      final activePlots = (membership?['activePlots'] as num?)?.toInt() ?? 0;
+      final plansMap = <String, Map<String, dynamic>>{};
+      for (final p in plans) {
+        plansMap[p['planType'] as String] = p;
+      }
+      final currentPlanIsFree = (plansMap[planType]?['price'] as num? ?? 0) == 0;
+      if (hasMembership && currentPlanIsFree && activePlots >= maxPlots) {
+        final paidPlans = plans.where((p) => (p['price'] as num? ?? 0) > 0).toList();
+        final paidPlan = paidPlans.isEmpty
+            ? {'planType': 'PAID', 'price': 99, 'days': 30, 'plotLimit': 2}
+            : paidPlans.first;
+        Get.offNamed(AppRoutes.paymentScreen, arguments: {
+          'isPlot': true,
+          'plotId': plotId,
+          'plan': paidPlan,
+        });
+        return;
+      }
+    } catch (_) {}
+
     if (mounted) Get.back();
     AppToast.success('Plot listed successfully!');
   }

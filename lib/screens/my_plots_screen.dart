@@ -60,6 +60,26 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
           AppToast.error('Free mode limit: deactivate a plot before adding a new one.');
           return;
         }
+      } else {
+        final status = await _ctrl.getPlotMembershipStatus();
+        final hasMembership = status != null && (status['hasMembership'] == true);
+        final canActivate = (status ?? {})['canActivate'] as bool? ?? false;
+        if (hasMembership && !canActivate) {
+          final plans = await _ctrl.getPlotPlans();
+          if (!mounted) return;
+          final paidPlans = plans.where((p) => (p['price'] as num? ?? 0) > 0).toList()
+            ..sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
+          final upgradePlan = paidPlans.isNotEmpty
+              ? paidPlans.first
+              : {'planType': 'PAID', 'price': 99, 'days': 30, 'plotLimit': 2};
+          await Get.toNamed(AppRoutes.paymentScreen, arguments: {
+            'isPlot': true,
+            'plotId': '',
+            'plan': upgradePlan,
+          });
+          _ctrl.loadMyPlots(reset: true);
+          return;
+        }
       }
     } catch (_) {}
     Get.toNamed(AppRoutes.addPlot);
