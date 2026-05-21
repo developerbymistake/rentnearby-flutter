@@ -600,12 +600,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
       if (failed > 0 && mounted) {
         AppToast.error('$failed photo${failed > 1 ? 's' : ''} could not be uploaded.');
       }
-      // Notify explore page after all photos are uploaded
-      _ctrl.notifyListingPosted();
-    } else {
-      // Case 2: No photos selected (photo upload is optional)
-      // Still notify explore page so pin appears
-      _ctrl.notifyListingPosted();
     }
 
     await _ctrl.loadMyListings();
@@ -636,6 +630,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
     if (mounted) Get.back();
     AppToast.success('Room listed successfully!');
+    Future.delayed(const Duration(milliseconds: 400), _ctrl.notifyListingPosted);
   }
 
   InputDecoration _inputDec(String hint, {Widget? prefixIcon, String? prefix}) => InputDecoration(

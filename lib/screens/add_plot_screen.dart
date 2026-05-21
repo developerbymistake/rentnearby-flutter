@@ -694,7 +694,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       }
     }
 
-    _ctrl.notifyPlotPosted();
     await _ctrl.loadMyPlots(reset: true);
 
     try {
@@ -728,6 +727,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
     if (mounted) Get.back();
     AppToast.success('Plot listed successfully!');
+    Future.delayed(const Duration(milliseconds: 400), _ctrl.notifyPlotPosted);
   }
 
   InputDecoration _inputDec(String hint, {Widget? prefixIcon}) => InputDecoration(
