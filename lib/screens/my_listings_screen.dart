@@ -182,9 +182,9 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
       if (membership != null && membership['hasMembership'] == true) {
         final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 0;
-        final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
+        final totalRooms = _ctrl.myListings.length;
 
-        if (activeRooms >= maxRooms) {
+        if (totalRooms >= maxRooms) {
           final planType = membership['planType'] as String? ?? '';
           final plans = await _ctrl.getPlans();
           final currentPlanIsFree = (plans[planType]?['price'] as num? ?? 0) == 0;
