@@ -30,6 +30,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Circle? _nativeUserDot;
   bool _pinsVisible = true;
   bool _styleLoaded = false;
+  LatLng? _cameraCenter;
 
   // ── State ─────────────────────────────────────────────────────────────────
   final _listingCtrl = Get.find<ListingController>();
@@ -401,39 +402,10 @@ class _ExploreScreenState extends State<ExploreScreen>
     _fitToRadius();
   }
 
-  // ── Marker screen-position projection ────────────────────────────────────
-
-  Future<void> _fetchAllScreenPositions(List<_MapMarkerData> data) async {
-    final ctrl = _mapController;
-    if (ctrl == null || !_mapReady || data.isEmpty) return;
-    try {
-      final points = await Future.wait(data.map((d) => ctrl.toScreenLocation(d.position)));
-      for (int i = 0; i < data.length; i++) {
-        data[i].screenPosition = Offset(points[i].x.toDouble(), points[i].y.toDouble());
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _updateMarkerScreenPositions() async {
-    final ctrl = _mapController;
-    if (ctrl == null || !_mapReady || !mounted) return;
-    final snapshot = _markerData.take(_revealedCount).toList();
-    if (snapshot.isEmpty) return;
-    try {
-      final points = await Future.wait(snapshot.map((d) => ctrl.toScreenLocation(d.position)));
-      for (int i = 0; i < snapshot.length; i++) {
-        snapshot[i].screenPosition = Offset(points[i].x.toDouble(), points[i].y.toDouble());
-      }
-      if (mounted) setState(() {});
-    } catch (_) {}
-  }
-
-  Future<void> _onCameraIdle() async {
+  void _onCameraIdle() {
     if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
       _lastClusterZoom = _currentZoom;
-      await _buildMarkers(animate: false);
-    } else {
-      await _updateMarkerScreenPositions();
+      _buildMarkers(animate: false);
     }
     if (mounted && !_pinsVisible) setState(() => _pinsVisible = true);
   }
@@ -495,7 +467,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         ),
       );
 
-  Future<void> _buildMarkers({bool animate = true}) async {
+  void _buildMarkers({bool animate = true}) {
     final data = <_MapMarkerData>[];
 
     if (_userLocation != null) data.add(_buildUserMarkerData());
@@ -596,10 +568,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     _revealTimer?.cancel();
     _markerData = data;
 
-    // Pre-fetch all positions from native SDK (exact, not approximated)
-    await _fetchAllScreenPositions(data);
-    if (!mounted) return;
-
     if (!animate || data.isEmpty) {
       setState(() => _revealedCount = data.length);
       return;
@@ -698,6 +666,19 @@ class _ExploreScreenState extends State<ExploreScreen>
     return points;
   }
 
+  static Offset _projectToScreen(LatLng ll, LatLng center, double zoom, Size screenSize) {
+    const tileSize = 512.0;
+    final scale = tileSize * pow(2.0, zoom);
+    double wx(double lng) => (lng + 180) / 360;
+    double wy(double lat) {
+      final s = sin(lat * pi / 180);
+      return (1 - log((1 + s) / (1 - s)) / (2 * pi)) / 2;
+    }
+    final dx = (wx(ll.longitude) - wx(center.longitude)) * scale;
+    final dy = (wy(ll.latitude) - wy(center.latitude)) * scale;
+    return Offset(screenSize.width / 2 + dx, screenSize.height / 2 + dy);
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   double _chipWidth(String text) => (text.length * 9.0 + 26).clamp(52.0, 90.0);
@@ -762,9 +743,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                 onStyleLoadedCallback: _onStyleLoaded,
                 onCameraMove: (CameraPosition pos) {
                   _currentZoom = pos.zoom;
+                  _cameraCenter = pos.target;
                   if (mounted && _pinsVisible) setState(() => _pinsVisible = false);
                 },
-                onCameraIdle: () => _onCameraIdle(),
+                onCameraIdle: _onCameraIdle,
               ),
             ),
 
@@ -780,14 +762,21 @@ class _ExploreScreenState extends State<ExploreScreen>
                   fit: StackFit.expand,
                   children: _markerData
                       .take(_revealedCount)
-                      .where((d) => d.screenPosition != null)
-                      .map((d) => Positioned(
-                            left: d.screenPosition!.dx - d.width / 2,
-                            top: d.screenPosition!.dy - d.height / 2,
-                            width: d.width,
-                            height: d.height,
-                            child: d.widget,
-                          ))
+                      .map((d) {
+                        final sp = _projectToScreen(
+                          d.position,
+                          _cameraCenter ?? _searchCenter,
+                          _currentZoom,
+                          constraints.biggest,
+                        );
+                        return Positioned(
+                          left: sp.dx - d.width / 2,
+                          top: sp.dy - d.height / 2,
+                          width: d.width,
+                          height: d.height,
+                          child: d.widget,
+                        );
+                      })
                       .toList(),
                 ),
               ),
@@ -1177,7 +1166,6 @@ class _MapMarkerData {
   final double width;
   final double height;
   final bool isUser;
-  Offset? screenPosition;
 
   _MapMarkerData({
     required this.position,
