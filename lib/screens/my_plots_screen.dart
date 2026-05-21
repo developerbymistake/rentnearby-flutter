@@ -90,7 +90,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
           return;
         }
       }
-    } catch (_) {}
+    } catch (_) { AppToast.info('Adding plot...'); }
     Get.toNamed(AppRoutes.addPlot);
   }
 
@@ -886,7 +886,7 @@ class _PlotPlanSelectionSheet extends StatelessWidget {
         subtitle: '$days days • $plots plot${plots > 1 ? 's' : ''}',
         price: '₹$price',
         icon: Icons.flash_on_rounded,
-        color: AppColors.primary,
+        color: _kGreen,
         isHighlighted: hasUsedFreePlotPlan && i == 0,
       ));
       if (i < paidPlans.length - 1) tiles.add(const SizedBox(height: 12));

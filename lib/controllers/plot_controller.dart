@@ -210,6 +210,8 @@ class PlotController extends GetxController {
   Future<bool> verifyPlotPayment(Map<String, dynamic> body) async {
     try {
       await ApiService.post('/plots/${body['plotId']}/verify-payment', body);
+      plotPostedTrigger.value++;
+      await loadMyPlots(reset: true);
       return true;
     } catch (_) { return false; }
   }
@@ -224,6 +226,8 @@ class PlotController extends GetxController {
   Future<bool> verifyPlotUpgradePayment(Map<String, dynamic> body) async {
     try {
       await ApiService.post('/plots/upgrade-plan/verify', body);
+      plotPostedTrigger.value++;
+      await loadMyPlots(reset: true);
       return true;
     } catch (_) { return false; }
   }
