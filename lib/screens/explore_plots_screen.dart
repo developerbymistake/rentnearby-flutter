@@ -965,6 +965,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
             children: [
               Container(
                 width: 58,
+                constraints: const BoxConstraints(minHeight: 52),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF10B981), Color(0xFF059669)],
@@ -1330,32 +1331,28 @@ class _PlotBottomSheet extends StatelessWidget {
                   const Divider(height: 1),
                   const SizedBox(height: 14),
 
-                  // Distance
+                  // Owner + distance in same row
                   Row(children: [
-                    const Icon(Icons.near_me_rounded, size: 15, color: AppColors.textLight),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${plot.distanceKm.toStringAsFixed(1)} km away',
-                      style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
-                    ),
-                  ]),
-
-                  if (plot.ownerName != null) ...[
-                    const SizedBox(height: 10),
-                    Row(children: [
+                    if (plot.ownerName != null && plot.ownerName!.isNotEmpty) ...[
                       const Icon(Icons.person_outline_rounded, size: 15, color: AppColors.textLight),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 5),
                       Text(
                         plot.ownerName!,
                         style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textDark),
+                            fontFamily: 'Poppins', fontSize: 13,
+                            fontWeight: FontWeight.w600, color: AppColors.textDark),
                       ),
-                    ]),
-                  ],
+                    ] else
+                      const SizedBox.shrink(),
+                    const Spacer(),
+                    const Icon(Icons.near_me_rounded, size: 13, color: AppColors.textLight),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${plot.distanceKm.toStringAsFixed(1)} km away',
+                      style: const TextStyle(
+                          fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+                    ),
+                  ]),
 
                   const SizedBox(height: 20),
 

@@ -1036,6 +1036,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             children: [
               Container(
                 width: 54,
+                constraints: const BoxConstraints(minHeight: 52),
                 decoration: BoxDecoration(
                   gradient: AppColors.primaryGradient,
                   borderRadius: BorderRadius.circular(12),
