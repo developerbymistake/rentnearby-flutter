@@ -107,20 +107,20 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
 
   void _showNameDialog() {
     final nameCtrl = TextEditingController();
+    bool saving = false;
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => StatefulBuilder(builder: (ctx, setDialogState) {
-        bool saving = false;
         Future<void> save() async {
           final name = nameCtrl.text.trim();
           if (name.isEmpty) { AppToast.error('Please enter your name.'); return; }
           setDialogState(() => saving = true);
           final ok = await _auth.updateProfile(name, null);
-          setDialogState(() => saving = false);
-          if (ok && ctx.mounted) {
-            Navigator.pop(ctx);
-            Get.toNamed(AppRoutes.addPlot);
+          if (ok) {
+            if (ctx.mounted) { Navigator.pop(ctx); Get.toNamed(AppRoutes.addPlot); }
+          } else {
+            setDialogState(() => saving = false);
           }
         }
 

@@ -612,13 +612,12 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 
   void _showProfileRequiredDialog() {
     final nameCtrl = TextEditingController();
+    bool saving = false;
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setDialogState) {
-          bool saving = false;
-
           Future<void> save() async {
             final name = nameCtrl.text.trim();
             if (name.isEmpty) {
@@ -627,10 +626,10 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             }
             setDialogState(() => saving = true);
             final ok = await _auth.updateProfile(name, null);
-            setDialogState(() => saving = false);
-            if (ok && ctx.mounted) {
-              Navigator.pop(ctx);
-              Get.toNamed(AppRoutes.addListing);
+            if (ok) {
+              if (ctx.mounted) { Navigator.pop(ctx); Get.toNamed(AppRoutes.addListing); }
+            } else {
+              setDialogState(() => saving = false);
             }
           }
 
