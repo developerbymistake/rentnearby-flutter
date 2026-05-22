@@ -270,7 +270,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ]);
   }
 
-  void _save() {
+  Future<void> _save() async {
     FocusScope.of(context).unfocus();
     final name = _nameCtrl.text.trim();
     final gmail = _gmailCtrl.text.trim();
@@ -288,7 +288,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    _auth.updateProfile(name, gmail.isNotEmpty ? gmail : null);
+    await _auth.updateProfile(name, gmail.isNotEmpty ? gmail : null);
   }
 
   void _confirmLogout() {

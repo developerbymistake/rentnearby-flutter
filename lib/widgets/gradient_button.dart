@@ -17,19 +17,22 @@ class GradientButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Loading = gradient + spinner (active appearance)
+    // Disabled (onPressed null, not loading) = grey + text (muted appearance)
+    final disabled = onPressed == null && !isLoading;
     return AnimatedOpacity(
-      opacity: onPressed == null ? 0.6 : 1.0,
+      opacity: disabled ? 0.6 : 1.0,
       duration: const Duration(milliseconds: 200),
       child: GestureDetector(
-        onTap: onPressed,
+        onTap: isLoading ? null : onPressed,
         child: Container(
           width: double.infinity,
           height: height,
           decoration: BoxDecoration(
-            gradient: onPressed == null ? null : AppColors.primaryGradient,
-            color: onPressed == null ? AppColors.textHint : null,
+            gradient: disabled ? null : AppColors.primaryGradient,
+            color: disabled ? AppColors.textHint : null,
             borderRadius: BorderRadius.circular(14),
-            boxShadow: onPressed == null
+            boxShadow: disabled
                 ? []
                 : [
                     BoxShadow(
