@@ -8,6 +8,7 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
+import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../widgets/gradient_button.dart';
 import 'explore_screen.dart';
@@ -39,6 +40,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     _navController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     Get.put(ListingController());
     Get.put(PlotController());
+    Get.put(LocationController());
     ever(_auth.tabIndex, (i) => setState(() => _currentIndex = i));
     _initConnectivity();
     _initGpsGate();

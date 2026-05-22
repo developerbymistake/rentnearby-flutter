@@ -1054,7 +1054,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
               child: Container(
-                height: 280,
+                height: 320,
                 color: AppColors.surface,
                 child: const Center(
                   child: Column(
@@ -1073,9 +1073,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
             borderRadius: BorderRadius.circular(14),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                _mapSize = Size(constraints.maxWidth, 280);
+                _mapSize = Size(constraints.maxWidth, 320);
                 return SizedBox(
-                  height: 280,
+                  height: 320,
                   child: Stack(children: [
                     MapLibreMap(
                       styleString: 'assets/map_style.json',

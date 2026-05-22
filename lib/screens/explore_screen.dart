@@ -10,6 +10,7 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_map_state.dart';
 import '../controllers/listing_controller.dart';
+import '../controllers/location_controller.dart';
 import '../models/city_model.dart';
 import '../models/listing_model.dart';
 import '../widgets/listing_bottom_sheet.dart';
@@ -36,25 +37,23 @@ class _ExploreScreenState extends State<ExploreScreen>
   Worker? _mapPauseWorker;
 
   // ── State ─────────────────────────────────────────────────────────────────
-  final _listingCtrl = Get.find<ListingController>();
-  Worker? _districtsWorker;
+  final _listingCtrl  = Get.find<ListingController>();
+  final _locationCtrl = Get.find<LocationController>();
+  Worker? _locationWorker;
+  Worker? _locationLoadingWorker;
+  Worker? _userLocationWorker;
   Worker? _postedWorker;
   Worker? _loadingWorker;
-  StreamSubscription<ServiceStatus>? _serviceStatusSub;
+  Worker? _refreshWorker;
 
   List<_MapMarkerData> _markerData = [];
-  LatLng? _userLocation;
   double _radius = 1.0;
   double _lastClusterZoom = 0;
-  DistrictModel? _selectedDistrict;
   CityModel? _selectedCity;
-  CityModel? _autoCity;
-  bool _locationLoading = true;
   bool _mapReady = false;
   bool _checkingPermission = false;
   Timer? _loadNearbyDebounceTimer;
   String? _selectedRoomType;
-  bool _autoLoading = false;
   bool _loadingNearby = false;
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
@@ -73,10 +72,50 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
 
     WidgetsBinding.instance.addObserver(this);
-    _districtsWorker = ever(_listingCtrl.districts, (_) => _tryAutoLoad());
+
+    // Trigger data load whenever LocationController resolves the district.
+    _locationWorker = ever(_locationCtrl.selectedDistrict, (_) {
+      if (_locationCtrl.selectedDistrict.value != null) {
+        _loadNearby();
+        if (_mapReady) _fitToRadius();
+      }
+    });
+
+    // Propagate loading state changes → map shimmer / map visible.
+    _locationLoadingWorker = ever(_locationCtrl.locationLoading, (bool loading) {
+      if (!mounted) return;
+      if (loading) {
+        setState(() {
+          _styleLoaded = false;
+          _mapReady = false;
+          _mapController = null;
+          _nativeCircle = null;
+          _nativeCircleGlow = null;
+          _nativeCircleLine = null;
+          _nativeUserDot = null;
+        });
+      } else {
+        setState(() {});
+      }
+    });
+
+    // Propagate user-dot position updates to the map.
+    _userLocationWorker = ever(_locationCtrl.userLocation, (_) {
+      if (!mounted) return;
+      setState(() {});
+      if (_mapReady) {
+        if (_locationCtrl.userLocation.value != null) {
+          if (_nativeUserDot == null) _initNativeUserDot();
+          else _updateNativeUserDot();
+        } else {
+          _buildMarkers(animate: false);
+        }
+      }
+    });
+
     _postedWorker = ever(_listingCtrl.listingPostedTrigger, (_) => _loadNearby());
-    ever(_listingCtrl.exploreRefreshTrigger, (_) {
-      if (_selectedDistrict != null) _loadNearby();
+    _refreshWorker = ever(_listingCtrl.exploreRefreshTrigger, (_) {
+      if (_locationCtrl.selectedDistrict.value != null) _loadNearby();
     });
     _loadingWorker = ever(_listingCtrl.isLoading, (loading) {
       if (!loading && _radarController.isAnimating) {
@@ -102,40 +141,18 @@ class _ExploreScreenState extends State<ExploreScreen>
         setState(() => _mapActive = true);
       }
     });
-
-    _serviceStatusSub = Geolocator.getServiceStatusStream().listen((status) {
-      if (!mounted) return;
-      if (status == ServiceStatus.enabled) {
-        if (_userLocation == null && !_locationLoading) {
-          setState(() {
-            _locationLoading = true;
-            _styleLoaded = false;
-            _mapReady = false;
-          });
-          _nativeUserDot = null;
-          _initLocation();
-        }
-      } else {
-        setState(() {
-          _userLocation = null;
-          _locationLoading = false;
-        });
-        _buildMarkers(animate: false);
-      }
-    });
-
-    _initLocation();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _tryAutoLoad());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _districtsWorker?.dispose();
+    _locationWorker?.dispose();
+    _locationLoadingWorker?.dispose();
+    _userLocationWorker?.dispose();
     _postedWorker?.dispose();
     _loadingWorker?.dispose();
+    _refreshWorker?.dispose();
     _mapPauseWorker?.dispose();
-    _serviceStatusSub?.cancel();
     _radarController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
@@ -150,6 +167,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _checkPermissionOnResume();
+      _locationCtrl.refreshOnResume();
       if (!_listingCtrl.isLoading.value && _radarController.isAnimating) {
         _radarController.stop();
         _radarController.reset();
@@ -167,7 +185,6 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (!mounted) return;
       if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
-        if (_userLocation == null && !_locationLoading) _initLocation();
         return;
       }
       await showDialog(
@@ -205,122 +222,23 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  // ── Location ──────────────────────────────────────────────────────────────
-
-  void _tryAutoLoad() {
-    if (_selectedDistrict != null) return;
-    if (_locationLoading) return;
-    if (_autoLoading) return;
-    _autoLoad();
-  }
-
-  String? get _effectiveCityId => _selectedCity?.id ?? _autoCity?.id;
-
-  Future<void> _autoLoad() async {
-    if (_userLocation == null) return;
-    _autoLoading = true;
-    try {
-      final ctx = await _listingCtrl.loadContext(
-          _userLocation!.latitude, _userLocation!.longitude);
-      if (!mounted || ctx == null) return;
-      setState(() {
-        _selectedDistrict = ctx.district;
-        _autoCity = ctx.nearestCity;
-      });
-      _loadNearby();
-      if (_mapReady) _fitToRadius();
-    } finally {
-      _autoLoading = false;
-    }
-  }
-
-  Future<void> _initLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        setState(() => _locationLoading = false);
-        _tryAutoLoad();
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          setState(() => _locationLoading = false);
-          _tryAutoLoad();
-          return;
-        }
-      }
-      if (permission == LocationPermission.deniedForever) {
-        setState(() => _locationLoading = false);
-        _tryAutoLoad();
-        return;
-      }
-
-      // Show last known position immediately — map appears without waiting for fresh GPS fix.
-      final lastKnown = await Geolocator.getLastKnownPosition();
-      setState(() {
-        if (lastKnown != null) {
-          _userLocation = LatLng(lastKnown.latitude, lastKnown.longitude);
-        }
-        _locationLoading = false;
-      });
-      if (_listingCtrl.districts.isNotEmpty && lastKnown != null) {
-        _tryAutoLoad();
-      }
-      if (_mapReady) {
-        if (_nativeUserDot == null) _initNativeUserDot();
-        else _updateNativeUserDot();
-        _fitToRadius();
-      }
-
-      // High accuracy resolves in <1 s via network+GPS rather than satellite-only fix.
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings:
-            const LocationSettings(accuracy: LocationAccuracy.high),
-      );
-      if (!mounted) return;
-      setState(() => _userLocation = LatLng(pos.latitude, pos.longitude));
-      if (_mapReady) {
-        if (_nativeUserDot == null) _initNativeUserDot();
-        else _updateNativeUserDot();
-      }
-
-      final ctx =
-          await _listingCtrl.loadContext(pos.latitude, pos.longitude);
-      if (!mounted) return;
-      if (ctx != null &&
-          (_selectedDistrict == null ||
-              _selectedDistrict!.id != ctx.district.id)) {
-        setState(() {
-          _selectedDistrict = ctx.district;
-          _autoCity = ctx.nearestCity;
-        });
-        _loadNearby();
-      }
-
-      if (_mapReady) _fitToRadius();
-    } catch (_) {
-      setState(() => _locationLoading = false);
-      _tryAutoLoad();
-    }
-  }
-
   // ── Search center + zoom ──────────────────────────────────────────────────
+
+  String? get _effectiveCityId => _selectedCity?.id ?? _locationCtrl.autoCity.value?.id;
 
   LatLng get _searchCenter {
     if (_selectedCity?.latitude != null && _selectedCity?.longitude != null) {
       return LatLng(_selectedCity!.latitude!, _selectedCity!.longitude!);
     }
-    if (_userLocation != null) return _userLocation!;
-    if (_autoCity?.latitude != null && _autoCity?.longitude != null) {
-      return LatLng(_autoCity!.latitude!, _autoCity!.longitude!);
+    final loc = _locationCtrl.userLocation.value;
+    if (loc != null) return loc;
+    final city = _locationCtrl.autoCity.value;
+    if (city?.latitude != null && city?.longitude != null) {
+      return LatLng(city!.latitude!, city.longitude!);
     }
-    if (_selectedDistrict?.latitude != null &&
-        _selectedDistrict?.longitude != null) {
-      return LatLng(
-          _selectedDistrict!.latitude!, _selectedDistrict!.longitude!);
+    final dist = _locationCtrl.selectedDistrict.value;
+    if (dist?.latitude != null && dist?.longitude != null) {
+      return LatLng(dist!.latitude!, dist.longitude!);
     }
     final first = _listingCtrl.districts.firstOrNull;
     if (first?.latitude != null && first?.longitude != null) {
@@ -373,7 +291,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Future<void> _initNativeUserDot() async {
     final ctrl = _mapController;
-    final loc = _userLocation;
+    final loc = _locationCtrl.userLocation.value;
     if (ctrl == null || loc == null || !mounted) return;
     _nativeUserDot = await ctrl.addCircle(CircleOptions(
       geometry: loc,
@@ -389,7 +307,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   void _updateNativeUserDot() {
     final ctrl = _mapController;
     final dot = _nativeUserDot;
-    final loc = _userLocation;
+    final loc = _locationCtrl.userLocation.value;
     if (ctrl == null || dot == null || loc == null) return;
     ctrl.updateCircle(dot, CircleOptions(geometry: loc));
   }
@@ -447,14 +365,14 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Future<void> _executeLoadNearby() async {
     if (_loadingNearby) return;
-    if (_selectedDistrict == null) return;
+    if (_locationCtrl.selectedDistrict.value == null) return;
     final cityId = _effectiveCityId;
     if (cityId == null) return;
     _loadingNearby = true;
     try {
       _revealTimer?.cancel();
       _radarController.repeat();
-      _markerData = _userLocation != null ? [_buildUserMarkerData()] : [];
+      _markerData = _locationCtrl.userLocation.value != null ? [_buildUserMarkerData()] : [];
       _revealedCount = _markerData.length;
       setState(() {});
       final center = _searchCenter;
@@ -478,7 +396,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   // ── Marker data building ──────────────────────────────────────────────────
 
   _MapMarkerData _buildUserMarkerData() => _MapMarkerData(
-        position: _userLocation!,
+        position: _locationCtrl.userLocation.value!,
         width: 120,
         height: 120,
         isUser: true,
@@ -495,7 +413,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   void _buildMarkers({bool animate = true}) {
     final data = <_MapMarkerData>[];
 
-    if (_userLocation != null) data.add(_buildUserMarkerData());
+    if (_locationCtrl.userLocation.value != null) data.add(_buildUserMarkerData());
 
     var listings = _listingCtrl.nearbyListings.toList()
       ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
@@ -598,7 +516,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       return;
     }
 
-    final userCount = _userLocation != null ? 1 : 0;
+    final userCount = _locationCtrl.userLocation.value != null ? 1 : 0;
     setState(() => _revealedCount = userCount);
 
     if (data.length <= userCount) return;
@@ -637,7 +555,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     const clusterMeters = 500.0;
     const clusterPxCap = 48.0;
     final zoom = _currentZoom;
-    final refLat = _userLocation?.latitude ?? _searchCenter.latitude;
+    final refLat = _locationCtrl.userLocation.value?.latitude ?? _searchCenter.latitude;
     final clusterPx =
         _metersToPixels(clusterMeters, zoom, refLat).clamp(0.0, clusterPxCap);
     for (final listing in listings) {
@@ -745,7 +663,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           return Stack(
             children: [
           // ── Layer 1: Map or loading shimmer ─────────────────────────────
-          if (_locationLoading || !_mapActive)
+          if (_locationCtrl.locationLoading.value || !_mapActive)
             _buildMapShimmer()
           else
             RepaintBoundary(
@@ -777,7 +695,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
 
           // ── Layer 3: Flutter widget marker overlay ───────────────────────
-          if (!_locationLoading && _mapReady)
+          if (!_locationCtrl.locationLoading.value && _mapReady)
             IgnorePointer(
               ignoring: !_pinsVisible,
               child: AnimatedOpacity(
@@ -864,9 +782,9 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Widget _buildCityDropdown() {
     return Obx(() {
-      final cs = _listingCtrl.nearbyCities;
+      final cs = _locationCtrl.nearbyCities;
       if (cs.isEmpty) {
-        return _selectedDistrict != null
+        return _locationCtrl.selectedDistrict.value != null
             ? Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -879,7 +797,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Iconsax.location, color: Colors.white, size: 13),
                   const SizedBox(width: 5),
-                  Text(_selectedDistrict!.name,
+                  Text(_locationCtrl.selectedDistrict.value!.name,
                       style: const TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 13,
