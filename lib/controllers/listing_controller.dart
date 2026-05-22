@@ -1,22 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../models/listing_model.dart';
-import '../models/city_model.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
-
-class LocationContext {
-  final DistrictModel district;
-  final CityModel? nearestCity;
-  const LocationContext({required this.district, this.nearestCity});
-}
 
 class ListingController extends GetxController {
   final myListings = <ListingModel>[].obs;
   final nearbyListings = <NearbyListingModel>[].obs;
-  final districts = <DistrictModel>[].obs;
-  final cities = <CityModel>[].obs;       // AddListingScreen: district-based city list
-  final nearbyCities = <CityModel>[].obs; // ExploreScreen: location-based city list
   final roomTypes = <RoomTypeModel>[].obs;
   final isLoading = false.obs;
   final isUploading = false.obs;
@@ -27,41 +17,14 @@ class ListingController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadMasterData();
+    _loadRoomTypes();
   }
 
-  Future<void> loadMasterData() async {
+  Future<void> _loadRoomTypes() async {
     try {
-      final results = await Future.wait([
-        ApiService.get('/admin/districts'),
-        ApiService.get('/admin/room-types'),
-      ]);
-      districts.value = (results[0]['data'] as List).map((e) => DistrictModel.fromJson(e)).toList();
-      roomTypes.value = (results[1]['data'] as List).map((e) => RoomTypeModel.fromJson(e)).toList();
+      final res = await ApiService.get('/admin/room-types');
+      roomTypes.value = (res['data'] as List).map((e) => RoomTypeModel.fromJson(e)).toList();
     } catch (_) {}
-  }
-
-  Future<LocationContext?> loadContext(double lat, double lng) async {
-    try {
-      final res = await ApiService.get('/listings/context', params: {'lat': lat, 'lng': lng});
-      final data = res['data'];
-      final district = DistrictModel.fromJson(data['district'] as Map<String, dynamic>);
-      nearbyCities.value = (data['cities'] as List).map((e) => CityModel.fromJson(e as Map<String, dynamic>)).toList();
-      final nearestCityId = data['nearestCityId'] as String?;
-      final nearestCity = nearestCityId != null ? nearbyCities.firstWhereOrNull((c) => c.id == nearestCityId) : nearbyCities.firstOrNull;
-      return LocationContext(district: district, nearestCity: nearestCity);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> loadCities(String districtId) async {
-    try {
-      final res = await ApiService.get('/admin/cities', params: {'districtId': districtId});
-      cities.value = (res['data'] as List).map((e) => CityModel.fromJson(e)).toList();
-    } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not load cities.'));
-    }
   }
 
   Future<void> loadNearby(double lat, double lng, double radius, String cityId) async {

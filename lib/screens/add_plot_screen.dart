@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:get/get.dart';
-import 'package:geolocator/geolocator.dart';
+import '../controllers/location_controller.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -77,7 +77,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   String? _selectedCityId;
   LatLng? _selectedLocation;
   LatLng? _userLocation;
-  bool _locationBlocked = false;
+  final _locationCtrl = Get.find<LocationController>();
   bool _mapReady = false;
   bool _cameraInitialized = false;
   bool _isGeocoding = false;
@@ -104,7 +104,10 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     super.initState();
     _areaCtrl.addListener(_updateSqftPreview);
     _addressCtrl.addListener(_onAddressChanged);
-    _fetchUserLocation();
+    _userLocation = _locationCtrl.userLocation.value;
+    _selectedLocation = _locationCtrl.userLocation.value;
+    _selectedDistrictId = _locationCtrl.selectedDistrict.value?.id;
+    _selectedCityId = _locationCtrl.autoCity.value?.id;
   }
 
   void _onAddressChanged() {
@@ -114,88 +117,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   void _updateSqftPreview() {
     final v = double.tryParse(_areaCtrl.text) ?? 0;
     setState(() => _sqftPreview = _sqftLabel(v, _selectedUnit));
-  }
-
-  Future<void> _fetchUserLocation() async {
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) setState(() => _locationBlocked = true);
-        return;
-      }
-      var perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) perm = await Geolocator.requestPermission();
-      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
-        if (mounted) setState(() => _locationBlocked = true);
-        return;
-      }
-
-      bool contextLoaded = false;
-      final lastKnown = await Geolocator.getLastKnownPosition();
-      if (lastKnown != null && mounted) {
-        final lastLoc = LatLng(lastKnown.latitude, lastKnown.longitude);
-        setState(() {
-          _userLocation = lastLoc;
-          _selectedLocation ??= lastLoc;
-        });
-        if (_selectedDistrictId == null) {
-          final ctx = await _ctrl.loadContext(lastLoc.latitude, lastLoc.longitude);
-          if (mounted && ctx != null) {
-            await _ctrl.loadCities(ctx.district.id);
-            if (mounted) {
-              setState(() {
-                _selectedDistrictId = ctx.district.id;
-                _selectedCityId = ctx.nearestCity?.id;
-              });
-              contextLoaded = true;
-            }
-          }
-        }
-      }
-
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
-      if (!mounted) return;
-      final loc = LatLng(pos.latitude, pos.longitude);
-      final addressWasEmpty = _addressCtrl.text.trim().isEmpty;
-      bool pinMoved = false;
-      setState(() {
-        _userLocation = loc;
-        if (_selectedLocation == null ||
-            (_selectedLocation!.latitude == lastKnown?.latitude &&
-                _selectedLocation!.longitude == lastKnown?.longitude)) {
-          _selectedLocation = loc;
-          pinMoved = true;
-        }
-      });
-      if (_mapReady) {
-        if (_nativeUserDot == null) _initNativeUserDot();
-        else _updateNativeUserDot();
-        if (_nativeCircleLine == null) _initNativeCircle();
-        if (pinMoved && _selectedLocation != null) _setNativePin(_selectedLocation!);
-      }
-
-      if (addressWasEmpty && _selectedLocation != null) _reverseGeocode(_selectedLocation!);
-
-      if (!contextLoaded && _selectedDistrictId == null) {
-        final ctx = await _ctrl.loadContext(loc.latitude, loc.longitude);
-        if (mounted && ctx != null) {
-          await _ctrl.loadCities(ctx.district.id);
-          if (mounted) {
-            setState(() {
-              _selectedDistrictId = ctx.district.id;
-              _selectedCityId = ctx.nearestCity?.id;
-            });
-          }
-        }
-      }
-
-      if (_mapReady && !_cameraInitialized) {
-        _cameraInitialized = true;
-        _animateTo(loc, 14.0);
-      }
-    } catch (_) {}
   }
 
   void _animateTo(LatLng target, double zoom) {
@@ -215,6 +136,9 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     if (_userLocation != null && !_cameraInitialized) {
       _cameraInitialized = true;
       _animateTo(_userLocation!, 14.0);
+    }
+    if (_userLocation != null && _addressCtrl.text.trim().isEmpty) {
+      _reverseGeocode(_selectedLocation ?? _userLocation!);
     }
     if (mounted) setState(() {});
   }
@@ -297,6 +221,15 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       final dLng = (radiusKm * 1000 * sin(angle)) / (earthRadius * cos(latRad)) * (180 / pi);
       return LatLng(center.latitude + dLat, center.longitude + dLng);
     });
+  }
+
+  static double _distanceBetween(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6378137.0;
+    final dLat = (lat2 - lat1) * pi / 180;
+    final dLon = (lon2 - lon1) * pi / 180;
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) * sin(dLon / 2) * sin(dLon / 2);
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
 
   @override
@@ -1224,60 +1157,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     child: _sectionCard(
       title: 'Pin Your Plot Location *',
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        if (_locationBlocked) ...[
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.error.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
-            ),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Icon(Icons.location_off_rounded, color: AppColors.error, size: 18),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Location access required',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.error)),
-                  const SizedBox(height: 4),
-                  const Text('Please enable GPS and grant location permission.',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5)),
-                  const SizedBox(height: 10),
-                  Row(children: [
-                    GestureDetector(
-                      onTap: () async {
-                        await Geolocator.openLocationSettings();
-                        if (mounted) setState(() => _locationBlocked = false);
-                        _fetchUserLocation();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(color: const Color(0xFF92400E), borderRadius: BorderRadius.circular(8)),
-                        child: const Text('Enable GPS',
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: () async {
-                        await Geolocator.openAppSettings();
-                        if (mounted) setState(() => _locationBlocked = false);
-                        _fetchUserLocation();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(border: Border.all(color: const Color(0xFF92400E)), borderRadius: BorderRadius.circular(8)),
-                        child: const Text('App Settings',
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF92400E))),
-                      ),
-                    ),
-                  ]),
-                ]),
-              ),
-            ]),
-          ),
-          const SizedBox(height: 12),
-        ] else
         Row(children: [
           const Icon(Icons.info_outline_rounded, color: AppColors.primaryLight, size: 15),
           const SizedBox(width: 6),
@@ -1337,7 +1216,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                     },
                     onMapClick: (_, latLng) {
                       if (_userLocation != null) {
-                        final distM = Geolocator.distanceBetween(
+                        final distM = _distanceBetween(
                           _userLocation!.latitude, _userLocation!.longitude,
                           latLng.latitude, latLng.longitude,
                         );
@@ -1392,43 +1271,21 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _sectionCard(
         title: 'District & City',
-        child: Obx(() {
-          final gpsAvailable = _userLocation != null;
-          final districtName = _ctrl.districts.firstWhereOrNull((d) => d.id == _selectedDistrictId)?.name;
-          final cityName = _ctrl.cities.firstWhereOrNull((c) => c.id == _selectedCityId)?.name;
-          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('District *', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
-            const SizedBox(height: 6),
-            if (gpsAvailable && districtName != null)
-              _readOnlyField(Iconsax.location, districtName)
-            else
-              DropdownButtonFormField<String>(
-                key: ValueKey('district-${_ctrl.districts.length}'),
-                initialValue: _selectedDistrictId,
-                decoration: _inputDec('Select your district', prefixIcon: const Icon(Iconsax.location, color: AppColors.primaryLight, size: 18)),
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
-                items: _ctrl.districts.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name, style: const TextStyle(fontFamily: 'Poppins')))).toList(),
-                onChanged: (v) {
-                  setState(() { _selectedDistrictId = v; _selectedCityId = null; });
-                  if (v != null) _ctrl.loadCities(v);
-                },
-              ),
-            const SizedBox(height: 16),
-            const Text('City / Area (Optional)', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
-            const SizedBox(height: 6),
-            if (gpsAvailable && cityName != null)
-              _readOnlyField(Iconsax.map, cityName)
-            else
-              DropdownButtonFormField<String>(
-                key: ValueKey('city-$_selectedDistrictId-${_ctrl.cities.length}'),
-                initialValue: _selectedCityId,
-                decoration: _inputDec('Select city or area', prefixIcon: const Icon(Iconsax.map, color: AppColors.primaryLight, size: 18)),
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
-                items: _ctrl.cities.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: const TextStyle(fontFamily: 'Poppins')))).toList(),
-                onChanged: (v) => setState(() => _selectedCityId = v),
-              ),
-          ]);
-        }),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('District *', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+          const SizedBox(height: 6),
+          _readOnlyField(
+            Iconsax.location,
+            _locationCtrl.selectedDistrict.value?.name ?? '—',
+          ),
+          const SizedBox(height: 16),
+          const Text('City / Area (Optional)', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+          const SizedBox(height: 6),
+          _readOnlyField(
+            Iconsax.map,
+            _locationCtrl.autoCity.value?.name ?? '—',
+          ),
+        ]),
       ),
 
       _sectionCard(

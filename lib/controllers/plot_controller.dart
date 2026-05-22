@@ -1,22 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../models/plot_model.dart';
-import '../models/city_model.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
-
-class PlotLocationContext {
-  final DistrictModel district;
-  final CityModel? nearestCity;
-  const PlotLocationContext({required this.district, this.nearestCity});
-}
 
 class PlotController extends GetxController {
   final nearbyPlots = <NearbyPlotModel>[].obs;
   final myPlots = <PlotModel>[].obs;
-  final districts = <DistrictModel>[].obs;
-  final cities = <CityModel>[].obs;
-  final nearbyCities = <CityModel>[].obs;
   final plotTypes = <PlotTypeModel>[].obs;
   final isLoading = false.obs;
   final isUploading = false.obs;
@@ -28,7 +18,6 @@ class PlotController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _loadDistricts();
     loadPlotTypes();
   }
 
@@ -37,40 +26,6 @@ class PlotController extends GetxController {
       final res = await ApiService.get('/admin/plot-types');
       plotTypes.value = (res['data'] as List).map((e) => PlotTypeModel.fromJson(e)).toList();
     } catch (_) {}
-  }
-
-  Future<void> _loadDistricts() async {
-    try {
-      final res = await ApiService.get('/admin/districts');
-      districts.value = (res['data'] as List).map((e) => DistrictModel.fromJson(e)).toList();
-    } catch (_) {}
-  }
-
-  Future<PlotLocationContext?> loadContext(double lat, double lng) async {
-    try {
-      final res = await ApiService.get('/plots/context', params: {'lat': lat, 'lng': lng});
-      final data = res['data'];
-      final district = DistrictModel.fromJson(data['district'] as Map<String, dynamic>);
-      nearbyCities.value = (data['cities'] as List)
-          .map((e) => CityModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-      final nearestCityId = data['nearestCityId'] as String?;
-      final nearestCity = nearestCityId != null
-          ? nearbyCities.firstWhereOrNull((c) => c.id == nearestCityId)
-          : nearbyCities.firstOrNull;
-      return PlotLocationContext(district: district, nearestCity: nearestCity);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> loadCities(String districtId) async {
-    try {
-      final res = await ApiService.get('/admin/cities', params: {'districtId': districtId});
-      cities.value = (res['data'] as List).map((e) => CityModel.fromJson(e)).toList();
-    } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not load cities.'));
-    }
   }
 
   Future<void> loadNearby(double lat, double lng, double radius, String cityId) async {
