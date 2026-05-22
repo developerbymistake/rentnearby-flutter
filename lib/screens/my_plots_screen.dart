@@ -62,7 +62,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
       final freeLimit = featureConfig['freeLimit'] as int;
       if (!paymentEnabled) {
         if (_ctrl.myPlots.length >= freeLimit) {
-          AppToast.error('Free mode limit: delete your existing plot before adding a new one.');
+          if (mounted) _showPlotLimitDialog(maxPlots: freeLimit, hasPlan: true);
           return;
         }
         Get.toNamed(AppRoutes.addPlot);

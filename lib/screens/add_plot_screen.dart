@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -61,7 +62,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   Line?   _nativeCircleGlow;
   Line?   _nativeCircleLine;
   Circle? _nativeUserDot;
-  Circle? _nativePin;
+  Symbol? _nativePin;
   double  _currentZoom = 14.0;
   Size    _mapSize = Size.zero;
   double  _minZoom = 13.0;
@@ -128,9 +129,13 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   Future<void> _onStyleLoaded() async {
     _mapReady = true;
     if (!mounted) return;
+    final ctrl = _mapController;
+    if (ctrl == null) return;
     if (_userLocation != null && _mapSize.width > 0) {
       _minZoom = _calcMinZoom(0.5, _userLocation!.latitude, _mapSize.width);
     }
+    final pinBytes = await _buildPinImage();
+    await ctrl.addImage('location_pin', pinBytes);
     _initNativeCircle();
     _initNativeUserDot();
     if (_selectedLocation != null) await _setNativePin(_selectedLocation!);
@@ -141,7 +146,35 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     if (_userLocation != null && _addressCtrl.text.trim().isEmpty) {
       _reverseGeocode(_selectedLocation ?? _userLocation!);
     }
-    if (mounted) setState(() {});
+  }
+
+  static Future<Uint8List> _buildPinImage() async {
+    const double w = 40, h = 52, cx = w / 2, cy = 18, r = 16;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, w, h));
+
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(cx, h - 2), width: 14, height: 5),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.22)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+
+    final body = Paint()..color = const Color(0xFFE53935);
+    final path = Path()
+      ..addOval(Rect.fromCircle(center: const Offset(cx, cy), radius: r))
+      ..moveTo(cx - 8, cy + r - 4)
+      ..quadraticBezierTo(cx - 5, h - 6, cx, h)
+      ..quadraticBezierTo(cx + 5, h - 6, cx + 8, cy + r - 4)
+      ..close();
+    canvas.drawPath(path, body);
+
+    canvas.drawCircle(
+        const Offset(cx, cy), 6.5, Paint()..color = Colors.white);
+
+    final img = await recorder.endRecording().toImage(w.toInt(), h.toInt());
+    final bytes = (await img.toByteData(format: ui.ImageByteFormat.png))!;
+    return bytes.buffer.asUint8List();
   }
 
   Future<void> _initNativeCircle() async {
@@ -199,15 +232,13 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     final ctrl = _mapController;
     if (ctrl == null || !mounted) return;
     if (_nativePin != null) {
-      await ctrl.updateCircle(_nativePin!, CircleOptions(geometry: latLng));
+      await ctrl.updateSymbol(_nativePin!, SymbolOptions(geometry: latLng));
     } else {
-      _nativePin = await ctrl.addCircle(CircleOptions(
+      _nativePin = await ctrl.addSymbol(SymbolOptions(
         geometry: latLng,
-        circleRadius: 12.0,
-        circleColor: '#92400E',
-        circleOpacity: 1.0,
-        circleStrokeColor: '#FFFFFF',
-        circleStrokeWidth: 2.5,
+        iconImage: 'location_pin',
+        iconSize: 1.5,
+        iconAnchor: 'bottom',
       ));
     }
   }
@@ -1176,7 +1207,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(14),
             child: Container(
-              height: 320,
+              height: 340,
               color: AppColors.surface,
               child: const Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1192,9 +1223,9 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
           borderRadius: BorderRadius.circular(14),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              _mapSize = Size(constraints.maxWidth, 320);
+              _mapSize = Size(constraints.maxWidth, 340);
               return SizedBox(
-                height: 320,
+                height: 340,
                 child: Stack(children: [
                   MapLibreMap(
                     styleString: 'assets/map_style.json',

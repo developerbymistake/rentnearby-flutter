@@ -177,7 +177,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       final freeLimit = featureConfig['freeLimit'] as int;
       if (!paymentEnabled) {
         if (_ctrl.myListings.length >= freeLimit) {
-          AppToast.error('Free mode limit: delete your existing listing before adding a new one.');
+          if (mounted) _showRoomLimitDialog(maxRooms: freeLimit, hasPlan: true);
           return;
         }
         Get.toNamed(AppRoutes.addListing);
