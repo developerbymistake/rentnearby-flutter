@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -17,7 +18,8 @@ class LocationController extends GetxController {
   final locationLoading  = true.obs;
   final selectedDistrict = Rxn<DistrictModel>();
   final autoCity         = Rxn<CityModel>();
-  final nearbyCities     = <CityModel>[].obs;
+  final nearbyCities        = <CityModel>[].obs;
+  final districtUnavailable = false.obs;
 
   // Private guards
   int  _loadContextVersion = 0;
@@ -151,8 +153,12 @@ class LocationController extends GetxController {
       final nearestCity = nearestCityId != null
           ? nearbyCities.firstWhereOrNull((c) => c.id == nearestCityId)
           : nearbyCities.firstOrNull;
+      districtUnavailable.value = false;
       return _LocationContext(district: district, nearestCity: nearestCity);
-    } catch (_) {
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 404) {
+        districtUnavailable.value = true;
+      }
       return null;
     }
   }

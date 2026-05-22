@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
+import '../controllers/location_controller.dart';
 import '../utils/app_toast.dart';
 import '../widgets/listing_card.dart';
 import '../widgets/payment_success_dialog.dart';
@@ -159,6 +159,12 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   }
 
   void _onAddRoom() async {
+    final locationCtrl = Get.find<LocationController>();
+    if (locationCtrl.selectedDistrict.value == null) {
+      AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+      return;
+    }
+
     final name = _auth.user.value?.name?.trim() ?? '';
     if (name.isEmpty) {
       _showProfileRequiredDialog();

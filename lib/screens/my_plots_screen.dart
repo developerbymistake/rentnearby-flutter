@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../models/plot_model.dart';
 import '../utils/app_toast.dart';
@@ -47,6 +48,12 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   Future<void> _refresh() => _ctrl.loadMyPlots(reset: true);
 
   void _onAddPlot() async {
+    final locationCtrl = Get.find<LocationController>();
+    if (locationCtrl.selectedDistrict.value == null) {
+      AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+      return;
+    }
+
     final name = _auth.user.value?.name?.trim() ?? '';
     if (name.isEmpty) { _showNameDialog(); return; }
     try {

@@ -1,13 +1,9 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
-import '../models/city_model.dart';
-import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -141,85 +137,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
   bool _isGranted(LocationPermission p) =>
       p == LocationPermission.whileInUse || p == LocationPermission.always;
 
-  Future<bool> _checkDistrictSupport() async {
-    try {
-      final pos = await Geolocator.getLastKnownPosition() ??
-          await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(
-              accuracy: LocationAccuracy.high,
-              timeLimit: Duration(seconds: 8),
-            ),
-          );
-
-      final response = await ApiService.get('/admin/districts');
-      final List<dynamic> raw = response['data'] ?? [];
-      final districts = raw.map((d) => DistrictModel.fromJson(d)).toList();
-
-      if (districts.isEmpty) return true;
-
-      double minDist = double.infinity;
-      for (final d in districts) {
-        if (d.latitude == null || d.longitude == null) continue;
-        final dist =
-            _haversineKm(pos.latitude, pos.longitude, d.latitude!, d.longitude!);
-        if (dist < minDist) minDist = dist;
-      }
-
-      if (minDist > 100) {
-        if (!mounted) return false;
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => PopScope(
-            canPop: false,
-            child: AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('Service Not Available',
-                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-              content: const Text(
-                  'Bakhli is not available in your district yet. Contact our support on WhatsApp to request coverage in your area.',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
-              actions: [
-                TextButton(
-                  onPressed: _launchWhatsApp,
-                  child: const Text('Contact Support',
-                      style: TextStyle(
-                          fontFamily: 'Poppins',
-                          color: Color(0xFF25D366),
-                          fontWeight: FontWeight.w600)),
-                ),
-              ],
-            ),
-          ),
-        );
-        return false;
-      }
-      return true;
-    } catch (_) {
-      return true;
-    }
-  }
-
-  Future<void> _launchWhatsApp() async {
-    const number = '917060023511';
-    final uri = Uri.parse(
-        'https://wa.me/$number?text=Hi%2C%20I%20want%20Bakhli%20in%20my%20district.');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
-
-  double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
-    const r = 6371.0;
-    final dlat = (lat2 - lat1) * pi / 180;
-    final dlng = (lng2 - lng1) * pi / 180;
-    final a = sin(dlat / 2) * sin(dlat / 2) +
-        cos(lat1 * pi / 180) *
-            cos(lat2 * pi / 180) *
-            sin(dlng / 2) *
-            sin(dlng / 2);
-    return r * 2 * atan2(sqrt(a), sqrt(1 - a));
-  }
+  Future<bool> _checkDistrictSupport() async => true;
 
   @override
   Widget build(BuildContext context) {

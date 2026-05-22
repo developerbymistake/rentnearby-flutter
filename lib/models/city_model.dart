@@ -1,16 +1,14 @@
 class DistrictModel {
   final String id;
   final String name;
-  final double? latitude;
-  final double? longitude;
+  final String? stateName;
 
-  DistrictModel({required this.id, required this.name, this.latitude, this.longitude});
+  DistrictModel({required this.id, required this.name, this.stateName});
 
   factory DistrictModel.fromJson(Map<String, dynamic> json) => DistrictModel(
         id: json['id'],
         name: json['name'],
-        latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
-        longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+        stateName: json['stateName'] as String?,
       );
 }
 

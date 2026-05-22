@@ -231,14 +231,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     if (city?.latitude != null && city?.longitude != null) {
       return LatLng(city!.latitude!, city.longitude!);
     }
-    final dist = _locationCtrl.selectedDistrict.value;
-    if (dist?.latitude != null && dist?.longitude != null) {
-      return LatLng(dist!.latitude!, dist.longitude!);
-    }
-    final first = _plotCtrl.districts.firstOrNull;
-    if (first?.latitude != null && first?.longitude != null) {
-      return LatLng(first!.latitude!, first.longitude!);
-    }
     return const LatLng(28.6139, 77.2090);
   }
 

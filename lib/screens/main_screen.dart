@@ -29,6 +29,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   final _auth = Get.find<AuthController>();
   bool _isOffline = false;
   bool _gpsEnabled = true;
+  bool _districtUnavailable = false;
+  Worker? _districtWorker;
+  late final LocationController _locationCtrl;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   StreamSubscription<ServiceStatus>? _gpsStatusSub;
 
@@ -40,8 +43,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     _navController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     Get.put(ListingController());
     Get.put(PlotController());
-    Get.put(LocationController());
+    _locationCtrl = Get.put(LocationController());
     ever(_auth.tabIndex, (i) => setState(() => _currentIndex = i));
+    _districtWorker = ever(_locationCtrl.districtUnavailable, (val) {
+      if (mounted) setState(() => _districtUnavailable = val);
+    });
     _initConnectivity();
     _initGpsGate();
     _auth.refreshProfile();
@@ -75,10 +81,118 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _districtWorker?.dispose();
     _connectivitySub?.cancel();
     _gpsStatusSub?.cancel();
     _navController.dispose();
     super.dispose();
+  }
+
+  Widget _buildOfflineGate() {
+    return Positioned.fill(
+      child: Material(
+        color: Colors.white,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 100, height: 100,
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 46),
+                ),
+                const SizedBox(height: 32),
+                const Text(
+                  'No Internet',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Please check your internet connection. App will resume automatically when you\'re back online.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    color: AppColors.textMedium,
+                    height: 1.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDistrictGate() {
+    return Positioned.fill(
+      child: Material(
+        color: Colors.white,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 100, height: 100,
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.location_searching_rounded, color: Colors.white, size: 46),
+                ),
+                const SizedBox(height: 32),
+                const Text(
+                  'Area Not Supported Yet',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Bakhli hasn\'t reached your area yet. Contact admin to register your district.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    color: AppColors.textMedium,
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                TextButton(
+                  onPressed: () => _locationCtrl.refreshOnResume(),
+                  child: const Text(
+                    'Check Again',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildGpsGate() {
@@ -254,42 +368,16 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       },
       child: Stack(
         children: [
-      Scaffold(
-        body: Column(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 350),
-              curve: Curves.easeInOut,
-              height: _isOffline ? MediaQuery.of(context).padding.top + 36 : 0,
-              color: const Color(0xFFC62828),
-              child: Padding(
-                padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.wifi_off_rounded, color: Colors.white, size: 14),
-                    SizedBox(width: 8),
-                    Text('No internet connection',
-                        style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white)),
-                  ],
-                ),
-              ),
+          Scaffold(
+            body: IndexedStack(
+              index: _currentIndex,
+              children: _screens,
             ),
-            Expanded(
-              child: IndexedStack(
-                index: _currentIndex,
-                children: _screens,
-              ),
-            ),
-          ],
-        ),
-        bottomNavigationBar: _buildBottomNav(),
-      ),
-      if (!_gpsEnabled) _buildGpsGate(),
+            bottomNavigationBar: _buildBottomNav(),
+          ),
+          if (_isOffline) _buildOfflineGate(),
+          if (!_isOffline && _districtUnavailable) _buildDistrictGate(),
+          if (!_gpsEnabled) _buildGpsGate(),
         ],
       ),
     );
