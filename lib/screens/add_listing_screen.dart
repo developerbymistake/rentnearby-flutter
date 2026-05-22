@@ -48,6 +48,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   bool _cameraInitialized = false;
   bool _isGeocoding = false;
   bool _isUploading = false;
+  bool _isFinalizing = false;
   int _uploadCurrent = 0;
   int _uploadTotal = 0;
   double _uploadProgress = 0.0;
@@ -529,6 +530,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       // Case 2: No photos selected (photo upload is optional)
     }
 
+    if (mounted) setState(() => _isFinalizing = true);
     await _ctrl.loadMyListings();
 
     // If user is on a free (price=0) plan and at capacity, go straight to paid payment
@@ -686,7 +688,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        if (_isUploading) return;
+        if (_isUploading || _isFinalizing) return;
         if (_hasChanges) {
           _confirmDiscard();
         } else {
@@ -767,11 +769,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
             Expanded(
               flex: 2,
               child: Obx(() {
-                final isButtonDisabled = _ctrl.isLoading.value ||
+                final isButtonDisabled = _ctrl.isLoading.value || _isFinalizing ||
                     (_step == 2 && (_isGeocoding || _selectedDistrictId == null || _addressCtrl.text.trim().isEmpty));
                 return GradientButton(
                   onPressed: isButtonDisabled ? null : _handleNext,
-                  isLoading: _ctrl.isLoading.value,
+                  isLoading: _ctrl.isLoading.value || _isFinalizing,
                   label: _step == 0 ? 'Next: Location' : _step == 1 ? 'Next: Address' : _step == 2 ? 'Next: Photos' : 'Post Listing',
                 );
               }),
