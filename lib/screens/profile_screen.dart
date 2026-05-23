@@ -461,93 +461,185 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _confirmDeleteAccount() {
+    final confirmCtrl = TextEditingController();
     showDialog(
       context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.white,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 36),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+      barrierDismissible: true,
+      builder: (_) => StatefulBuilder(builder: (ctx, setDialogState) {
+        final canDelete = confirmCtrl.text.trim() == 'DELETE';
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          backgroundColor: Colors.white,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 60, height: 60,
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.delete_forever_rounded, size: 30, color: AppColors.error),
+                  ),
                 ),
-                child: const Icon(Icons.delete_forever_rounded, size: 28, color: AppColors.error),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Delete Account?',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
+                const SizedBox(height: 16),
+                const Center(
+                  child: Text('Delete Account',
+                      style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark)),
                 ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Your account, all listings, plots, photos and any active membership will be permanently deleted. This cannot be undone.',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 13,
-                  color: AppColors.textMedium,
-                  height: 1.5,
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+                  ),
+                  child: const Text(
+                    'This will permanently delete your account, all listings, plots, photos and memberships. This action cannot be undone.',
+                    style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        color: AppColors.error,
+                        height: 1.55),
+                  ),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
+                const SizedBox(height: 20),
+                const Text('Type DELETE to confirm',
+                    style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textMedium)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: confirmCtrl,
+                  autofocus: true,
+                  onChanged: (_) => setDialogState(() {}),
+                  textCapitalization: TextCapitalization.characters,
+                  style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 2),
+                  decoration: InputDecoration(
+                    hintText: 'DELETE',
+                    hintStyle: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 15,
+                        letterSpacing: 2,
+                        color: Colors.grey.shade400),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(ctx),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textMedium,
                         side: BorderSide(color: Colors.grey.shade300),
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
+                      child: const Text('Cancel',
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Obx(() => ElevatedButton(
-                      onPressed: _auth.isLoading.value
-                          ? null
-                          : () {
-                              Navigator.pop(context);
-                              _auth.deleteAccount();
-                            },
+                    child: ElevatedButton(
+                      onPressed: canDelete
+                          ? () {
+                              Navigator.pop(ctx);
+                              _doDeleteAccount();
+                            }
+                          : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.error,
+                        disabledBackgroundColor: AppColors.error.withValues(alpha: 0.35),
                         foregroundColor: Colors.white,
+                        disabledForegroundColor: Colors.white70,
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'Delete',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                    )),
+                      child: const Text('Delete Account',
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
                   ),
-                ],
+                ]),
+              ],
+            ),
+          ),
+        );
+      }),
+    ).whenComplete(() => confirmCtrl.dispose());
+  }
+
+  Future<void> _doDeleteAccount() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withValues(alpha: 0.65),
+      builder: (_) => PopScope(
+        canPop: false,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              SizedBox(
+                width: 48, height: 48,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: AppColors.error,
+                ),
               ),
-            ],
+              const SizedBox(height: 20),
+              const Text('Deleting your account...',
+                  style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark)),
+              const SizedBox(height: 6),
+              const Text('Please do not close the app.',
+                  style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      color: AppColors.textLight)),
+            ]),
           ),
         ),
       ),
     );
+
+    await _auth.deleteAccount();
+
+    // Only reached on error — success navigates away via Get.offAllNamed
+    if (mounted && Navigator.canPop(context)) Navigator.pop(context);
   }
 }
