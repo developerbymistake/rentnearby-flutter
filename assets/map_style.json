@@ -8142,6 +8142,7 @@
         ]
       ],
       "layout": {
+        "icon-optional": true,
         "icon-image": [
           "match",
           [
@@ -8150,10 +8151,79 @@
           ],
           "station",
           "train_station",
+          "townhall",
+          "townspot",
+          [
+            "aerodrome",
+            "animal",
+            "artwork",
+            "attraction",
+            "bar",
+            "beach",
+            "beauty",
+            "bench",
+            "books",
+            "building",
+            "bus_stop",
+            "cafe",
+            "clothes",
+            "convenience",
+            "drinking_water",
+            "electronics",
+            "fast_food",
+            "ferry_terminal",
+            "forest",
+            "garden",
+            "library",
+            "marina",
+            "museum",
+            "park",
+            "peak",
+            "post_office",
+            "restaurant",
+            "school",
+            "stadium",
+            "supermarket",
+            "theatre",
+            "toilets",
+            "university",
+            "zoo"
+          ],
           [
             "get",
             "kind"
-          ]
+          ],
+          "hospital",
+          "hospital",
+          "clinic",
+          "hospital",
+          "bank",
+          "bank",
+          "atm",
+          "bank",
+          "fuel",
+          "fuel",
+          "hotel",
+          "lodging",
+          "guest_house",
+          "lodging",
+          "police",
+          "police",
+          "pharmacy",
+          "pharmacy",
+          "parking",
+          "parking",
+          "college",
+          "college",
+          "place_of_worship",
+          "place_of_worship",
+          "temple",
+          "place_of_worship",
+          "mosque",
+          "religious_muslim",
+          "church",
+          "religious_christian",
+          ""
         ],
         "text-font": [
           "Noto Sans Regular"
@@ -9050,7 +9120,8 @@
         "text-variable-anchor": [
           "left",
           "right"
-        ]
+        ],
+        "text-optional": true
       },
       "paint": {
         "text-color": [
