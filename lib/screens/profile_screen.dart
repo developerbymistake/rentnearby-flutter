@@ -24,16 +24,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _resetForm();
+    _profileTabWorker = ever(_auth.profileTabTrigger, (_) => _resetForm());
+  }
+
+  void _resetForm() {
     _nameCtrl.text = _auth.user.value?.name ?? '';
-    _isContactVisible = _auth.user.value?.isContactVisible ?? true;
-    _profileTabWorker = ever(_auth.profileTabTrigger, (_) {
-      if (mounted) {
-        setState(() {
-          _nameCtrl.text = _auth.user.value?.name ?? '';
-          _isContactVisible = _auth.user.value?.isContactVisible ?? true;
-        });
-      }
-    });
+    final newVisible = _auth.user.value?.isContactVisible ?? true;
+    if (!mounted) {
+      _isContactVisible = newVisible;
+      return;
+    }
+    setState(() => _isContactVisible = newVisible);
   }
 
   @override
@@ -289,7 +291,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     label: 'Privacy Policy',
                     onTap: () => Get.to(() => const PrivacyPolicyScreen(),
                         transition: Transition.rightToLeft,
-                        duration: const Duration(milliseconds: 300)),
+                        duration: const Duration(milliseconds: 300))
+                        .then((_) => _resetForm()),
                   ),
                   Divider(height: 1, indent: 56, color: AppColors.divider),
                   _legalTile(
@@ -297,7 +300,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     label: 'Terms of Service',
                     onTap: () => Get.to(() => const TermsOfServiceScreen(),
                         transition: Transition.rightToLeft,
-                        duration: const Duration(milliseconds: 300)),
+                        duration: const Duration(milliseconds: 300))
+                        .then((_) => _resetForm()),
                   ),
                 ]),
               ),
