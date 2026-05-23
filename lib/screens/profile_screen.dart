@@ -6,6 +6,8 @@ import '../config/app_colors.dart';
 import '../controllers/auth_controller.dart';
 import '../utils/app_toast.dart';
 import '../widgets/gradient_button.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_of_service_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,14 +18,14 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = Get.find<AuthController>();
   final _nameCtrl = TextEditingController();
-  final _gmailCtrl = TextEditingController();
   bool _tickerWasActive = false;
+  bool _isContactVisible = true;
 
   @override
   void initState() {
     super.initState();
     _nameCtrl.text = _auth.user.value?.name ?? '';
-    _gmailCtrl.text = _auth.user.value?.gmailId ?? '';
+    _isContactVisible = _auth.user.value?.isContactVisible ?? true;
   }
 
   @override
@@ -32,7 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final active = TickerMode.of(context);
     if (active && !_tickerWasActive) {
       _nameCtrl.text = _auth.user.value?.name ?? '';
-      _gmailCtrl.text = _auth.user.value?.gmailId ?? '';
+      _isContactVisible = _auth.user.value?.isContactVisible ?? true;
     }
     _tickerWasActive = active;
   }
@@ -40,7 +42,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _gmailCtrl.dispose();
     super.dispose();
   }
 
@@ -124,23 +125,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   style: const TextStyle(
                                       fontFamily: 'Poppins', fontSize: 15, color: Colors.white70),
                                 )),
-                                Obx(() => _auth.user.value?.isAdmin == true
-                                    ? Padding(
-                                        padding: const EdgeInsets.only(top: 6),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                                          decoration: BoxDecoration(
-                                              color: AppColors.accent,
-                                              borderRadius: BorderRadius.circular(20)),
-                                          child: const Text('Admin',
-                                              style: TextStyle(
-                                                  fontFamily: 'Poppins',
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.white)),
-                                        ),
-                                      )
-                                    : const SizedBox()),
                               ],
                             ),
                           ),
@@ -182,10 +166,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: AppColors.textDark)),
                 const SizedBox(height: 20),
                 _buildField('Full Name', Iconsax.user, _nameCtrl),
-                const SizedBox(height: 16),
-                _buildField('Gmail ID (Optional)', Iconsax.sms, _gmailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    hint: 'Enter your Gmail (optional)'),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Contact visible to public',
+                              style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.textMedium)),
+                          const SizedBox(height: 2),
+                          const Text('Show call & WhatsApp on your listings',
+                              style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11,
+                                  color: AppColors.textLight)),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _isContactVisible,
+                      onChanged: (v) => setState(() => _isContactVisible = v),
+                      activeColor: AppColors.primary,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
                 Obx(() => GradientButton(
                   onPressed: _auth.isLoading.value ? null : _save,
@@ -195,9 +205,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ]),
             ),
 
+            // Legal
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))
+                  ],
+                ),
+                child: Column(children: [
+                  _legalTile(
+                    icon: Iconsax.shield_tick,
+                    label: 'Privacy Policy',
+                    onTap: () => Get.to(() => const PrivacyPolicyScreen(),
+                        transition: Transition.rightToLeft,
+                        duration: const Duration(milliseconds: 300)),
+                  ),
+                  Divider(height: 1, indent: 56, color: AppColors.divider),
+                  _legalTile(
+                    icon: Iconsax.document_text,
+                    label: 'Terms of Service',
+                    onTap: () => Get.to(() => const TermsOfServiceScreen(),
+                        transition: Transition.rightToLeft,
+                        duration: const Duration(milliseconds: 300)),
+                  ),
+                ]),
+              ),
+            ),
+
             // Logout
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
               child: OutlinedButton.icon(
                 onPressed: _confirmLogout,
                 icon: const Icon(Iconsax.logout, color: AppColors.error, size: 20),
@@ -212,6 +253,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               ),
+            ),
+
+            // Delete Account
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: Obx(() => TextButton(
+                onPressed: _auth.isLoading.value ? null : _confirmDeleteAccount,
+                child: const Text(
+                  'Delete Account',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    color: AppColors.textLight,
+                    decoration: TextDecoration.underline,
+                    decorationColor: AppColors.textLight,
+                  ),
+                ),
+              )),
             ),
 
             // Footer
@@ -248,6 +307,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _legalTile({required IconData icon, required String label, required VoidCallback onTap}) {
+    return ListTile(
+      onTap: onTap,
+      leading: Container(
+        width: 36, height: 36,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: AppColors.primaryLight, size: 18),
+      ),
+      title: Text(label,
+          style: const TextStyle(
+              fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
+      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textLight),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    );
+  }
+
   Widget _buildField(String label, IconData icon, TextEditingController ctrl,
       {TextInputType? keyboardType, String? hint}) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -273,8 +351,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _save() async {
     FocusScope.of(context).unfocus();
     final name = _nameCtrl.text.trim();
-    final gmail = _gmailCtrl.text.trim();
-
     if (name.isEmpty) {
       AppToast.error('Name is required.');
       return;
@@ -283,12 +359,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       AppToast.error('Name cannot exceed 100 characters.');
       return;
     }
-    if (gmail.isNotEmpty && !RegExp(r'^[\w.+-]+@[\w-]+\.[\w.]+$').hasMatch(gmail)) {
-      AppToast.error('Enter a valid email address.');
-      return;
-    }
 
-    await _auth.updateProfile(name, gmail.isNotEmpty ? gmail : null);
+    await _auth.updateProfile(name, isContactVisible: _isContactVisible);
   }
 
   void _confirmLogout() {
@@ -378,6 +450,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteAccount() {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 36),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.delete_forever_rounded, size: 28, color: AppColors.error),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Delete Account?',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Your account, all listings, plots, photos and any active membership will be permanently deleted. This cannot be undone.',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 13,
+                  color: AppColors.textMedium,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textMedium,
+                        side: BorderSide(color: Colors.grey.shade300),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Obx(() => ElevatedButton(
+                      onPressed: _auth.isLoading.value
+                          ? null
+                          : () {
+                              Navigator.pop(context);
+                              _auth.deleteAccount();
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.error,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600),
+                      ),
+                    )),
                   ),
                 ],
               ),

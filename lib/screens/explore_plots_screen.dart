@@ -721,6 +721,15 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 right: 20,
                 child: _buildLocationFab(),
               ),
+
+              const Positioned(
+                bottom: 4,
+                left: 8,
+                child: Text(
+                  '© OpenStreetMap contributors',
+                  style: TextStyle(fontSize: 9, color: Colors.black45),
+                ),
+              ),
             ],
           );
         },

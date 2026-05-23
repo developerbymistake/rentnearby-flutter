@@ -8,6 +8,8 @@ import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../utils/app_toast.dart';
 import '../widgets/gradient_button.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_of_service_screen.dart';
 
 class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key});
@@ -159,182 +161,6 @@ class _OtpScreenState extends State<OtpScreen> {
     if (ok) Get.offAllNamed(AppRoutes.main);
   }
 
-  Future<bool> _showTerms() async {
-    final result = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        height: MediaQuery.of(context).size.height * 0.82,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          children: [
-            // Handle bar
-            const SizedBox(height: 12),
-            Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-            ),
-            const SizedBox(height: 4),
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36, height: 36,
-                    decoration: const BoxDecoration(gradient: AppColors.primaryGradient, shape: BoxShape.circle),
-                    child: const Icon(Icons.shield_rounded, color: Colors.white, size: 18),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text('Terms of Service',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                  ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 32, height: 32,
-                      decoration: BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
-                      child: const Icon(Icons.close_rounded, size: 18, color: AppColors.textMedium),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            // Scrollable content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _termSection(
-                      Icons.home_rounded,
-                      'What Bakhli Does',
-                      'Bakhli is a room listing platform built to help people find rental rooms near them — faster and without the hassle of brokers. We simply connect room owners with people looking for a place to stay. Our goal is to make the process easier, more direct, and more transparent for everyone.',
-                    ),
-                    _termSection(
-                      Icons.handshake_rounded,
-                      'Our Role & Limitations',
-                      'Bakhli serves as a connecting platform and directory — we are not a rental agent, broker, or guarantor of any kind. While we strive to provide the best possible experience, we are unable to guarantee that a listed room will be rented or that every user will find a suitable room. Any arrangement, agreement, or interaction between a room owner and a tenant is entirely between those two individuals. Bakhli is not a party to any such arrangement and holds no responsibility for its outcome.',
-                    ),
-                    _termSection(
-                      Icons.visibility_rounded,
-                      'Your Information is Publicly Visible',
-                      'When you post a room, the details you provide — photos, address, rent amount, and your contact number — are visible to all users of the app. This is how tenants can reach you directly. By posting, you agree that this information may be seen by anyone using Bakhli.',
-                    ),
-                    _termSection(
-                      Icons.phone_rounded,
-                      'Your Contact Number',
-                      'Your mobile number is used to log in and is displayed on your listings so tenants can contact you directly. Since it is publicly visible, we kindly request that you register with a number you are comfortable sharing.',
-                    ),
-                    _termSection(
-                      Icons.location_on_rounded,
-                      'Location Access',
-                      'Bakhli uses your device location only to show rooms near you. Your live location is never stored on our servers or shared with other users.',
-                    ),
-                    _termSection(
-                      Icons.fact_check_rounded,
-                      'Listing Accuracy & Our Limits',
-                      'All listings on Bakhli are created and managed by individual users. While we encourage honesty and accuracy, we are not in a position to independently verify every listing. Bakhli and its team will not be held responsible for any inaccurate, misleading, or fraudulent content submitted by users. We kindly request that you report any suspicious listing through the app so we can take appropriate action.',
-                    ),
-                    _termSection(
-                      Icons.security_rounded,
-                      'Your Agreement',
-                      'By using Bakhli, you confirm that the information you provide is accurate and that you consent to your listing details being visible to all users of the platform. You may remove your listing at any time from the My Rooms section. Continued use of the platform indicates your acceptance of these terms.',
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 18),
-                          const SizedBox(width: 10),
-                          const Expanded(
-                            child: Text(
-                              'Bakhli is built to help people find and list rooms easily. It does not make any guarantees or claims of any kind.',
-                              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Bottom button
-            Padding(
-              padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom + 16),
-              child: GestureDetector(
-                onTap: () => Navigator.pop(context, true),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Center(
-                    child: Text('Got it, Continue',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    // After modal closes Flutter restores focus to the last field — prevent that
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) FocusScope.of(context).unfocus();
-    });
-    return result == true;
-  }
-
-  Widget _termSection(IconData icon, String title, String body) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32, height: 32,
-            margin: const EdgeInsets.only(top: 2),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: AppColors.primary, size: 16),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                const SizedBox(height: 4),
-                Text(body,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.6)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -462,67 +288,68 @@ class _OtpScreenState extends State<OtpScreen> {
           ),
           const SizedBox(height: 20),
           // Mandatory checkbox
-          GestureDetector(
-            onTap: () async {
-              FocusScope.of(context).unfocus();
-              if (_agreed) {
-                setState(() => _agreed = false);
-              } else {
-                final ok = await _showTerms();
-                if (ok && mounted) setState(() => _agreed = true);
-              }
-            },
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 22, height: 22,
-                  child: Checkbox(
-                    value: _agreed,
-                    onChanged: (v) async {
-                      FocusScope.of(context).unfocus();
-                      if (v == true) {
-                        final ok = await _showTerms();
-                        if (ok && mounted) setState(() => _agreed = true);
-                      } else {
-                        setState(() => _agreed = false);
-                      }
-                    },
-                    activeColor: AppColors.primary,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                    side: const BorderSide(color: AppColors.textLight, width: 1.5),
-                  ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 22, height: 22,
+                child: Checkbox(
+                  value: _agreed,
+                  onChanged: (v) {
+                    FocusScope.of(context).unfocus();
+                    setState(() => _agreed = v ?? false);
+                  },
+                  activeColor: AppColors.primary,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  side: const BorderSide(color: AppColors.textLight, width: 1.5),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () async {
-                      FocusScope.of(context).unfocus();
-                      final ok = await _showTerms();
-                      if (ok && mounted) setState(() => _agreed = true);
-                    },
-                    child: RichText(
-                      text: TextSpan(
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5),
-                        children: [
-                          const TextSpan(text: 'I have read and agree to the\n'),
-                          TextSpan(
-                            text: 'Terms of Service',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                              decoration: TextDecoration.underline,
-                              decorationColor: AppColors.primary,
-                            ),
-                          ),
-                        ],
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: RichText(
+                  text: TextSpan(
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.5),
+                    children: [
+                      const TextSpan(text: 'I have read and agree to the '),
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: GestureDetector(
+                          onTap: () => Get.to(() => const TermsOfServiceScreen(),
+                              transition: Transition.rightToLeft,
+                              duration: const Duration(milliseconds: 300)),
+                          child: const Text('Terms of Service',
+                              style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: AppColors.primary)),
+                        ),
                       ),
-                    ),
+                      const TextSpan(text: ' and '),
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: GestureDetector(
+                          onTap: () => Get.to(() => const PrivacyPolicyScreen(),
+                              transition: Transition.rightToLeft,
+                              duration: const Duration(milliseconds: 300)),
+                          child: const Text('Privacy Policy',
+                              style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: AppColors.primary)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           Obx(() => GradientButton(

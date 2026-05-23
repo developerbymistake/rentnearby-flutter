@@ -247,14 +247,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
       try {
         final dio = http_dio.Dio();
         final res = await dio.get<Map<String, dynamic>>(
-          'https://nominatim.openstreetmap.org/reverse',
+          'https://nominatim.developerbymistake.tech/reverse',
           queryParameters: {
             'format': 'jsonv2',
             'lat': pos.latitude.toStringAsFixed(6),
             'lon': pos.longitude.toStringAsFixed(6),
           },
           options: http_dio.Options(
-            headers: {'User-Agent': 'Bakhli/1.0 (bakhli.app)'},
+            headers: {'User-Agent': 'Bakhli/1.0 (support@bakhli.in)'},
             receiveTimeout: const Duration(seconds: 8),
           ),
         );
@@ -1042,6 +1042,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 Text(
                   '${_selectedLocation!.latitude.toStringAsFixed(5)}, ${_selectedLocation!.longitude.toStringAsFixed(5)}',
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w500),
+                ),
+                const Spacer(),
+                const Text(
+                  '© OpenStreetMap contributors',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 9, color: AppColors.textLight),
                 ),
               ]),
             ),

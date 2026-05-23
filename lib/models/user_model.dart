@@ -2,20 +2,18 @@ class UserModel {
   final String id;
   final String phoneNumber;
   final String? name;
-  final String? gmailId;
-  final bool isAdmin;
   final bool hasUsedFreePlan;
   final bool hasUsedFreePlotPlan;
+  final bool isContactVisible;
   final DateTime createdAt;
 
   UserModel({
     required this.id,
     required this.phoneNumber,
     this.name,
-    this.gmailId,
-    required this.isAdmin,
     required this.hasUsedFreePlan,
     this.hasUsedFreePlotPlan = false,
+    this.isContactVisible = true,
     required this.createdAt,
   });
 
@@ -23,10 +21,9 @@ class UserModel {
         id: json['id'],
         phoneNumber: json['phoneNumber'],
         name: json['name'],
-        gmailId: json['gmailId'],
-        isAdmin: json['isAdmin'] ?? false,
         hasUsedFreePlan: json['hasUsedFreePlan'] ?? false,
         hasUsedFreePlotPlan: json['hasUsedFreePlotPlan'] ?? false,
+        isContactVisible: json['isContactVisible'] ?? true,
         createdAt: DateTime.parse(json['createdAt']),
       );
 
@@ -34,10 +31,9 @@ class UserModel {
         'id': id,
         'phoneNumber': phoneNumber,
         'name': name,
-        'gmailId': gmailId,
-        'isAdmin': isAdmin,
         'hasUsedFreePlan': hasUsedFreePlan,
         'hasUsedFreePlotPlan': hasUsedFreePlotPlan,
+        'isContactVisible': isContactVisible,
         'createdAt': createdAt.toIso8601String(),
       };
 

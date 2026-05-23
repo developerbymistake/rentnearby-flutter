@@ -61,6 +61,21 @@ class AuthController extends GetxController {
     Get.offAllNamed(AppRoutes.otp);
   }
 
+  Future<void> deleteAccount() async {
+    try {
+      isLoading.value = true;
+      await ApiService.delete('/account');
+      await StorageService.clearAll();
+      user.value = null;
+      Get.find<ListingController>().clearData();
+      Get.offAllNamed(AppRoutes.otp);
+    } catch (e) {
+      AppToast.error(_dioMessage(e, 'Could not delete account. Please try again.'));
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   static String _retryAfter(DioException e) {
     final raw = e.response?.headers.value('retry-after');
     final seconds = raw != null ? int.tryParse(raw) : null;
@@ -130,11 +145,11 @@ class AuthController extends GetxController {
     } catch (_) {}
   }
 
-  Future<bool> updateProfile(String? name, String? gmailId) async {
+  Future<bool> updateProfile(String? name, {bool? isContactVisible}) async {
     try {
       isLoading.value = true;
       final body = <String, dynamic>{'name': name};
-      if (gmailId != null) body['gmailId'] = gmailId;
+      if (isContactVisible != null) body['isContactVisible'] = isContactVisible;
       final res = await ApiService.put('/users/profile', body);
       final updated = UserModel.fromJson(res['data']);
       StorageService.saveUser(updated);
