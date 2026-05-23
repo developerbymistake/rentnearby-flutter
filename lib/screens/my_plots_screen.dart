@@ -9,6 +9,7 @@ import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../models/plot_model.dart';
 import '../utils/app_toast.dart';
+import '../widgets/app_loading_overlay.dart';
 import '../widgets/payment_success_dialog.dart';
 
 const _kBrown = Color(0xFF92400E);
@@ -534,7 +535,11 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
+      body: Obx(() => AppLoadingOverlay(
+        isLoading: _ctrl.isDeleting.value,
+        message: 'Deleting...',
+        indicatorColor: _kBrown,
+        child: Column(
         children: [
           _buildHeader(),
           Expanded(
@@ -575,7 +580,8 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
             }),
           ),
         ],
-      ),
+        ),
+      )),
     );
   }
 

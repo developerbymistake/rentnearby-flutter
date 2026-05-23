@@ -10,6 +10,7 @@ class ListingController extends GetxController {
   final nearbyListings = <NearbyListingModel>[].obs;
   final roomTypes = <RoomTypeModel>[].obs;
   final isLoading = false.obs;
+  final isDeleting = false.obs;
   final isUploading = false.obs;
   final hasMoreMyListings = false.obs;
   final listingPostedTrigger = 0.obs;
@@ -162,12 +163,15 @@ class ListingController extends GetxController {
 
   Future<void> deleteListing(String id) async {
     try {
+      isDeleting.value = true;
       await ApiService.delete('/listings/$id');
       myListings.removeWhere((l) => l.id == id);
       nearbyListings.removeWhere((l) => l.id == id);
       AppToast.success('Listing removed successfully.');
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not delete listing.'));
+    } finally {
+      isDeleting.value = false;
     }
   }
 

@@ -10,6 +10,7 @@ class PlotController extends GetxController {
   final myPlots = <PlotModel>[].obs;
   final plotTypes = <PlotTypeModel>[].obs;
   final isLoading = false.obs;
+  final isDeleting = false.obs;
   final isUploading = false.obs;
   final hasMorePlots = false.obs;
   final plotPostedTrigger = 0.obs;
@@ -212,12 +213,15 @@ class PlotController extends GetxController {
 
   Future<void> deletePlot(String id) async {
     try {
+      isDeleting.value = true;
       await ApiService.delete('/plots/$id');
       myPlots.removeWhere((p) => p.id == id);
       nearbyPlots.removeWhere((p) => p.id == id);
       AppToast.success('Plot removed successfully.');
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not delete plot.'));
+    } finally {
+      isDeleting.value = false;
     }
   }
 

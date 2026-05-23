@@ -8,6 +8,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../utils/app_toast.dart';
+import '../widgets/app_loading_overlay.dart';
 import '../widgets/listing_card.dart';
 import '../widgets/payment_success_dialog.dart';
 
@@ -54,7 +55,10 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
+      body: Obx(() => AppLoadingOverlay(
+        isLoading: _ctrl.isDeleting.value,
+        message: 'Deleting...',
+        child: Column(
         children: [
           Container(
             decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
@@ -154,7 +158,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             }),
           ),
         ],
-      ),
+        ),
+      )),
     );
   }
 

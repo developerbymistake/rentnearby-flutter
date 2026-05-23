@@ -34,6 +34,8 @@ class _ExploreScreenState extends State<ExploreScreen>
   bool _styleLoaded = false;
   LatLng? _cameraCenter;
   bool _mapActive = true;
+  bool _isCameraMoving = false;
+  Timer? _cameraIdleDebounce;
   Worker? _mapPauseWorker;
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -77,7 +79,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     _locationWorker = ever(_locationCtrl.selectedDistrict, (_) {
       if (_locationCtrl.selectedDistrict.value != null) {
         _loadNearby();
-        if (_mapReady) _fitToRadius();
+        if (_mapReady && !_isCameraMoving) _fitToRadius();
       }
     });
 
@@ -102,7 +104,9 @@ class _ExploreScreenState extends State<ExploreScreen>
     // Propagate user-dot position updates to the map.
     _userLocationWorker = ever(_locationCtrl.userLocation, (_) {
       if (!mounted) return;
-      setState(() {});
+      // Only rebuild overlay when markers are visible — rebuilding mid-fade
+      // interrupts AnimatedOpacity and causes a visible flash on next show.
+      if (_pinsVisible && !_isCameraMoving) setState(() {});
       if (_mapReady) {
         if (_locationCtrl.userLocation.value != null) {
           if (_nativeUserDot == null) _initNativeUserDot();
@@ -159,6 +163,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     _radarController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
+    _cameraIdleDebounce?.cancel();
     _audioPlayer.dispose();
     if (_mapController != null && _nativeUserDot != null) {
       _mapController!.removeCircle(_nativeUserDot!);
@@ -341,11 +346,19 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   void _onCameraIdle() {
-    if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
-      _lastClusterZoom = _currentZoom;
-      _buildMarkers(animate: false);
-    }
-    if (mounted && !_pinsVisible) setState(() => _pinsVisible = true);
+    // Debounce: MapLibre fires onCameraIdle during brief pauses in inertial
+    // scroll. Without this, markers flash at an intermediate position then
+    // disappear again as the camera resumes — that's the visible "shake".
+    _cameraIdleDebounce?.cancel();
+    _cameraIdleDebounce = Timer(const Duration(milliseconds: 150), () {
+      if (!mounted) return;
+      _isCameraMoving = false;
+      if ((_currentZoom - _lastClusterZoom).abs() >= 0.4) {
+        _lastClusterZoom = _currentZoom;
+        _buildMarkers(animate: false);
+      }
+      if (!_pinsVisible) setState(() => _pinsVisible = true);
+    });
   }
 
   // ── Listings load ─────────────────────────────────────────────────────────
@@ -682,6 +695,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                 onCameraMove: (CameraPosition pos) {
                   _currentZoom = pos.zoom;
                   _cameraCenter = pos.target;
+                  _isCameraMoving = true;
+                  _cameraIdleDebounce?.cancel();
                   if (mounted && _pinsVisible) setState(() => _pinsVisible = false);
                 },
                 onCameraIdle: _onCameraIdle,
