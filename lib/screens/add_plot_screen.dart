@@ -59,9 +59,6 @@ class AddPlotScreen extends StatefulWidget {
 class _AddPlotScreenState extends State<AddPlotScreen> {
   final _ctrl = Get.find<PlotController>();
   MapLibreMapController? _mapController;
-  Line?   _nativeCircleGlow;
-  Line?   _nativeCircleLine;
-  Circle? _nativeUserDot;
   Symbol? _nativePin;
   double  _currentZoom = 14.0;
   Size    _mapSize = Size.zero;
@@ -182,14 +179,14 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     final loc = _userLocation;
     if (ctrl == null || loc == null || !mounted) return;
     final points = _circlePolygonPoints(loc, 0.5);
-    _nativeCircleGlow = await ctrl.addLine(LineOptions(
+    await ctrl.addLine(LineOptions(
       geometry: points,
       lineColor: '#92400E',
       lineWidth: 10.0,
       lineOpacity: 0.20,
       lineBlur: 4.0,
     ));
-    _nativeCircleLine = await ctrl.addLine(LineOptions(
+    await ctrl.addLine(LineOptions(
       geometry: points,
       lineColor: '#92400E',
       lineWidth: 2.5,
@@ -201,7 +198,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     final ctrl = _mapController;
     final loc = _userLocation;
     if (ctrl == null || loc == null || !mounted) return;
-    _nativeUserDot = await ctrl.addCircle(CircleOptions(
+    await ctrl.addCircle(CircleOptions(
       geometry: loc,
       circleRadius: 8.0,
       circleColor: '#E53935',
@@ -209,14 +206,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       circleStrokeColor: '#FFFFFF',
       circleStrokeWidth: 2.5,
     ));
-  }
-
-  void _updateNativeUserDot() {
-    final ctrl = _mapController;
-    final dot = _nativeUserDot;
-    final loc = _userLocation;
-    if (ctrl == null || dot == null || loc == null) return;
-    ctrl.updateCircle(dot, CircleOptions(geometry: loc));
   }
 
   double _calcMinZoom(double radiusKm, double lat, double screenWidthPx) {

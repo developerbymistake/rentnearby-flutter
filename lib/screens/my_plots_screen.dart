@@ -74,7 +74,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
       final hasMembership = status != null && (status['hasMembership'] == true);
 
       if (hasMembership) {
-        final maxPlots = (status!['maxPlots'] as num?)?.toInt() ?? 0;
+        final maxPlots = (status['maxPlots'] as num?)?.toInt() ?? 0;
         final totalPlots = _ctrl.myPlots.length;
         if (totalPlots >= maxPlots) {
           final planType = status['planType'] as String? ?? '';
@@ -198,7 +198,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
     }
 
     if (hasMembership && !canActivate) {
-      final maxPlots = (membership!['maxPlots'] as num?)?.toInt() ?? 0;
+      final maxPlots = (membership['maxPlots'] as num?)?.toInt() ?? 0;
       final planType = membership['planType'] as String? ?? '';
       final plans = await _ctrl.getPlotPlans();
       final currentPlan = plans.firstWhereOrNull((p) => p['planType'] == planType);

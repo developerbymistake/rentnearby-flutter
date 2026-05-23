@@ -26,9 +26,6 @@ class AddListingScreen extends StatefulWidget {
 class _AddListingScreenState extends State<AddListingScreen> {
   final _ctrl = Get.find<ListingController>();
   MapLibreMapController? _mapController;
-  Line?   _nativeCircleGlow;
-  Line?   _nativeCircleLine;
-  Circle? _nativeUserDot;
   Symbol? _nativePin;
   double  _currentZoom = 14.0;
   Size    _mapSize = Size.zero;
@@ -145,14 +142,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
     final loc = _userLocation;
     if (ctrl == null || loc == null || !mounted) return;
     final points = _circlePolygonPoints(loc, 0.5);
-    _nativeCircleGlow = await ctrl.addLine(LineOptions(
+    await ctrl.addLine(LineOptions(
       geometry: points,
       lineColor: '#2f64ca',
       lineWidth: 10.0,
       lineOpacity: 0.20,
       lineBlur: 4.0,
     ));
-    _nativeCircleLine = await ctrl.addLine(LineOptions(
+    await ctrl.addLine(LineOptions(
       geometry: points,
       lineColor: '#2f64ca',
       lineWidth: 2.5,
@@ -164,7 +161,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     final ctrl = _mapController;
     final loc = _userLocation;
     if (ctrl == null || loc == null || !mounted) return;
-    _nativeUserDot = await ctrl.addCircle(CircleOptions(
+    await ctrl.addCircle(CircleOptions(
       geometry: loc,
       circleRadius: 8.0,
       circleColor: '#1E88E5',
@@ -172,14 +169,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
       circleStrokeColor: '#FFFFFF',
       circleStrokeWidth: 2.5,
     ));
-  }
-
-  void _updateNativeUserDot() {
-    final ctrl = _mapController;
-    final dot = _nativeUserDot;
-    final loc = _userLocation;
-    if (ctrl == null || dot == null || loc == null) return;
-    ctrl.updateCircle(dot, CircleOptions(geometry: loc));
   }
 
   double _calcMinZoom(double radiusKm, double lat, double screenWidthPx) {
@@ -573,7 +562,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
         _ctrl.getMembershipStatus(),
         _ctrl.getPlans(),
       ]);
-      final membership = results[0] as Map<String, dynamic>?;
+      final Map<String, dynamic>? membership = results[0];
       final plans = results[1] as Map<String, Map<String, dynamic>>;
       final hasMembership = membership != null && (membership['hasMembership'] == true);
       final planType = membership?['planType'] as String? ?? '';
