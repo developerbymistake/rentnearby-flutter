@@ -263,7 +263,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Switch(
                     value: _isContactVisible,
                     onChanged: (v) => setState(() => _isContactVisible = v),
-                    activeColor: AppColors.primary,
+                    activeThumbColor: AppColors.primary,
+                    activeTrackColor: AppColors.primaryLight,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ]),
