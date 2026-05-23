@@ -2,7 +2,7 @@
   "version": 8,
   "name": "Bakhli",
   "glyphs": "https://fonts.developerbymistake.tech/fonts/{fontstack}/{range}.pbf",
-  "sprite": "asset://assets/sprites/light",
+  "sprite": "asset://flutter_assets/assets/sprites/light",
   "sources": {
     "protomaps": {
       "type": "vector",
