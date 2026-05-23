@@ -289,19 +289,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _legalTile(
                     icon: Iconsax.shield_tick,
                     label: 'Privacy Policy',
-                    onTap: () => Get.to(() => const PrivacyPolicyScreen(),
-                        transition: Transition.rightToLeft,
-                        duration: const Duration(milliseconds: 300))
-                        .then((_) => _resetForm()),
+                    onTap: () async {
+                      await Get.to(() => const PrivacyPolicyScreen(),
+                          transition: Transition.rightToLeft,
+                          duration: const Duration(milliseconds: 300));
+                      _resetForm();
+                    },
                   ),
                   Divider(height: 1, indent: 56, color: AppColors.divider),
                   _legalTile(
                     icon: Iconsax.document_text,
                     label: 'Terms of Service',
-                    onTap: () => Get.to(() => const TermsOfServiceScreen(),
-                        transition: Transition.rightToLeft,
-                        duration: const Duration(milliseconds: 300))
-                        .then((_) => _resetForm()),
+                    onTap: () async {
+                      await Get.to(() => const TermsOfServiceScreen(),
+                          transition: Transition.rightToLeft,
+                          duration: const Duration(milliseconds: 300));
+                      _resetForm();
+                    },
                   ),
                 ]),
               ),
