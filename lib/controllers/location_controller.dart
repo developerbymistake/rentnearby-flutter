@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
@@ -13,30 +14,35 @@ class _LocationContext {
 }
 
 class LocationController extends GetxController {
-  // Public reactive state observed by explore screens
-  final userLocation     = Rxn<LatLng>();
-  final locationLoading  = true.obs;
-  final selectedDistrict = Rxn<DistrictModel>();
-  final autoCity         = Rxn<CityModel>();
+  // Public reactive state observed by explore screens and MainScreen
+  final userLocation        = Rxn<LatLng>();
+  final locationLoading     = true.obs;
+  final selectedDistrict    = Rxn<DistrictModel>();
+  final autoCity            = Rxn<CityModel>();
   final nearbyCities        = <CityModel>[].obs;
   final districtUnavailable = false.obs;
+  final gpsEnabled          = true.obs;
+  final isOffline           = false.obs;
 
   // Private guards
   int  _loadContextVersion = 0;
   bool _autoLoading        = false;
   bool _refreshing         = false;
   StreamSubscription<ServiceStatus>? _serviceStatusSub;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
   @override
   void onInit() {
     super.onInit();
     _setupServiceStream();
+    _setupConnectivity();
     _initLocation();
   }
 
   @override
   void onClose() {
     _serviceStatusSub?.cancel();
+    _connectivitySub?.cancel();
     super.onClose();
   }
 
@@ -44,6 +50,7 @@ class LocationController extends GetxController {
 
   void _setupServiceStream() {
     _serviceStatusSub = Geolocator.getServiceStatusStream().listen((status) {
+      gpsEnabled.value = (status == ServiceStatus.enabled);
       if (status == ServiceStatus.enabled) {
         if (userLocation.value == null && !locationLoading.value) {
           locationLoading.value = true;
@@ -56,11 +63,29 @@ class LocationController extends GetxController {
     });
   }
 
+  // ── Connectivity stream (one subscription for the entire app) ──────────────
+
+  void _setupConnectivity() {
+    Connectivity().checkConnectivity().then((results) {
+      isOffline.value = results.every((r) => r == ConnectivityResult.none);
+    });
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
+      isOffline.value = results.every((r) => r == ConnectivityResult.none);
+    });
+  }
+
+  // ── GPS recheck (called by GPS gate "Check Again" button) ──────────────────
+
+  Future<void> recheckGps() async {
+    gpsEnabled.value = await Geolocator.isLocationServiceEnabled();
+  }
+
   // ── Location initialization ────────────────────────────────────────────────
 
   Future<void> _initLocation() async {
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      gpsEnabled.value = serviceEnabled;
       if (!serviceEnabled) {
         locationLoading.value = false;
         _tryAutoLoad();

@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -23,69 +21,19 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
-  int _currentIndex = 0;
-  late AnimationController _navController;
+class _MainScreenState extends State<MainScreen> {
   final _auth = Get.find<AuthController>();
-  bool _isOffline = false;
-  bool _gpsEnabled = true;
-  bool _districtUnavailable = false;
-  Worker? _districtWorker;
   late final LocationController _locationCtrl;
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
-  StreamSubscription<ServiceStatus>? _gpsStatusSub;
 
   final _screens = const [ExploreScreen(), MyListingsScreen(), ExplorePlotsScreen(), MyPlotsScreen(), ProfileScreen()];
 
   @override
   void initState() {
     super.initState();
-    _navController = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     Get.put(ListingController());
     Get.put(PlotController());
     _locationCtrl = Get.put(LocationController());
-    ever(_auth.tabIndex, (i) => setState(() => _currentIndex = i));
-    _districtWorker = ever(_locationCtrl.districtUnavailable, (val) {
-      if (mounted) setState(() => _districtUnavailable = val);
-    });
-    _initConnectivity();
-    _initGpsGate();
     _auth.refreshProfile();
-  }
-
-  Future<void> _initGpsGate() async {
-    final enabled = await Geolocator.isLocationServiceEnabled();
-    if (mounted) setState(() => _gpsEnabled = enabled);
-
-    _gpsStatusSub = Geolocator.getServiceStatusStream().listen((status) {
-      if (!mounted) return;
-      setState(() => _gpsEnabled = status == ServiceStatus.enabled);
-    });
-  }
-
-  Future<void> _recheckGps() async {
-    final enabled = await Geolocator.isLocationServiceEnabled();
-    if (mounted) setState(() => _gpsEnabled = enabled);
-  }
-
-  void _initConnectivity() {
-    Connectivity().checkConnectivity().then((results) {
-      if (!mounted) return;
-      setState(() => _isOffline = results.every((r) => r == ConnectivityResult.none));
-    });
-    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
-      if (!mounted) return;
-      setState(() => _isOffline = results.every((r) => r == ConnectivityResult.none));
-    });
-  }
-
-  @override
-  void dispose() {
-    _districtWorker?.dispose();
-    _connectivitySub?.cancel();
-    _gpsStatusSub?.cancel();
-    _navController.dispose();
-    super.dispose();
   }
 
   Widget _buildOfflineGate() {
@@ -241,7 +189,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 12),
                 TextButton(
-                  onPressed: _recheckGps,
+                  onPressed: () => _locationCtrl.recheckGps(),
                   child: const Text(
                     'Check Again',
                     style: TextStyle(
@@ -360,8 +308,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        if (_currentIndex != 0) {
-          setState(() => _currentIndex = 0);
+        if (_auth.tabIndex.value != 0) {
+          _auth.tabIndex.value = 0;
         } else {
           _showExitConfirmation();
         }
@@ -369,15 +317,21 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       child: Stack(
         children: [
           Scaffold(
-            body: IndexedStack(
-              index: _currentIndex,
+            body: Obx(() => IndexedStack(
+              index: _auth.tabIndex.value,
               children: _screens,
-            ),
-            bottomNavigationBar: _buildBottomNav(),
+            )),
+            bottomNavigationBar: Obx(() => _buildBottomNav()),
           ),
-          if (_isOffline) _buildOfflineGate(),
-          if (!_isOffline && _districtUnavailable) _buildDistrictGate(),
-          if (!_gpsEnabled) _buildGpsGate(),
+          Obx(() => _locationCtrl.isOffline.value
+              ? _buildOfflineGate()
+              : const SizedBox.shrink()),
+          Obx(() => !_locationCtrl.isOffline.value && _locationCtrl.districtUnavailable.value
+              ? _buildDistrictGate()
+              : const SizedBox.shrink()),
+          Obx(() => !_locationCtrl.gpsEnabled.value
+              ? _buildGpsGate()
+              : const SizedBox.shrink()),
         ],
       ),
     );
@@ -412,22 +366,21 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   }
 
   Widget _navItem(int index, IconData icon, IconData activeIcon, String label) {
-    final isActive = _currentIndex == index;
+    final isActive = _auth.tabIndex.value == index;
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          if (index == 0 && _currentIndex != 0) {
+          if (index == 0 && _auth.tabIndex.value != 0) {
             Get.find<ListingController>().exploreRefreshTrigger.value++;
           }
-          if (index == 2 && _currentIndex != 2) {
+          if (index == 2 && _auth.tabIndex.value != 2) {
             Get.find<PlotController>().exploreRefreshTrigger.value++;
           }
           if (index == 4) _auth.profileTabTrigger.value++;
           Get.find<ListingController>().filterResetTrigger.value++;
           Get.find<PlotController>().filterResetTrigger.value++;
-          setState(() => _currentIndex = index);
+          _auth.tabIndex.value = index;
         },
-
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
