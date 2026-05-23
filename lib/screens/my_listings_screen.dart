@@ -625,7 +625,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
               return;
             }
             setDialogState(() => saving = true);
-            final ok = await _auth.updateProfile(name, null);
+            final ok = await _auth.updateProfile(name);
             if (ok) {
               if (ctx.mounted) { Navigator.pop(ctx); Get.toNamed(AppRoutes.addListing); }
             } else {

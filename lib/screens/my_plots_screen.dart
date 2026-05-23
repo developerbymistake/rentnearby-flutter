@@ -116,7 +116,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
           final name = nameCtrl.text.trim();
           if (name.isEmpty) { AppToast.error('Please enter your name.'); return; }
           setDialogState(() => saving = true);
-          final ok = await _auth.updateProfile(name, null);
+          final ok = await _auth.updateProfile(name);
           if (ok) {
             if (ctx.mounted) { Navigator.pop(ctx); Get.toNamed(AppRoutes.addPlot); }
           } else {
