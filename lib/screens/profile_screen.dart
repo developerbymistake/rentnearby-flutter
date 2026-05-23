@@ -18,31 +18,27 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = Get.find<AuthController>();
   final _nameCtrl = TextEditingController();
-  bool _tickerWasActive = false;
   bool _isContactVisible = true;
+  Worker? _profileTabWorker;
 
   @override
   void initState() {
     super.initState();
     _nameCtrl.text = _auth.user.value?.name ?? '';
     _isContactVisible = _auth.user.value?.isContactVisible ?? true;
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final active = TickerMode.of(context);
-    if (active && !_tickerWasActive) {
-      setState(() {
-        _nameCtrl.text = _auth.user.value?.name ?? '';
-        _isContactVisible = _auth.user.value?.isContactVisible ?? true;
-      });
-    }
-    _tickerWasActive = active;
+    _profileTabWorker = ever(_auth.profileTabTrigger, (_) {
+      if (mounted) {
+        setState(() {
+          _nameCtrl.text = _auth.user.value?.name ?? '';
+          _isContactVisible = _auth.user.value?.isContactVisible ?? true;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    _profileTabWorker?.dispose();
     _nameCtrl.dispose();
     super.dispose();
   }
