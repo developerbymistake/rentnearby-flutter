@@ -14,6 +14,7 @@ class PlotController extends GetxController {
   final hasMorePlots = false.obs;
   final plotPostedTrigger = 0.obs;
   final exploreRefreshTrigger = 0.obs;
+  final filterResetTrigger = 0.obs;
   int _myPlotsPage = 1;
 
   @override

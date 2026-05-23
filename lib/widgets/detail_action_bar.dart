@@ -67,17 +67,6 @@ class DetailActionBar extends StatelessWidget {
           ),
           if (hasPhone) ...[
             const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.check_circle_rounded, size: 12, color: AppColors.success),
-                SizedBox(width: 4),
-                Text('Contact public',
-                    style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 11, color: AppColors.success)),
-              ],
-            ),
-            const SizedBox(height: 8),
             // Row 2: Call Owner + WhatsApp side by side
             Row(
               children: [

@@ -117,6 +117,9 @@ class _ExploreScreenState extends State<ExploreScreen>
     _refreshWorker = ever(_listingCtrl.exploreRefreshTrigger, (_) {
       if (_locationCtrl.selectedDistrict.value != null) _loadNearby();
     });
+    ever(_listingCtrl.filterResetTrigger, (_) {
+      if (mounted) setState(() { _selectedCity = null; _selectedRoomType = null; });
+    });
     _loadingWorker = ever(_listingCtrl.isLoading, (loading) {
       if (!loading && _radarController.isAnimating) {
         _radarController.stop();
@@ -891,7 +894,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   Widget _buildRadiusChips() {
-    final radii = [1.0, 3.0, 6.0];
+    final radii = [1.0, 4.0, 8.0];
     return Row(
       children: radii.asMap().entries.map((entry) {
         final i = entry.key;

@@ -154,7 +154,6 @@ class AuthController extends GetxController {
       final updated = UserModel.fromJson(res['data']);
       StorageService.saveUser(updated);
       user.value = updated;
-      AppToast.success('Profile updated!');
       return true;
     } catch (e) {
       AppToast.error(_dioMessage(e, 'Could not update profile.'));

@@ -14,6 +14,7 @@ class ListingController extends GetxController {
   final hasMoreMyListings = false.obs;
   final listingPostedTrigger = 0.obs;
   final exploreRefreshTrigger = 0.obs;
+  final filterResetTrigger = 0.obs;
 
   @override
   void onInit() {

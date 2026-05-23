@@ -152,10 +152,7 @@ class ListingBottomSheet extends StatelessWidget {
                 ]),
 
                 const SizedBox(height: 20),
-                BottomSheetActionBar(
-                  listingId: listing.id,
-                  ownerPhone: listing.ownerPhone,
-                ),
+                BottomSheetActionBar(listingId: listing.id),
               ],
             ),
           ),

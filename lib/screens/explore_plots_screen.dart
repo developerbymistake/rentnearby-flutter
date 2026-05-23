@@ -118,6 +118,9 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _refreshWorker = ever(_plotCtrl.exploreRefreshTrigger, (_) {
       if (_locationCtrl.selectedDistrict.value != null) _loadNearby();
     });
+    ever(_plotCtrl.filterResetTrigger, (_) {
+      if (mounted) setState(() { _selectedCity = null; _selectedPlotType = null; });
+    });
     _loadingWorker = ever(_plotCtrl.isLoading, (loading) {
       if (!loading && _radarController.isAnimating) {
         _radarController.stop();
@@ -839,7 +842,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   Widget _buildRadiusChips() {
-    final radii = [1.0, 3.0, 6.0];
+    final radii = [1.0, 4.0, 8.0];
     return Row(
       children: radii.asMap().entries.map((entry) {
         final i = entry.key;
@@ -1135,19 +1138,6 @@ class _PlotBottomSheet extends StatelessWidget {
         ),
       );
 
-  void _call() {
-    final phone = plot.ownerPhone;
-    if (phone == null) return;
-    final uri = Uri(scheme: 'tel', path: phone);
-    canLaunchUrl(uri).then((ok) { if (ok) launchUrl(uri); });
-  }
-
-  void _whatsapp() {
-    final phone = plot.ownerPhone;
-    if (phone == null) return;
-    launchUrl(Uri.parse('https://wa.me/91$phone'), mode: LaunchMode.externalApplication);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1306,84 +1296,6 @@ class _PlotBottomSheet extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
-
-                  // Action buttons
-                  if (isAuthenticated && plot.ownerPhone != null)
-                    SizedBox(
-                      height: 50,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _call,
-                              icon: const Icon(Icons.call_rounded, size: 18),
-                              label: const Text(
-                                'Call Owner',
-                                style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFF59E0B),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _whatsapp,
-                              icon: const Icon(Icons.chat_rounded, size: 18),
-                              label: const Text(
-                                'WhatsApp',
-                                style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF25D366),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14)),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else if (!isAuthenticated)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF7ED),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: const Color(0xFF92400E).withValues(alpha: 0.3)),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.lock_outline_rounded,
-                              size: 16, color: Color(0xFF92400E)),
-                          SizedBox(width: 8),
-                          Text(
-                            'Login to contact owner',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF78350F),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                 ],
               ),
             ),
