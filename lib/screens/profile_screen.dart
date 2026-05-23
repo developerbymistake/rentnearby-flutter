@@ -145,7 +145,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       duration: const Duration(milliseconds: 300),
                     ),
                   ),
-                  Divider(height: 1, indent: 56, color: AppColors.divider),
+                ]),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Legal
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                        color: AppColors.shadow,
+                        blurRadius: 12,
+                        offset: const Offset(0, 4))
+                  ],
+                ),
+                child: Column(children: [
                   _tile(
                     icon: Iconsax.shield_tick,
                     label: 'Privacy Policy',
