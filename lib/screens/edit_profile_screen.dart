@@ -114,7 +114,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: const Text('Edit Profile',
+        title: const Text('Update Profile',
             style: TextStyle(
                 fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w600)),
         elevation: 0,

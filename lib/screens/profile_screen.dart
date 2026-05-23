@@ -138,8 +138,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(children: [
                   _tile(
                     icon: Iconsax.user_edit,
-                    label: 'Edit Profile',
-                    subtitle: 'Update name and contact settings',
+                    label: 'Update Profile',
                     onTap: () => Get.to(
                       () => const EditProfileScreen(),
                       transition: Transition.rightToLeft,
