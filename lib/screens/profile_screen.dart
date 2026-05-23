@@ -134,7 +134,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ]),
         ),
       ),
-    );
+    ).then((_) {
+      if (mounted) FocusScope.of(context).unfocus();
+    });
   }
 
   @override
