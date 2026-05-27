@@ -24,6 +24,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   final _ctrl = Get.find<ListingController>();
   final _auth = Get.find<AuthController>();
   final _scrollCtrl = ScrollController();
+  Worker? _tabWorker;
   int _page = 1;
   late final _permissionService = ListingPermissionService(
     _ctrl,
@@ -36,10 +37,14 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     super.initState();
     _ctrl.loadMyListings(page: 1);
     _scrollCtrl.addListener(_onScroll);
+    _tabWorker = ever(_auth.tabIndex, (int idx) {
+      if (idx == 1 && !_ctrl.isLoading.value) _refresh();
+    });
   }
 
   @override
   void dispose() {
+    _tabWorker?.dispose();
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     super.dispose();

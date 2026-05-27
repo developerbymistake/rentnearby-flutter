@@ -27,6 +27,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   final _ctrl = Get.find<PlotController>();
   final _auth = Get.find<AuthController>();
   final _scrollCtrl = ScrollController();
+  Worker? _tabWorker;
   late final _permissionService = PlotPermissionService(
     _ctrl,
     _auth,
@@ -38,10 +39,14 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
     super.initState();
     _ctrl.loadMyPlots(reset: true);
     _scrollCtrl.addListener(_onScroll);
+    _tabWorker = ever(_auth.tabIndex, (int idx) {
+      if (idx == 3 && !_ctrl.isLoading.value) _refresh();
+    });
   }
 
   @override
   void dispose() {
+    _tabWorker?.dispose();
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     super.dispose();
