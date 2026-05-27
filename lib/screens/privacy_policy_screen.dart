@@ -30,8 +30,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               'Mobile number — used for OTP-based login and displayed on your listings so tenants can contact you directly.',
               'Name — an optional profile field you may provide.',
               'Location (GPS) — used only in real-time to show rooms near you. Your location is never stored on our servers.',
-              'Listing photos — images you upload are stored on Cloudinary, a third-party cloud storage service.',
-              'Payment data — listing activation payments are processed entirely by Razorpay. Bakhli does not store your card or bank details.',
+              'Listing photos — images you upload are stored securely on our platform.',
+              'Payment data — listing activation payments are processed by a third-party payment gateway. Bakhli does not store your card or bank details.',
             ],
           ),
           _section(
@@ -40,7 +40,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
               'To authenticate your account using your mobile number.',
               'To display your listings — including photos, address, rent, and contact number — to other users of the platform.',
               'To show you rental rooms available near your current location.',
-              'To process listing activation payments through Razorpay.',
+              'To process listing activation payments through our payment partner.',
               'To improve the Bakhli platform and user experience.',
             ],
           ),
@@ -60,13 +60,9 @@ class PrivacyPolicyScreen extends StatelessWidget {
             'Children\'s Privacy',
             'Bakhli is intended for adults (18 years and older). We do not knowingly collect personal information from minors. If you believe a minor is using the platform, please contact us at support@bakhli.in and we will take appropriate action.',
           ),
-          _section(
+          _sectionBody(
             'Third-Party Services',
-            [
-              'Razorpay — processes listing activation payments. Subject to Razorpay\'s Privacy Policy.',
-              'Cloudinary — stores listing photos. Subject to Cloudinary\'s Privacy Policy.',
-              'OpenStreetMap — provides map data displayed in the app. Data is licensed under ODbL. © OpenStreetMap contributors.',
-            ],
+            'Listing activation payments are processed by Razorpay, a licensed payment aggregator regulated by the Reserve Bank of India. Razorpay handles your payment information directly and is subject to their own Privacy Policy. Bakhli does not receive or store any card or bank account details.',
           ),
           _sectionBody(
             'Changes to This Policy',

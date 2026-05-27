@@ -34,7 +34,7 @@ class TermsOfServiceScreen extends StatelessWidget {
           ),
           _sectionBody(
             'Your Account',
-            'Each mobile number may be registered as one account. You are responsible for maintaining the confidentiality of your account. Bakhli enforces single-device sessions — logging in on a new device will end your previous session.',
+            'Each mobile number may be registered as one account. You are responsible for maintaining the confidentiality of your account. Only one active login is allowed per account at a time. Logging in on a new device will sign you out from your previous device.',
           ),
           _section(
             'Listing Rules',
@@ -62,11 +62,11 @@ class TermsOfServiceScreen extends StatelessWidget {
           ),
           _sectionBody(
             'Payments',
-            'Listing activation requires a one-time fee processed through Razorpay, a third-party payment provider. All payments are in Indian Rupees (INR). Fees paid for listing activation are non-refundable once processed. Bakhli does not store your payment card or bank details — all payment data is handled by Razorpay.',
+            'Listing activation requires a one-time fee processed through Razorpay, a third-party payment provider. All payments are in Indian Rupees (INR). Fees paid for listing activation are non-refundable once processed. Bakhli does not store your payment card or bank details — all payment data is handled by them.',
           ),
           _sectionBody(
             'Content You Post',
-            'By posting a listing on Bakhli, you grant Bakhli a non-exclusive, royalty-free licence to display that content within the platform. You retain ownership of your content. You may remove your listing at any time from the My Rooms section of the app.',
+            'By posting a listing on Bakhli, you grant Bakhli a non-exclusive, royalty-free licence to display that content within the platform. You retain ownership of your content. You may remove your listing at any time from within the app.',
           ),
           _sectionBody(
             'Account Termination',
