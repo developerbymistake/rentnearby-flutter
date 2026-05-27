@@ -376,7 +376,7 @@ class _MainScreenState extends State<MainScreen> {
           if (index == 2 && _auth.tabIndex.value != 2) {
             Get.find<PlotController>().exploreRefreshTrigger.value++;
           }
-          if (index == 4) _auth.profileTabTrigger.value++;
+          if (index == 4 && _auth.tabIndex.value != 4) _auth.profileTabTrigger.value++;
           Get.find<ListingController>().filterResetTrigger.value++;
           Get.find<PlotController>().filterResetTrigger.value++;
           _auth.tabIndex.value = index;

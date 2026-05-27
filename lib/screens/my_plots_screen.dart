@@ -138,7 +138,6 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: nameCtrl,
-                autofocus: true,
                 textCapitalization: TextCapitalization.words,
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
                 decoration: InputDecoration(
