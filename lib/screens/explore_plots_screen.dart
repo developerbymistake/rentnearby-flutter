@@ -29,10 +29,8 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   // ── Map ──────────────────────────────────────────────────────────────────
   MapLibreMapController? _mapController;
   double _currentZoom = 13.0;
-  Fill? _nativeCircle;
-  Line? _nativeCircleGlow;
-  Line? _nativeCircleLine;
   Circle? _nativeUserDot;
+  final _circleCache = <double, Map<String, dynamic>>{};
   bool _pinsVisible = true;
   bool _styleLoaded = false;
   LatLng? _cameraCenter;
@@ -83,6 +81,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _locationWorker = ever(_locationCtrl.selectedDistrict, (_) {
       if (_locationCtrl.selectedDistrict.value != null) {
         if (_auth.tabIndex.value == 2 && !mapShouldPause.value) {
+          _precomputeCircleCache();
           _loadNearby();
           if (_mapReady && !_isCameraMoving) _fitToRadius();
         } else {
@@ -99,9 +98,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           _styleLoaded = false;
           _mapReady = false;
           _mapController = null;
-          _nativeCircle = null;
-          _nativeCircleGlow = null;
-          _nativeCircleLine = null;
           _nativeUserDot = null;
         });
       } else {
@@ -154,9 +150,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           _styleLoaded = false;
           _mapReady = false;
           _mapController = null;
-          _nativeCircle = null;
-          _nativeCircleGlow = null;
-          _nativeCircleLine = null;
           _nativeUserDot = null;
         });
       } else {
@@ -308,36 +301,23 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Future<void> _initNativeCircle() async {
     final ctrl = _mapController;
     if (ctrl == null || !mounted) return;
-    final points = _circlePolygonPoints(_searchCenter, _radius);
-    _nativeCircle = await ctrl.addFill(FillOptions(
-      geometry: [points],
-      fillColor: '#92400E',
-      fillOpacity: 0.06,
-    ));
-    if (!_mapActive) return;
-    _nativeCircleGlow = await ctrl.addLine(LineOptions(
-      geometry: points,
-      lineColor: '#92400E',
-      lineWidth: 6.0,
-      lineOpacity: 0.15,
-      lineBlur: 3.0,
-    ));
-    if (!_mapActive) return;
-    _nativeCircleLine = await ctrl.addLine(LineOptions(
-      geometry: points,
-      lineColor: '#92400E',
-      lineWidth: 1.8,
-      lineOpacity: 0.65,
-    ));
+    _precomputeCircleCache();
+    await ctrl.addGeoJsonSource('radius-source', _circleCache[_radius]!);
+    await ctrl.addFillLayer('radius-source', 'radius-fill',
+        FillLayerProperties(fillColor: '#92400e', fillOpacity: 0.06));
+    await ctrl.addLineLayer('radius-source', 'radius-glow',
+        LineLayerProperties(lineColor: '#92400e', lineWidth: 6.0,
+            lineOpacity: 0.15, lineBlur: 3.0));
+    await ctrl.addLineLayer('radius-source', 'radius-border',
+        LineLayerProperties(lineColor: '#92400e', lineWidth: 1.8,
+            lineOpacity: 0.65));
   }
 
   void _updateNativeRadiusCircle() {
     final ctrl = _mapController;
     if (ctrl == null) return;
-    final points = _circlePolygonPoints(_searchCenter, _radius);
-    if (_nativeCircle != null)     ctrl.updateFill(_nativeCircle!, FillOptions(geometry: [points]));
-    if (_nativeCircleGlow != null) ctrl.updateLine(_nativeCircleGlow!, LineOptions(geometry: points));
-    if (_nativeCircleLine != null) ctrl.updateLine(_nativeCircleLine!, LineOptions(geometry: points));
+    ctrl.setGeoJsonSource('radius-source',
+        _circleCache[_radius] ?? _buildCircleGeojson(_searchCenter, _radius));
   }
 
   Future<void> _initNativeUserDot() async {
@@ -614,7 +594,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
-    const steps = 128;
+    const steps = 64;
     const earthRadius = 6378137.0;
     final latRad = center.latitude * pi / 180;
     final points = <LatLng>[];
@@ -626,6 +606,29 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       points.add(LatLng(center.latitude + dLat, center.longitude + dLng));
     }
     return points;
+  }
+
+  Map<String, dynamic> _buildCircleGeojson(LatLng center, double radiusKm) {
+    final pts = _circlePolygonPoints(center, radiusKm);
+    return {
+      'type': 'FeatureCollection',
+      'features': [{
+        'type': 'Feature',
+        'geometry': {
+          'type': 'Polygon',
+          'coordinates': [pts.map((p) => [p.longitude, p.latitude]).toList()]
+        },
+        'properties': <String, dynamic>{}
+      }]
+    };
+  }
+
+  void _precomputeCircleCache() {
+    _circleCache.clear();
+    final center = _searchCenter;
+    for (final r in AppConstants.radiusOptions) {
+      _circleCache[r] = _buildCircleGeojson(center, r);
+    }
   }
 
   static Offset _projectToScreen(LatLng ll, LatLng center, double zoom, Size screenSize) {
@@ -828,6 +831,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
             if (city == null) return;
             setState(() => _selectedCity = city);
           }
+          _precomputeCircleCache();
           _loadNearby();
           if (_mapReady) _fitToRadius();
         },
@@ -1039,6 +1043,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     return GestureDetector(
       onTap: () {
         setState(() => _selectedCity = null);
+        _precomputeCircleCache();
         _loadNearby();
         if (_mapReady) _fitToRadius();
       },
