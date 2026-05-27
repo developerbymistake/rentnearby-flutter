@@ -191,9 +191,6 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                     children: [
                       Text(p.areaDisplay,
                           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
-                      if (p.areaUnit != 'sqft')
-                        Text(p.sqftLabel,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, color: Colors.white70)),
                     ],
                   ),
                 ),

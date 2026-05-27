@@ -1288,17 +1288,6 @@ class _PlotBottomSheet extends StatelessWidget {
                       color: AppColors.textDark,
                     ),
                   ),
-                  if (plot.areaUnit != 'sqft') ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      plot.sqftLabel,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 13,
-                        color: AppColors.textMedium,
-                      ),
-                    ),
-                  ],
 
                   const SizedBox(height: 16),
                   const Divider(height: 1),

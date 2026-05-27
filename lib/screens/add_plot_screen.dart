@@ -22,35 +22,13 @@ import '../widgets/gradient_button.dart';
 // Per-unit config: hint text and whether decimal input is allowed
 const _unitConfig = {
   'sqft':  (hint: 'e.g., 1200',  decimal: false),
-  'sqm':   (hint: 'e.g., 120.0', decimal: true),
   'bigha': (hint: 'e.g., 1.5',   decimal: true),
-  'marla': (hint: 'e.g., 8.0',   decimal: true),
   'acre':  (hint: 'e.g., 0.5',   decimal: true),
-  'kanal': (hint: 'e.g., 2.0',   decimal: true),
+  'nali':  (hint: 'e.g., 4.0',   decimal: true),
 };
 
-const _units = ['sqft', 'sqm', 'bigha', 'marla', 'acre', 'kanal'];
+const _units = ['sqft', 'bigha', 'acre', 'nali'];
 
-// Same conversion factors as backend
-double _toSqft(double value, String unit) => switch (unit) {
-      'sqft'  => value,
-      'sqm'   => value * 10.764,
-      'marla' => value * 272.25,
-      'bigha' => value * 27000,
-      'acre'  => value * 43560,
-      'kanal' => value * 5445,
-      _       => value,
-    };
-
-String _sqftLabel(double value, String unit) {
-  if (unit == 'sqft' || value <= 0) return '';
-  final sqft = _toSqft(value, unit);
-  if (sqft >= 100000) return '≈ ${(sqft / 100000).toStringAsFixed(1)} lakh sqft';
-  final n = sqft.toInt();
-  final formatted = n.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
-  return '≈ $formatted sqft';
-}
 
 class AddPlotScreen extends StatefulWidget {
   const AddPlotScreen({super.key});
@@ -90,7 +68,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   final _picker = ImagePicker();
   int _step = 0;
   Timer? _nominatimTimer;
-  String _sqftPreview = '';
 
   bool get _hasChanges =>
       _selectedPlotType != null ||
@@ -103,7 +80,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   @override
   void initState() {
     super.initState();
-    _areaCtrl.addListener(_updateSqftPreview);
     _addressCtrl.addListener(_onAddressChanged);
     _userLocation = _locationCtrl.userLocation.value;
     _selectedLocation = _locationCtrl.userLocation.value;
@@ -113,11 +89,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
   void _onAddressChanged() {
     if (mounted) setState(() {});
-  }
-
-  void _updateSqftPreview() {
-    final v = double.tryParse(_areaCtrl.text) ?? 0;
-    setState(() => _sqftPreview = _sqftLabel(v, _selectedUnit));
   }
 
   void _animateTo(LatLng target, double zoom) {
@@ -258,7 +229,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   @override
   void dispose() {
     _nominatimTimer?.cancel();
-    _areaCtrl.removeListener(_updateSqftPreview);
     _addressCtrl.removeListener(_onAddressChanged);
     _areaCtrl.dispose();
     _descCtrl.dispose();
@@ -1079,7 +1049,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                     setState(() {
                       _selectedUnit = unit;
                       _areaCtrl.clear();
-                      _sqftPreview = '';
                     });
                   },
                   child: AnimatedContainer(
@@ -1134,22 +1103,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                       color: AppColors.primaryLight, size: 18),
                 ),
               ),
-              if (_sqftPreview.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Row(children: [
-                  const Icon(Icons.info_outline_rounded,
-                      size: 13, color: AppColors.textLight),
-                  const SizedBox(width: 5),
-                  Text(
-                    _sqftPreview,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      color: AppColors.textMedium,
-                    ),
-                  ),
-                ]),
-              ],
             ]),
           ),
 

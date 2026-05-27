@@ -5,22 +5,6 @@ String _formatArea(double value, String unit) {
   return '$display $unit';
 }
 
-String _toSqftLabel(double value, String unit) {
-  if (unit == 'sqft') return '${value.toInt()} sqft';
-  final sqft = switch (unit) {
-    'sqm'   => value * 10.764,
-    'marla' => value * 272.25,
-    'bigha' => value * 27000,
-    'acre'  => value * 43560,
-    'kanal' => value * 5445,
-    _       => value,
-  };
-  if (sqft >= 100000) return '≈ ${(sqft / 100000).toStringAsFixed(1)} lakh sqft';
-  final n = sqft.toInt();
-  final formatted = n.toString().replaceAllMapped(
-    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
-  return '≈ $formatted sqft';
-}
 
 class NearbyPlotModel {
   final String id;
@@ -68,16 +52,13 @@ class NearbyPlotModel {
       );
 
   double get areaSqft => switch (areaUnit) {
-    'sqm'   => areaValue * 10.764,
-    'marla' => areaValue * 272.25,
     'bigha' => areaValue * 27000,
     'acre'  => areaValue * 43560,
-    'kanal' => areaValue * 5445,
+    'nali'  => areaValue * 2152.78,
     _       => areaValue,
   };
 
   String get areaDisplay => _formatArea(areaValue, areaUnit);
-  String get sqftLabel => _toSqftLabel(areaValue, areaUnit);
 }
 
 class PlotModel {
@@ -151,5 +132,4 @@ class PlotModel {
       );
 
   String get areaDisplay => _formatArea(areaValue, areaUnit);
-  String get sqftLabel => _toSqftLabel(areaValue, areaUnit);
 }
