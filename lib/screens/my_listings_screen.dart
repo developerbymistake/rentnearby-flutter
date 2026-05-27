@@ -63,8 +63,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Obx(() => AppLoadingOverlay(
-        isLoading: _ctrl.isDeleting.value,
-        message: 'Deleting...',
+        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value,
+        message: _ctrl.isTogglingActive.value ? 'Updating...' : 'Deleting...',
         child: Column(
         children: [
           Container(
@@ -571,12 +571,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   }
 
   void _activateFreePlanDirect(String listingId) async {
-    try {
-      await _ctrl.toggleActive(listingId, false);
-      AppToast.success('Room is now LIVE! 🎉');
-    } catch (e) {
-      AppToast.error('Could not activate: $e');
-    }
+    await _ctrl.toggleActive(listingId, false);
   }
 
   void _showProfileRequiredDialog() {

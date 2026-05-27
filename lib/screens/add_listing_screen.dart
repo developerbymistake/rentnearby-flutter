@@ -16,6 +16,7 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/listing_controller.dart';
 import '../utils/app_toast.dart';
+import '../widgets/app_loading_overlay.dart';
 import '../widgets/gradient_button.dart';
 
 class AddListingScreen extends StatefulWidget {
@@ -534,7 +535,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           }
         }
       }
-      if (mounted) setState(() => _isUploading = false);
+      if (mounted) setState(() { _isUploading = false; _isFinalizing = true; });
       if (failed > 0 && mounted) {
         AppToast.error('$failed photo${failed > 1 ? 's' : ''} could not be uploaded.');
       }
@@ -795,6 +796,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       ]),
       ),
           if (_isUploading) _buildUploadOverlay(),
+          if (_isFinalizing) AppLoadingOverlay.stackChild(message: 'Saving your listing...'),
         ],
       ),
     );

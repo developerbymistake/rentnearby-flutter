@@ -16,6 +16,7 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/plot_controller.dart';
 import '../utils/app_toast.dart';
+import '../widgets/app_loading_overlay.dart';
 import '../widgets/gradient_button.dart';
 
 // Per-unit config: hint text and whether decimal input is allowed
@@ -630,7 +631,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
           }
         }
       }
-      if (mounted) setState(() => _isUploading = false);
+      if (mounted) setState(() { _isUploading = false; _isFinalizing = true; });
       if (failed > 0 && mounted) {
         AppToast.error(
             '$failed photo${failed > 1 ? 's' : ''} could not be uploaded.');
@@ -957,6 +958,10 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
             ]),
           ),
           if (_isUploading) _buildUploadOverlay(),
+          if (_isFinalizing) AppLoadingOverlay.stackChild(
+            message: 'Saving your plot...',
+            indicatorColor: const Color(0xFF92400E),
+          ),
         ],
       ),
     );

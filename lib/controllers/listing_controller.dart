@@ -13,6 +13,7 @@ class ListingController extends GetxController {
   final isLoading = false.obs;
   final isDeleting = false.obs;
   final isUploading = false.obs;
+  final isTogglingActive = false.obs;
   final hasMoreMyListings = false.obs;
   final listingPostedTrigger = 0.obs;
   final exploreRefreshTrigger = 0.obs;
@@ -155,11 +156,17 @@ class ListingController extends GetxController {
 
   Future<void> toggleActive(String id, bool isActive) async {
     try {
+      isTogglingActive.value = true;
       await ApiService.put('/listings/$id', {'isActive': !isActive});
-      await loadMyListings();
+      AppToast.success(isActive ? 'Listing hidden.' : 'Room is now LIVE! 🎉');
       if (isActive) nearbyListings.removeWhere((l) => l.id == id);
       exploreRefreshTrigger.value++;
-    } catch (_) {}
+      await loadMyListings();
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not update listing status.'));
+    } finally {
+      isTogglingActive.value = false;
+    }
   }
 
   Future<void> deleteListing(String id) async {

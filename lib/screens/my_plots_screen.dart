@@ -508,8 +508,8 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Obx(() => AppLoadingOverlay(
-        isLoading: _ctrl.isDeleting.value,
-        message: 'Deleting...',
+        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value,
+        message: _ctrl.isTogglingActive.value ? 'Updating...' : 'Deleting...',
         indicatorColor: _kBrown,
         child: Column(
         children: [

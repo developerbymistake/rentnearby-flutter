@@ -13,6 +13,7 @@ class PlotController extends GetxController {
   final isLoading = false.obs;
   final isDeleting = false.obs;
   final isUploading = false.obs;
+  final isTogglingActive = false.obs;
   final hasMorePlots = false.obs;
   final plotPostedTrigger = 0.obs;
   final exploreRefreshTrigger = 0.obs;
@@ -158,14 +159,11 @@ class PlotController extends GetxController {
     } catch (_) { return null; }
   }
 
-  Future<bool> verifyPlotPayment(Map<String, dynamic> body) async {
-    try {
-      await ApiService.post('/plots/${body['plotId']}/verify-payment', body);
-      Get.find<PlotRepository>().invalidateMembership();
-      plotPostedTrigger.value++;
-      await loadMyPlots(reset: true);
-      return true;
-    } catch (_) { return false; }
+  Future<void> verifyPlotPayment(Map<String, dynamic> body) async {
+    await ApiService.post('/plots/${body['plotId']}/verify-payment', body);
+    Get.find<PlotRepository>().invalidateMembership();
+    plotPostedTrigger.value++;
+    await loadMyPlots(reset: true);
   }
 
   Future<Map<String, dynamic>?> createPlotUpgradeOrder(String planType) async {
@@ -175,23 +173,26 @@ class PlotController extends GetxController {
     } catch (_) { return null; }
   }
 
-  Future<bool> verifyPlotUpgradePayment(Map<String, dynamic> body) async {
-    try {
-      await ApiService.post('/plots/upgrade-plan/verify', body);
-      Get.find<PlotRepository>().invalidateMembership();
-      plotPostedTrigger.value++;
-      await loadMyPlots(reset: true);
-      return true;
-    } catch (_) { return false; }
+  Future<void> verifyPlotUpgradePayment(Map<String, dynamic> body) async {
+    await ApiService.post('/plots/upgrade-plan/verify', body);
+    Get.find<PlotRepository>().invalidateMembership();
+    plotPostedTrigger.value++;
+    await loadMyPlots(reset: true);
   }
 
   Future<void> toggleActive(String id, bool currentIsActive) async {
     try {
+      isTogglingActive.value = true;
       await ApiService.put('/plots/$id', {'isActive': !currentIsActive});
-      await loadMyPlots(reset: true);
+      AppToast.success(currentIsActive ? 'Plot hidden.' : 'Plot is now LIVE! 🎉');
       if (currentIsActive) nearbyPlots.removeWhere((p) => p.id == id);
       exploreRefreshTrigger.value++;
-    } catch (_) {}
+      await loadMyPlots(reset: true);
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not update plot status.'));
+    } finally {
+      isTogglingActive.value = false;
+    }
   }
 
   Future<void> deletePlot(String id) async {
