@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:share_plus/share_plus.dart';
 import '../config/app_colors.dart';
+import '../config/app_insets.dart';
 import '../controllers/auth_controller.dart';
 import '../utils/app_toast.dart';
 import '../widgets/gradient_button.dart';
@@ -353,7 +354,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // Footer
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 36),
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 36 + AppInsets.bottomViewPadding(context)),
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 const Text('Made with ',
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),

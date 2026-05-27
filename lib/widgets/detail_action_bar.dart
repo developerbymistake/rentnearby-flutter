@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../config/app_insets.dart';
 
 class DetailActionBar extends StatelessWidget {
   final double? latitude;
@@ -37,7 +38,7 @@ class DetailActionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasPhone = ownerPhone != null;
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + AppInsets.bottomViewPadding(context)),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [

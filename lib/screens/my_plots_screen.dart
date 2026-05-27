@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
+import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
@@ -555,7 +556,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                 onRefresh: _refresh,
                 child: ListView.builder(
                   controller: _scrollCtrl,
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + AppInsets.bottomViewPadding(context)),
                   itemCount: plots.length + (hasMore || loading ? 1 : 0),
                   itemBuilder: (_, i) {
                     if (i == plots.length) {

@@ -12,6 +12,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:dio/dio.dart' as http_dio;
 import 'dart:io';
 import '../config/app_colors.dart';
+import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/listing_controller.dart';
 import '../utils/app_toast.dart';
@@ -773,7 +774,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
         Container(
           color: Colors.white,
-          padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom + 12),
+          padding: EdgeInsets.fromLTRB(20, 12, 20, AppInsets.bottomViewPadding(context) + 12),
           child: Row(children: [
             if (_step > 0) ...[
               Expanded(
