@@ -9,6 +9,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../config/app_colors.dart';
+import '../config/app_constants.dart';
 import '../config/app_map_state.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
@@ -43,12 +44,15 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   // ── State ─────────────────────────────────────────────────────────────────
   final _plotCtrl     = Get.find<PlotController>();
   final _locationCtrl = Get.find<LocationController>();
+  final _auth         = Get.find<AuthController>();
   Worker? _locationWorker;
   Worker? _locationLoadingWorker;
   Worker? _userLocationWorker;
   Worker? _postedWorker;
   Worker? _loadingWorker;
   Worker? _refreshWorker;
+  Worker? _tabWorker;
+  bool _stale = false;
   List<_MapMarkerData> _markerData = [];
   double _radius = 1.0;
   double _lastClusterZoom = 0;
@@ -78,8 +82,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     // Trigger data load whenever LocationController resolves the district.
     _locationWorker = ever(_locationCtrl.selectedDistrict, (_) {
       if (_locationCtrl.selectedDistrict.value != null) {
-        _loadNearby();
-        if (_mapReady && !_isCameraMoving) _fitToRadius();
+        if (_auth.tabIndex.value == 2 && !mapShouldPause.value) {
+          _loadNearby();
+          if (_mapReady && !_isCameraMoving) _fitToRadius();
+        } else {
+          _stale = true;
+        }
       }
     });
 
@@ -117,9 +125,16 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       }
     });
 
-    _postedWorker = ever(_plotCtrl.plotPostedTrigger, (_) => _loadNearby());
+    _postedWorker = ever(_plotCtrl.plotPostedTrigger, (_) {
+      _stale = true;
+      if (_auth.tabIndex.value == 2 && !mapShouldPause.value) _loadNearby();
+    });
     _refreshWorker = ever(_plotCtrl.exploreRefreshTrigger, (_) {
-      if (_locationCtrl.selectedDistrict.value != null) _loadNearby();
+      _stale = true;
+      if (_locationCtrl.selectedDistrict.value != null &&
+          _auth.tabIndex.value == 2 && !mapShouldPause.value) {
+        _loadNearby();
+      }
     });
     ever(_plotCtrl.filterResetTrigger, (_) {
       if (mounted) setState(() { _selectedCity = null; _selectedPlotType = null; });
@@ -146,6 +161,18 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         });
       } else {
         setState(() => _mapActive = true);
+        if (_auth.tabIndex.value == 2 && _stale) _loadNearby();
+      }
+    });
+
+    _tabWorker = ever(_auth.tabIndex, (index) {
+      if (index == 2) {
+        if (_stale && !mapShouldPause.value) _loadNearby();
+      } else {
+        if (_radarController.isAnimating) {
+          _radarController.stop();
+          _radarController.reset();
+        }
       }
     });
   }
@@ -160,6 +187,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _loadingWorker?.dispose();
     _refreshWorker?.dispose();
     _mapPauseWorker?.dispose();
+    _tabWorker?.dispose();
     _radarController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
@@ -238,7 +266,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     if (city?.latitude != null && city?.longitude != null) {
       return LatLng(city!.latitude!, city.longitude!);
     }
-    return const LatLng(28.6139, 77.2090);
+    return const LatLng(AppConstants.fallbackLat, AppConstants.fallbackLng);
   }
 
   void _fitToRadius() {
@@ -363,6 +391,8 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     if (_locationCtrl.selectedDistrict.value == null) return;
     final cityId = _effectiveCityId;
     if (cityId == null) return;
+    if (mapShouldPause.value) { _stale = true; return; }
+    _stale = false;
     _loadingNearby = true;
     try {
       _revealTimer?.cancel();
@@ -414,7 +444,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       plots = plots.where((p) => p.plotType == _selectedPlotType).toList();
     }
 
-    final filtered = plots.take(30).toList();
+    final filtered = plots.take(AppConstants.maxMapMarkers).toList();
     final clusters = _mapReady
         ? _computeClusters(filtered)
         : filtered.map((p) => _PlotCluster(p)).toList();
@@ -521,54 +551,61 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   void _zoomToCluster(_PlotCluster cluster) {
-    _animateTo(cluster.center, (_currentZoom + 2.5).clamp(10.0, 18.0));
-  }
-
-  static double _metersToPixels(double meters, double zoom, double lat) {
-    const earthCircumference = 40075016.686;
-    const tileSize = 512.0;
-    final metersPerPixel =
-        earthCircumference * cos(lat * pi / 180) / (tileSize * pow(2.0, zoom));
-    return meters / metersPerPixel;
+    double minPx = double.infinity, maxPx = double.negativeInfinity;
+    double minPy = double.infinity, maxPy = double.negativeInfinity;
+    for (final p in cluster.plots) {
+      final sinLat = sin(p.latitude * pi / 180);
+      final py = 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
+      final px = (p.longitude + 180) / 360;
+      if (px < minPx) minPx = px;
+      if (px > maxPx) maxPx = px;
+      if (py < minPy) minPy = py;
+      if (py > maxPy) maxPy = py;
+    }
+    final span = max(maxPx - minPx, maxPy - minPy);
+    final targetZoom = span < 1e-10
+        ? (_currentZoom + 2.5).clamp(10.0, 18.0)
+        : (log(144.0 / (span * 512.0)) / log(2.0)).clamp(10.0, 18.0);
+    _animateTo(cluster.center, targetZoom);
   }
 
   List<_PlotCluster> _computeClusters(List<NearbyPlotModel> plots) {
-    final clusters = <_PlotCluster>[];
-    const clusterMeters = 500.0;
-    const clusterPxCap = 48.0;
+    if (plots.isEmpty) return [];
+    const cellSize = 48.0;
     final zoom = _currentZoom;
-    final refLat = _locationCtrl.userLocation.value?.latitude ?? _searchCenter.latitude;
-    final clusterPx =
-        _metersToPixels(clusterMeters, zoom, refLat).clamp(0.0, clusterPxCap);
+    final scale = 512.0 * pow(2.0, zoom);
+    final grid = <(int, int), List<_PlotCluster>>{};
+    final anchors = <_PlotCluster, (double, double)>{};
+    final result = <_PlotCluster>[];
     for (final plot in plots) {
-      final pt = LatLng(plot.latitude, plot.longitude);
-      _PlotCluster? best;
+      final sinLat = sin(plot.latitude * pi / 180);
+      final mpy = 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
+      final spx = (plot.longitude + 180) / 360 * scale;
+      final spy = mpy * scale;
+      final gi = (spx / cellSize).floor();
+      final gj = (spy / cellSize).floor();
+      _PlotCluster? target;
       double bestDist = double.infinity;
-      for (final c in clusters) {
-        final d = _mercatorPixelDist(pt, c.center, zoom);
-        if (d < bestDist) {
-          bestDist = d;
-          best = c;
+      for (var di = -1; di <= 1; di++) {
+        for (var dj = -1; dj <= 1; dj++) {
+          for (final c in grid[(gi + di, gj + dj)] ?? const []) {
+            final (ax, ay) = anchors[c]!;
+            final dx = spx - ax, dy = spy - ay;
+            final d = sqrt(dx * dx + dy * dy);
+            if (d <= cellSize && d < bestDist) { bestDist = d; target = c; }
+          }
         }
       }
-      if (best != null && bestDist <= clusterPx) {
-        best.plots.add(plot);
+      if (target != null) {
+        target.plots.add(plot);
       } else {
-        clusters.add(_PlotCluster(plot));
+        final c = _PlotCluster(plot);
+        anchors[c] = (spx, spy);
+        grid.putIfAbsent((gi, gj), () => []).add(c);
+        result.add(c);
       }
     }
-    return clusters;
-  }
-
-  static double _mercatorPixelDist(LatLng a, LatLng b, double zoom) {
-    final scale = 512.0 * pow(2.0, zoom);
-    final ax = (a.longitude + 180) / 360 * scale;
-    final ay = _mercatorY(a.latitude) * scale;
-    final bx = (b.longitude + 180) / 360 * scale;
-    final by = _mercatorY(b.latitude) * scale;
-    final dx = ax - bx;
-    final dy = ay - by;
-    return sqrt(dx * dx + dy * dy);
+    return result;
   }
 
   static double _mercatorY(double lat) {
@@ -605,8 +642,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   void _showDetail(NearbyPlotModel plot) {
-    final auth = Get.find<AuthController>();
-    final isAuth = auth.user.value != null;
+    final isAuth = _auth.user.value != null;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -856,7 +892,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   Widget _buildRadiusChips() {
-    final radii = [1.0, 4.0, 8.0];
+    final radii = AppConstants.radiusOptions;
     return Row(
       children: radii.asMap().entries.map((entry) {
         final i = entry.key;

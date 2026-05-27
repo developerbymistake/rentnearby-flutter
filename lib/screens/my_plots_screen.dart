@@ -8,6 +8,7 @@ import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
+import '../services/plot_permission_service.dart';
 import '../models/plot_model.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
@@ -26,6 +27,11 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   final _ctrl = Get.find<PlotController>();
   final _auth = Get.find<AuthController>();
   final _scrollCtrl = ScrollController();
+  late final _permissionService = PlotPermissionService(
+    _ctrl,
+    _auth,
+    Get.find<LocationController>(),
+  );
 
   @override
   void initState() {
@@ -50,61 +56,27 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   Future<void> _refresh() => _ctrl.loadMyPlots(reset: true);
 
   void _onAddPlot() async {
-    final locationCtrl = Get.find<LocationController>();
-    if (locationCtrl.selectedDistrict.value == null) {
-      AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+    PlotPermissionResult result;
+    try {
+      result = await _permissionService.check();
+    } catch (_) {
+      AppToast.info('Adding plot...');
+      Get.toNamed(AppRoutes.addPlot);
       return;
     }
-
-    final name = _auth.user.value?.name?.trim() ?? '';
-    if (name.isEmpty) { _showNameDialog(); return; }
-    try {
-      final featureConfig = await _ctrl.getPlotPaymentFeatureConfig();
-      final paymentEnabled = featureConfig['isEnabled'] as bool;
-      final freeLimit = featureConfig['freeLimit'] as int;
-      if (!paymentEnabled) {
-        if (_ctrl.myPlots.length >= freeLimit) {
-          if (mounted) _showPlotLimitDialog(maxPlots: freeLimit, hasPlan: true);
-          return;
-        }
+    if (!mounted) return;
+    switch (result) {
+      case PlotAllowed():
         Get.toNamed(AppRoutes.addPlot);
-        return;
-      }
-
-      final status = await _ctrl.getPlotMembershipStatus();
-      final hasMembership = status != null && (status['hasMembership'] == true);
-
-      if (hasMembership) {
-        final maxPlots = (status['maxPlots'] as num?)?.toInt() ?? 0;
-        final totalPlots = _ctrl.myPlots.length;
-        if (totalPlots >= maxPlots) {
-          final planType = status['planType'] as String? ?? '';
-          final plans = await _ctrl.getPlotPlans();
-          final currentPlan = plans.firstWhereOrNull((p) => p['planType'] == planType);
-          final currentPlanIsFree = currentPlan == null || (currentPlan['price'] as num? ?? 0) == 0;
-          if (currentPlanIsFree) {
-            if (mounted) _showPaidUpgradePlotSheet();
-          } else {
-            if (mounted) _showPlotLimitDialog(maxPlots: maxPlots, hasPlan: true);
-          }
-          return;
-        }
-      } else {
-        final hasUsedFree = _auth.user.value?.hasUsedFreePlotPlan ?? false;
-        final plans = await _ctrl.getPlotPlans();
-        final freePlan = plans.firstWhereOrNull((p) => (p['price'] as num? ?? 0) == 0);
-        final freeLimit = (freePlan?['plotLimit'] as num?)?.toInt() ?? 1;
-        if (_ctrl.myPlots.length >= freeLimit) {
-          if (hasUsedFree) {
-            if (mounted) _showPaidUpgradePlotSheet();
-          } else {
-            if (mounted) _showPlotLimitDialog(maxPlots: freeLimit, hasPlan: false);
-          }
-          return;
-        }
-      }
-    } catch (_) { AppToast.info('Adding plot...'); }
-    Get.toNamed(AppRoutes.addPlot);
+      case PlotNeedsDistrict():
+        AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+      case PlotNeedsName():
+        _showNameDialog();
+      case PlotShowLimitDialog():
+        _showPlotLimitDialog(maxPlots: result.maxPlots, hasPlan: result.hasPlan);
+      case PlotShowUpgradeSheet():
+        _showPaidUpgradePlotSheet();
+    }
   }
 
   void _showNameDialog() {

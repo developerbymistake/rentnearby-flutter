@@ -8,6 +8,9 @@ import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
+import '../repositories/listing_repository.dart';
+import '../repositories/plot_repository.dart';
+import '../repositories/user_repository.dart';
 import '../widgets/gradient_button.dart';
 import 'explore_screen.dart';
 import 'explore_plots_screen.dart';
@@ -30,6 +33,9 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    Get.put(ListingRepository());
+    Get.put(PlotRepository());
+    Get.put(UserRepository());
     Get.put(ListingController());
     Get.put(PlotController());
     _locationCtrl = Get.put(LocationController());

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../models/city_model.dart';
 import '../models/listing_model.dart';
+import '../repositories/listing_repository.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
 
@@ -259,6 +260,7 @@ class ListingController extends GetxController {
       if (data != null && data is Map<String, dynamic>) {
         final success = data['success'] == true;
         if (success) {
+          Get.find<ListingRepository>().invalidateMembership();
           listingPostedTrigger.value++;
           await loadMyListings();
         } else {
@@ -293,14 +295,8 @@ class ListingController extends GetxController {
     return null;
   }
 
-  Future<Map<String, dynamic>?> getMembershipStatus() async {
-    try {
-      final res = await ApiService.get('/listings/payment/status');
-      return res['data'];
-    } catch (e) {
-      return null;
-    }
-  }
+  Future<Map<String, dynamic>?> getMembershipStatus() =>
+      Get.find<ListingRepository>().getMembershipStatus();
 
   Future<Map<String, dynamic>> createUpgradeOrder(String planType) async {
     try {
@@ -332,6 +328,7 @@ class ListingController extends GetxController {
         'razorpayPaymentId': razorpayPaymentId,
         'razorpaySignature': razorpaySignature,
       });
+      Get.find<ListingRepository>().invalidateMembership();
       listingPostedTrigger.value++;
       await loadMyListings();
     } catch (e) {
@@ -340,40 +337,16 @@ class ListingController extends GetxController {
     }
   }
 
-  Future<Map<String, dynamic>> getPaymentFeatureConfig() async {
-    try {
-      final res = await ApiService.get('/admin/features/room_payment');
-      final data = res['data'];
-      if (data != null && data is Map<String, dynamic>) {
-        return {
-          'isEnabled': data['isEnabled'] == true,
-          'freeLimit': (data['freeLimit'] as num?)?.toInt() ?? 1,
-          'freeDays': (data['freeDays'] as num?)?.toInt() ?? 2,
-        };
-      }
-    } catch (_) {}
-    return {'isEnabled': false, 'freeLimit': 1, 'freeDays': 2};
-  }
+  Future<Map<String, dynamic>> getPaymentFeatureConfig() =>
+      Get.find<ListingRepository>().getPaymentFeatureConfig();
 
   Future<bool> isPaymentFeatureEnabled() async {
     final config = await getPaymentFeatureConfig();
     return config['isEnabled'] as bool;
   }
 
-  Future<Map<String, Map<String, dynamic>>> getPlans() async {
-    try {
-      final res = await ApiService.get('/listings/plans');
-      final list = res['data'] as List;
-      final result = <String, Map<String, dynamic>>{};
-      for (final item in list) {
-        final p = Map<String, dynamic>.from(item as Map);
-        result[p['planType'] as String] = p;
-      }
-      return result;
-    } catch (_) {
-      return {};
-    }
-  }
+  Future<Map<String, Map<String, dynamic>>> getPlans() =>
+      Get.find<ListingRepository>().getPlans();
 
   void clearData() {
     nearbyListings.clear();

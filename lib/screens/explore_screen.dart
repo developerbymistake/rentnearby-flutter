@@ -8,6 +8,8 @@ import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
+import '../config/app_constants.dart';
+import '../controllers/auth_controller.dart';
 import '../config/app_map_state.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
@@ -41,12 +43,15 @@ class _ExploreScreenState extends State<ExploreScreen>
   // ── State ─────────────────────────────────────────────────────────────────
   final _listingCtrl  = Get.find<ListingController>();
   final _locationCtrl = Get.find<LocationController>();
+  final _auth         = Get.find<AuthController>();
   Worker? _locationWorker;
   Worker? _locationLoadingWorker;
   Worker? _userLocationWorker;
   Worker? _postedWorker;
   Worker? _loadingWorker;
   Worker? _refreshWorker;
+  Worker? _tabWorker;
+  bool _stale = false;
 
   List<_MapMarkerData> _markerData = [];
   double _radius = 1.0;
@@ -78,8 +83,12 @@ class _ExploreScreenState extends State<ExploreScreen>
     // Trigger data load whenever LocationController resolves the district.
     _locationWorker = ever(_locationCtrl.selectedDistrict, (_) {
       if (_locationCtrl.selectedDistrict.value != null) {
-        _loadNearby();
-        if (_mapReady && !_isCameraMoving) _fitToRadius();
+        if (_auth.tabIndex.value == 0 && !mapShouldPause.value) {
+          _loadNearby();
+          if (_mapReady && !_isCameraMoving) _fitToRadius();
+        } else {
+          _stale = true;
+        }
       }
     });
 
@@ -117,9 +126,16 @@ class _ExploreScreenState extends State<ExploreScreen>
       }
     });
 
-    _postedWorker = ever(_listingCtrl.listingPostedTrigger, (_) => _loadNearby());
+    _postedWorker = ever(_listingCtrl.listingPostedTrigger, (_) {
+      _stale = true;
+      if (_auth.tabIndex.value == 0 && !mapShouldPause.value) _loadNearby();
+    });
     _refreshWorker = ever(_listingCtrl.exploreRefreshTrigger, (_) {
-      if (_locationCtrl.selectedDistrict.value != null) _loadNearby();
+      _stale = true;
+      if (_locationCtrl.selectedDistrict.value != null &&
+          _auth.tabIndex.value == 0 && !mapShouldPause.value) {
+        _loadNearby();
+      }
     });
     ever(_listingCtrl.filterResetTrigger, (_) {
       if (mounted) setState(() { _selectedCity = null; _selectedRoomType = null; });
@@ -146,6 +162,18 @@ class _ExploreScreenState extends State<ExploreScreen>
         });
       } else {
         setState(() => _mapActive = true);
+        if (_auth.tabIndex.value == 0 && _stale) _loadNearby();
+      }
+    });
+
+    _tabWorker = ever(_auth.tabIndex, (index) {
+      if (index == 0) {
+        if (_stale && !mapShouldPause.value) _loadNearby();
+      } else {
+        if (_radarController.isAnimating) {
+          _radarController.stop();
+          _radarController.reset();
+        }
       }
     });
   }
@@ -160,6 +188,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     _loadingWorker?.dispose();
     _refreshWorker?.dispose();
     _mapPauseWorker?.dispose();
+    _tabWorker?.dispose();
     _radarController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
@@ -244,7 +273,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     if (city?.latitude != null && city?.longitude != null) {
       return LatLng(city!.latitude!, city.longitude!);
     }
-    return const LatLng(28.6139, 77.2090);
+    return const LatLng(AppConstants.fallbackLat, AppConstants.fallbackLng);
   }
 
   void _fitToRadius() {
@@ -376,6 +405,8 @@ class _ExploreScreenState extends State<ExploreScreen>
     if (_locationCtrl.selectedDistrict.value == null) return;
     final cityId = _effectiveCityId;
     if (cityId == null) return;
+    if (mapShouldPause.value) { _stale = true; return; }
+    _stale = false;
     _loadingNearby = true;
     try {
       _revealTimer?.cancel();
@@ -432,7 +463,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           .toList();
     }
 
-    final filtered = listings.take(30).toList();
+    final filtered = listings.take(AppConstants.maxMapMarkers).toList();
     final clusters = _mapReady
         ? _computeClusters(filtered)
         : filtered.map(_Cluster.new).toList();
@@ -543,58 +574,64 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   // ── Clustering ────────────────────────────────────────────────────────────
 
-  // Zoom in on cluster center so markers spread apart at the new zoom level.
+  // Zoom to the exact level where every pin in the cluster lands in non-adjacent
+  // grid cells (max axis > 3 × clusterPxCap = 144 px).
   void _zoomToCluster(_Cluster cluster) {
-    _animateTo(cluster.center, (_currentZoom + 2.5).clamp(10.0, 18.0));
-  }
-
-  // Hybrid threshold: cap at 48 px so clusters never visually overlap,
-  // but never exceed 50 m physical distance so distant items don't merge.
-  static double _metersToPixels(double meters, double zoom, double lat) {
-    const earthCircumference = 40075016.686;
-    const tileSize = 512.0;
-    final metersPerPixel =
-        earthCircumference * cos(lat * pi / 180) / (tileSize * pow(2.0, zoom));
-    return meters / metersPerPixel;
+    double minPx = double.infinity, maxPx = double.negativeInfinity;
+    double minPy = double.infinity, maxPy = double.negativeInfinity;
+    for (final l in cluster.listings) {
+      final sinLat = sin(l.latitude * pi / 180);
+      final py = 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
+      final px = (l.longitude + 180) / 360;
+      if (px < minPx) minPx = px;
+      if (px > maxPx) maxPx = px;
+      if (py < minPy) minPy = py;
+      if (py > maxPy) maxPy = py;
+    }
+    final span = max(maxPx - minPx, maxPy - minPy);
+    final targetZoom = span < 1e-10
+        ? (_currentZoom + 2.5).clamp(10.0, 18.0)
+        : (log(144.0 / (span * 512.0)) / log(2.0)).clamp(10.0, 18.0);
+    _animateTo(cluster.center, targetZoom);
   }
 
   List<_Cluster> _computeClusters(List<NearbyListingModel> listings) {
-    final clusters = <_Cluster>[];
-    const clusterMeters = 500.0;
-    const clusterPxCap = 48.0;
+    if (listings.isEmpty) return [];
+    const cellSize = 48.0;
     final zoom = _currentZoom;
-    final refLat = _locationCtrl.userLocation.value?.latitude ?? _searchCenter.latitude;
-    final clusterPx =
-        _metersToPixels(clusterMeters, zoom, refLat).clamp(0.0, clusterPxCap);
+    final scale = 512.0 * pow(2.0, zoom);
+    final grid = <(int, int), List<_Cluster>>{};
+    final anchors = <_Cluster, (double, double)>{};
+    final result = <_Cluster>[];
     for (final listing in listings) {
-      final pt = LatLng(listing.latitude, listing.longitude);
-      _Cluster? best;
+      final sinLat = sin(listing.latitude * pi / 180);
+      final mpy = 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
+      final spx = (listing.longitude + 180) / 360 * scale;
+      final spy = mpy * scale;
+      final gi = (spx / cellSize).floor();
+      final gj = (spy / cellSize).floor();
+      _Cluster? target;
       double bestDist = double.infinity;
-      for (final c in clusters) {
-        final d = _mercatorPixelDist(pt, c.center, zoom);
-        if (d < bestDist) {
-          bestDist = d;
-          best = c;
+      for (var di = -1; di <= 1; di++) {
+        for (var dj = -1; dj <= 1; dj++) {
+          for (final c in grid[(gi + di, gj + dj)] ?? const []) {
+            final (ax, ay) = anchors[c]!;
+            final dx = spx - ax, dy = spy - ay;
+            final d = sqrt(dx * dx + dy * dy);
+            if (d <= cellSize && d < bestDist) { bestDist = d; target = c; }
+          }
         }
       }
-      if (best != null && bestDist <= clusterPx) {
-        best.listings.add(listing);
+      if (target != null) {
+        target.listings.add(listing);
       } else {
-        clusters.add(_Cluster(listing));
+        final c = _Cluster(listing);
+        anchors[c] = (spx, spy);
+        grid.putIfAbsent((gi, gj), () => []).add(c);
+        result.add(c);
       }
     }
-    return clusters;
-  }
-
-  static double _mercatorPixelDist(LatLng a, LatLng b, double zoom) {
-    final scale = 512.0 * pow(2.0, zoom);
-    final ax = (a.longitude + 180) / 360 * scale;
-    final ay = _mercatorY(a.latitude) * scale;
-    final bx = (b.longitude + 180) / 360 * scale;
-    final by = _mercatorY(b.latitude) * scale;
-    final dx = ax - bx;
-    final dy = ay - by;
-    return sqrt(dx * dx + dy * dy);
+    return result;
   }
 
   static double _mercatorY(double lat) {
@@ -909,7 +946,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   Widget _buildRadiusChips() {
-    final radii = [1.0, 4.0, 8.0];
+    final radii = AppConstants.radiusOptions;
     return Row(
       children: radii.asMap().entries.map((entry) {
         final i = entry.key;

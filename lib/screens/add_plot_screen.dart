@@ -9,7 +9,7 @@ import '../controllers/location_controller.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:dio/dio.dart' as http_dio;
+import '../services/api_service.dart';
 import 'dart:io';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
@@ -273,21 +273,9 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       if (!mounted) return;
       setState(() => _isGeocoding = true);
       try {
-        final dio = http_dio.Dio();
-        final res = await dio.get<Map<String, dynamic>>(
-          'https://nominatim.developerbymistake.tech/reverse',
-          queryParameters: {
-            'format': 'jsonv2',
-            'lat': pos.latitude.toStringAsFixed(6),
-            'lon': pos.longitude.toStringAsFixed(6),
-          },
-          options: http_dio.Options(
-            headers: {'User-Agent': 'Bakhli/1.0 (support@bakhli.in)'},
-            receiveTimeout: const Duration(seconds: 8),
-          ),
-        );
+        final res = await ApiService.reverseGeocode(pos.latitude, pos.longitude);
         if (!mounted) return;
-        final displayName = res.data?['display_name'] as String? ?? '';
+        final displayName = res?['display_name'] as String? ?? '';
         if (displayName.isNotEmpty) {
           final parts = displayName
               .split(',')
@@ -471,11 +459,11 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
         if (status.isPermanentlyDenied && mounted) _showPermissionDeniedDialog('Camera');
         return;
       }
-      final picked = await _picker.pickImage(source: source, imageQuality: 85);
+      final picked = await _picker.pickImage(source: source, imageQuality: 85, maxWidth: 1280);
       if (picked != null && mounted) setState(() => _photos.add(File(picked.path)));
     } else {
       final remaining = 5 - _photos.length;
-      final picked = await _picker.pickMultiImage(imageQuality: 85, limit: remaining);
+      final picked = await _picker.pickMultiImage(imageQuality: 85, maxWidth: 1280, limit: remaining);
       if (picked.isNotEmpty && mounted) {
         final allowed = picked.take(remaining).map((f) => File(f.path)).toList();
         setState(() => _photos.addAll(allowed));

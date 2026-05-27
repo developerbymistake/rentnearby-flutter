@@ -1,6 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../models/user_model.dart';
+import '../repositories/listing_repository.dart';
+import '../repositories/plot_repository.dart';
+import '../repositories/user_repository.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../config/app_routes.dart';
@@ -138,6 +141,7 @@ class AuthController extends GetxController {
   }
 
   Future<void> refreshProfile() async {
+    Get.find<UserRepository>().invalidate();
     try {
       final res = await ApiService.get('/users/profile');
       final updated = UserModel.fromJson(res['data']);
@@ -155,6 +159,7 @@ class AuthController extends GetxController {
       final updated = UserModel.fromJson(res['data']);
       StorageService.saveUser(updated);
       user.value = updated;
+      Get.find<UserRepository>().invalidate();
       return true;
     } catch (e) {
       AppToast.error(_dioMessage(e, 'Could not update profile.'));

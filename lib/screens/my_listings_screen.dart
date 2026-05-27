@@ -8,6 +8,7 @@ import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
+import '../services/listing_permission_service.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/listing_card.dart';
@@ -24,6 +25,11 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   final _auth = Get.find<AuthController>();
   final _scrollCtrl = ScrollController();
   int _page = 1;
+  late final _permissionService = ListingPermissionService(
+    _ctrl,
+    _auth,
+    Get.find<LocationController>(),
+  );
 
   @override
   void initState() {
@@ -165,69 +171,26 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   }
 
   void _onAddRoom() async {
-    final locationCtrl = Get.find<LocationController>();
-    if (locationCtrl.selectedDistrict.value == null) {
-      AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
-      return;
-    }
-
-    final name = _auth.user.value?.name?.trim() ?? '';
-    if (name.isEmpty) {
-      _showProfileRequiredDialog();
-      return;
-    }
-
+    ListingPermissionResult result;
     try {
-      final featureConfig = await _ctrl.getPaymentFeatureConfig();
-      final paymentEnabled = featureConfig['isEnabled'] as bool;
-      final freeLimit = featureConfig['freeLimit'] as int;
-      if (!paymentEnabled) {
-        if (_ctrl.myListings.length >= freeLimit) {
-          if (mounted) _showRoomLimitDialog(maxRooms: freeLimit, hasPlan: true);
-          return;
-        }
-        Get.toNamed(AppRoutes.addListing);
-        return;
-      }
-
-      // Check if user can add more rooms based on membership
-      final membership = await _ctrl.getMembershipStatus();
-
-      if (membership != null && membership['hasMembership'] == true) {
-        final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 0;
-        final totalRooms = _ctrl.myListings.length;
-
-        if (totalRooms >= maxRooms) {
-          final planType = membership['planType'] as String? ?? '';
-          final plans = await _ctrl.getPlans();
-          final currentPlanIsFree = (plans[planType]?['price'] as num? ?? 0) == 0;
-          if (currentPlanIsFree) {
-            if (mounted) _showPaidUpgradeSheet();
-          } else {
-            if (mounted) _showRoomLimitDialog(maxRooms: maxRooms, hasPlan: true);
-          }
-          return;
-        }
-      } else {
-        final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
-        final plans = await _ctrl.getPlans();
-        final freePlan = plans.values.toList().firstWhereOrNull((p) => (p['price'] as num? ?? 0) == 0);
-        final freeLimit = (freePlan?['roomLimit'] as num?)?.toInt() ?? 1;
-        if (_ctrl.myListings.length >= freeLimit) {
-          if (hasUsedFree) {
-            if (mounted) _showPaidUpgradeSheet();
-          } else {
-            if (mounted) _showRoomLimitDialog(maxRooms: freeLimit, hasPlan: false);
-          }
-          return;
-        }
-      }
-
-      Get.toNamed(AppRoutes.addListing);
-    } catch (e) {
-      // On error, allow user to try adding room anyway
+      result = await _permissionService.check();
+    } catch (_) {
       AppToast.info('Adding room...');
       Get.toNamed(AppRoutes.addListing);
+      return;
+    }
+    if (!mounted) return;
+    switch (result) {
+      case ListingAllowed():
+        Get.toNamed(AppRoutes.addListing);
+      case ListingNeedsDistrict():
+        AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+      case ListingNeedsName():
+        _showProfileRequiredDialog();
+      case ListingShowLimitDialog():
+        _showRoomLimitDialog(maxRooms: result.maxRooms, hasPlan: result.hasPlan);
+      case ListingShowUpgradeSheet():
+        _showPaidUpgradeSheet();
     }
   }
 

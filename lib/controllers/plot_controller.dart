@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../models/city_model.dart';
 import '../models/plot_model.dart';
+import '../repositories/plot_repository.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
 
@@ -136,39 +137,19 @@ class PlotController extends GetxController {
     }
   }
 
-  Future<Map<String, dynamic>> getPlotPaymentFeatureConfig() async {
-    try {
-      final res = await ApiService.get('/admin/features/plot_payment');
-      final data = res['data'];
-      if (data != null && data is Map<String, dynamic>) {
-        return {
-          'isEnabled': data['isEnabled'] == true,
-          'freeLimit': (data['freeLimit'] as num?)?.toInt() ?? 1,
-          'freeDays': (data['freeDays'] as num?)?.toInt() ?? 2,
-        };
-      }
-    } catch (_) {}
-    return {'isEnabled': false, 'freeLimit': 1, 'freeDays': 2};
-  }
+  Future<Map<String, dynamic>> getPlotPaymentFeatureConfig() =>
+      Get.find<PlotRepository>().getPlotPaymentFeatureConfig();
 
   Future<bool> isPlotPaymentFeatureEnabled() async {
     final config = await getPlotPaymentFeatureConfig();
     return config['isEnabled'] as bool;
   }
 
-  Future<List<Map<String, dynamic>>> getPlotPlans() async {
-    try {
-      final res = await ApiService.get('/plots/plans');
-      return List<Map<String, dynamic>>.from(res['data'] ?? []);
-    } catch (_) { return []; }
-  }
+  Future<List<Map<String, dynamic>>> getPlotPlans() =>
+      Get.find<PlotRepository>().getPlotPlans();
 
-  Future<Map<String, dynamic>?> getPlotMembershipStatus() async {
-    try {
-      final res = await ApiService.get('/plots/payment/status');
-      return res['data'];
-    } catch (_) { return null; }
-  }
+  Future<Map<String, dynamic>?> getPlotMembershipStatus() =>
+      Get.find<PlotRepository>().getPlotMembershipStatus();
 
   Future<Map<String, dynamic>?> activatePlotPlan(String plotId, String planType) async {
     try {
@@ -180,6 +161,7 @@ class PlotController extends GetxController {
   Future<bool> verifyPlotPayment(Map<String, dynamic> body) async {
     try {
       await ApiService.post('/plots/${body['plotId']}/verify-payment', body);
+      Get.find<PlotRepository>().invalidateMembership();
       plotPostedTrigger.value++;
       await loadMyPlots(reset: true);
       return true;
@@ -196,6 +178,7 @@ class PlotController extends GetxController {
   Future<bool> verifyPlotUpgradePayment(Map<String, dynamic> body) async {
     try {
       await ApiService.post('/plots/upgrade-plan/verify', body);
+      Get.find<PlotRepository>().invalidateMembership();
       plotPostedTrigger.value++;
       await loadMyPlots(reset: true);
       return true;
