@@ -928,6 +928,12 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
             ]),
           ),
           if (_isUploading) _buildUploadOverlay(),
+          Obx(() => _ctrl.isLoading.value
+              ? AppLoadingOverlay.stackChild(
+                  message: 'Creating plot...',
+                  indicatorColor: const Color(0xFF92400E),
+                )
+              : const SizedBox.shrink()),
           if (_isFinalizing) AppLoadingOverlay.stackChild(
             message: 'Saving your plot...',
             indicatorColor: const Color(0xFF92400E),
@@ -1039,35 +1045,42 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
           // Area Unit
           _sectionCard(
             title: 'Area Unit *',
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _units.map((unit) {
+            child: Row(
+              children: _units.asMap().entries.map((entry) {
+                final index = entry.key;
+                final unit = entry.value;
                 final active = _selectedUnit == unit;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedUnit = unit;
-                      _areaCtrl.clear();
-                    });
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: active ? const Color(0xFF92400E) : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: active ? const Color(0xFF92400E) : AppColors.divider,
-                          width: 1.5),
-                    ),
-                    child: Text(
-                      unit,
-                      style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: active ? Colors.white : AppColors.textMedium),
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(left: index == 0 ? 0 : 8),
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedUnit = unit;
+                          _areaCtrl.clear();
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: active ? const Color(0xFF92400E) : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                              color: active ? const Color(0xFF92400E) : AppColors.divider,
+                              width: 1.5),
+                        ),
+                        child: Center(
+                          child: Text(
+                            unit,
+                            style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: active ? Colors.white : AppColors.textMedium),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 );

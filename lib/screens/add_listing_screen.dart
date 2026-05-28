@@ -796,6 +796,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
       ]),
       ),
           if (_isUploading) _buildUploadOverlay(),
+          Obx(() => _ctrl.isLoading.value
+              ? AppLoadingOverlay.stackChild(message: 'Creating listing...')
+              : const SizedBox.shrink()),
           if (_isFinalizing) AppLoadingOverlay.stackChild(message: 'Saving your listing...'),
         ],
       ),

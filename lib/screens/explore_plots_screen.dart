@@ -9,6 +9,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../config/app_colors.dart';
+import '../config/app_insets.dart';
 import '../config/app_constants.dart';
 import '../config/app_map_state.dart';
 import '../config/app_routes.dart';
@@ -1242,7 +1243,7 @@ class _PlotBottomSheet extends StatelessWidget {
 
             // Content
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 32 + AppInsets.bottomViewPadding(context)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../config/app_insets.dart';
 import '../models/listing_model.dart';
 import 'bottom_sheet_action_bar.dart';
 
@@ -90,7 +91,7 @@ class ListingBottomSheet extends StatelessWidget {
           const SizedBox(height: 16),
 
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 24 + AppInsets.bottomViewPadding(context)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
