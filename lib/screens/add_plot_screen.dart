@@ -520,6 +520,12 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       return;
     }
 
+    final cityId = _selectedCityId ?? _locationCtrl.autoCity.value?.id;
+    if (cityId == null) {
+      AppToast.error('City not detected. Please enable GPS and try again.');
+      return;
+    }
+
     final data = {
       'areaValue': areaValue,
       'areaUnit': _selectedUnit,
@@ -530,7 +536,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       'longitude': pinLocation.longitude,
       'address': _addressCtrl.text.trim(),
       'districtId': _selectedDistrictId,
-      'cityId': _selectedCityId,
+      'cityId': cityId,
     };
 
     final plotId = await _ctrl.createPlot(data);

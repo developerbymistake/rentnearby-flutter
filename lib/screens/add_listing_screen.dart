@@ -461,6 +461,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
       AppToast.error('Please pin your location on the map'); return;
     }
 
+    final cityId = _selectedCityId ?? _locationCtrl.autoCity.value?.id;
+    if (cityId == null) {
+      AppToast.error('City not detected. Please enable GPS and try again.');
+      return;
+    }
+
     final data = {
       'roomTypeId': _selectedRoomTypeId,
       'description': _descCtrl.text.trim().isNotEmpty ? _descCtrl.text.trim() : null,
@@ -469,7 +475,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       'longitude': pinLocation.longitude,
       'address': _addressCtrl.text.trim(),
       'districtId': _selectedDistrictId,
-      'cityId': _selectedCityId,
+      'cityId': cityId,
     };
 
     final listingId = await _ctrl.createListing(data);
