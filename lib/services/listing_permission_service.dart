@@ -63,7 +63,7 @@ class ListingPermissionService {
       final plans = await _ctrl.getPlans();
       final freePlan = plans.values
           .toList()
-          .firstWhereOrNull((p) => (p['price'] as num? ?? 0) == 0);
+          .firstWhereOrNull((p) => (p['originalPrice'] as num? ?? 0) == 0);
       final limit = (freePlan?['roomLimit'] as num?)?.toInt() ?? 1;
       if (_ctrl.myListings.length >= limit) {
         return hasUsedFree

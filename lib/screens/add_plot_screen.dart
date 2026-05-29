@@ -625,17 +625,16 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       for (final p in plans) {
         plansMap[p['planType'] as String] = p;
       }
-      final currentPlanIsFree = (plansMap[planType]?['price'] as num? ?? 0) == 0;
+      final currentPlanIsFree = (plansMap[planType]?['originalPrice'] as num? ?? 0) == 0;
       if (hasMembership && currentPlanIsFree && _ctrl.myPlots.length > maxPlots) {
-        final paidPlans = plans.where((p) => (p['price'] as num? ?? 0) > 0).toList();
-        final paidPlan = paidPlans.isEmpty
-            ? {'planType': 'PAID', 'price': 99, 'days': 30, 'plotLimit': 2}
-            : paidPlans.first;
-        Get.offNamed(AppRoutes.paymentScreen, arguments: {
-          'isPlot': true,
-          'plotId': plotId,
-          'plan': paidPlan,
-        });
+        final paidPlans = plans.where((p) => (p['originalPrice'] as num? ?? 0) > 0).toList();
+        if (paidPlans.isNotEmpty) {
+          Get.offNamed(AppRoutes.paymentScreen, arguments: {
+            'isPlot': true,
+            'plotId': plotId,
+            'plan': paidPlans.first,
+          });
+        }
         return;
       }
     } catch (_) {}

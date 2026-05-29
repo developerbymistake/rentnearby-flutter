@@ -67,7 +67,7 @@ class PlotPermissionService {
       final hasUsedFree = _auth.user.value?.hasUsedFreePlotPlan ?? false;
       final plans = await _ctrl.getPlotPlans();
       final freePlan =
-          plans.firstWhereOrNull((p) => (p['price'] as num? ?? 0) == 0);
+          plans.firstWhereOrNull((p) => (p['originalPrice'] as num? ?? 0) == 0);
       final limit = (freePlan?['plotLimit'] as num?)?.toInt() ?? 1;
       if (_ctrl.myPlots.length >= limit) {
         return hasUsedFree
