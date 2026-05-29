@@ -284,165 +284,181 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   void _showPaidUpgradePlotSheet({String plotId = ''}) async {
     final plans = await _ctrl.getPlotPlans();
     final paidPlans = plans.where((p) => (p['price'] as num? ?? 0) > 0).toList()
-      ..sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
+      ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0));
 
     if (!mounted) return;
 
-    showModalBottomSheet(
+    String? selectedType = paidPlans.isNotEmpty ? (paidPlans.first['planType'] as String? ?? '') : null;
+
+    const golden = Color(0xFFD4A017);
+    final screenH = MediaQuery.of(context).size.height;
+
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Center(
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: _kBrown.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.flash_on_rounded, size: 30, color: _kBrown),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Center(
-              child: Text(
-                'Upgrade Your Plan',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Center(
-              child: Text(
-                'Choose a plan to add more plots.',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 20),
-            if (paidPlans.isEmpty)
-              const Center(
-                child: Text(
-                  'No paid plans available. Please contact support.',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
-                  textAlign: TextAlign.center,
-                ),
-              )
-            else
-              ...paidPlans.asMap().entries.map((entry) {
-                final i = entry.key;
-                final p = entry.value;
-                final days = (p['days'] as num?)?.toInt() ?? 30;
-                final plots = (p['plotLimit'] as num?)?.toInt() ?? 2;
-                final price = (p['price'] as num?)?.toInt() ?? 0;
-                final originalPrice = (p['originalPrice'] as num?)?.toInt() ?? 0;
-                final discountPercent = (p['discountPercent'] as num?)?.toInt() ?? 0;
-                final hasDiscount = discountPercent > 0 && originalPrice > 0;
-                final raw = (p['planType'] as String? ?? '');
-                final label = raw.isEmpty ? raw : raw[0].toUpperCase() + raw.substring(1).toLowerCase();
-                return Padding(
-                  padding: EdgeInsets.only(bottom: i < paidPlans.length - 1 ? 12 : 0),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      Get.toNamed(AppRoutes.paymentScreen, arguments: {
-                        'isPlot': true,
-                        'plotId': plotId,
-                        'plan': p,
-                      });
-                      _ctrl.loadMyPlots(reset: true);
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: i == 0 ? _kBrown : _kBrown.withValues(alpha: 0.3),
-                          width: i == 0 ? 2 : 1.5,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) {
+          final selectedPlan = paidPlans.isNotEmpty
+              ? paidPlans.firstWhere((p) => p['planType'] == selectedType, orElse: () => paidPlans.first)
+              : null;
+          final selOrigPrice = (selectedPlan?['originalPrice'] as num?)?.toInt() ?? 0;
+          final btnLabel = selOrigPrice == 0 ? 'Activate FREE' : 'Continue  ₹$selOrigPrice';
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.topCenter,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 36),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: screenH * 0.78),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 52, 20, 4),
+                          child: Column(children: [
+                            const Text('Upgrade Your Plan',
+                                style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                            const SizedBox(height: 4),
+                            const Text('Choose a plan to add more plots',
+                                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
+                                textAlign: TextAlign.center),
+                          ]),
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                        color: i == 0 ? _kBrown.withValues(alpha: 0.05) : Colors.grey[50],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: _kBrown.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
+                        Flexible(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                            child: paidPlans.isEmpty
+                                ? const Padding(
+                                    padding: EdgeInsets.all(24),
+                                    child: Text('No plans available.', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight), textAlign: TextAlign.center),
+                                  )
+                                : Column(
+                                    children: paidPlans.map((p) {
+                                      final normalPrice = (p['price'] as num?)?.toInt() ?? 0;
+                                      final origPrice = (p['originalPrice'] as num?)?.toInt() ?? 0;
+                                      final disc = (p['discountPercent'] as num?)?.toInt() ?? 0;
+                                      final hasDiscount = disc > 0 && normalPrice > 0;
+                                      final days = (p['days'] as num?)?.toInt() ?? 30;
+                                      final plots = (p['plotLimit'] as num?)?.toInt() ?? 2;
+                                      final raw = (p['planType'] as String? ?? '');
+                                      final label = raw.isEmpty ? raw : raw[0].toUpperCase() + raw.substring(1).toLowerCase();
+                                      final isSelected = selectedType == raw;
+                                      final displayPrice = origPrice == 0 ? 'FREE' : '₹$origPrice';
+
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 10),
+                                        child: GestureDetector(
+                                          onTap: () => setS(() => selectedType = raw),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(milliseconds: 200),
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                            decoration: BoxDecoration(
+                                              color: isSelected ? golden.withValues(alpha: 0.04) : Colors.white,
+                                              borderRadius: BorderRadius.circular(14),
+                                              border: Border.all(
+                                                color: isSelected ? golden : AppColors.divider,
+                                                width: isSelected ? 2 : 1.5,
+                                              ),
+                                            ),
+                                            child: Row(children: [
+                                              Container(
+                                                width: 22, height: 22,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(color: isSelected ? golden : AppColors.textLight, width: 2),
+                                                ),
+                                                child: isSelected
+                                                    ? Center(child: Container(width: 10, height: 10, decoration: const BoxDecoration(shape: BoxShape.circle, color: golden)))
+                                                    : null,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                                Row(children: [
+                                                  Text('$label Plan',
+                                                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                                  if (hasDiscount) ...[
+                                                    const SizedBox(width: 6),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(4)),
+                                                      child: Text('$disc% Savings',
+                                                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
+                                                    ),
+                                                  ],
+                                                ]),
+                                                Text('Valid for $days days • $plots plot${plots > 1 ? 's' : ''}',
+                                                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                                              ])),
+                                              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                                                if (hasDiscount)
+                                                  Text('₹$normalPrice',
+                                                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, decoration: TextDecoration.lineThrough)),
+                                                Text(displayPrice,
+                                                    style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700,
+                                                        color: origPrice == 0 ? AppColors.success : _kBrown)),
+                                              ]),
+                                            ]),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                          child: Column(children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: selectedPlan == null ? null : () {
+                                  Navigator.pop(ctx);
+                                  Get.toNamed(AppRoutes.paymentScreen, arguments: {'isPlot': true, 'plotId': plotId, 'plan': selectedPlan});
+                                  _ctrl.loadMyPlots(reset: true);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _kBrown, foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  elevation: 0,
+                                ),
+                                child: Text(btnLabel, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15)),
+                              ),
                             ),
-                            child: const Icon(Icons.flash_on_rounded, color: _kBrown, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(children: [
-                                  Text('$label Plan',
-                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, fontFamily: 'Poppins', color: AppColors.textDark)),
-                                  if (hasDiscount) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.success,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text('$discountPercent% off',
-                                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
-                                    ),
-                                  ],
-                                ]),
-                                Text('$days days • $plots plot${plots > 1 ? 's' : ''}',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey[600], fontFamily: 'Poppins')),
-                              ],
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Maybe Later', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight, fontSize: 13)),
                             ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              if (hasDiscount)
-                                Text('₹$originalPrice',
-                                    style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.textLight,
-                                        fontFamily: 'Poppins',
-                                        decoration: TextDecoration.lineThrough)),
-                              Text('₹$price',
-                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kBrown, fontFamily: 'Poppins')),
-                            ],
-                          ),
-                        ],
-                      ),
+                          ]),
+                        ),
+                      ],
                     ),
                   ),
-                );
-              }),
-            const SizedBox(height: 16),
-            Center(
-              child: TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Maybe Later', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-              ),
+                ),
+                Positioned(
+                  top: 0,
+                  child: Container(
+                    width: 72, height: 72,
+                    decoration: BoxDecoration(
+                      color: _kBrown,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: [BoxShadow(color: _kBrown.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+                    ),
+                    child: const Center(
+                      child: Text('B', style: TextStyle(fontFamily: 'Poppins', fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white)),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
