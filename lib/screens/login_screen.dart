@@ -40,7 +40,7 @@ class LoginScreen extends StatelessWidget {
                               color: Colors.white,
                             )),
                         SizedBox(height: 4),
-                        Text('Apna kamra, apne paas',
+                        Text('Discover your new address',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 13,
