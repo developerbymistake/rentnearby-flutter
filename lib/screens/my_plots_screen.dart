@@ -279,7 +279,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
 
   void _showPaidUpgradePlotSheet({String plotId = ''}) async {
     final plans = await _ctrl.getPlotPlans();
-    final paidPlans = plans.where((p) => (p['price'] as num? ?? 0) > 0).toList()
+    final paidPlans = plans.where((p) => (p['originalPrice'] as num? ?? 0) > 0).toList()
       ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0));
 
     if (!mounted) return;

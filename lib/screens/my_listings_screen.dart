@@ -321,7 +321,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   void _showPaidUpgradeSheet({String listingId = ''}) async {
     final plans = await _ctrl.getPlans();
     final paidPlans = plans.values
-        .where((p) => (p['price'] as num? ?? 0) > 0)
+        .where((p) => (p['originalPrice'] as num? ?? 0) > 0)
         .toList()
       ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0));
 
