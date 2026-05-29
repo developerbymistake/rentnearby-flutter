@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
@@ -972,7 +972,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                       border: Border.all(color: Colors.white, width: 3),
                       boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
                     ),
-                    child: const Center(child: Text('B', style: TextStyle(fontFamily: 'Poppins', fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white))),
+                    child: Center(child: Image.asset('assets/images/app_logo.png', width: 44, height: 44, fit: BoxFit.contain)),
                   ),
                 ),
               ],
