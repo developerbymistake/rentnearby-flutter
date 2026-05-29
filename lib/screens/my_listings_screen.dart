@@ -578,6 +578,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
           planType: selectedPlanType,
           daysValid: (selectedPlan['days'] as num?)?.toInt() ?? 2,
           maxRooms: (selectedPlan['roomLimit'] as num?)?.toInt() ?? 1,
+          originalPrice: (selectedPlan['originalPrice'] as num?)?.toInt() ?? 0,
           onDismiss: () {
             Get.find<AuthController>().tabIndex.value = 1;
           },

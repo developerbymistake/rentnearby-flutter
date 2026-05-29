@@ -58,7 +58,7 @@ class PlotPermissionService {
         final currentPlan =
             plans.firstWhereOrNull((p) => p['planType'] == planType);
         final isFree =
-            currentPlan == null || (currentPlan['price'] as num? ?? 0) == 0;
+            currentPlan == null || (currentPlan['originalPrice'] as num? ?? 0) == 0;
         return isFree
             ? PlotShowUpgradeSheet()
             : PlotShowLimitDialog(maxPlots: maxPlots, hasPlan: true);

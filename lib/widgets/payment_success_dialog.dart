@@ -7,6 +7,7 @@ class PaymentSuccessDialog extends StatefulWidget {
   final int maxRooms;
   final int maxPlots;
   final bool isPlot;
+  final int originalPrice;
   final VoidCallback onDismiss;
 
   const PaymentSuccessDialog({
@@ -15,6 +16,7 @@ class PaymentSuccessDialog extends StatefulWidget {
     required this.maxRooms,
     this.maxPlots = 0,
     this.isPlot = false,
+    this.originalPrice = 0,
     required this.onDismiss,
     Key? key,
   }) : super(key: key);
@@ -70,7 +72,7 @@ class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
 
   @override
   Widget build(BuildContext context) {
-    final isPaid = widget.planType == 'PAID';
+    final isPaid = widget.originalPrice > 0;
     final color = isPaid
         ? AppColors.primary
         : (widget.isPlot ? const Color(0xFF92400E) : const Color(0xFF10B981));
@@ -130,6 +132,14 @@ class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
             const SizedBox(height: 18),
             Row(
               children: [
+                _statBox(
+                  icon: Icons.currency_rupee_rounded,
+                  label: 'Amount Paid',
+                  value: isPaid ? '₹${widget.originalPrice}' : 'FREE',
+                  color: color,
+                  lightColor: lightColor,
+                ),
+                const SizedBox(width: 10),
                 _statBox(
                   icon: Icons.calendar_today_rounded,
                   label: 'Duration',

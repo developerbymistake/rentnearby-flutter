@@ -561,6 +561,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
         maxRooms: 0,
         maxPlots: (plan['plotLimit'] as num?)?.toInt() ?? 1,
         isPlot: true,
+        originalPrice: (plan['originalPrice'] as num?)?.toInt() ?? 0,
         onDismiss: () {
           Get.find<AuthController>().tabIndex.value = 3;
         },

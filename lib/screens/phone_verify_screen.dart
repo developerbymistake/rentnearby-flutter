@@ -132,6 +132,7 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
     }
     final ok = await _auth.verifyPhoneOtp(_phoneCtrl.text.trim(), otp);
     if (ok) {
+      await _showSuccessDialog();
       Get.back(result: true);
     } else {
       _attempts++;
@@ -140,6 +141,65 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
         _showMaxAttemptsDialog();
       }
     }
+  }
+
+  Future<void> _showSuccessDialog() {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withValues(alpha: 0.6),
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72, height: 72,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3), width: 2),
+                ),
+                child: const Icon(Icons.check_rounded, color: Color(0xFF10B981), size: 36),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                _isChange ? 'Number Changed!' : 'Phone Verified!',
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                _isChange
+                    ? 'Your mobile number has been updated to +91 ${_phoneCtrl.text}. All future OTPs will be sent to this number.'
+                    : 'Your mobile number +91 ${_phoneCtrl.text} is now verified. You can post listings on RentNearby.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: Container(
+                  decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Continue', style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<bool?> _showConfirmDialog(String phone) {

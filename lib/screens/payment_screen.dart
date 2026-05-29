@@ -211,6 +211,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             maxRooms: (_plan['roomLimit'] as num?)?.toInt() ?? 2,
             maxPlots: (_plan['plotLimit'] as num?)?.toInt() ?? 1,
             isPlot: _isPlot,
+            originalPrice: (_plan['originalPrice'] as num?)?.toInt() ?? 0,
             onDismiss: () {
               Get.until((route) => route.settings.name == AppRoutes.main);
               Get.find<AuthController>().tabIndex.value = _isPlot ? 3 : 1;
