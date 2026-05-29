@@ -79,6 +79,7 @@ class PlotModel {
   final bool isActive;
   final String? ownerName;
   final String? ownerPhone;
+  final String? ownerEmail;
   final List<String> photos;
   final DateTime? validUntil;
   final DateTime createdAt;
@@ -101,6 +102,7 @@ class PlotModel {
     required this.isActive,
     this.ownerName,
     this.ownerPhone,
+    this.ownerEmail,
     required this.photos,
     this.validUntil,
     required this.createdAt,
@@ -124,6 +126,7 @@ class PlotModel {
         isActive: json['isActive'] ?? false,
         ownerName: json['ownerName'],
         ownerPhone: json['ownerPhone'],
+        ownerEmail: json['ownerEmail'],
         photos: (json['photos'] as List? ?? [])
             .map((p) => p.toString().startsWith('http') ? p.toString() : '${AppConstants.serverUrl}$p')
             .toList(),

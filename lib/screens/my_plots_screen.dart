@@ -350,6 +350,9 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                 final days = (p['days'] as num?)?.toInt() ?? 30;
                 final plots = (p['plotLimit'] as num?)?.toInt() ?? 2;
                 final price = (p['price'] as num?)?.toInt() ?? 0;
+                final originalPrice = (p['originalPrice'] as num?)?.toInt() ?? 0;
+                final discountPercent = (p['discountPercent'] as num?)?.toInt() ?? 0;
+                final hasDiscount = discountPercent > 0 && originalPrice > 0;
                 final raw = (p['planType'] as String? ?? '');
                 final label = raw.isEmpty ? raw : raw[0].toUpperCase() + raw.substring(1).toLowerCase();
                 return Padding(
@@ -390,15 +393,41 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('$label Plan',
-                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, fontFamily: 'Poppins', color: AppColors.textDark)),
+                                Row(children: [
+                                  Text('$label Plan',
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, fontFamily: 'Poppins', color: AppColors.textDark)),
+                                  if (hasDiscount) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.success,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text('$discountPercent% off',
+                                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
+                                    ),
+                                  ],
+                                ]),
                                 Text('$days days • $plots plot${plots > 1 ? 's' : ''}',
                                     style: TextStyle(fontSize: 12, color: Colors.grey[600], fontFamily: 'Poppins')),
                               ],
                             ),
                           ),
-                          Text('₹$price',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kBrown, fontFamily: 'Poppins')),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (hasDiscount)
+                                Text('₹$originalPrice',
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textLight,
+                                        fontFamily: 'Poppins',
+                                        decoration: TextDecoration.lineThrough)),
+                              Text('₹$price',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kBrown, fontFamily: 'Poppins')),
+                            ],
+                          ),
                         ],
                       ),
                     ),

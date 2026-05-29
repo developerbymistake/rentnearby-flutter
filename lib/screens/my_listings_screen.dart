@@ -402,6 +402,9 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 final days = (p['days'] as num?)?.toInt() ?? 30;
                 final rooms = (p['roomLimit'] as num?)?.toInt() ?? 2;
                 final price = (p['price'] as num?)?.toInt() ?? 0;
+                final originalPrice = (p['originalPrice'] as num?)?.toInt() ?? 0;
+                final discountPercent = (p['discountPercent'] as num?)?.toInt() ?? 0;
+                final hasDiscount = discountPercent > 0 && originalPrice > 0;
                 final raw = (p['planType'] as String? ?? '');
                 final label = raw.isEmpty ? raw : raw[0].toUpperCase() + raw.substring(1).toLowerCase();
                 return Padding(
@@ -445,12 +448,30 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('$label Plan',
-                                    style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        fontFamily: 'Poppins',
-                                        color: AppColors.textDark)),
+                                Row(children: [
+                                  Text('$label Plan',
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Poppins',
+                                          color: AppColors.textDark)),
+                                  if (hasDiscount) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.success,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text('$discountPercent% off',
+                                          style: const TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white)),
+                                    ),
+                                  ],
+                                ]),
                                 Text('$days days • $rooms rooms',
                                     style: TextStyle(
                                         fontSize: 12,
@@ -459,12 +480,24 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                               ],
                             ),
                           ),
-                          Text('₹$price',
-                              style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
-                                  fontFamily: 'Poppins')),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (hasDiscount)
+                                Text('₹$originalPrice',
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textLight,
+                                        fontFamily: 'Poppins',
+                                        decoration: TextDecoration.lineThrough)),
+                              Text('₹$price',
+                                  style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary,
+                                      fontFamily: 'Poppins')),
+                            ],
+                          ),
                         ],
                       ),
                     ),
