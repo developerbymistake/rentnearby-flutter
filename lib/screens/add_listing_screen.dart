@@ -854,31 +854,35 @@ class _AddListingScreenState extends State<AddListingScreen> {
         title: 'Room Type *',
         child: Obx(() {
           final types = _ctrl.roomTypes;
-          return Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: types.map((rt) {
+          return Row(
+            children: types.asMap().entries.map((entry) {
+              final rt = entry.value;
               final active = _selectedRoomTypeId == rt.id;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedRoomTypeId = rt.id),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: (MediaQuery.of(context).size.width - 40 - 32 - 16) / 3,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: active ? AppColors.primary : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: active ? AppColors.primary : AppColors.divider,
-                        width: 1.5),
-                  ),
-                  child: Center(
-                    child: Text(rt.name,
-                        style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: active ? Colors.white : AppColors.textMedium)),
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(left: entry.key == 0 ? 0 : 8),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedRoomTypeId = rt.id),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: active ? AppColors.primary : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: active ? AppColors.primary : AppColors.divider,
+                            width: 1.5),
+                      ),
+                      child: Center(
+                        child: Text(rt.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: active ? Colors.white : AppColors.textMedium)),
+                      ),
+                    ),
                   ),
                 ),
               );

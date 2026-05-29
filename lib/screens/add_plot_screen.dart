@@ -1010,31 +1010,35 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
           // Plot Type
           _sectionCard(
             title: 'Plot Type *',
-            child: Obx(() => Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _ctrl.plotTypes.map((type) {
+            child: Obx(() => Row(
+              children: _ctrl.plotTypes.asMap().entries.map((entry) {
+                final type = entry.value;
                 final active = _selectedPlotType == type.id;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedPlotType = type.id),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: (MediaQuery.of(context).size.width - 40 - 32 - 16) / 3,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: active ? const Color(0xFF92400E) : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: active ? const Color(0xFF92400E) : AppColors.divider,
-                          width: 1.5),
-                    ),
-                    child: Center(
-                      child: Text(type.name,
-                          style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: active ? Colors.white : AppColors.textMedium)),
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(left: entry.key == 0 ? 0 : 8),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedPlotType = type.id),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: active ? const Color(0xFF92400E) : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: active ? const Color(0xFF92400E) : AppColors.divider,
+                              width: 1.5),
+                        ),
+                        child: Center(
+                          child: Text(type.name,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: active ? Colors.white : AppColors.textMedium)),
+                        ),
+                      ),
                     ),
                   ),
                 );

@@ -41,8 +41,8 @@ class AppRoutes {
     GetPage(
       name: phoneVerify,
       page: () => const PhoneVerifyScreen(),
-      transition: Transition.downToUp,
-      transitionDuration: const Duration(milliseconds: 350),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
       name: otp,
@@ -72,13 +72,13 @@ class AppRoutes {
       name: addListing,
       page: () => const AddListingScreen(),
       transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 350),
+      transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
       name: addPlot,
       page: () => const AddPlotScreen(),
-      transition: Transition.downToUp,
-      transitionDuration: const Duration(milliseconds: 350),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
       name: paymentScreen,
