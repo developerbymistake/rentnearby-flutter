@@ -230,16 +230,12 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
       final planType = membership['planType'] as String? ?? '';
       final plans = await _ctrl.getPlotPlans();
       final currentPlan = plans.firstWhereOrNull((p) => p['planType'] == planType);
-      final currentPlanIsFree = currentPlan == null || (currentPlan['price'] as num? ?? 0) == 0;
+      final currentPlanIsFree = currentPlan == null || (currentPlan['originalPrice'] as num? ?? 0) == 0;
       if (currentPlanIsFree) {
-        final paidPlan = plans.firstWhereOrNull((p) => (p['price'] as num? ?? 0) > 0);
         if (!mounted) return;
-        await Get.toNamed(AppRoutes.paymentScreen, arguments: {
-          'isPlot': true,
-          'plotId': plotId,
-          'plan': paidPlan ?? {'planType': 'PAID', 'price': 99, 'days': 30, 'plotLimit': 2},
-        });
-        _ctrl.loadMyPlots(reset: true);
+        // At capacity on free plan → show upgrade dialog with paid plans from master table
+        _showPaidUpgradePlotSheet(plotId: plotId);
+        return;
       } else {
         if (mounted) _showPlotLimitDialog(maxPlots: maxPlots, hasPlan: true);
       }
@@ -266,7 +262,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
 
     if (selectedPlan == null) return;
 
-    final isFree = (selectedPlan['price'] as num? ?? 0) == 0;
+    final isFree = (selectedPlan['originalPrice'] as num? ?? 0) == 0;
     if (isFree) {
       await _activateFreePlotPlanDirect(plotId, selectedPlan);
       return;
@@ -1014,9 +1010,9 @@ class _PlotPlanSelectionSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final freePlans = plans.where((p) => (p['price'] as num? ?? 0) == 0).toList();
-    final paidPlans = plans.where((p) => (p['price'] as num? ?? 0) > 0).toList()
-      ..sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
+    final freePlans = plans.where((p) => (p['originalPrice'] as num? ?? 0) == 0).toList();
+    final paidPlans = plans.where((p) => (p['originalPrice'] as num? ?? 0) > 0).toList()
+      ..sort((a, b) => (a['originalPrice'] as num).compareTo(b['originalPrice'] as num));
 
     final tiles = <Widget>[];
 
@@ -1041,13 +1037,13 @@ class _PlotPlanSelectionSheet extends StatelessWidget {
       final p = paidPlans[i];
       final days = (p['days'] as num?)?.toInt() ?? 30;
       final plots = (p['plotLimit'] as num?)?.toInt() ?? 1;
-      final price = (p['price'] as num?)?.toInt() ?? 0;
+      final origPrice = (p['originalPrice'] as num?)?.toInt() ?? 0;
       tiles.add(_planTile(
         context,
         plan: p,
         title: '${_label(p)} Plan',
         subtitle: '$days days • $plots plot${plots > 1 ? 's' : ''}',
-        price: '₹$price',
+        price: origPrice == 0 ? 'FREE' : '₹$origPrice',
         icon: Icons.flash_on_rounded,
         color: _kBrown,
         isHighlighted: hasUsedFreePlotPlan && i == 0,

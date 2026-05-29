@@ -532,19 +532,13 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
       final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
       final membershipPlanType = membership['planType'] as String? ?? '';
 
-      // Route by price: if current plan is free (price=0) and at capacity → upgrade to paid
+      // Route by price: if current plan is free (originalPrice=0) and at capacity → upgrade to paid
       final currentPlan = plans[membershipPlanType];
-      final currentPlanIsFree = currentPlan == null || (currentPlan['price'] as num) == 0;
+      final currentPlanIsFree = currentPlan == null || (currentPlan['originalPrice'] as num? ?? 0) == 0;
 
       if (activeRooms >= maxRooms && currentPlanIsFree) {
-        // At capacity on free plan → show first available paid plan for upgrade
-        final _paidMatches = plans.values.cast<Map<String, dynamic>>().where((p) => (p['price'] as num) > 0);
-        final paidPlan = _paidMatches.isEmpty ? null : _paidMatches.first;
-        await Get.toNamed(AppRoutes.paymentScreen, arguments: {
-          'listingId': listingId,
-          'plan': paidPlan ?? {'planType': 'PAID', 'price': 99, 'days': 30, 'roomLimit': 2},
-        });
-        _refresh();
+        // At capacity on free plan → show upgrade dialog with paid plans
+        _showPaidUpgradeSheet(listingId: listingId);
         return;
       }
 
@@ -571,7 +565,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     if (selectedPlanType == null) return;
 
     final selectedPlan = plans[selectedPlanType] ?? {};
-    final isFree = (selectedPlan['price'] as num? ?? 0) == 0;
+    final isFree = (selectedPlan['originalPrice'] as num? ?? 0) == 0;
 
     if (isFree) {
       try {
@@ -847,12 +841,12 @@ class _PlanSelectionSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final freePlans = plans.values
-        .where((p) => (p['price'] as num? ?? 0) == 0)
+        .where((p) => (p['originalPrice'] as num? ?? 0) == 0)
         .toList();
     final paidPlans = plans.values
-        .where((p) => (p['price'] as num? ?? 0) > 0)
+        .where((p) => (p['originalPrice'] as num? ?? 0) > 0)
         .toList()
-      ..sort((a, b) => (a['price'] as num).compareTo(b['price'] as num));
+      ..sort((a, b) => (a['originalPrice'] as num).compareTo(b['originalPrice'] as num));
 
     final tiles = <Widget>[];
 
@@ -877,13 +871,13 @@ class _PlanSelectionSheet extends StatelessWidget {
       final p = paidPlans[i];
       final days = (p['days'] as num?)?.toInt() ?? 30;
       final rooms = (p['roomLimit'] as num?)?.toInt() ?? 2;
-      final price = (p['price'] as num?)?.toInt() ?? 0;
+      final origPrice = (p['originalPrice'] as num?)?.toInt() ?? 0;
       tiles.add(_planTile(
         context,
         planType: p['planType'] as String,
         title: '${_label(p)} Plan',
         subtitle: '$days days • $rooms rooms',
-        price: '₹$price',
+        price: origPrice == 0 ? 'FREE' : '₹$origPrice',
         icon: Icons.flash_on_rounded,
         color: AppColors.primary,
         isHighlighted: hasUsedFreePlan && i == 0,
