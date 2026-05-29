@@ -337,7 +337,12 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
                         child: IconButton(
                           onPressed: () {
                             FocusScope.of(context).unfocus();
-                            Get.back();
+                            if (_otpSent) {
+                              _otpCtrl.clear();
+                              setState(() { _otpSent = false; _attempts = 0; });
+                            } else {
+                              Get.back();
+                            }
                           },
                           icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 20),
                         ),
