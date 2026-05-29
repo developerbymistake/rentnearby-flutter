@@ -226,7 +226,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
     }
 
     if (hasMembership && !canActivate) {
-      final maxPlots = (membership['maxPlots'] as num?)?.toInt() ?? 0;
+      final maxPlots = (membership['maxPlotListings'] as num?)?.toInt() ?? 0;
       final planType = membership['planType'] as String? ?? '';
       final plans = await _ctrl.getPlotPlans();
       final currentPlan = plans.firstWhereOrNull((p) => p['planType'] == planType);
