@@ -19,7 +19,7 @@ class TermsOfServiceScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _heading('Terms of Service'),
-          _updated('Last updated: May 23, 2026'),
+          _updated('Last updated: May 29, 2026'),
           const SizedBox(height: 12),
           _body(
             'By using the Bakhli app, you agree to be bound by these Terms of Service. Please read them carefully. If you do not agree to these terms, do not use the platform.',
@@ -34,7 +34,7 @@ class TermsOfServiceScreen extends StatelessWidget {
           ),
           _sectionBody(
             'Your Account',
-            'Each mobile number may be registered as one account. You are responsible for maintaining the confidentiality of your account. Only one active login is allowed per account at a time. Logging in on a new device will sign you out from your previous device.',
+            'You may create one Bakhli account per Google account. You are responsible for maintaining the security of your account. Only one active login is allowed per account at a time — signing in on a new device will automatically sign you out from your previous one. A verified mobile number is required to post listings.',
           ),
           _section(
             'Listing Rules',

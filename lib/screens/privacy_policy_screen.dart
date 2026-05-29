@@ -19,7 +19,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _heading('Privacy Policy'),
-          _updated('Last updated: May 23, 2026'),
+          _updated('Last updated: May 29, 2026'),
           const SizedBox(height: 12),
           _body(
             'Bakhli is committed to protecting your privacy. This Privacy Policy explains what information we collect, how we use it, and what rights you have regarding your data when you use the Bakhli app.',
@@ -27,8 +27,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
           _section(
             'Information We Collect',
             [
-              'Mobile number — used for OTP-based login and displayed on your listings so tenants can contact you directly.',
-              'Name — an optional profile field you may provide.',
+              'Google account details — when you sign in with Google, we receive your name, email address, and profile photo. This is used to create and display your profile.',
+              'Mobile number — provided by you when setting up your profile. Required to post listings so tenants can contact you directly.',
               'Location (GPS) — used only in real-time to show rooms near you. Your location is never stored on our servers.',
               'Listing photos — images you upload are stored securely on our platform.',
               'Payment data — listing activation payments are processed by a third-party payment gateway. Bakhli does not store your card or bank details.',
@@ -37,7 +37,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
           _section(
             'How We Use Your Information',
             [
-              'To authenticate your account using your mobile number.',
+              'To create and manage your account.',
               'To display your listings — including photos, address, rent, and contact number — to other users of the platform.',
               'To show you rental rooms available near your current location.',
               'To process listing activation payments through our payment partner.',
@@ -62,7 +62,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
           ),
           _sectionBody(
             'Third-Party Services',
-            'Listing activation payments are processed by Razorpay, a licensed payment aggregator regulated by the Reserve Bank of India. Razorpay handles your payment information directly and is subject to their own Privacy Policy. Bakhli does not receive or store any card or bank account details.',
+            'Sign-in is handled through Google Sign-In. By choosing to sign in, you are subject to Google\'s Privacy Policy in addition to ours.\n\nListing activation payments are processed by Razorpay, a licensed payment aggregator regulated by the Reserve Bank of India. Razorpay handles your payment information directly and is subject to their own Privacy Policy. Bakhli does not receive or store any card or bank account details.',
           ),
           _sectionBody(
             'Changes to This Policy',
