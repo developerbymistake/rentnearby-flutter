@@ -49,10 +49,11 @@ class PlotPermissionService {
 
     final status = await _ctrl.getPlotMembershipStatus();
     final hasMembership = status != null && (status['hasMembership'] == true);
+    final activePlots = (status?['activePlotListings'] as num?)?.toInt() ?? 0;
 
     if (hasMembership) {
-      final maxPlots = (status['maxPlots'] as num?)?.toInt() ?? 0;
-      if (_ctrl.myPlots.length >= maxPlots) {
+      final maxPlots = (status!['maxPlotListings'] as num?)?.toInt() ?? 0;
+      if (activePlots >= maxPlots) {
         final planType = status['planType'] as String? ?? '';
         final plans = await _ctrl.getPlotPlans();
         final currentPlan =
@@ -69,7 +70,7 @@ class PlotPermissionService {
       final freePlan =
           plans.firstWhereOrNull((p) => (p['originalPrice'] as num? ?? 0) == 0);
       final limit = (freePlan?['plotLimit'] as num?)?.toInt() ?? 1;
-      if (_ctrl.myPlots.length >= limit) {
+      if (activePlots >= limit) {
         return hasUsedFree
             ? PlotShowUpgradeSheet()
             : PlotShowLimitDialog(maxPlots: limit, hasPlan: false);

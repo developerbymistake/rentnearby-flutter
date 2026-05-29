@@ -48,12 +48,14 @@ class ListingPermissionService {
     }
 
     final membership = await _ctrl.getMembershipStatus();
+    final activeRooms = (membership?['activeRooms'] as num?)?.toInt() ?? 0;
+
     if (membership != null && membership['hasMembership'] == true) {
       final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 0;
-      if (_ctrl.myListings.length >= maxRooms) {
+      if (activeRooms >= maxRooms) {
         final planType = membership['planType'] as String? ?? '';
         final plans = await _ctrl.getPlans();
-        final isFree = (plans[planType]?['price'] as num? ?? 0) == 0;
+        final isFree = (plans[planType]?['originalPrice'] as num? ?? 0) == 0;
         return isFree
             ? ListingShowUpgradeSheet()
             : ListingShowLimitDialog(maxRooms: maxRooms, hasPlan: true);
@@ -65,7 +67,7 @@ class ListingPermissionService {
           .toList()
           .firstWhereOrNull((p) => (p['originalPrice'] as num? ?? 0) == 0);
       final limit = (freePlan?['roomLimit'] as num?)?.toInt() ?? 1;
-      if (_ctrl.myListings.length >= limit) {
+      if (activeRooms >= limit) {
         return hasUsedFree
             ? ListingShowUpgradeSheet()
             : ListingShowLimitDialog(maxRooms: limit, hasPlan: false);
