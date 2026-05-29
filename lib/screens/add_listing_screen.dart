@@ -855,39 +855,42 @@ class _AddListingScreenState extends State<AddListingScreen> {
         title: 'Room Type *',
         child: Obx(() {
           final types = _ctrl.roomTypes;
-          return Row(
-            children: types.asMap().entries.map((entry) {
-              final rt = entry.value;
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 2.6,
+            ),
+            itemCount: types.length,
+            itemBuilder: (_, i) {
+              final rt = types[i];
               final active = _selectedRoomTypeId == rt.id;
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(left: entry.key == 0 ? 0 : 8),
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedRoomTypeId = rt.id),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: active ? AppColors.primary : Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                            color: active ? AppColors.primary : AppColors.divider,
-                            width: 1.5),
-                      ),
-                      child: Center(
-                        child: Text(rt.name,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: active ? Colors.white : AppColors.textMedium)),
-                      ),
-                    ),
+              return GestureDetector(
+                onTap: () => setState(() => _selectedRoomTypeId = rt.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    color: active ? AppColors.primary : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: active ? AppColors.primary : AppColors.divider,
+                        width: 1.5),
+                  ),
+                  child: Center(
+                    child: Text(rt.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: active ? Colors.white : AppColors.textMedium)),
                   ),
                 ),
               );
-            }).toList(),
+            },
           );
         }),
       ),
