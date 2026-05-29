@@ -58,7 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _shareApp() async {
     await SharePlus.instance.share(
       ShareParams(
-        text: '🏠 Bakhli — Find rooms near you!\n'
+        text: '🏠 Bakhli — Discover your new address!\n'
             'No brokers. No commission. Just homes.\n\n'
             'Download: https://google.com',
         subject: 'Check out Bakhli!',
