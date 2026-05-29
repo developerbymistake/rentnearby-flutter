@@ -57,7 +57,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
     if (StorageService.isLoggedIn) {
       Get.offAllNamed(AppRoutes.main);
     } else {
-      Get.offAllNamed(AppRoutes.otp);
+      Get.offAllNamed(AppRoutes.login);
     }
   }
 

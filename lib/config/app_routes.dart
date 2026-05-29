@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import '../screens/splash_screen.dart';
-import '../screens/otp_screen.dart';
+import '../screens/login_screen.dart';
+import '../screens/onboarding_screen.dart';
+import '../screens/phone_verify_screen.dart';
 import '../screens/main_screen.dart';
 import '../screens/listing_detail_screen.dart';
 import '../screens/add_listing_screen.dart';
@@ -10,6 +12,10 @@ import '../screens/plot_detail_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
+  static const String login = '/login';
+  static const String onboarding = '/onboarding';
+  static const String phoneVerify = '/phone-verify';
+  // keep /otp as alias for phone-verify (backward compat for any deep links)
   static const String otp = '/otp';
   static const String main = '/main';
   static const String listingDetail = '/listing-detail';
@@ -21,8 +27,26 @@ class AppRoutes {
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
     GetPage(
+      name: login,
+      page: () => const LoginScreen(),
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 400),
+    ),
+    GetPage(
+      name: onboarding,
+      page: () => const OnboardingScreen(),
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 400),
+    ),
+    GetPage(
+      name: phoneVerify,
+      page: () => const PhoneVerifyScreen(),
+      transition: Transition.downToUp,
+      transitionDuration: const Duration(milliseconds: 350),
+    ),
+    GetPage(
       name: otp,
-      page: () => const OtpScreen(),
+      page: () => const PhoneVerifyScreen(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 400),
     ),

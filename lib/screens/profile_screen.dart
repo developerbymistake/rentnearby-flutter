@@ -1,9 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:share_plus/share_plus.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
+import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../utils/app_toast.dart';
 import '../widgets/gradient_button.dart';
@@ -76,6 +78,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
     final ok = await _auth.updateProfile(name, isContactVisible: _isContactVisible);
+    FocusManager.instance.primaryFocus?.unfocus();
     if (ok && mounted) _showSuccess();
   }
 
@@ -158,26 +161,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Row(
                         children: [
                           Obx(() {
-                            final initials = _initials(_auth.user.value?.name);
-                            return Container(
-                              width: 80, height: 80,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.22),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.6), width: 2),
-                              ),
-                              child: Center(
-                                child: initials.isNotEmpty
-                                    ? Text(initials,
-                                        style: const TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontSize: 30,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white))
-                                    : const Icon(Iconsax.user5, size: 38, color: Colors.white),
-                              ),
-                            );
+                            final photoUrl = _auth.user.value?.profilePhotoUrl;
+                            if (photoUrl != null && photoUrl.isNotEmpty) {
+                              return Container(
+                                width: 80, height: 80,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 2),
+                                ),
+                                child: ClipOval(
+                                  child: CachedNetworkImage(
+                                    imageUrl: photoUrl,
+                                    width: 80, height: 80,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, __) => _avatarFallback(),
+                                    errorWidget: (_, __, ___) => _avatarFallback(),
+                                  ),
+                                ),
+                              );
+                            }
+                            return _avatarFallback();
                           }),
                           const SizedBox(width: 18),
                           Expanded(
@@ -198,11 +201,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 )),
                                 const SizedBox(height: 4),
                                 Obx(() => Text(
-                                  '+91 ${_auth.user.value?.phoneNumber ?? ''}',
+                                  _auth.user.value?.googleEmail ?? '',
                                   style: const TextStyle(
                                       fontFamily: 'Poppins',
-                                      fontSize: 15,
+                                      fontSize: 13,
                                       color: Colors.white70),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 )),
                               ],
                             ),
@@ -244,31 +249,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 20),
                 _buildField('Full Name', Iconsax.user, _nameCtrl),
                 const SizedBox(height: 20),
-                Row(children: [
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Contact visible to public',
-                          style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textMedium)),
-                      const SizedBox(height: 2),
-                      const Text('Show call & WhatsApp on your listings',
-                          style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 11,
-                              color: AppColors.textLight)),
-                    ]),
-                  ),
-                  Switch(
-                    value: _isContactVisible,
-                    onChanged: (v) => setState(() => _isContactVisible = v),
-                    activeThumbColor: AppColors.primary,
-                    activeTrackColor: AppColors.primaryLight,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ]),
+                Obx(() {
+                  final canToggle = _auth.user.value?.isPhoneVerified ?? false;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            const Text('Contact visible to public',
+                                style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.textMedium)),
+                            const SizedBox(height: 2),
+                            const Text('Show call & WhatsApp on your listings',
+                                style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 11,
+                                    color: AppColors.textLight)),
+                          ]),
+                        ),
+                        Switch(
+                          value: _isContactVisible,
+                          onChanged: canToggle ? (v) => setState(() => _isContactVisible = v) : null,
+                          activeThumbColor: AppColors.primary,
+                          activeTrackColor: AppColors.primaryLight,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ]),
+                      if (!canToggle) ...[
+                        const SizedBox(height: 4),
+                        const Text('Verify your number to control contact visibility',
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                      ],
+                    ],
+                  );
+                }),
                 const SizedBox(height: 24),
                 Obx(() => GradientButton(
                   onPressed: _auth.isLoading.value ? null : _save,
@@ -277,6 +295,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 )),
               ]),
             ),
+
+            // Mobile Number Card
+            _buildMobileNumberCard(),
 
             // Legal
             Padding(
@@ -373,6 +394,134 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  Widget _avatarFallback() {
+    final initials = _initials(_auth.user.value?.name);
+    return Container(
+      width: 80, height: 80,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.22),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 2),
+      ),
+      child: Center(
+        child: initials.isNotEmpty
+            ? Text(initials,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 30, fontWeight: FontWeight.w700, color: Colors.white))
+            : const Icon(Iconsax.user5, size: 38, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildMobileNumberCard() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Iconsax.call, color: AppColors.primaryLight, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Mobile Number',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                const SizedBox(height: 3),
+                // Phone number display — narrow Obx since user.phoneNumber can change on verify
+                Obx(() => Text(
+                  '+91 ${_auth.user.value?.phoneNumber ?? ''}',
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                )),
+                const SizedBox(height: 6),
+                // Verification badge — narrow Obx, only this badge rebuilds
+                Obx(() {
+                  final verified = _auth.user.value?.isPhoneVerified ?? false;
+                  return verified
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.verified_rounded, color: AppColors.success, size: 12),
+                          SizedBox(width: 4),
+                          Text('Verified', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.success)),
+                        ]),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 12),
+                          SizedBox(width: 4),
+                          Text('Not verified', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.warning)),
+                        ]),
+                      );
+                }),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Action button — narrow Obx, only button rebuilds
+          Obx(() {
+            final verified = _auth.user.value?.isPhoneVerified ?? false;
+            return verified
+              ? TextButton(
+                  onPressed: _openPhoneVerify,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textLight,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    minimumSize: Size.zero,
+                  ),
+                  child: const Text('Change',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textLight)),
+                )
+              : ElevatedButton(
+                  onPressed: _openPhoneVerify,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.warning,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    minimumSize: Size.zero,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Verify',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+                );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openPhoneVerify() async {
+    final result = await Get.toNamed(
+      AppRoutes.phoneVerify,
+      arguments: {'isChange': _auth.user.value?.isPhoneVerified ?? false},
+    );
+    if (result == true) {
+      await _auth.refreshProfile();
+      _resetForm();
+    }
   }
 
   Widget _buildField(String label, IconData icon, TextEditingController ctrl) {

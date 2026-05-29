@@ -77,11 +77,62 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
         AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
       case PlotNeedsName():
         _showNameDialog();
+      case PlotNeedsPhoneVerification():
+        _showPhoneVerificationRequired();
       case PlotShowLimitDialog():
         _showPlotLimitDialog(maxPlots: result.maxPlots, hasPlan: result.hasPlan);
       case PlotShowUpgradeSheet():
         _showPaidUpgradePlotSheet();
     }
+  }
+
+  void _showPhoneVerificationRequired() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
+          Container(
+            width: 60, height: 60,
+            decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.12), shape: BoxShape.circle),
+            child: const Icon(Icons.phone_android_rounded, color: AppColors.warning, size: 28),
+          ),
+          const SizedBox(height: 16),
+          const Text('Mobile verification required',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+          const SizedBox(height: 8),
+          const Text('You need to verify your mobile number before posting a plot.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5)),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _auth.tabIndex.value = 4;
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.warning,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(0, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              child: const Text('Go to Profile', style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 
   void _showNameDialog() {

@@ -1,6 +1,9 @@
 class UserModel {
   final String id;
+  final String googleEmail;
+  final String? profilePhotoUrl;
   final String phoneNumber;
+  final bool isPhoneVerified;
   final String? name;
   final bool hasUsedFreePlan;
   final bool hasUsedFreePlotPlan;
@@ -9,7 +12,10 @@ class UserModel {
 
   UserModel({
     required this.id,
+    required this.googleEmail,
+    this.profilePhotoUrl,
     required this.phoneNumber,
+    this.isPhoneVerified = false,
     this.name,
     required this.hasUsedFreePlan,
     this.hasUsedFreePlotPlan = false,
@@ -19,7 +25,10 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
         id: json['id'],
-        phoneNumber: json['phoneNumber'],
+        googleEmail: json['googleEmail'] ?? '',
+        profilePhotoUrl: json['profilePhotoUrl'],
+        phoneNumber: json['phoneNumber'] ?? '',
+        isPhoneVerified: json['isPhoneVerified'] ?? false,
         name: json['name'],
         hasUsedFreePlan: json['hasUsedFreePlan'] ?? false,
         hasUsedFreePlotPlan: json['hasUsedFreePlotPlan'] ?? false,
@@ -29,7 +38,10 @@ class UserModel {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'googleEmail': googleEmail,
+        'profilePhotoUrl': profilePhotoUrl,
         'phoneNumber': phoneNumber,
+        'isPhoneVerified': isPhoneVerified,
         'name': name,
         'hasUsedFreePlan': hasUsedFreePlan,
         'hasUsedFreePlotPlan': hasUsedFreePlotPlan,
@@ -37,5 +49,5 @@ class UserModel {
         'createdAt': createdAt.toIso8601String(),
       };
 
-  String get displayName => name ?? phoneNumber;
+  String get displayName => name?.trim().isNotEmpty == true ? name! : googleEmail;
 }

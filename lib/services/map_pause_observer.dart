@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import '../config/app_map_state.dart';
 
-const _pauseRoutes = {'/add-listing', '/add-plot'};
+const _pauseRoutes = {'/add-listing', '/add-plot', '/phone-verify', '/onboarding'};
 
 class MapPauseObserver extends NavigatorObserver {
   @override

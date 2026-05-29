@@ -19,6 +19,8 @@ class PlotShowLimitDialog extends PlotPermissionResult {
 
 class PlotShowUpgradeSheet extends PlotPermissionResult {}
 
+class PlotNeedsPhoneVerification extends PlotPermissionResult {}
+
 class PlotPermissionService {
   final PlotController _ctrl;
   final AuthController _auth;
@@ -31,6 +33,8 @@ class PlotPermissionService {
 
     final name = _auth.user.value?.name?.trim() ?? '';
     if (name.isEmpty) return PlotNeedsName();
+
+    if (_auth.user.value?.isPhoneVerified != true) return PlotNeedsPhoneVerification();
 
     final featureConfig = await _ctrl.getPlotPaymentFeatureConfig();
     final paymentEnabled = featureConfig['isEnabled'] as bool;

@@ -7,6 +7,8 @@ class AppConstants {
 
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
+  static const String googleWebClientId =
+      '577015347089-k0pslitl2gko23qr92bdu3e6as9gidth.apps.googleusercontent.com';
 
   static const double defaultRadius = 5.0; // km
   static const int maxPhotos = 5;

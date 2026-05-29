@@ -19,6 +19,8 @@ class ListingShowLimitDialog extends ListingPermissionResult {
 
 class ListingShowUpgradeSheet extends ListingPermissionResult {}
 
+class ListingNeedsPhoneVerification extends ListingPermissionResult {}
+
 class ListingPermissionService {
   final ListingController _ctrl;
   final AuthController _auth;
@@ -31,6 +33,8 @@ class ListingPermissionService {
 
     final name = _auth.user.value?.name?.trim() ?? '';
     if (name.isEmpty) return ListingNeedsName();
+
+    if (_auth.user.value?.isPhoneVerified != true) return ListingNeedsPhoneVerification();
 
     final featureConfig = await _ctrl.getPaymentFeatureConfig();
     final paymentEnabled = featureConfig['isEnabled'] as bool;

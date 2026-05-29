@@ -27,7 +27,7 @@ class ApiService {
         if (error.response?.statusCode == 401) {
           await StorageService.clearAll();
           AppToast.info('Session expired. Please log in again.');
-          Get.offAllNamed(AppRoutes.otp);
+          Get.offAllNamed(AppRoutes.login);
         }
         handler.next(error);
       },
