@@ -848,7 +848,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(title, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-      const SizedBox(height: 14),
+      const SizedBox(height: 10),
       child,
     ]),
   );
@@ -864,6 +864,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
               crossAxisSpacing: 10,
