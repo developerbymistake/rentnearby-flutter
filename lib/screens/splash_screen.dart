@@ -86,23 +86,33 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
           canPop: false,
           child: AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('Location Required',
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+            icon: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 36),
+            title: const Text('Location Access Required',
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
             content: const Text(
-                'Bakhli needs location access to show rooms near you. Please enable it in Settings.',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
+                'Bakhli is a location-based app that helps you discover rental rooms and plots near you. '
+                'Location access is essential for the app to function. '
+                'Please enable it to continue.',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, height: 1.5)),
             actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _waitingForSettings = true;
-                  Geolocator.openAppSettings();
-                },
-                child: const Text('Open Settings',
-                    style: TextStyle(
-                        fontFamily: 'Poppins',
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600)),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _waitingForSettings = true;
+                    Geolocator.openAppSettings();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Allow Location',
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 14)),
+                ),
               ),
             ],
           ),
@@ -111,32 +121,6 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
       return false;
     }
 
-    if (!mounted) return false;
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => PopScope(
-        canPop: false,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Location Required',
-              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          content: const Text(
-              'Bakhli needs your location to find rooms nearby. Please allow location access to continue.',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Allow',
-                  style: TextStyle(
-                      fontFamily: 'Poppins',
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600)),
-            ),
-          ],
-        ),
-      ),
-    );
     return false;
   }
 
