@@ -201,7 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 )),
                                 const SizedBox(height: 4),
                                 Obx(() => Text(
-                                  _auth.user.value?.googleEmail ?? '',
+                                  _auth.user.value?.email ?? '',
                                   style: const TextStyle(
                                       fontFamily: 'Poppins',
                                       fontSize: 13,

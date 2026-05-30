@@ -24,7 +24,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _agreed = false;
 
   late final String _idToken;
-  late final String _googleEmail;
+  late final String _email;
   late final String? _photoUrl;
 
   @override
@@ -32,7 +32,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.initState();
     final args = Get.arguments as Map<String, dynamic>;
     _idToken = args['idToken'] as String;
-    _googleEmail = args['email'] as String? ?? '';
+    _email = args['email'] as String? ?? '';
     _photoUrl = args['photoUrl'] as String?;
     _nameCtrl.text = args['name'] as String? ?? '';
   }
@@ -141,7 +141,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                             color: AppColors.textLight,
                                           )),
                                       const SizedBox(height: 2),
-                                      Text(_googleEmail,
+                                      Text(_email,
                                           style: const TextStyle(
                                             fontFamily: 'Poppins',
                                             fontSize: 13,
