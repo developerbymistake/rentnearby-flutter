@@ -226,7 +226,7 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
               const Text('Confirm your number',
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
               const SizedBox(height: 8),
-              const Text('We will send an OTP to',
+              const Text('We will send an OTP on WhatsApp to',
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
               const SizedBox(height: 12),
               Container(
@@ -234,6 +234,16 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
                 decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
                 child: Text('+91 $phone',
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.primary, letterSpacing: 1.5)),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/images/whatsapp_icon.png', width: 16, height: 16, errorBuilder: (_, __, ___) => const Icon(Icons.chat, color: Color(0xFF25D366), size: 16)),
+                  const SizedBox(width: 6),
+                  const Text('via WhatsApp',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF25D366), fontWeight: FontWeight.w600)),
+                ],
               ),
               const SizedBox(height: 24),
               Row(children: [
@@ -458,7 +468,7 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            _isChange ? 'Your old number will be replaced after verification' : 'You\'ll receive an OTP to verify',
+            _isChange ? 'Your old number will be replaced after verification' : 'You\'ll receive an OTP on WhatsApp',
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
           ),
           const SizedBox(height: 28),
@@ -508,6 +518,15 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
         const SizedBox(height: 6),
         Text('Sent to +91 ${_phoneCtrl.text}',
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            const Icon(Icons.chat_rounded, color: Color(0xFF25D366), size: 14),
+            const SizedBox(width: 4),
+            const Text('Check your WhatsApp for the OTP',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF25D366), fontWeight: FontWeight.w500)),
+          ],
+        ),
         if (_attempts > 0) ...[
           const SizedBox(height: 6),
           Text('${_maxAttempts - _attempts} attempt${_maxAttempts - _attempts == 1 ? '' : 's'} remaining',
