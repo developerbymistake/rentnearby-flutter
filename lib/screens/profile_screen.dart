@@ -483,30 +483,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // Action button — narrow Obx, only button rebuilds
           Obx(() {
             final verified = _auth.user.value?.isPhoneVerified ?? false;
-            return verified
-              ? TextButton(
-                  onPressed: _openPhoneVerify,
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.textLight,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    minimumSize: Size.zero,
-                  ),
-                  child: const Text('Change',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textLight)),
-                )
-              : ElevatedButton(
-                  onPressed: _openPhoneVerify,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.warning,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    minimumSize: Size.zero,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: const Text('Verify',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-                );
+            final changeLocked = _auth.user.value?.hasUsedPhoneChange ?? false;
+            if (!verified) {
+              return ElevatedButton(
+                onPressed: _openPhoneVerify,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.warning,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  minimumSize: Size.zero,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: const Text('Verify',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+              );
+            }
+            if (!changeLocked) {
+              return TextButton(
+                onPressed: _openPhoneVerify,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textLight,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  minimumSize: Size.zero,
+                ),
+                child: const Text('Change',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textLight)),
+              );
+            }
+            return const SizedBox.shrink();
           }),
         ],
       ),

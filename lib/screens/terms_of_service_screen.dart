@@ -82,7 +82,7 @@ class TermsOfServiceScreen extends StatelessWidget {
           ),
           _sectionBody(
             'Contact Us',
-            'If you have questions about these Terms of Service or wish to report a violation, please contact our Grievance Officer:\n\nName: Bakhli Team\nEmail: support@bakhli.in',
+            'If you have questions about these Terms of Service or wish to report a violation, please contact our Grievance Officer:\n\nName: Bakhli Team\nEmail: supportbakhli@gmail.com',
           ),
           const SizedBox(height: 32),
           Center(

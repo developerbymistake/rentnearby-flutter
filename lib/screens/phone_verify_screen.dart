@@ -24,7 +24,7 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
   int _attempts = 0;
   int _resends = 0;
   static const int _maxAttempts = 3;
-  static const int _maxResends = 2;
+  static const int _maxResends = 1;
 
   late PinTheme _defaultTheme;
   late PinTheme _focusedTheme;

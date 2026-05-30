@@ -4,6 +4,7 @@ class UserModel {
   final String? profilePhotoUrl;
   final String phoneNumber;
   final bool isPhoneVerified;
+  final bool hasUsedPhoneChange;
   final String? name;
   final bool hasUsedFreePlan;
   final bool hasUsedFreePlotPlan;
@@ -16,6 +17,7 @@ class UserModel {
     this.profilePhotoUrl,
     required this.phoneNumber,
     this.isPhoneVerified = false,
+    this.hasUsedPhoneChange = false,
     this.name,
     required this.hasUsedFreePlan,
     this.hasUsedFreePlotPlan = false,
@@ -29,6 +31,7 @@ class UserModel {
         profilePhotoUrl: json['profilePhotoUrl'],
         phoneNumber: json['phoneNumber'] ?? '',
         isPhoneVerified: json['isPhoneVerified'] ?? false,
+        hasUsedPhoneChange: json['hasUsedPhoneChange'] ?? false,
         name: json['name'],
         hasUsedFreePlan: json['hasUsedFreePlan'] ?? false,
         hasUsedFreePlotPlan: json['hasUsedFreePlotPlan'] ?? false,
@@ -42,6 +45,7 @@ class UserModel {
         'profilePhotoUrl': profilePhotoUrl,
         'phoneNumber': phoneNumber,
         'isPhoneVerified': isPhoneVerified,
+        'hasUsedPhoneChange': hasUsedPhoneChange,
         'name': name,
         'hasUsedFreePlan': hasUsedFreePlan,
         'hasUsedFreePlotPlan': hasUsedFreePlotPlan,

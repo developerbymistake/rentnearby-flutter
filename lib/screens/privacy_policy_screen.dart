@@ -58,7 +58,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
           ),
           _sectionBody(
             'Children\'s Privacy',
-            'Bakhli is intended for adults (18 years and older). We do not knowingly collect personal information from minors. If you believe a minor is using the platform, please contact us at support@bakhli.in and we will take appropriate action.',
+            'Bakhli is intended for adults (18 years and older). We do not knowingly collect personal information from minors. If you believe a minor is using the platform, please contact us at supportbakhli@gmail.com and we will take appropriate action.',
           ),
           _sectionBody(
             'Third-Party Services',
@@ -70,7 +70,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
           ),
           _sectionBody(
             'Contact Us',
-            'If you have any questions or concerns about this Privacy Policy, please contact our Grievance Officer:\n\nName: Bakhli Team\nEmail: support@bakhli.in',
+            'If you have any questions or concerns about this Privacy Policy, please contact our Grievance Officer:\n\nName: Bakhli Team\nEmail: supportbakhli@gmail.com',
           ),
           const SizedBox(height: 32),
           Center(
