@@ -71,6 +71,12 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
       if (_isGranted(permission)) return true;
     }
 
+    // If requestPermission() returned denied again, Android won't re-show
+    // the system dialog — treat as deniedForever and direct user to settings
+    if (permission == LocationPermission.denied) {
+      permission = LocationPermission.deniedForever;
+    }
+
     if (permission == LocationPermission.deniedForever) {
       if (!mounted) return false;
       await showDialog(
