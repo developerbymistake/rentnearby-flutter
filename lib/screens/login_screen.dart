@@ -167,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Container(
               width: 56, height: 56,
               decoration: const BoxDecoration(gradient: AppColors.primaryGradient, shape: BoxShape.circle),
-              child: const Icon(Icons.whatsapp_rounded, color: Colors.white, size: 30),
+              child: const Icon(Icons.chat_rounded, color: Colors.white, size: 30),
             ),
             const SizedBox(height: 16),
             const Text('Confirm your number', style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
