@@ -209,13 +209,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                       child: Divider(height: 1, color: AppColors.divider),
                     ),
                   ],
-                  if (l.ownerEmail != null && l.ownerEmail!.isNotEmpty) ...[
-                    _infoRow(Icons.email_outlined, 'Email', l.ownerEmail!),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Divider(height: 1, color: AppColors.divider),
-                    ),
-                  ],
                   // Location row (city + district combined)
                   if (_locationStr(l).isNotEmpty)
                     _infoRow(Iconsax.location, 'Location', _locationStr(l)),

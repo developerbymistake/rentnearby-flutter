@@ -1,8 +1,5 @@
 class UserModel {
   final String id;
-  final String email;
-  final String authProvider;
-  final String? profilePhotoUrl;
   final String phoneNumber;
   final bool isPhoneVerified;
   final bool hasUsedPhoneChange;
@@ -14,9 +11,6 @@ class UserModel {
 
   UserModel({
     required this.id,
-    required this.email,
-    this.authProvider = 'Google',
-    this.profilePhotoUrl,
     required this.phoneNumber,
     this.isPhoneVerified = false,
     this.hasUsedPhoneChange = false,
@@ -29,9 +23,6 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
         id: json['id'],
-        email: json['email'] ?? '',
-        authProvider: json['authProvider'] ?? 'Google',
-        profilePhotoUrl: json['profilePhotoUrl'],
         phoneNumber: json['phoneNumber'] ?? '',
         isPhoneVerified: json['isPhoneVerified'] ?? false,
         hasUsedPhoneChange: json['hasUsedPhoneChange'] ?? false,
@@ -44,9 +35,6 @@ class UserModel {
 
   Map<String, dynamic> toJson() => {
         'id': id,
-        'email': email,
-        'authProvider': authProvider,
-        'profilePhotoUrl': profilePhotoUrl,
         'phoneNumber': phoneNumber,
         'isPhoneVerified': isPhoneVerified,
         'hasUsedPhoneChange': hasUsedPhoneChange,
@@ -57,5 +45,5 @@ class UserModel {
         'createdAt': createdAt.toIso8601String(),
       };
 
-  String get displayName => name?.trim().isNotEmpty == true ? name! : email;
+  String get displayName => name?.trim().isNotEmpty == true ? name! : '+91 $phoneNumber';
 }

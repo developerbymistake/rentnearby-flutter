@@ -18,8 +18,6 @@ class PlotShowLimitDialog extends PlotPermissionResult {
 
 class PlotShowUpgradeSheet extends PlotPermissionResult {}
 
-class PlotNeedsPhoneVerification extends PlotPermissionResult {}
-
 class PlotPermissionService {
   final PlotController _ctrl;
   final AuthController _auth;
@@ -29,8 +27,6 @@ class PlotPermissionService {
 
   Future<PlotPermissionResult> check() async {
     if (_location.selectedDistrict.value == null) return PlotNeedsDistrict();
-
-    if (_auth.user.value?.isPhoneVerified != true) return PlotNeedsPhoneVerification();
 
     final _features      = Get.find<AppFeatureController>();
     final paymentEnabled = _features.isPlotPaymentEnabled.value;

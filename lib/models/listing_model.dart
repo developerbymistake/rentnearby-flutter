@@ -17,7 +17,6 @@ class ListingModel {
   final bool isActive;
   final String? ownerName;
   final String? ownerPhone;
-  final String? ownerEmail;
   final List<String> photos;
   final DateTime createdAt;
   final DateTime? validUntil;
@@ -39,7 +38,6 @@ class ListingModel {
     required this.isActive,
     this.ownerName,
     this.ownerPhone,
-    this.ownerEmail,
     required this.photos,
     required this.createdAt,
     this.validUntil,
@@ -62,7 +60,6 @@ class ListingModel {
         isActive: json['isActive'] ?? true,
         ownerName: json['ownerName'],
         ownerPhone: json['ownerPhone'],
-        ownerEmail: json['ownerEmail'],
         photos: (json['photos'] as List? ?? [])
             .map((p) => p.toString().startsWith('http') ? p.toString() : '${AppConstants.serverUrl}$p')
             .toList(),

@@ -213,13 +213,6 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                       child: Divider(height: 1, color: AppColors.divider),
                     ),
                   ],
-                  if (p.ownerEmail != null && p.ownerEmail!.isNotEmpty) ...[
-                    _infoRow(Icons.email_outlined, 'Email', p.ownerEmail!),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Divider(height: 1, color: AppColors.divider),
-                    ),
-                  ],
                   if (_locationStr(p).isNotEmpty)
                     _infoRow(Iconsax.location, 'Location', _locationStr(p)),
                   if (p.address != null && p.address!.isNotEmpty) ...[

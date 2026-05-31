@@ -1,11 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 import '../repositories/user_repository.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
-import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../utils/app_toast.dart';
 import 'listing_controller.dart';
@@ -16,66 +14,57 @@ class AuthController extends GetxController {
   final tabIndex = 0.obs;
   final profileTabTrigger = 0.obs;
 
-  final _googleSignIn = GoogleSignIn(
-    serverClientId: AppConstants.googleWebClientId,
-    scopes: ['email', 'profile', 'openid'],
-  );
-
   @override
   void onInit() {
     super.onInit();
     user.value = StorageService.getUser();
   }
 
-  // ── Google Sign-In ────────────────────────────────────────────────────────
+  // ── Phone Login ───────────────────────────────────────────────────────────
 
-  Future<void> signInWithGoogle() async {
+  Future<bool> sendLoginOtp(String phone) async {
     try {
       isLoading.value = true;
-      final account = await _googleSignIn.signIn();
-      if (account == null) return; // User cancelled
-
-      final auth = await account.authentication;
-      final idToken = auth.idToken;
-      if (idToken == null) {
-        AppToast.error('Could not get Google token. Please try again.');
-        return;
-      }
-
-      final res = await ApiService.post('/auth/google', {'idToken': idToken});
-      final data = res['data'] as Map<String, dynamic>;
-      final needsOnboarding = data['needsOnboarding'] as bool? ?? false;
-
-      if (needsOnboarding) {
-        final profile = data['googleProfile'] as Map<String, dynamic>;
-        Get.offAllNamed(AppRoutes.onboarding, arguments: {
-          'idToken': idToken,
-          'name': profile['name'] ?? '',
-          'email': profile['email'] ?? '',
-          'photoUrl': profile['photoUrl'],
-        });
-      } else {
-        await _saveSession(data);
-        Get.offAllNamed(AppRoutes.main);
-      }
+      await ApiService.post('/auth/phone/send-otp', {'phoneNumber': phone});
+      return true;
     } catch (e) {
-      AppToast.error(_dioMessage(e, 'Sign in failed. Please try again.'));
+      AppToast.error(_otpSendError(e));
+      return false;
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<void> completeOnboarding({
-    required String idToken,
+  /// Returns null on success (login), 'onboarding' if new user, error string on failure.
+  Future<String?> verifyLoginOtp(String phone, String otp) async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.post('/auth/phone/verify-otp', {
+        'phoneNumber': phone,
+        'otp': otp,
+      });
+      final data = res['data'] as Map<String, dynamic>;
+      final needsOnboarding = data['needsOnboarding'] as bool? ?? false;
+      if (needsOnboarding) return 'onboarding';
+      await _saveSession(data);
+      Get.offAllNamed(AppRoutes.main);
+      return null;
+    } catch (e) {
+      return _otpVerifyError(e);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> completePhoneOnboarding({
+    required String phone,
     required String name,
-    required String phoneNumber,
   }) async {
     try {
       isLoading.value = true;
-      final res = await ApiService.post('/auth/complete-onboarding', {
-        'idToken': idToken,
+      final res = await ApiService.post('/auth/phone/complete-onboarding', {
+        'phoneNumber': phone,
         'name': name,
-        'phoneNumber': phoneNumber,
       });
       await _saveSession(res['data'] as Map<String, dynamic>);
       Get.offAllNamed(AppRoutes.main);
@@ -86,7 +75,7 @@ class AuthController extends GetxController {
     }
   }
 
-  // ── Phone Verification ────────────────────────────────────────────────────
+  // ── Phone Verification (profile — change number) ──────────────────────────
 
   /// Returns null on success, error string on failure (409 = phone claimed).
   Future<String?> sendPhoneOtp(String phone) async {
@@ -95,9 +84,7 @@ class AuthController extends GetxController {
       await ApiService.post('/auth/send-otp', {'phoneNumber': phone});
       return null;
     } catch (e) {
-      if (e is DioException && e.response?.statusCode == 409) {
-        return 'phone_claimed';
-      }
+      if (e is DioException && e.response?.statusCode == 409) return 'phone_claimed';
       return _dioMessage(e, 'Could not send OTP. Please try again.');
     } finally {
       isLoading.value = false;
@@ -120,7 +107,7 @@ class AuthController extends GetxController {
       if (e is DioException && e.response?.statusCode == 409) {
         AppToast.warning('This number is already verified by another account.');
       } else {
-        AppToast.error(_otpVerifyError(e));
+        AppToast.error(_otpVerifyError(e) ?? 'Invalid or expired OTP.');
       }
       return false;
     } finally {
@@ -144,7 +131,6 @@ class AuthController extends GetxController {
     try {
       await ApiService.post('/auth/logout', {});
     } catch (_) {}
-    await _googleSignIn.signOut().catchError((_) => null);
     await StorageService.clearAll();
     user.value = null;
     Get.find<ListingController>().clearData();
@@ -155,7 +141,6 @@ class AuthController extends GetxController {
     try {
       isLoading.value = true;
       await ApiService.delete('/account');
-      await _googleSignIn.signOut().catchError((_) => null);
       await StorageService.clearAll();
       user.value = null;
       Get.find<ListingController>().clearData();
@@ -210,7 +195,22 @@ class AuthController extends GetxController {
     return '$hours hour${hours == 1 ? '' : 's'} $mins minute${mins == 1 ? '' : 's'}';
   }
 
-  static String _otpVerifyError(dynamic e) {
+  static String _otpSendError(dynamic e) {
+    if (e is DioException) {
+      final status = e.response?.statusCode;
+      if (status == 429) return 'OTP limit reached. Try again in ${_retryAfter(e)}.';
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        return 'No internet connection. Please check your network.';
+      }
+      final message = e.response?.data?['error']?['message'] as String?;
+      return message ?? 'Failed to send OTP. Please try again.';
+    }
+    return 'Failed to send OTP. Please try again.';
+  }
+
+  static String? _otpVerifyError(dynamic e) {
     if (e is DioException) {
       final status = e.response?.statusCode;
       if (status == 429) return 'Too many attempts. Try again in ${_retryAfter(e)}.';

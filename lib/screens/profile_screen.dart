@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -160,28 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 30, 60, 34),
                       child: Row(
                         children: [
-                          Obx(() {
-                            final photoUrl = _auth.user.value?.profilePhotoUrl;
-                            if (photoUrl != null && photoUrl.isNotEmpty) {
-                              return Container(
-                                width: 80, height: 80,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 2),
-                                ),
-                                child: ClipOval(
-                                  child: CachedNetworkImage(
-                                    imageUrl: photoUrl,
-                                    width: 80, height: 80,
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, __) => _avatarFallback(),
-                                    errorWidget: (_, __, ___) => _avatarFallback(),
-                                  ),
-                                ),
-                              );
-                            }
-                            return _avatarFallback();
-                          }),
+                          _avatarFallback(),
                           const SizedBox(width: 18),
                           Expanded(
                             child: Column(
@@ -201,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 )),
                                 const SizedBox(height: 4),
                                 Obx(() => Text(
-                                  _auth.user.value?.email ?? '',
+                                  '+91 ${_auth.user.value?.phoneNumber ?? ''}',
                                   style: const TextStyle(
                                       fontFamily: 'Poppins',
                                       fontSize: 13,
@@ -249,44 +227,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 20),
                 _buildField('Full Name', Iconsax.user, _nameCtrl),
                 const SizedBox(height: 20),
-                Obx(() {
-                  final canToggle = _auth.user.value?.isPhoneVerified ?? false;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Expanded(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            const Text('Contact visible to public',
-                                style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppColors.textMedium)),
-                            const SizedBox(height: 2),
-                            const Text('Show call & WhatsApp on your listings',
-                                style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 11,
-                                    color: AppColors.textLight)),
-                          ]),
-                        ),
-                        Switch(
-                          value: _isContactVisible,
-                          onChanged: canToggle ? (v) => setState(() => _isContactVisible = v) : null,
-                          activeThumbColor: AppColors.primary,
-                          activeTrackColor: AppColors.primaryLight,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ]),
-                      if (!canToggle) ...[
-                        const SizedBox(height: 4),
-                        const Text('Verify your number to control contact visibility',
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                      ],
-                    ],
-                  );
-                }),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          const Text('Contact visible to public',
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+                          const SizedBox(height: 2),
+                          const Text('Show call & WhatsApp on your listings',
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                        ]),
+                      ),
+                      Switch(
+                        value: _isContactVisible,
+                        onChanged: (v) => setState(() => _isContactVisible = v),
+                        activeThumbColor: AppColors.primary,
+                        activeTrackColor: AppColors.primaryLight,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ]),
+                  ],
+                ),
                 const SizedBox(height: 24),
                 Obx(() => GradientButton(
                   onPressed: _auth.isLoading.value ? null : _save,
@@ -480,25 +443,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          // Action button — narrow Obx, only button rebuilds
+          // Change number button — only if not locked
           Obx(() {
-            final verified = _auth.user.value?.isPhoneVerified ?? false;
             final changeLocked = _auth.user.value?.hasUsedPhoneChange ?? false;
-            if (!verified) {
-              return ElevatedButton(
-                onPressed: _openPhoneVerify,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.warning,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  minimumSize: Size.zero,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: const Text('Verify',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-              );
-            }
             if (!changeLocked) {
               return TextButton(
                 onPressed: _openPhoneVerify,

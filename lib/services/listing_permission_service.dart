@@ -18,8 +18,6 @@ class ListingShowLimitDialog extends ListingPermissionResult {
 
 class ListingShowUpgradeSheet extends ListingPermissionResult {}
 
-class ListingNeedsPhoneVerification extends ListingPermissionResult {}
-
 class ListingPermissionService {
   final ListingController _ctrl;
   final AuthController _auth;
@@ -29,8 +27,6 @@ class ListingPermissionService {
 
   Future<ListingPermissionResult> check() async {
     if (_location.selectedDistrict.value == null) return ListingNeedsDistrict();
-
-    if (_auth.user.value?.isPhoneVerified != true) return ListingNeedsPhoneVerification();
 
     final _features      = Get.find<AppFeatureController>();
     final paymentEnabled = _features.isRoomPaymentEnabled.value;
