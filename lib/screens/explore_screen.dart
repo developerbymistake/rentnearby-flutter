@@ -9,6 +9,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
+import '../controllers/app_feature_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../config/app_map_state.dart';
 import '../controllers/listing_controller.dart';
@@ -198,6 +199,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     if (state == AppLifecycleState.resumed) {
       _checkPermissionOnResume();
       _locationCtrl.refreshOnResume();
+      Get.find<AppFeatureController>().refresh();
       if (!_listingCtrl.isLoading.value && _radarController.isAnimating) {
         _radarController.stop();
         _radarController.reset();

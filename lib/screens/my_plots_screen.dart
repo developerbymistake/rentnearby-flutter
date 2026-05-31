@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
+import '../controllers/app_feature_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
@@ -28,6 +29,8 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   final _auth = Get.find<AuthController>();
   final _scrollCtrl = ScrollController();
   Worker? _tabWorker;
+  bool _isAddingPlot = false;
+  String? _goLiveLoadingId;
   late final _permissionService = PlotPermissionService(
     _ctrl,
     _auth,
@@ -39,8 +42,16 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
     super.initState();
     _ctrl.loadMyPlots(reset: true);
     _scrollCtrl.addListener(_onScroll);
-    _tabWorker = ever(_auth.tabIndex, (int idx) {
-      if (idx == 3 && !_ctrl.isLoading.value) _refresh();
+    _tabWorker = ever(_auth.tabIndex, (int idx) async {
+      if (idx == 3 && !_ctrl.isLoading.value) {
+        _refresh();
+        _ctrl.isPlotMembershipLoading.value = true;
+        try {
+          await _ctrl.getPlotMembershipStatus();
+        } finally {
+          _ctrl.isPlotMembershipLoading.value = false;
+        }
+      }
     });
   }
 
@@ -61,28 +72,28 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   Future<void> _refresh() => _ctrl.loadMyPlots(reset: true);
 
   void _onAddPlot() async {
-    PlotPermissionResult result;
+    if (_isAddingPlot) return;
+    setState(() => _isAddingPlot = true);
     try {
-      result = await _permissionService.check();
+      final result = await _permissionService.check();
+      if (!mounted) return;
+      switch (result) {
+        case PlotAllowed():
+          Get.toNamed(AppRoutes.addPlot);
+        case PlotNeedsDistrict():
+          AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+        case PlotNeedsPhoneVerification():
+          _showPhoneVerificationRequired();
+        case PlotShowLimitDialog():
+          _showPlotLimitDialog(maxPlots: result.maxPlots, hasPlan: result.hasPlan);
+        case PlotShowUpgradeSheet():
+          _showPaidUpgradePlotSheet();
+      }
     } catch (_) {
       AppToast.info('Adding plot...');
       Get.toNamed(AppRoutes.addPlot);
-      return;
-    }
-    if (!mounted) return;
-    switch (result) {
-      case PlotAllowed():
-        Get.toNamed(AppRoutes.addPlot);
-      case PlotNeedsDistrict():
-        AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
-      case PlotNeedsName():
-        _showNameDialog();
-      case PlotNeedsPhoneVerification():
-        _showPhoneVerificationRequired();
-      case PlotShowLimitDialog():
-        _showPlotLimitDialog(maxPlots: result.maxPlots, hasPlan: result.hasPlan);
-      case PlotShowUpgradeSheet():
-        _showPaidUpgradePlotSheet();
+    } finally {
+      if (mounted) setState(() => _isAddingPlot = false);
     }
   }
 
@@ -135,86 +146,19 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
     );
   }
 
-  void _showNameDialog() {
-    final nameCtrl = TextEditingController();
-    bool saving = false;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => StatefulBuilder(builder: (ctx, setDialogState) {
-        Future<void> save() async {
-          final name = nameCtrl.text.trim();
-          if (name.isEmpty) { AppToast.error('Please enter your name.'); return; }
-          setDialogState(() => saving = true);
-          final ok = await _auth.updateProfile(name);
-          if (ok) {
-            if (ctx.mounted) { Navigator.pop(ctx); Get.toNamed(AppRoutes.addPlot); }
-          } else {
-            setDialogState(() => saving = false);
-          }
-        }
-
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Enter Your Name',
-              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Your name is shown to interested buyers. Please add it before listing.',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium)),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameCtrl,
-                textCapitalization: TextCapitalization.words,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'Full name',
-                  hintStyle: const TextStyle(fontFamily: 'Poppins', color: AppColors.textHint),
-                  prefixIcon: const Icon(Icons.person_rounded, color: _kBrown, size: 20),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.divider)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _kBrown, width: 1.5)),
-                ),
-                onSubmitted: (_) => save(),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: saving ? null : () { nameCtrl.dispose(); Navigator.pop(ctx); },
-              child: const Text('Later', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kBrown,
-                foregroundColor: Colors.white,
-                minimumSize: Size.zero,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: saving ? null : save,
-              child: saving
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Save', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-            ),
-          ],
-        );
-      }),
-    );
-  }
-
   void _showPaymentDialog(String plotId) async {
-    final paymentEnabled = await _ctrl.isPlotPaymentFeatureEnabled();
+    setState(() => _goLiveLoadingId = plotId);
+    try {
+    final paymentEnabled = Get.find<AppFeatureController>().isPlotPaymentEnabled.value;
     if (!paymentEnabled) {
+      setState(() => _goLiveLoadingId = null);
       await _ctrl.toggleActive(plotId, false);
       AppToast.success('Plot is now LIVE!');
       return;
     }
 
     final membership = await _ctrl.getPlotMembershipStatus();
+    if (mounted) setState(() => _goLiveLoadingId = null);
     final hasMembership = membership != null && (membership['hasMembership'] == true);
     final canActivate = (membership ?? {})['canActivate'] as bool? ?? false;
 
@@ -269,6 +213,9 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
       'plan': selectedPlan,
     });
     _ctrl.loadMyPlots(reset: true);
+    } finally {
+      if (mounted) setState(() => _goLiveLoadingId = null);
+    }
   }
 
   void _showPaidUpgradePlotSheet({String plotId = ''}) async {
@@ -600,8 +547,12 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Obx(() => AppLoadingOverlay(
-        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value,
-        message: _ctrl.isTogglingActive.value ? 'Updating...' : 'Deleting...',
+        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value || _ctrl.isPlotMembershipLoading.value,
+        message: _ctrl.isPlotMembershipLoading.value
+            ? 'Loading...'
+            : _ctrl.isTogglingActive.value
+                ? 'Updating...'
+                : 'Deleting...',
         indicatorColor: _kBrown,
         child: Column(
         children: [
@@ -636,6 +587,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                         onToggleActive: () => _ctrl.toggleActive(plots[i].id, plots[i].isActive),
                         onGoLive: () => _showPaymentDialog(plots[i].id),
                         onDelete: () => _confirmDelete(plots[i].id),
+                        isGoLiveLoading: _goLiveLoadingId == plots[i].id,
                       ),
                     );
                   },
@@ -672,7 +624,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                 ]),
                 const Spacer(),
                 GestureDetector(
-                  onTap: _onAddPlot,
+                  onTap: _isAddingPlot ? null : _onAddPlot,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
@@ -680,15 +632,21 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2))],
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.add_rounded, size: 16, color: _kBrown),
-                        SizedBox(width: 4),
-                        Text('Add Plot',
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _kBrown)),
-                      ],
-                    ),
+                    child: _isAddingPlot
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: _kBrown),
+                          )
+                        : const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.add_rounded, size: 16, color: _kBrown),
+                              SizedBox(width: 4),
+                              Text('Add Plot',
+                                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _kBrown)),
+                            ],
+                          ),
                   ),
                 ),
               ],
@@ -893,12 +851,14 @@ class _PlotCard extends StatelessWidget {
   final VoidCallback onToggleActive;
   final VoidCallback onGoLive;
   final VoidCallback onDelete;
+  final bool isGoLiveLoading;
 
   const _PlotCard({
     required this.plot,
     required this.onToggleActive,
     required this.onGoLive,
     required this.onDelete,
+    this.isGoLiveLoading = false,
   });
 
   Color _typeColor(String type) => switch (type) {
@@ -1030,7 +990,7 @@ class _PlotCard extends StatelessWidget {
                     ] else ...[
                       // Inactive: show "Make it Live" button
                       GestureDetector(
-                        onTap: onGoLive,
+                        onTap: isGoLiveLoading ? null : onGoLive,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
@@ -1038,19 +998,26 @@ class _PlotCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
                           ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.rocket_launch_rounded, size: 14, color: Color(0xFF10B981)),
-                              SizedBox(width: 4),
-                              Text('Make it Live',
-                                  style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF10B981))),
-                            ],
-                          ),
+                          child: isGoLiveLoading
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Color(0xFF10B981)),
+                                )
+                              : const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.rocket_launch_rounded, size: 14, color: Color(0xFF10B981)),
+                                    SizedBox(width: 4),
+                                    Text('Make it Live',
+                                        style: TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF10B981))),
+                                  ],
+                                ),
                         ),
                       ),
                     ],

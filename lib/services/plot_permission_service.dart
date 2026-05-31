@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../controllers/app_feature_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
@@ -8,8 +9,6 @@ sealed class PlotPermissionResult {}
 class PlotAllowed extends PlotPermissionResult {}
 
 class PlotNeedsDistrict extends PlotPermissionResult {}
-
-class PlotNeedsName extends PlotPermissionResult {}
 
 class PlotShowLimitDialog extends PlotPermissionResult {
   final int maxPlots;
@@ -31,14 +30,11 @@ class PlotPermissionService {
   Future<PlotPermissionResult> check() async {
     if (_location.selectedDistrict.value == null) return PlotNeedsDistrict();
 
-    final name = _auth.user.value?.name?.trim() ?? '';
-    if (name.isEmpty) return PlotNeedsName();
-
     if (_auth.user.value?.isPhoneVerified != true) return PlotNeedsPhoneVerification();
 
-    final featureConfig = await _ctrl.getPlotPaymentFeatureConfig();
-    final paymentEnabled = featureConfig['isEnabled'] as bool;
-    final freeLimit = featureConfig['freeLimit'] as int;
+    final _features      = Get.find<AppFeatureController>();
+    final paymentEnabled = _features.isPlotPaymentEnabled.value;
+    final freeLimit      = _features.plotPaymentFreeLimit.value;
 
     if (!paymentEnabled) {
       if (_ctrl.myPlots.length >= freeLimit) {

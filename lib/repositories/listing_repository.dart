@@ -1,9 +1,6 @@
 import '../services/api_service.dart';
 
 class ListingRepository {
-  Map<String, dynamic>? _featureConfigCache;
-  DateTime? _featureConfigCacheTime;
-
   Map<String, Map<String, dynamic>>? _plansCache;
   DateTime? _plansCacheTime;
 
@@ -15,27 +12,6 @@ class ListingRepository {
 
   bool _isValid(DateTime? time, Duration ttl) =>
       time != null && DateTime.now().difference(time) < ttl;
-
-  Future<Map<String, dynamic>> getPaymentFeatureConfig() async {
-    if (_featureConfigCache != null &&
-        _isValid(_featureConfigCacheTime, _longTtl)) {
-      return _featureConfigCache!;
-    }
-    try {
-      final res = await ApiService.get('/admin/features/room_payment');
-      final data = res['data'];
-      if (data != null && data is Map<String, dynamic>) {
-        _featureConfigCache = {
-          'isEnabled': data['isEnabled'] == true,
-          'freeLimit': (data['freeLimit'] as num?)?.toInt() ?? 1,
-          'freeDays': (data['freeDays'] as num?)?.toInt() ?? 2,
-        };
-        _featureConfigCacheTime = DateTime.now();
-        return _featureConfigCache!;
-      }
-    } catch (_) {}
-    return {'isEnabled': false, 'freeLimit': 1, 'freeDays': 2};
-  }
 
   Future<Map<String, Map<String, dynamic>>> getPlans() async {
     if (_plansCache != null && _isValid(_plansCacheTime, _longTtl)) {
@@ -78,8 +54,6 @@ class ListingRepository {
   }
 
   void invalidateAll() {
-    _featureConfigCache = null;
-    _featureConfigCacheTime = null;
     _plansCache = null;
     _plansCacheTime = null;
     _membershipCache = null;

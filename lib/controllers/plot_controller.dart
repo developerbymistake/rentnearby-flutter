@@ -18,6 +18,7 @@ class PlotController extends GetxController {
   final plotPostedTrigger = 0.obs;
   final exploreRefreshTrigger = 0.obs;
   final filterResetTrigger = 0.obs;
+  final isPlotMembershipLoading = false.obs;
   int _myPlotsPage = 1;
 
   @override
@@ -136,14 +137,6 @@ class PlotController extends GetxController {
     } finally {
       isUploading.value = false;
     }
-  }
-
-  Future<Map<String, dynamic>> getPlotPaymentFeatureConfig() =>
-      Get.find<PlotRepository>().getPlotPaymentFeatureConfig();
-
-  Future<bool> isPlotPaymentFeatureEnabled() async {
-    final config = await getPlotPaymentFeatureConfig();
-    return config['isEnabled'] as bool;
   }
 
   Future<List<Map<String, dynamic>>> getPlotPlans() =>

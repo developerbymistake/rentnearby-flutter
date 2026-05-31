@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../controllers/app_feature_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
@@ -8,8 +9,6 @@ sealed class ListingPermissionResult {}
 class ListingAllowed extends ListingPermissionResult {}
 
 class ListingNeedsDistrict extends ListingPermissionResult {}
-
-class ListingNeedsName extends ListingPermissionResult {}
 
 class ListingShowLimitDialog extends ListingPermissionResult {
   final int maxRooms;
@@ -31,14 +30,11 @@ class ListingPermissionService {
   Future<ListingPermissionResult> check() async {
     if (_location.selectedDistrict.value == null) return ListingNeedsDistrict();
 
-    final name = _auth.user.value?.name?.trim() ?? '';
-    if (name.isEmpty) return ListingNeedsName();
-
     if (_auth.user.value?.isPhoneVerified != true) return ListingNeedsPhoneVerification();
 
-    final featureConfig = await _ctrl.getPaymentFeatureConfig();
-    final paymentEnabled = featureConfig['isEnabled'] as bool;
-    final freeLimit = featureConfig['freeLimit'] as int;
+    final _features      = Get.find<AppFeatureController>();
+    final paymentEnabled = _features.isRoomPaymentEnabled.value;
+    final freeLimit      = _features.roomPaymentFreeLimit.value;
 
     if (!paymentEnabled) {
       if (_ctrl.myListings.length >= freeLimit) {

@@ -10,6 +10,7 @@ class ListingCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onToggleActive;
   final VoidCallback? onGoLive;
+  final bool isGoLiveLoading;
 
   const ListingCard({
     super.key,
@@ -18,6 +19,7 @@ class ListingCard extends StatelessWidget {
     this.onDelete,
     this.onToggleActive,
     this.onGoLive,
+    this.isGoLiveLoading = false,
   });
 
   @override
@@ -281,7 +283,7 @@ class ListingCard extends StatelessWidget {
 
   Widget _makeItLiveButton() {
     return GestureDetector(
-      onTap: onGoLive,
+      onTap: isGoLiveLoading ? null : onGoLive,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
@@ -297,23 +299,29 @@ class ListingCard extends StatelessWidget {
             ),
           ],
         ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.rocket_launch_rounded, size: 14, color: Colors.white),
-            SizedBox(width: 6),
-            Text(
-              'Make it Live',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                letterSpacing: 0.3,
+        child: isGoLiveLoading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.rocket_launch_rounded, size: 14, color: Colors.white),
+                  SizedBox(width: 6),
+                  Text(
+                    'Make it Live',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

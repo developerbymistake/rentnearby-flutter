@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
+import '../controllers/app_feature_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
@@ -26,6 +27,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   final _scrollCtrl = ScrollController();
   Worker? _tabWorker;
   int _page = 1;
+  bool _isAddingRoom = false;
+  String? _goLiveLoadingId;
   late final _permissionService = ListingPermissionService(
     _ctrl,
     _auth,
@@ -37,8 +40,16 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     super.initState();
     _ctrl.loadMyListings(page: 1);
     _scrollCtrl.addListener(_onScroll);
-    _tabWorker = ever(_auth.tabIndex, (int idx) {
-      if (idx == 1 && !_ctrl.isLoading.value) _refresh();
+    _tabWorker = ever(_auth.tabIndex, (int idx) async {
+      if (idx == 1 && !_ctrl.isLoading.value) {
+        _refresh();
+        _ctrl.isMembershipLoading.value = true;
+        try {
+          await _ctrl.getMembershipStatus();
+        } finally {
+          _ctrl.isMembershipLoading.value = false;
+        }
+      }
     });
   }
 
@@ -68,8 +79,12 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Obx(() => AppLoadingOverlay(
-        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value,
-        message: _ctrl.isTogglingActive.value ? 'Updating...' : 'Deleting...',
+        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value || _ctrl.isMembershipLoading.value,
+        message: _ctrl.isMembershipLoading.value
+            ? 'Loading...'
+            : _ctrl.isTogglingActive.value
+                ? 'Updating...'
+                : 'Deleting...',
         child: Column(
         children: [
           Container(
@@ -93,7 +108,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                     ]),
                     const Spacer(),
                     GestureDetector(
-                      onTap: _onAddRoom,
+                      onTap: _isAddingRoom ? null : _onAddRoom,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
@@ -107,19 +122,26 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                             ),
                           ],
                         ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
-                            SizedBox(width: 4),
-                            Text('Add Room',
-                                style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primary)),
-                          ],
-                        ),
+                        child: _isAddingRoom
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: AppColors.primary),
+                              )
+                            : const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
+                                  SizedBox(width: 4),
+                                  Text('Add Room',
+                                      style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primary)),
+                                ],
+                              ),
                       ),
                     ),
                   ],
@@ -162,6 +184,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                             _ctrl.toggleActive(listings[i].id, listings[i].isActive),
                         onDelete: () => _confirmDelete(listings[i].id),
                         onGoLive: () => _showPaymentDialog(listings[i].id),
+                        isGoLiveLoading: _goLiveLoadingId == listings[i].id,
                       ),
                     );
                   },
@@ -176,28 +199,28 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   }
 
   void _onAddRoom() async {
-    ListingPermissionResult result;
+    if (_isAddingRoom) return;
+    setState(() => _isAddingRoom = true);
     try {
-      result = await _permissionService.check();
+      final result = await _permissionService.check();
+      if (!mounted) return;
+      switch (result) {
+        case ListingAllowed():
+          Get.toNamed(AppRoutes.addListing);
+        case ListingNeedsDistrict():
+          AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+        case ListingNeedsPhoneVerification():
+          _showPhoneVerificationRequired();
+        case ListingShowLimitDialog():
+          _showRoomLimitDialog(maxRooms: result.maxRooms, hasPlan: result.hasPlan);
+        case ListingShowUpgradeSheet():
+          _showPaidUpgradeSheet();
+      }
     } catch (_) {
       AppToast.info('Adding room...');
       Get.toNamed(AppRoutes.addListing);
-      return;
-    }
-    if (!mounted) return;
-    switch (result) {
-      case ListingAllowed():
-        Get.toNamed(AppRoutes.addListing);
-      case ListingNeedsDistrict():
-        AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
-      case ListingNeedsName():
-        _showProfileRequiredDialog();
-      case ListingNeedsPhoneVerification():
-        _showPhoneVerificationRequired();
-      case ListingShowLimitDialog():
-        _showRoomLimitDialog(maxRooms: result.maxRooms, hasPlan: result.hasPlan);
-      case ListingShowUpgradeSheet():
-        _showPaidUpgradeSheet();
+    } finally {
+      if (mounted) setState(() => _isAddingRoom = false);
     }
   }
 
@@ -515,15 +538,18 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   }
 
   void _showPaymentDialog(String listingId) async {
-    // If admin disabled payment feature, skip plan popup and activate FREE directly
-    final paymentEnabled = await _ctrl.isPaymentFeatureEnabled();
+    setState(() => _goLiveLoadingId = listingId);
+    try {
+    final paymentEnabled = Get.find<AppFeatureController>().isRoomPaymentEnabled.value;
     if (!paymentEnabled) {
+      setState(() => _goLiveLoadingId = null);
       _activateFreePlanDirect(listingId);
       return;
     }
 
     final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
     final membership = await _ctrl.getMembershipStatus();
+    if (mounted) setState(() => _goLiveLoadingId = null);
     final plans = await _ctrl.getPlans();
     final hasMembership = membership != null && (membership['hasMembership'] == true);
 
@@ -594,6 +620,9 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     });
 
     _refresh();
+    } finally {
+      if (mounted) setState(() => _goLiveLoadingId = null);
+    }
   }
 
   void _activateFreePlanDirect(String listingId) async {
@@ -645,110 +674,6 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             ),
           ),
         ]),
-      ),
-    );
-  }
-
-  void _showProfileRequiredDialog() {
-    final nameCtrl = TextEditingController();
-    bool saving = false;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          Future<void> save() async {
-            final name = nameCtrl.text.trim();
-            if (name.isEmpty) {
-              AppToast.error('Please enter your name.');
-              return;
-            }
-            setDialogState(() => saving = true);
-            final ok = await _auth.updateProfile(name);
-            if (ok) {
-              if (ctx.mounted) { Navigator.pop(ctx); Get.toNamed(AppRoutes.addListing); }
-            } else {
-              setDialogState(() => saving = false);
-            }
-          }
-
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('Enter Your Name',
-                style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Your name is shown to renters. Please add it before listing a room.',
-                  style: TextStyle(
-                      fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: nameCtrl,
-                  textCapitalization: TextCapitalization.words,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
-                  decoration: InputDecoration(
-                    hintText: 'Full name',
-                    hintStyle: const TextStyle(
-                        fontFamily: 'Poppins', color: AppColors.textHint),
-                    prefixIcon: const Icon(Icons.person_rounded,
-                        color: AppColors.primaryLight, size: 20),
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.divider)),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.divider)),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: AppColors.primary, width: 1.5)),
-                  ),
-                  onSubmitted: (_) => save(),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: saving
-                    ? null
-                    : () {
-                        nameCtrl.dispose();
-                        Navigator.pop(ctx);
-                      },
-                child: const Text('Later',
-                    style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: saving ? null : save,
-                child: saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text('Update Profile',
-                        style: TextStyle(
-                            fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-              ),
-            ],
-          );
-        },
       ),
     );
   }

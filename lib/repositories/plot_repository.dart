@@ -1,9 +1,6 @@
 import '../services/api_service.dart';
 
 class PlotRepository {
-  Map<String, dynamic>? _featureConfigCache;
-  DateTime? _featureConfigCacheTime;
-
   List<Map<String, dynamic>>? _plansCache;
   DateTime? _plansCacheTime;
 
@@ -15,27 +12,6 @@ class PlotRepository {
 
   bool _isValid(DateTime? time, Duration ttl) =>
       time != null && DateTime.now().difference(time) < ttl;
-
-  Future<Map<String, dynamic>> getPlotPaymentFeatureConfig() async {
-    if (_featureConfigCache != null &&
-        _isValid(_featureConfigCacheTime, _longTtl)) {
-      return _featureConfigCache!;
-    }
-    try {
-      final res = await ApiService.get('/admin/features/plot_payment');
-      final data = res['data'];
-      if (data != null && data is Map<String, dynamic>) {
-        _featureConfigCache = {
-          'isEnabled': data['isEnabled'] == true,
-          'freeLimit': (data['freeLimit'] as num?)?.toInt() ?? 1,
-          'freeDays': (data['freeDays'] as num?)?.toInt() ?? 2,
-        };
-        _featureConfigCacheTime = DateTime.now();
-        return _featureConfigCache!;
-      }
-    } catch (_) {}
-    return {'isEnabled': false, 'freeLimit': 1, 'freeDays': 2};
-  }
 
   Future<List<Map<String, dynamic>>> getPlotPlans() async {
     if (_plansCache != null && _isValid(_plansCacheTime, _longTtl)) {
@@ -72,8 +48,6 @@ class PlotRepository {
   }
 
   void invalidateAll() {
-    _featureConfigCache = null;
-    _featureConfigCacheTime = null;
     _plansCache = null;
     _plansCacheTime = null;
     _membershipCache = null;

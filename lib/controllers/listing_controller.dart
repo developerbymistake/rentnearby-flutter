@@ -18,6 +18,7 @@ class ListingController extends GetxController {
   final listingPostedTrigger = 0.obs;
   final exploreRefreshTrigger = 0.obs;
   final filterResetTrigger = 0.obs;
+  final isMembershipLoading = false.obs;
 
   @override
   void onInit() {
@@ -342,14 +343,6 @@ class ListingController extends GetxController {
       AppToast.error(_errorMessage(e, 'Could not verify upgrade payment.'));
       rethrow;
     }
-  }
-
-  Future<Map<String, dynamic>> getPaymentFeatureConfig() =>
-      Get.find<ListingRepository>().getPaymentFeatureConfig();
-
-  Future<bool> isPaymentFeatureEnabled() async {
-    final config = await getPaymentFeatureConfig();
-    return config['isEnabled'] as bool;
   }
 
   Future<Map<String, Map<String, dynamic>>> getPlans() =>
