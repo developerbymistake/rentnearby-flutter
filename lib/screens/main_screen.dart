@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../config/app_colors.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
@@ -13,8 +12,6 @@ import '../repositories/listing_repository.dart';
 import '../repositories/plot_repository.dart';
 import '../repositories/user_repository.dart';
 import '../controllers/app_feature_controller.dart';
-import '../services/notification_service.dart';
-import '../services/storage_service.dart';
 import '../widgets/gradient_button.dart';
 import 'explore_screen.dart';
 import 'explore_plots_screen.dart';
@@ -28,17 +25,15 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
+class _MainScreenState extends State<MainScreen> {
   final _auth = Get.find<AuthController>();
   late final LocationController _locationCtrl;
-  bool _notifCheckInProgress = false;
 
   final _screens = const [ExploreScreen(), MyListingsScreen(), ExplorePlotsScreen(), MyPlotsScreen(), ProfileScreen()];
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     Get.put(AppFeatureController());
     Get.put(ListingRepository());
     Get.put(PlotRepository());
@@ -47,79 +42,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     Get.put(PlotController());
     _locationCtrl = Get.put(LocationController());
     _auth.refreshProfile();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _checkNotificationPermission();
-    }
-  }
-
-  Future<void> _checkNotificationPermission() async {
-    if (_notifCheckInProgress || !mounted || !StorageService.isLoggedIn) return;
-    if (!Get.isRegistered<NotificationService>()) return;
-    // Don't show notification dialog when a full-screen gate is already blocking the UI
-    if (!_locationCtrl.gpsEnabled.value || _locationCtrl.isOffline.value) return;
-    _notifCheckInProgress = true;
-    try {
-      final shouldPrompt = await NotificationService.to.shouldShowPermissionPrompt();
-      if (!shouldPrompt || !mounted) return;
-      _showNotificationPermissionDialog();
-    } catch (_) {
-      // Firebase unavailable or other error — silently skip prompt
-    } finally {
-      _notifCheckInProgress = false;
-    }
-  }
-
-  void _showNotificationPermissionDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Enable Notifications',
-          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17),
-        ),
-        content: const Text(
-          'Get notified when your listing plan expires so you can renew on time.',
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 14, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              NotificationService.to.onPermissionPromptDismissed();
-            },
-            child: const Text(
-              'Not Now',
-              style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings();
-            },
-            child: const Text(
-              'Open Settings',
-              style: TextStyle(
-                  fontFamily: 'Poppins',
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildOfflineGate() {
@@ -456,10 +378,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          if (index == 0 && _auth.tabIndex.value != 0 && _auth.tabIndex.value != 4) {
+          if (index == 0 && _auth.tabIndex.value != 0) {
             Get.find<ListingController>().exploreRefreshTrigger.value++;
           }
-          if (index == 2 && _auth.tabIndex.value != 2 && _auth.tabIndex.value != 4) {
+          if (index == 2 && _auth.tabIndex.value != 2) {
             Get.find<PlotController>().exploreRefreshTrigger.value++;
           }
           if (index == 4 && _auth.tabIndex.value != 4) _auth.profileTabTrigger.value++;

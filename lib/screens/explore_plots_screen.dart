@@ -135,9 +135,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       }
     });
     ever(_plotCtrl.filterResetTrigger, (_) {
-      if (mounted && (_selectedCity != null || _selectedPlotType != null)) {
-        setState(() { _selectedCity = null; _selectedPlotType = null; });
-      }
+      if (mounted) setState(() { _selectedCity = null; _selectedPlotType = null; });
     });
     _loadingWorker = ever(_plotCtrl.isLoading, (loading) {
       if (!loading && _radarController.isAnimating) {
