@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:in_app_review/in_app_review.dart';
 import 'package:share_plus/share_plus.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
@@ -57,12 +58,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _shareApp() async {
     await SharePlus.instance.share(
       ShareParams(
-        text: '🏠 Bakhli — Discover your new address!\n'
-            'No brokers. No commission. Just homes.\n\n'
-            'Download: https://google.com',
-        subject: 'Check out Bakhli!',
+        text: 'Bakhli से किराए का घर ढूंढो — बिना दलाल, बिना कमीशन। 🏠\n'
+            'https://play.google.com/store/apps/details?id=com.rentnearby.rentnearby',
+        subject: 'Bakhli — किराए का घर ढूंढो आसानी से!',
       ),
     );
+  }
+
+  Future<void> _rateApp() async {
+    final inAppReview = InAppReview.instance;
+    if (await inAppReview.isAvailable()) {
+      await inAppReview.requestReview();
+    }
   }
 
   Future<void> _save() async {
@@ -153,10 +160,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
               child: SafeArea(
                 bottom: false,
-                child: Stack(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 30, 60, 34),
+                child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 30, 20, 34),
                       child: Row(
                         children: [
                           _avatarFallback(),
@@ -193,16 +198,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
                     ),
-                    Positioned(
-                      top: 8, right: 8,
-                      child: IconButton(
-                        onPressed: _shareApp,
-                        icon: const Icon(Icons.share_rounded, color: Colors.white, size: 22),
-                        tooltip: 'Share App',
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
 
@@ -261,6 +256,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // Mobile Number Card
             _buildMobileNumberCard(),
+
+            // Support
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))
+                  ],
+                ),
+                child: Column(children: [
+                  _legalTile(
+                    icon: Iconsax.star,
+                    label: 'Rate App',
+                    onTap: _rateApp,
+                  ),
+                  Divider(height: 1, indent: 56, color: AppColors.divider),
+                  _legalTile(
+                    icon: Iconsax.share,
+                    label: 'Share App',
+                    onTap: _shareApp,
+                  ),
+                ]),
+              ),
+            ),
 
             // Legal
             Padding(
