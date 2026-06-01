@@ -166,8 +166,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Obx(() => Text(
-                                  _auth.user.value?.name?.trim().isNotEmpty == true
-                                      ? _auth.user.value!.name!.trim()
+                                  _auth.profileName.value.trim().isNotEmpty
+                                      ? _auth.profileName.value.trim()
                                       : 'Your Profile',
                                   style: const TextStyle(
                                       fontFamily: 'Poppins',

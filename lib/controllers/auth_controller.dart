@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../models/user_model.dart';
 import '../repositories/user_repository.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../config/app_routes.dart';
 import '../utils/app_toast.dart';
@@ -14,10 +16,24 @@ class AuthController extends GetxController {
   final tabIndex = 0.obs;
   final profileTabTrigger = 0.obs;
 
+  // Granular profile observables — each fires only when its specific field changes
+  final profileName = ''.obs;
+  final profilePhone = ''.obs;
+  final profilePhoneVerified = false.obs;
+  final profilePhoneChangeLocked = false.obs;
+
+  void _syncProfileFields(UserModel? u) {
+    profileName.value = u?.name ?? '';
+    profilePhone.value = u?.phoneNumber ?? '';
+    profilePhoneVerified.value = u?.isPhoneVerified ?? false;
+    profilePhoneChangeLocked.value = u?.hasUsedPhoneChange ?? false;
+  }
+
   @override
   void onInit() {
     super.onInit();
     user.value = StorageService.getUser();
+    _syncProfileFields(user.value);
   }
 
   // ── Phone Login ───────────────────────────────────────────────────────────
@@ -101,6 +117,7 @@ class AuthController extends GetxController {
       final updated = UserModel.fromJson(res['data'] as Map<String, dynamic>);
       StorageService.saveUser(updated);
       user.value = updated;
+      _syncProfileFields(updated);
       Get.find<UserRepository>().invalidate();
       return true;
     } catch (e) {
@@ -124,6 +141,10 @@ class AuthController extends GetxController {
     final userModel = UserModel.fromJson(userData);
     StorageService.saveUser(userModel);
     user.value = userModel;
+    _syncProfileFields(userModel);
+    // Register FCM token after login — fire-and-forget, must not block login flow
+    NotificationService.to.registerTokenAfterLogin()
+        .catchError((e) => debugPrint('FCM token registration failed: $e'));
   }
 
   Future<void> logout() async {
@@ -131,8 +152,12 @@ class AuthController extends GetxController {
     try {
       await ApiService.post('/auth/logout', {});
     } catch (_) {}
+    try {
+      await NotificationService.to.clearToken();
+    } catch (_) {}
     await StorageService.clearAll();
     user.value = null;
+    _syncProfileFields(null);
     Get.find<ListingController>().clearData();
     Get.offAllNamed(AppRoutes.login);
   }
@@ -141,8 +166,10 @@ class AuthController extends GetxController {
     try {
       isLoading.value = true;
       await ApiService.delete('/account');
+      await NotificationService.to.clearToken();
       await StorageService.clearAll();
       user.value = null;
+      _syncProfileFields(null);
       Get.find<ListingController>().clearData();
       Get.offAllNamed(AppRoutes.login);
     } catch (e) {
@@ -159,6 +186,7 @@ class AuthController extends GetxController {
       final updated = UserModel.fromJson(res['data'] as Map<String, dynamic>);
       StorageService.saveUser(updated);
       user.value = updated;
+      _syncProfileFields(updated);
     } catch (_) {}
   }
 
@@ -171,6 +199,7 @@ class AuthController extends GetxController {
       final updated = UserModel.fromJson(res['data'] as Map<String, dynamic>);
       StorageService.saveUser(updated);
       user.value = updated;
+      profileName.value = updated.name ?? '';
       Get.find<UserRepository>().invalidate();
       return true;
     } catch (e) {
