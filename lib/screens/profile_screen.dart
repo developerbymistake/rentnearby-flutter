@@ -267,11 +267,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // Name Card
-            _buildNameCard(),
-
             // Contact Visibility Card
             _buildContactCard(),
+
+            // Name Card
+            _buildNameCard(),
 
             // Mobile Number Card
             _buildMobileNumberCard(),
