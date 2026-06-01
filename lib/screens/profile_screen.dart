@@ -21,7 +21,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = Get.find<AuthController>();
   final _nameCtrl = TextEditingController();
-  bool _isContactVisible = true;
+  final _isContactVisible = true.obs;
   Worker? _profileTabWorker;
 
   @override
@@ -33,12 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _resetForm() {
     _nameCtrl.text = _auth.user.value?.name ?? '';
-    final newVisible = _auth.user.value?.isContactVisible ?? true;
-    if (!mounted) {
-      _isContactVisible = newVisible;
-      return;
-    }
-    setState(() => _isContactVisible = newVisible);
+    _isContactVisible.value = _auth.user.value?.isContactVisible ?? true;
   }
 
   @override
@@ -88,7 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       AppToast.error('Name cannot exceed 100 characters.');
       return;
     }
-    final ok = await _auth.updateProfile(name, isContactVisible: _isContactVisible);
+    final ok = await _auth.updateProfile(name, isContactVisible: _isContactVisible.value);
     FocusManager.instance.primaryFocus?.unfocus();
     if (ok && mounted) _showSuccess();
   }
@@ -230,13 +225,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
                         ]),
                       ),
-                      Switch(
-                        value: _isContactVisible,
-                        onChanged: (v) => setState(() => _isContactVisible = v),
+                      Obx(() => Switch(
+                        value: _isContactVisible.value,
+                        onChanged: (v) => _isContactVisible.value = v,
                         activeThumbColor: AppColors.primary,
                         activeTrackColor: AppColors.primaryLight,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
+                      )),
                     ]),
                   ],
                 ),
