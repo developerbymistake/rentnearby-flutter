@@ -331,12 +331,11 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                   child: Container(
                     width: 72, height: 72,
                     decoration: BoxDecoration(
-                      color: Colors.white,
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 3),
                       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4))],
                     ),
-                    child: Center(child: Image.asset('assets/images/app_logo.png', width: 48, height: 48, fit: BoxFit.contain)),
+                    child: ClipOval(child: Image.asset('assets/images/icon_logo.png', width: 72, height: 72, fit: BoxFit.cover)),
                   ),
                 ),
               ],
@@ -776,12 +775,11 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
                   child: Container(
                     width: 72, height: 72,
                     decoration: BoxDecoration(
-                      color: Colors.white,
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 3),
                       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4))],
                     ),
-                    child: Center(child: Image.asset('assets/images/app_logo.png', width: 48, height: 48, fit: BoxFit.contain)),
+                    child: ClipOval(child: Image.asset('assets/images/icon_logo.png', width: 72, height: 72, fit: BoxFit.cover)),
                   ),
                 ),
               ],
