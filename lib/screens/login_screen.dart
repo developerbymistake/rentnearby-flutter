@@ -294,6 +294,9 @@ class _LoginScreenState extends State<LoginScreen> {
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.divider)),
               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
             ),
+            onChanged: (v) {
+              if (v.length == 10) FocusManager.instance.primaryFocus?.unfocus();
+            },
             onFieldSubmitted: (_) => _sendOtp(),
           ),
           const SizedBox(height: 16),
