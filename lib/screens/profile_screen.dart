@@ -179,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 )),
                                 const SizedBox(height: 4),
                                 Obx(() => Text(
-                                  '+91 ${_auth.user.value?.phoneNumber ?? ''}',
+                                  '+91 ${_auth.profilePhone.value}',
                                   style: const TextStyle(
                                       fontFamily: 'Poppins',
                                       fontSize: 13,
@@ -423,13 +423,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 3),
                 // Phone number display — narrow Obx since user.phoneNumber can change on verify
                 Obx(() => Text(
-                  '+91 ${_auth.user.value?.phoneNumber ?? ''}',
+                  '+91 ${_auth.profilePhone.value}',
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark),
                 )),
                 const SizedBox(height: 6),
                 // Verification badge — narrow Obx, only this badge rebuilds
                 Obx(() {
-                  final verified = _auth.user.value?.isPhoneVerified ?? false;
+                  final verified = _auth.profilePhoneVerified.value;
                   return verified
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -462,7 +462,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(width: 8),
           // Change number button — only if not locked
           Obx(() {
-            final changeLocked = _auth.user.value?.hasUsedPhoneChange ?? false;
+            final changeLocked = _auth.profilePhoneChangeLocked.value;
             if (!changeLocked) {
               return TextButton(
                 onPressed: _openPhoneVerify,
