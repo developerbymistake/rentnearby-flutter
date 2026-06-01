@@ -16,11 +16,7 @@ import '../controllers/banner_controller.dart';
 import '../services/banner_hub_service.dart';
 import '../widgets/district_banner_overlay.dart';
 import '../widgets/gradient_button.dart';
-import 'explore_screen.dart';
-import 'explore_plots_screen.dart';
-import 'my_listings_screen.dart';
-import 'my_plots_screen.dart';
-import 'profile_screen.dart';
+import '../navigation/tab_router.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -34,7 +30,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   late final BannerController _bannerCtrl;
   Worker? _bannerDistrictWorker;
 
-  final _screens = const [ExploreScreen(), MyListingsScreen(), ExplorePlotsScreen(), MyPlotsScreen(), ProfileScreen()];
+  final _screens = const [
+    TabNavigator(tabId: 0),
+    TabNavigator(tabId: 1),
+    TabNavigator(tabId: 2),
+    TabNavigator(tabId: 3),
+    TabNavigator(tabId: 4),
+  ];
 
   @override
   void initState() {
