@@ -387,6 +387,7 @@ class _LoginScreenState extends State<LoginScreen> {
               focusedPinTheme: _focusedTheme,
               submittedPinTheme: _submittedTheme,
               hapticFeedbackType: HapticFeedbackType.lightImpact,
+              autofillHints: const [AutofillHints.oneTimeCode],
               onCompleted: _verifyOtp,
             ),
           ),
