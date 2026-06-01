@@ -144,7 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       setLocal(() => isSaving = false);
                       if (ok) {
                         Navigator.pop(ctx);
-                        if (mounted) _showSuccess();
+                        AppToast.success('Name updated successfully');
                       }
                     },
                   ),
@@ -196,7 +196,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   setLocal(() => isSaving = false);
                                   if (ok) {
                                     Navigator.pop(ctx);
-                                    if (mounted) _showSuccess();
+                                    AppToast.success('Name updated successfully');
                                   }
                                 },
                           child: isSaving
@@ -226,65 +226,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _saveVisibility() async {
     final ok = await _auth.updateProfile(
         _auth.profileName.value, isContactVisible: _isContactVisible.value);
-    if (ok && mounted) _showSuccess();
+    if (ok && mounted) AppToast.success('Visibility updated');
   }
 
-  void _showSuccess() {
-    var popped = false;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: Colors.white,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 48),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 68, height: 68,
-              decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check_rounded, size: 36, color: AppColors.success),
-            ),
-            const SizedBox(height: 18),
-            const Text('Profile Updated',
-                style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark)),
-            const SizedBox(height: 8),
-            const Text('Your profile has been saved successfully.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    color: AppColors.textMedium,
-                    height: 1.5)),
-          ]),
-        ),
-      ),
-    ).then((_) {
-      popped = true;
-      // Post-frame: Flutter restores focus after dialog pop — we override it
-      // in the next frame so the keyboard doesn't re-open.
-      if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) FocusManager.instance.primaryFocus?.unfocus();
-        });
-      }
-    });
-
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!popped && mounted) {
-        popped = true;
-        Navigator.of(context).pop();
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
