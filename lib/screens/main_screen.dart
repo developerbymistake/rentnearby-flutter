@@ -11,6 +11,7 @@ import '../controllers/plot_controller.dart';
 import '../repositories/listing_repository.dart';
 import '../repositories/plot_repository.dart';
 import '../repositories/user_repository.dart';
+import 'dart:async';
 import '../controllers/app_feature_controller.dart';
 import '../controllers/banner_controller.dart';
 import '../widgets/district_banner_overlay.dart';
@@ -32,6 +33,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   late final LocationController _locationCtrl;
   late final BannerController _bannerCtrl;
   Worker? _bannerDistrictWorker;
+  Timer? _bannerPollTimer;
 
   final _screens = const [ExploreScreen(), MyListingsScreen(), ExplorePlotsScreen(), MyPlotsScreen(), ProfileScreen()];
 
@@ -53,6 +55,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (_locationCtrl.selectedDistrict.value != null) {
       _bannerCtrl.checkBanner(_locationCtrl.selectedDistrict.value!.id.toString());
     }
+    _bannerPollTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      final district = _locationCtrl.selectedDistrict.value;
+      if (district != null) _bannerCtrl.checkBanner(district.id.toString());
+    });
     _auth.refreshProfile();
   }
 
@@ -60,6 +66,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _bannerDistrictWorker?.dispose();
+    _bannerPollTimer?.cancel();
     super.dispose();
   }
 

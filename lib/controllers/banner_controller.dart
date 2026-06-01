@@ -7,7 +7,10 @@ class BannerController extends GetxController {
 
   Future<void> checkBanner(String districtId) async {
     try {
-      final res = await ApiService.get('/banners/active?districtId=$districtId');
+      final res = await ApiService.get(
+        '/banners/active',
+        params: {'districtId': districtId},
+      );
       final data = res['data'];
       activeBanner.value = data != null
           ? BannerModel.fromJson(data as Map<String, dynamic>)
