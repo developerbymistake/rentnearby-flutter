@@ -81,6 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final confirmed = await _showConfirmDialog(phone);
     if (confirmed != true || !mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
 
     final ok = await _auth.sendLoginOtp(phone);
     if (!mounted) return;
@@ -198,7 +199,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Container(
                     decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
                     child: ElevatedButton(
-                      onPressed: () { FocusScope.of(context).unfocus(); Navigator.pop(context, true); },
+                      onPressed: () {
+                          FocusScope.of(context).unfocus();
+                          _auth.isLoading.value = true;
+                          Navigator.pop(context, true);
+                        },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent, shadowColor: Colors.transparent,
                         padding: const EdgeInsets.symmetric(vertical: 14),
