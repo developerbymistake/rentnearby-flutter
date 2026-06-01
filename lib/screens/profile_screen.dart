@@ -20,26 +20,18 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = Get.find<AuthController>();
-  final _nameCtrl = TextEditingController();
-  final _isContactVisible = true.obs;
   Worker? _profileTabWorker;
 
   @override
   void initState() {
     super.initState();
-    _resetForm();
-    _profileTabWorker = ever(_auth.profileTabTrigger, (_) => _resetForm());
-  }
-
-  void _resetForm() {
-    _nameCtrl.text = _auth.user.value?.name ?? '';
-    _isContactVisible.value = _auth.user.value?.isContactVisible ?? true;
+    _syncContactVisible();
+    _profileTabWorker = ever(_auth.profileTabTrigger, (_) => _syncContactVisible());
   }
 
   @override
   void dispose() {
     _profileTabWorker?.dispose();
-    _nameCtrl.dispose();
     super.dispose();
   }
 
@@ -72,18 +64,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _save() async {
-    FocusManager.instance.primaryFocus?.unfocus();
-    final name = _nameCtrl.text.trim();
-    if (name.isEmpty) {
-      AppToast.error('Name is required.');
-      return;
-    }
-    if (name.length > 100) {
-      AppToast.error('Name cannot exceed 100 characters.');
-      return;
-    }
-    final ok = await _auth.updateProfile(name, isContactVisible: _isContactVisible.value);
+  final _isContactVisible = true.obs;
+
+  void _syncContactVisible() {
+    _isContactVisible.value = _auth.user.value?.isContactVisible ?? true;
+  }
+
+  Future<void> _showChangeNameDialog() async {
+    final nameCtrl = TextEditingController(text: _auth.profileName.value);
+    bool isSaving = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: Colors.white,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+          title: const Text('Change Name',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+          content: TextField(
+            controller: nameCtrl,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            maxLength: 100,
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
+            decoration: InputDecoration(
+              counterText: '',
+              hintText: 'Your full name',
+              hintStyle: const TextStyle(fontFamily: 'Poppins', color: AppColors.textHint),
+              prefixIcon: const Icon(Iconsax.user, color: AppColors.primaryLight, size: 20),
+              filled: true,
+              fillColor: AppColors.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel',
+                  style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      final name = nameCtrl.text.trim();
+                      if (name.isEmpty) {
+                        AppToast.error('Name is required.');
+                        return;
+                      }
+                      setLocal(() => isSaving = true);
+                      final ok = await _auth.updateProfile(
+                          name, isContactVisible: _isContactVisible.value);
+                      if (!ctx.mounted) return;
+                      setLocal(() => isSaving = false);
+                      if (ok) {
+                        Navigator.pop(ctx);
+                        if (mounted) _showSuccess();
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Save',
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+    nameCtrl.dispose();
+  }
+
+  Future<void> _saveVisibility() async {
+    final ok = await _auth.updateProfile(
+        _auth.profileName.value, isContactVisible: _isContactVisible.value);
     if (ok && mounted) _showSuccess();
   }
 
@@ -201,58 +267,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // Edit form
-            Container(
-              margin: const EdgeInsets.all(20),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))
-                ],
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Update Profile',
-                    style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textDark)),
-                const SizedBox(height: 20),
-                _buildField('Full Name', Iconsax.user, _nameCtrl),
-                const SizedBox(height: 20),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          const Text('Contact visible to public',
-                              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
-                          const SizedBox(height: 2),
-                          const Text('Show call & WhatsApp on your listings',
-                              style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                        ]),
-                      ),
-                      Obx(() => Switch(
-                        value: _isContactVisible.value,
-                        onChanged: (v) => _isContactVisible.value = v,
-                        activeThumbColor: AppColors.primary,
-                        activeTrackColor: AppColors.primaryLight,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      )),
-                    ]),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Obx(() => GradientButton(
-                  onPressed: _auth.isLoading.value ? null : _save,
-                  isLoading: _auth.isLoading.value,
-                  label: 'Save Profile',
-                )),
-              ]),
-            ),
+            // Name Card
+            _buildNameCard(),
+
+            // Contact Visibility Card
+            _buildContactCard(),
 
             // Mobile Number Card
             _buildMobileNumberCard(),
@@ -303,7 +322,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       await Get.to(() => const PrivacyPolicyScreen(),
                           transition: Transition.rightToLeft,
                           duration: const Duration(milliseconds: 300));
-                      _resetForm();
+                      _syncContactVisible();
                     },
                   ),
                   Divider(height: 1, indent: 56, color: AppColors.divider),
@@ -314,7 +333,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       await Get.to(() => const TermsOfServiceScreen(),
                           transition: Transition.rightToLeft,
                           duration: const Duration(milliseconds: 300));
-                      _resetForm();
+                      _syncContactVisible();
                     },
                   ),
                 ]),
@@ -494,28 +513,119 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     if (result == true) {
       await _auth.refreshProfile();
-      _resetForm();
+      _syncContactVisible();
     }
   }
 
-  Widget _buildField(String label, IconData icon, TextEditingController ctrl) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label,
-          style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textMedium)),
-      const SizedBox(height: 8),
-      TextFormField(
-        controller: ctrl,
-        style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: AppColors.primaryLight, size: 20),
-          hintText: 'Enter $label',
-        ),
+  Widget _buildNameCard() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
       ),
-    ]);
+      child: Row(
+        children: [
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Iconsax.user, color: AppColors.primaryLight, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Full Name',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                const SizedBox(height: 3),
+                Obx(() => Text(
+                  _auth.profileName.value.trim().isNotEmpty
+                      ? _auth.profileName.value.trim()
+                      : '—',
+                  style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark),
+                )),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: _showChangeNameDialog,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.textLight,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              minimumSize: Size.zero,
+            ),
+            child: const Text('Change',
+                style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textLight)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactCard() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Iconsax.eye, color: AppColors.primaryLight, size: 20),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Contact visible to public',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                  SizedBox(height: 2),
+                  Text('Show call & WhatsApp on your listings',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                ]),
+              ),
+              Obx(() => Switch(
+                value: _isContactVisible.value,
+                onChanged: (v) => _isContactVisible.value = v,
+                activeThumbColor: AppColors.primary,
+                activeTrackColor: AppColors.primaryLight,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              )),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Obx(() => GradientButton(
+            onPressed: _auth.isLoading.value ? null : _saveVisibility,
+            isLoading: _auth.isLoading.value,
+            label: 'Save Visibility',
+          )),
+        ],
+      ),
+    );
   }
 
   Widget _legalTile({required IconData icon, required String label, required VoidCallback onTap}) {
