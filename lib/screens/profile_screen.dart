@@ -7,8 +7,6 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
-import '../utils/app_toast.dart';
-import '../widgets/gradient_button.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
 
@@ -25,8 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _syncContactVisible();
-    _profileTabWorker = ever(_auth.profileTabTrigger, (_) => _syncContactVisible());
+    _profileTabWorker = ever(_auth.profileTabTrigger, (_) {});
   }
 
   @override
@@ -63,172 +60,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
   }
-
-  final _isContactVisible = true.obs;
-
-  void _syncContactVisible() {
-    _isContactVisible.value = _auth.user.value?.isContactVisible ?? true;
-  }
-
-  Future<void> _showChangeNameDialog() async {
-    final nameCtrl = TextEditingController(text: _auth.profileName.value);
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) {
-          bool isSaving = false;
-          return Padding(
-            // Sheet rises with keyboard — no global layout shift
-            padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Handle
-                  Center(
-                    child: Container(
-                      width: 40, height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.divider,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Change Name',
-                      style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textDark)),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: nameCtrl,
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.words,
-                    maxLength: 100,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
-                    decoration: InputDecoration(
-                      counterText: '',
-                      hintText: 'Your full name',
-                      hintStyle: const TextStyle(
-                          fontFamily: 'Poppins', color: AppColors.textHint),
-                      prefixIcon: const Icon(Iconsax.user,
-                          color: AppColors.primaryLight, size: 20),
-                      filled: true,
-                      fillColor: AppColors.surface,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none),
-                      focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                              color: AppColors.primary, width: 1.5)),
-                    ),
-                    onSubmitted: (_) async {
-                      final name = nameCtrl.text.trim();
-                      if (name.isEmpty) return;
-                      setLocal(() => isSaving = true);
-                      final ok = await _auth.updateProfile(
-                          name, isContactVisible: _isContactVisible.value);
-                      if (!ctx.mounted) return;
-                      setLocal(() => isSaving = false);
-                      if (ok) {
-                        Navigator.pop(ctx);
-                        AppToast.success('Name updated successfully');
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed:
-                              isSaving ? null : () => Navigator.pop(ctx),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            side: const BorderSide(color: AppColors.divider),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text('Cancel',
-                              style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textMedium)),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                          onPressed: isSaving
-                              ? null
-                              : () async {
-                                  final name = nameCtrl.text.trim();
-                                  if (name.isEmpty) {
-                                    AppToast.error('Name is required.');
-                                    return;
-                                  }
-                                  setLocal(() => isSaving = true);
-                                  final ok = await _auth.updateProfile(name,
-                                      isContactVisible:
-                                          _isContactVisible.value);
-                                  if (!ctx.mounted) return;
-                                  setLocal(() => isSaving = false);
-                                  if (ok) {
-                                    Navigator.pop(ctx);
-                                    AppToast.success('Name updated successfully');
-                                  }
-                                },
-                          child: isSaving
-                              ? const SizedBox(
-                                  width: 20, height: 20,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Colors.white))
-                              : const Text('Save',
-                                  style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-    nameCtrl.dispose();
-  }
-
-  Future<void> _saveVisibility() async {
-    final ok = await _auth.updateProfile(
-        _auth.profileName.value, isContactVisible: _isContactVisible.value);
-    if (ok && mounted) AppToast.success('Visibility updated');
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -287,11 +118,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // Contact Visibility Card
-            _buildContactCard(),
-
-            // Name Card
-            _buildNameCard(),
+            // Update Profile tile
+            _buildUpdateProfileTile(),
 
             // Mobile Number Card
             _buildMobileNumberCard(),
@@ -342,7 +170,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       await Get.to(() => const PrivacyPolicyScreen(),
                           transition: Transition.rightToLeft,
                           duration: const Duration(milliseconds: 300));
-                      _syncContactVisible();
+                      // no-op
                     },
                   ),
                   Divider(height: 1, indent: 56, color: AppColors.divider),
@@ -353,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       await Get.to(() => const TermsOfServiceScreen(),
                           transition: Transition.rightToLeft,
                           duration: const Duration(milliseconds: 300));
-                      _syncContactVisible();
+                      // no-op
                     },
                   ),
                 ]),
@@ -533,118 +361,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     if (result == true) {
       await _auth.refreshProfile();
-      _syncContactVisible();
     }
   }
 
-  Widget _buildNameCard() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-      padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Iconsax.user, color: AppColors.primaryLight, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Full Name',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                const SizedBox(height: 3),
-                Obx(() => Text(
-                  _auth.profileName.value.trim().isNotEmpty
-                      ? _auth.profileName.value.trim()
-                      : '—',
-                  style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textDark),
-                )),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: _showChangeNameDialog,
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.textLight,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              minimumSize: Size.zero,
-            ),
-            child: const Text('Change',
-                style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textLight)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactCard() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-      padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44, height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Iconsax.eye, color: AppColors.primaryLight, size: 20),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Contact visible to public',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                  SizedBox(height: 2),
-                  Text('Show call & WhatsApp on your listings',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                ]),
-              ),
-              Obx(() => Switch(
-                value: _isContactVisible.value,
-                onChanged: (v) => _isContactVisible.value = v,
-                activeThumbColor: AppColors.primary,
-                activeTrackColor: AppColors.primaryLight,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              )),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Obx(() => GradientButton(
-            onPressed: _auth.isLoading.value ? null : _saveVisibility,
-            isLoading: _auth.isLoading.value,
-            label: 'Save Visibility',
-          )),
-        ],
-      ),
+  Widget _buildUpdateProfileTile() {
+    return _legalTile(
+      icon: Iconsax.user_edit,
+      label: 'Update Profile',
+      onTap: () => Get.toNamed(AppRoutes.updateProfile),
     );
   }
 
