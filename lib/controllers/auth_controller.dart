@@ -9,6 +9,7 @@ import '../services/storage_service.dart';
 import '../config/app_routes.dart';
 import '../utils/app_toast.dart';
 import 'listing_controller.dart';
+import '../services/banner_hub_service.dart';
 
 class AuthController extends GetxController {
   final isLoading = false.obs;
@@ -155,6 +156,9 @@ class AuthController extends GetxController {
     try {
       await NotificationService.to.clearToken();
     } catch (_) {}
+    try {
+      await Get.find<BannerHubService>().disconnect();
+    } catch (_) {}
     await StorageService.clearAll();
     user.value = null;
     _syncProfileFields(null);
@@ -167,6 +171,9 @@ class AuthController extends GetxController {
       isLoading.value = true;
       await ApiService.delete('/account');
       await NotificationService.to.clearToken();
+      try {
+        await Get.find<BannerHubService>().disconnect();
+      } catch (_) {}
       await StorageService.clearAll();
       user.value = null;
       _syncProfileFields(null);

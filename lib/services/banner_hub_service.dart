@@ -18,7 +18,7 @@ class BannerHubService extends GetxService {
       return;
     }
 
-    await _disconnect();
+    await disconnect();
 
     if (StorageService.getToken() == null) return;
 
@@ -60,7 +60,7 @@ class BannerHubService extends GetxService {
     }
   }
 
-  Future<void> _disconnect() async {
+  Future<void> disconnect() async {
     try {
       await _connection?.stop();
     } catch (_) {}
