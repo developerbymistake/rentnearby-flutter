@@ -379,7 +379,10 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          Text('OTP sent via WhatsApp to +91 $_phone', style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+          const Text('OTP sent via WhatsApp to',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+          Text('+91 $_phone',
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           const SizedBox(height: 28),
           Center(
             child: Pinput(
