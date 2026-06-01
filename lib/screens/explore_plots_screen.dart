@@ -655,6 +655,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: LayoutBuilder(
         builder: (context, constraints) {
           return Stack(
