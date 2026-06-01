@@ -161,41 +161,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 bottom: false,
                 child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 30, 20, 34),
-                      child: Row(
-                        children: [
-                          Obx(() => _avatarFallback(_auth.profileName.value)),
-                          const SizedBox(width: 18),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Obx(() => Text(
-                                  _auth.profileName.value.trim().isNotEmpty
-                                      ? _auth.profileName.value.trim()
-                                      : 'Your Profile',
-                                  style: const TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                )),
-                                const SizedBox(height: 4),
-                                Obx(() => Text(
-                                  '+91 ${_auth.profilePhone.value}',
-                                  style: const TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 13,
-                                      color: Colors.white70),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                )),
-                              ],
+                      child: Obx(() {
+                        final name = _auth.profileName.value;
+                        return Row(
+                          children: [
+                            _avatarFallback(name),
+                            const SizedBox(width: 18),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name.trim().isNotEmpty ? name.trim() : 'Your Profile',
+                                    style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Obx(() => Text(
+                                    '+91 ${_auth.profilePhone.value}',
+                                    style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 13,
+                                        color: Colors.white70),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  )),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        );
+                      }),
                     ),
               ),
             ),
