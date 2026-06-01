@@ -13,7 +13,6 @@ class BannerHubService extends GetxService {
   Future<void> connectForDistrict(String districtId) async {
     final bannerCtrl = Get.find<BannerController>();
 
-    // Idempotent — skip if already connected to same district
     if (_currentDistrictId == districtId &&
         _connection?.state == HubConnectionState.Connected) {
       return;
@@ -26,12 +25,9 @@ class BannerHubService extends GetxService {
 
     _currentDistrictId = districtId;
 
-    final hubUrl =
-        '${AppConstants.serverUrl}/hubs/banner?districtId=$districtId';
-
     _connection = HubConnectionBuilder()
         .withUrl(
-          hubUrl,
+          '${AppConstants.serverUrl}/hubs/banner?districtId=$districtId',
           options: HttpConnectionOptions(
             accessTokenFactory: () async => token,
           ),
@@ -39,10 +35,15 @@ class BannerHubService extends GetxService {
         .withAutomaticReconnect()
         .build();
 
-    // On BannerActivated: call REST to sync state — this respects the
-    // user's dismissals so a previously-dismissed banner never reappears.
-    _connection!.on('BannerActivated', (_) {
-      bannerCtrl.checkBanner(districtId);
+    // Push payload used directly — no REST call.
+    // Local dismissed set filters out previously dismissed banners,
+    // so dismissed users never see the banner even on re-activation.
+    _connection!.on('BannerActivated', (args) {
+      if (args == null || args.isEmpty) return;
+      try {
+        final data = args[0] as Map<String, dynamic>;
+        bannerCtrl.applyFromPush(data);
+      } catch (_) {}
     });
 
     _connection!.on('BannerDeactivated', (_) {
@@ -50,14 +51,14 @@ class BannerHubService extends GetxService {
     });
 
     _connection!.onreconnected(({String? connectionId}) {
-      // Sync state after reconnect — may have missed a push while disconnected
+      // May have missed a push while disconnected — sync via REST once
       bannerCtrl.checkBanner(districtId);
     });
 
     try {
       await _connection!.start();
     } catch (_) {
-      // Hub unreachable (offline / server down) — fall back to REST
+      // Hub unreachable — fall back to REST for initial state
       await bannerCtrl.checkBanner(districtId);
     }
   }

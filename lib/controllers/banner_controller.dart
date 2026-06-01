@@ -1,10 +1,28 @@
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import '../models/banner_model.dart';
 import '../services/api_service.dart';
 
 class BannerController extends GetxController {
   final activeBanner = Rxn<BannerModel>();
 
+  // Persisted across restarts — dismissed banners never reappear
+  static const _storageKey = 'dismissed_banner_ids';
+  final _box = GetStorage();
+
+  Set<String> get _dismissedIds {
+    final raw = _box.read<List>(_storageKey);
+    return raw != null ? raw.cast<String>().toSet() : {};
+  }
+
+  bool isDismissed(String bannerId) => _dismissedIds.contains(bannerId);
+
+  void _saveDismissed(String bannerId) {
+    final ids = _dismissedIds..add(bannerId);
+    _box.write(_storageKey, ids.toList());
+  }
+
+  // Called only on: app start, district change, WS reconnect, WS connect failure
   Future<void> checkBanner(String districtId) async {
     try {
       final res = await ApiService.get(
@@ -18,8 +36,17 @@ class BannerController extends GetxController {
     } catch (_) {}
   }
 
+  // Called directly from BannerActivated push — zero REST call
+  void applyFromPush(Map<String, dynamic> data) {
+    final banner = BannerModel.fromJson(data);
+    if (!isDismissed(banner.id)) {
+      activeBanner.value = banner;
+    }
+  }
+
   Future<void> dismiss(String bannerId) async {
     activeBanner.value = null;
+    _saveDismissed(bannerId);           // persist locally — survives restarts
     try {
       await ApiService.post('/banners/$bannerId/dismiss', {});
     } catch (_) {}
