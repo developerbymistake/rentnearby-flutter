@@ -43,5 +43,27 @@ class StorageService {
   static Future<void> clearAll() async {
     await clearToken();
     clearUser();
+    clearFcmToken();
   }
+
+  static Future<void> saveFcmToken(String token) async =>
+      _box.write(AppConstants.fcmTokenKey, token);
+
+  static String? getFcmToken() =>
+      _box.read<String>(AppConstants.fcmTokenKey);
+
+  static void clearFcmToken() =>
+      _box.remove(AppConstants.fcmTokenKey);
+
+  static void saveNotifPromptDismissedAt() =>
+      _box.write(AppConstants.notifPromptDismissedKey, DateTime.now().toIso8601String());
+
+  static DateTime? getNotifPromptDismissedAt() {
+    final val = _box.read<String>(AppConstants.notifPromptDismissedKey);
+    if (val == null) return null;
+    return DateTime.tryParse(val);
+  }
+
+  static void clearNotifPromptDismissedAt() =>
+      _box.remove(AppConstants.notifPromptDismissedKey);
 }

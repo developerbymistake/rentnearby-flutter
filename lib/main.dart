@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -8,6 +9,7 @@ import 'config/app_routes.dart';
 import 'controllers/auth_controller.dart';
 import 'services/api_service.dart';
 import 'services/map_pause_observer.dart';
+import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 
 Future<void> main() async {
@@ -15,6 +17,7 @@ Future<void> main() async {
   await GetStorage.init();
   await StorageService.init();
   ApiService.init();
+  await Firebase.initializeApp();
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -25,6 +28,7 @@ Future<void> main() async {
   ));
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
+  Get.put(NotificationService());
   Get.put(AuthController());
 
   runApp(const BakhliApp());

@@ -7,6 +7,10 @@ class AppConstants {
 
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
+  static const String fcmTokenKey = 'fcm_token';
+  static const String notifPromptDismissedKey = 'notif_prompt_dismissed_at';
+
+  static const String registerTokenPath = '/notifications/register-token';
 
   static const double defaultRadius = 5.0; // km
   static const int maxPhotos = 5;
