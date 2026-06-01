@@ -20,24 +20,19 @@ class BannerHubService extends GetxService {
 
     await _disconnect();
 
-    final token = StorageService.getToken();
-    if (token == null) return;
-
-    _currentDistrictId = districtId;
+    if (StorageService.getToken() == null) return;
 
     _connection = HubConnectionBuilder()
         .withUrl(
           '${AppConstants.serverUrl}/hubs/banner?districtId=$districtId',
           options: HttpConnectionOptions(
-            accessTokenFactory: () async => token,
+            // Always reads fresh token — handles JWT refresh correctly
+            accessTokenFactory: () async => StorageService.getToken() ?? '',
           ),
         )
         .withAutomaticReconnect()
         .build();
 
-    // Push payload used directly — no REST call.
-    // Local dismissed set filters out previously dismissed banners,
-    // so dismissed users never see the banner even on re-activation.
     _connection!.on('BannerActivated', (args) {
       if (args == null || args.isEmpty) return;
       try {
@@ -51,14 +46,16 @@ class BannerHubService extends GetxService {
     });
 
     _connection!.onreconnected(({String? connectionId}) {
-      // May have missed a push while disconnected — sync via REST once
       bannerCtrl.checkBanner(districtId);
     });
 
     try {
       await _connection!.start();
+      // Only mark connected district after successful start
+      _currentDistrictId = districtId;
     } catch (_) {
-      // Hub unreachable — fall back to REST for initial state
+      // Connection failed — fall back to REST, don't mark as connected
+      _connection = null;
       await bannerCtrl.checkBanner(districtId);
     }
   }

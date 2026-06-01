@@ -128,8 +128,11 @@ class _LoginScreenState extends State<LoginScreen> {
       _otpCtrl.clear();
     });
     AppToast.error(result);
-    if (_attempts >= _maxAttempts) _showMaxAttemptsDialog();
-    else _otpFocus.requestFocus();
+    if (_attempts >= _maxAttempts) {
+      _showMaxAttemptsDialog();
+    } else {
+      _otpFocus.requestFocus();
+    }
   }
 
   void _showMaxAttemptsDialog() {
