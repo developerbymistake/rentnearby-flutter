@@ -361,6 +361,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       child: Stack(
         children: [
           Scaffold(
+            resizeToAvoidBottomInset: false,
             body: Obx(() => IndexedStack(
               index: _auth.tabIndex.value,
               children: _screens,
