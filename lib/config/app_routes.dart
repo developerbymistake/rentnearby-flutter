@@ -9,7 +9,6 @@ import '../screens/add_listing_screen.dart';
 import '../screens/add_plot_screen.dart';
 import '../screens/payment_screen.dart';
 import '../screens/plot_detail_screen.dart';
-import '../screens/update_profile_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -24,8 +23,6 @@ class AppRoutes {
   static const String addListing = '/add-listing';
   static const String addPlot = '/add-plot';
   static const String paymentScreen = '/payment-screen';
-  static const String updateProfile = '/update-profile';
-
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
     GetPage(
@@ -87,12 +84,6 @@ class AppRoutes {
       page: () => const PaymentScreen(),
       transition: Transition.upToDown,
       transitionDuration: const Duration(milliseconds: 350),
-    ),
-    GetPage(
-      name: updateProfile,
-      page: () => const UpdateProfileScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
     ),
   ];
 }
