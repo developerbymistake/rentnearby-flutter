@@ -2,7 +2,6 @@ import 'package:get/get.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import '../config/app_constants.dart';
 import '../controllers/banner_controller.dart';
-import '../models/banner_model.dart';
 import 'storage_service.dart';
 
 class BannerHubService extends GetxService {
@@ -28,19 +27,22 @@ class BannerHubService extends GetxService {
     _currentDistrictId = districtId;
 
     final hubUrl =
-        '${AppConstants.serverUrl}/hubs/banner?districtId=$districtId&access_token=$token';
+        '${AppConstants.serverUrl}/hubs/banner?districtId=$districtId';
 
     _connection = HubConnectionBuilder()
-        .withUrl(hubUrl)
+        .withUrl(
+          hubUrl,
+          options: HttpConnectionOptions(
+            accessTokenFactory: () async => token,
+          ),
+        )
         .withAutomaticReconnect()
         .build();
 
-    _connection!.on('BannerActivated', (args) {
-      if (args == null || args.isEmpty) return;
-      try {
-        final data = args[0] as Map<String, dynamic>;
-        bannerCtrl.activeBanner.value = BannerModel.fromJson(data);
-      } catch (_) {}
+    // On BannerActivated: call REST to sync state — this respects the
+    // user's dismissals so a previously-dismissed banner never reappears.
+    _connection!.on('BannerActivated', (_) {
+      bannerCtrl.checkBanner(districtId);
     });
 
     _connection!.on('BannerDeactivated', (_) {
