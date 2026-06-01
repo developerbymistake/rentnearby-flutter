@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:in_app_review/in_app_review.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
@@ -66,9 +66,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _rateApp() async {
-    final inAppReview = InAppReview.instance;
-    if (await inAppReview.isAvailable()) {
-      await inAppReview.requestReview();
+    final uri = Uri.parse(
+      'market://details?id=com.rentnearby.rentnearby',
+    );
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      await launchUrl(
+        Uri.parse('https://play.google.com/store/apps/details?id=com.rentnearby.rentnearby'),
+        mode: LaunchMode.externalApplication,
+      );
     }
   }
 
