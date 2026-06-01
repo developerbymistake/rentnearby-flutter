@@ -135,7 +135,9 @@ class _ExploreScreenState extends State<ExploreScreen>
       }
     });
     ever(_listingCtrl.filterResetTrigger, (_) {
-      if (mounted) setState(() { _selectedCity = null; _selectedRoomType = null; });
+      if (mounted && (_selectedCity != null || _selectedRoomType != null)) {
+        setState(() { _selectedCity = null; _selectedRoomType = null; });
+      }
     });
     _loadingWorker = ever(_listingCtrl.isLoading, (loading) {
       if (!loading && _radarController.isAnimating) {
