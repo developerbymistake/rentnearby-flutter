@@ -11,9 +11,9 @@ import '../controllers/plot_controller.dart';
 import '../repositories/listing_repository.dart';
 import '../repositories/plot_repository.dart';
 import '../repositories/user_repository.dart';
-import 'dart:async';
 import '../controllers/app_feature_controller.dart';
 import '../controllers/banner_controller.dart';
+import '../services/banner_hub_service.dart';
 import '../widgets/district_banner_overlay.dart';
 import '../widgets/gradient_button.dart';
 import 'explore_screen.dart';
@@ -33,7 +33,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   late final LocationController _locationCtrl;
   late final BannerController _bannerCtrl;
   Worker? _bannerDistrictWorker;
-  Timer? _bannerPollTimer;
 
   final _screens = const [ExploreScreen(), MyListingsScreen(), ExplorePlotsScreen(), MyPlotsScreen(), ProfileScreen()];
 
@@ -48,17 +47,19 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     Get.put(PlotController());
     _locationCtrl = Get.put(LocationController());
     _bannerCtrl = Get.put(BannerController());
+    Get.put(BannerHubService());
     WidgetsBinding.instance.addObserver(this);
     _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
-      if (district != null) _bannerCtrl.checkBanner(district.id.toString());
+      if (district != null) {
+        _bannerCtrl.checkBanner(district.id.toString());
+        BannerHubService.to.connectForDistrict(district.id.toString());
+      }
     });
     if (_locationCtrl.selectedDistrict.value != null) {
-      _bannerCtrl.checkBanner(_locationCtrl.selectedDistrict.value!.id.toString());
+      final id = _locationCtrl.selectedDistrict.value!.id.toString();
+      _bannerCtrl.checkBanner(id);
+      BannerHubService.to.connectForDistrict(id);
     }
-    _bannerPollTimer = Timer.periodic(const Duration(minutes: 5), (_) {
-      final district = _locationCtrl.selectedDistrict.value;
-      if (district != null) _bannerCtrl.checkBanner(district.id.toString());
-    });
     _auth.refreshProfile();
   }
 
@@ -66,7 +67,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _bannerDistrictWorker?.dispose();
-    _bannerPollTimer?.cancel();
     super.dispose();
   }
 
@@ -74,7 +74,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       final district = _locationCtrl.selectedDistrict.value;
-      if (district != null) _bannerCtrl.checkBanner(district.id.toString());
+      if (district != null) {
+        BannerHubService.to.connectForDistrict(district.id.toString());
+      }
     }
   }
 
