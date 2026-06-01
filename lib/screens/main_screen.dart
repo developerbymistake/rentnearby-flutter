@@ -12,6 +12,8 @@ import '../repositories/listing_repository.dart';
 import '../repositories/plot_repository.dart';
 import '../repositories/user_repository.dart';
 import '../controllers/app_feature_controller.dart';
+import '../controllers/banner_controller.dart';
+import '../widgets/district_banner_overlay.dart';
 import '../widgets/gradient_button.dart';
 import 'explore_screen.dart';
 import 'explore_plots_screen.dart';
@@ -25,9 +27,11 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final _auth = Get.find<AuthController>();
   late final LocationController _locationCtrl;
+  late final BannerController _bannerCtrl;
+  Worker? _bannerDistrictWorker;
 
   final _screens = const [ExploreScreen(), MyListingsScreen(), ExplorePlotsScreen(), MyPlotsScreen(), ProfileScreen()];
 
@@ -41,7 +45,30 @@ class _MainScreenState extends State<MainScreen> {
     Get.put(ListingController());
     Get.put(PlotController());
     _locationCtrl = Get.put(LocationController());
+    _bannerCtrl = Get.put(BannerController());
+    WidgetsBinding.instance.addObserver(this);
+    _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
+      if (district != null) _bannerCtrl.checkBanner(district.id.toString());
+    });
+    if (_locationCtrl.selectedDistrict.value != null) {
+      _bannerCtrl.checkBanner(_locationCtrl.selectedDistrict.value!.id.toString());
+    }
     _auth.refreshProfile();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _bannerDistrictWorker?.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final district = _locationCtrl.selectedDistrict.value;
+      if (district != null) _bannerCtrl.checkBanner(district.id.toString());
+    }
   }
 
   Widget _buildOfflineGate() {
@@ -331,6 +358,18 @@ class _MainScreenState extends State<MainScreen> {
             )),
             bottomNavigationBar: Obx(() => _buildBottomNav()),
           ),
+          Obx(() {
+            final hasGate = _locationCtrl.isOffline.value ||
+                            !_locationCtrl.gpsEnabled.value ||
+                            _locationCtrl.districtUnavailable.value;
+            if (hasGate) return const SizedBox.shrink();
+            final banner = _bannerCtrl.activeBanner.value;
+            if (banner == null) return const SizedBox.shrink();
+            return DistrictBannerOverlay(
+              banner: banner,
+              onDismiss: () => _bannerCtrl.dismiss(banner.id),
+            );
+          }),
           Obx(() => _locationCtrl.isOffline.value
               ? _buildOfflineGate()
               : const SizedBox.shrink()),
