@@ -30,8 +30,10 @@ class TabNavigator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Navigator(
       key: tabKeys[tabId],
-      onGenerateRoute: (_) => MaterialPageRoute(
-        builder: (_) => _rootScreen(tabId),
+      onGenerateRoute: (_) => PageRouteBuilder(
+        pageBuilder: (_, __, ___) => _rootScreen(tabId),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
       ),
     );
   }
