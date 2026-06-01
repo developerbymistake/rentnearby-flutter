@@ -43,7 +43,7 @@ class PlotPermissionService {
     final hasMembership = status != null && (status['hasMembership'] == true);
 
     if (hasMembership) {
-      final maxPlots = (status!['maxPlotListings'] as num?)?.toInt() ?? 0;
+      final maxPlots = (status['maxPlotListings'] as num?)?.toInt() ?? 0;
       if (_ctrl.myPlots.length >= maxPlots) {
         final planType = status['planType'] as String? ?? '';
         final plans = await _ctrl.getPlotPlans();

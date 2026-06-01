@@ -616,11 +616,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     return result;
   }
 
-  static double _mercatorY(double lat) {
-    final sinLat = sin(lat * pi / 180);
-    return 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
-  }
-
   static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
     const steps = 64;
     const earthRadius = 6378137.0;
