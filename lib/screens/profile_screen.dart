@@ -72,57 +72,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _showChangeNameDialog() async {
     final nameCtrl = TextEditingController(text: _auth.profileName.value);
-    bool isSaving = false;
 
-    await showDialog(
+    await showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: Colors.white,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 32),
-          title: const Text('Change Name',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-          content: TextField(
-            controller: nameCtrl,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            maxLength: 100,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
-            decoration: InputDecoration(
-              counterText: '',
-              hintText: 'Your full name',
-              hintStyle: const TextStyle(fontFamily: 'Poppins', color: AppColors.textHint),
-              prefixIcon: const Icon(Iconsax.user, color: AppColors.primaryLight, size: 20),
-              filled: true,
-              fillColor: AppColors.surface,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isSaving ? null : () => Navigator.pop(ctx),
-              child: const Text('Cancel',
-                  style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        builder: (ctx, setLocal) {
+          bool isSaving = false;
+          return Padding(
+            // Sheet rises with keyboard — no global layout shift
+            padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              onPressed: isSaving
-                  ? null
-                  : () async {
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.divider,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Change Name',
+                      style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark)),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameCtrl,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                    maxLength: 100,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      hintText: 'Your full name',
+                      hintStyle: const TextStyle(
+                          fontFamily: 'Poppins', color: AppColors.textHint),
+                      prefixIcon: const Icon(Iconsax.user,
+                          color: AppColors.primaryLight, size: 20),
+                      filled: true,
+                      fillColor: AppColors.surface,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                              color: AppColors.primary, width: 1.5)),
+                    ),
+                    onSubmitted: (_) async {
                       final name = nameCtrl.text.trim();
-                      if (name.isEmpty) {
-                        AppToast.error('Name is required.');
-                        return;
-                      }
+                      if (name.isEmpty) return;
                       setLocal(() => isSaving = true);
                       final ok = await _auth.updateProfile(
                           name, isContactVisible: _isContactVisible.value);
@@ -133,15 +147,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         if (mounted) _showSuccess();
                       }
                     },
-              child: isSaving
-                  ? const SizedBox(
-                      width: 18, height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Save',
-                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed:
+                              isSaving ? null : () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: const BorderSide(color: AppColors.divider),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Cancel',
+                              style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textMedium)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: isSaving
+                              ? null
+                              : () async {
+                                  final name = nameCtrl.text.trim();
+                                  if (name.isEmpty) {
+                                    AppToast.error('Name is required.');
+                                    return;
+                                  }
+                                  setLocal(() => isSaving = true);
+                                  final ok = await _auth.updateProfile(name,
+                                      isContactVisible:
+                                          _isContactVisible.value);
+                                  if (!ctx.mounted) return;
+                                  setLocal(() => isSaving = false);
+                                  if (ok) {
+                                    Navigator.pop(ctx);
+                                    if (mounted) _showSuccess();
+                                  }
+                                },
+                          child: isSaving
+                              ? const SizedBox(
+                                  width: 20, height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
+                              : const Text('Save',
+                                  style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
     nameCtrl.dispose();
