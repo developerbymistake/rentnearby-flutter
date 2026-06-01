@@ -73,7 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _save() async {
-    FocusScope.of(context).unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
       AppToast.error('Name is required.');
@@ -84,7 +84,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
     final ok = await _auth.updateProfile(name, isContactVisible: _isContactVisible.value);
-    FocusManager.instance.primaryFocus?.unfocus();
     if (ok && mounted) _showSuccess();
   }
 
@@ -128,7 +127,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     ).then((_) {
       popped = true;
-      if (mounted) FocusScope.of(context).unfocus();
+      // Post-frame: Flutter restores focus after dialog pop — we override it
+      // in the next frame so the keyboard doesn't re-open.
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) FocusManager.instance.primaryFocus?.unfocus();
+        });
+      }
     });
 
     Future.delayed(const Duration(seconds: 2), () {
@@ -142,7 +147,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Outer MainScreen Scaffold already handles keyboard avoidance.
+      // Setting this to false prevents the double-resize glitch.
+      resizeToAvoidBottomInset: false,
       body: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         child: Column(
           children: [
             // Header
@@ -154,7 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 30, 20, 34),
                       child: Row(
                         children: [
-                          _avatarFallback(),
+                          Obx(() => _avatarFallback(_auth.profileName.value)),
                           const SizedBox(width: 18),
                           Expanded(
                             child: Column(
@@ -371,8 +380,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _avatarFallback() {
-    final initials = _initials(_auth.user.value?.name);
+  Widget _avatarFallback(String name) {
+    final initials = _initials(name);
     return Container(
       width: 80, height: 80,
       decoration: BoxDecoration(
