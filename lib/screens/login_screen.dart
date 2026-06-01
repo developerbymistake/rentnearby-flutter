@@ -378,12 +378,27 @@ class _LoginScreenState extends State<LoginScreen> {
               const Text('Verify OTP', style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           const Text('OTP sent via WhatsApp to',
               style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-          Text('+91 $_phone',
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          const SizedBox(height: 28),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.phone_android_rounded, size: 14, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Text('+91 $_phone',
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           Center(
             child: Pinput(
               controller: _otpCtrl,
