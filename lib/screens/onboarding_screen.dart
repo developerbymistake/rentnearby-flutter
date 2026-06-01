@@ -47,18 +47,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenH = MediaQuery.of(context).size.height;
     return PopScope(
       canPop: false,
       child: Scaffold(
         body: Stack(
           children: [
-            Container(height: 220, decoration: const BoxDecoration(gradient: AppColors.primaryGradient)),
+            Container(height: screenH * 0.45, decoration: const BoxDecoration(gradient: AppColors.primaryGradient)),
             SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                 child: Column(
                   children: [
-                    const SizedBox(height: 24),
+                    SizedBox(height: screenH * 0.05),
                     FadeInDown(
                       duration: const Duration(milliseconds: 500),
                       child: const Text('Complete your profile',
@@ -70,7 +71,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       duration: const Duration(milliseconds: 500),
                       child: const Text('Just one more step', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: screenH * 0.07),
                     FadeInUp(
                       duration: const Duration(milliseconds: 500),
                       delay: const Duration(milliseconds: 150),
