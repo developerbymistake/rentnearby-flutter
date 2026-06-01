@@ -56,26 +56,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Container(height: screenH * 0.45, decoration: const BoxDecoration(gradient: AppColors.primaryGradient)),
             SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                padding: const EdgeInsets.only(bottom: 32),
                 child: Column(
                   children: [
                     SizedBox(height: screenH * 0.05),
+                    // Same height as login's icon+title section so card lands at blue/white boundary
                     FadeInDown(
                       duration: const Duration(milliseconds: 500),
-                      child: const Text('Complete your profile',
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.person_rounded, size: 44, color: Colors.white),
+                          SizedBox(height: 10),
+                          Text('Complete your profile',
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
+                          SizedBox(height: 4),
+                          Text('Just one more step',
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    FadeInDown(
-                      delay: const Duration(milliseconds: 100),
-                      duration: const Duration(milliseconds: 500),
-                      child: const Text('Just one more step', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
-                    ),
-                    SizedBox(height: screenH * 0.07),
+                    SizedBox(height: screenH * 0.08),
                     FadeInUp(
                       duration: const Duration(milliseconds: 500),
                       delay: const Duration(milliseconds: 150),
                       child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 20),
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           color: Colors.white,
