@@ -94,6 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showSuccess() {
+    var popped = false;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -102,7 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: Colors.white,
         insetPadding: const EdgeInsets.symmetric(horizontal: 48),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(
               width: 68, height: 68,
@@ -127,33 +128,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     fontSize: 13,
                     color: AppColors.textMedium,
                     height: 1.5)),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  FocusManager.instance.primaryFocus?.unfocus();
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: const Text('Done',
-                    style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600)),
-              ),
-            ),
           ]),
         ),
       ),
     ).then((_) {
+      popped = true;
       if (mounted) FocusScope.of(context).unfocus();
+    });
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (!popped && mounted) {
+        popped = true;
+        Navigator.of(context).pop();
+      }
     });
   }
 
