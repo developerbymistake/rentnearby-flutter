@@ -12,6 +12,7 @@ dependencies:
 
   # State management
   get: ^4.6.6
+  collection: ^1.18.0
 
   # HTTP
   dio: ^5.7.0

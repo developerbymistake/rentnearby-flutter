@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:get/get.dart';
 import '../controllers/app_feature_controller.dart';
 import '../controllers/auth_controller.dart';
