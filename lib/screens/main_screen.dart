@@ -391,7 +391,59 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           Obx(() => !_locationCtrl.gpsEnabled.value
               ? _buildGpsGate()
               : const SizedBox.shrink()),
+          Obx(() => _locationCtrl.gpsEnabled.value &&
+                  _locationCtrl.locationLoading.value &&
+                  _locationCtrl.userLocation.value == null
+              ? _buildLocationLoadingOverlay()
+              : const SizedBox.shrink()),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLocationLoadingOverlay() {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.45),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6)),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(
+                    color: AppColors.primary, strokeWidth: 3),
+                const SizedBox(height: 16),
+                const Text(
+                  'Getting your location...',
+                  style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Please wait a moment',
+                  style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      color: AppColors.textLight),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
