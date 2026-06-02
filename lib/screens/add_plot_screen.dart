@@ -61,7 +61,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   bool _isGeocoding = false;
   bool _isUploading = false;
   bool _isFinalizing = false;
-  int _uploadCurrent = 0;
+  Set<int> _uploadDone = {};
   int _uploadTotal = 0;
   double _uploadProgress = 0.0;
   final List<File> _photos = [];
@@ -544,73 +544,80 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
     if (_photos.isNotEmpty) {
       setState(() {
-        _isUploading = true;
-        _uploadTotal = _photos.length;
-        _uploadCurrent = 1;
+        _isUploading    = true;
+        _uploadTotal    = _photos.length;
+        _uploadDone     = {};
         _uploadProgress = 0.0;
       });
-      int failed = 0;
-      for (int i = 0; i < _photos.length; i++) {
-        setState(() {
-          _uploadCurrent = i + 1;
-          _uploadProgress = 0.0;
-        });
-        final success = await _ctrl.uploadPhoto(plotId, _photos[i].path,
-            onProgress: (sent, total) {
-          if (!mounted) return;
-          setState(() => _uploadProgress = total > 0 ? sent / total : 0.0);
-        });
-        if (!success) {
-          failed++;
-          if (!mounted) break;
-          final retry = await showDialog<bool>(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => AlertDialog(
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('Upload Failed',
-                  style: TextStyle(
-                      fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-              content: Text(
-                'Photo ${i + 1} could not be uploaded after 3 attempts.',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Skip',
-                      style: TextStyle(
-                          fontFamily: 'Poppins', color: AppColors.textLight)),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text('Retry',
-                      style: TextStyle(fontFamily: 'Poppins')),
-                ),
-              ],
+      final progresses = List<double>.filled(_photos.length, 0.0);
+      final uploadResults = List<bool>.filled(_photos.length, false);
+
+      // Upload all photos in parallel
+      await Future.wait(List.generate(_photos.length, (i) async {
+        final ok = await _ctrl.uploadPhoto(plotId, _photos[i].path,
+          onProgress: (sent, total) {
+            if (!mounted) return;
+            progresses[i] = total > 0 ? sent / total : 0.0;
+            setState(() => _uploadProgress =
+                progresses.fold(0.0, (a, b) => a + b) / _photos.length);
+          });
+        uploadResults[i] = ok;
+        if (ok && mounted) setState(() => _uploadDone.add(i));
+      }));
+
+      var failedIndices = [for (var i = 0; i < uploadResults.length; i++) if (!uploadResults[i]) i];
+
+      // Collective retry dialog for all failed photos
+      if (failedIndices.isNotEmpty && mounted) {
+        final retry = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('Upload Failed',
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+            content: Text(
+              '${failedIndices.length} photo${failedIndices.length > 1 ? 's' : ''} could not be uploaded after 3 attempts. Retry?',
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
             ),
-          );
-          if (retry == true) {
-            final retrySuccess = await _ctrl.uploadPhoto(plotId, _photos[i].path,
-                onProgress: (sent, total) {
-              if (!mounted) return;
-              setState(() => _uploadProgress = total > 0 ? sent / total : 0.0);
-            });
-            if (retrySuccess) failed--;
-          }
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Skip', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Retry', style: TextStyle(fontFamily: 'Poppins')),
+              ),
+            ],
+          ),
+        );
+        if (retry == true && mounted) {
+          final retryResults = List<bool>.filled(failedIndices.length, false);
+          await Future.wait(List.generate(failedIndices.length, (j) async {
+            final i = failedIndices[j];
+            final ok = await _ctrl.uploadPhoto(plotId, _photos[i].path,
+              onProgress: (sent, total) {
+                if (!mounted) return;
+                progresses[i] = total > 0 ? sent / total : 0.0;
+                setState(() => _uploadProgress =
+                    progresses.fold(0.0, (a, b) => a + b) / _photos.length);
+              });
+            retryResults[j] = ok;
+            if (ok && mounted) setState(() => _uploadDone.add(i));
+          }));
+          failedIndices = [for (var j = 0; j < failedIndices.length; j++) if (!retryResults[j]) failedIndices[j]];
         }
       }
+
       if (mounted) setState(() { _isUploading = false; _isFinalizing = true; });
-      if (failed > 0 && mounted) {
-        AppToast.error(
-            '$failed photo${failed > 1 ? 's' : ''} could not be uploaded.');
+      if (failedIndices.isNotEmpty && mounted) {
+        AppToast.error('${failedIndices.length} photo${failedIndices.length > 1 ? 's' : ''} could not be uploaded.');
       }
     }
 
@@ -666,17 +673,13 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       );
 
   Widget _buildUploadOverlay() {
-    final overall = _uploadTotal > 0
-        ? ((_uploadCurrent - 1) + _uploadProgress) / _uploadTotal
-        : 0.0;
+    final overall = _uploadProgress.clamp(0.0, 1.0);
     final percent = (overall * 100).toInt();
     final String statusText;
     if (percent >= 95) {
       statusText = 'Almost done!';
-    } else if (_uploadCurrent == _uploadTotal) {
-      statusText = 'Last photo…';
     } else {
-      statusText = 'Please wait…';
+      statusText = '${_uploadDone.length} of $_uploadTotal uploaded';
     }
     return Positioned.fill(
       child: Material(
@@ -721,7 +724,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                       decoration: TextDecoration.none)),
               const SizedBox(height: 6),
               Text(
-                'Photo $_uploadCurrent of $_uploadTotal',
+                'Uploading $_uploadTotal photo${_uploadTotal > 1 ? 's' : ''} in parallel',
                 style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 13,
@@ -732,8 +735,8 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(_uploadTotal, (i) {
-                  final isDone = i < _uploadCurrent - 1;
-                  final isCurrent = i == _uploadCurrent - 1;
+                  final isDone = _uploadDone.contains(i);
+                  final isCurrent = !isDone;
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeOut,
