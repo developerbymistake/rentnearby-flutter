@@ -61,6 +61,10 @@ class TermsOfServiceScreen extends StatelessWidget {
             'All listings on Bakhli are published solely by the property owners themselves. The accuracy, completeness, and current availability of any listing — including photos, rent details, address, and property conditions — are entirely the responsibility of the owner who has submitted them. Bakhli does not inspect, authenticate, or endorse any listing or the information it contains. Users are encouraged to conduct their own assessment before making any decisions based on a listing.',
           ),
           _sectionBody(
+            'Personal Verification and User Safety',
+            'Bakhli strongly encourages all users to personally visit and inspect any property before entering into any agreement or making any payment to a property owner. Listing details are provided by owners and have not been independently verified. Any decision to visit a property, meet an owner in person, or proceed with a rental arrangement is made entirely at the user\'s own discretion and judgement. Bakhli has no involvement in, and accepts no responsibility for, any interaction, meeting, or transaction that takes place between users outside of Bakhli.',
+          ),
+          _sectionBody(
             'Paid Memberships',
             'Certain features within Bakhli require a paid membership. Membership fees are charged for access to those features and are non-refundable once activated. Activation of a membership does not carry any assurance of responses, inquiries, or rental agreements. All outcomes remain dependent on individual user interest and prevailing conditions. Payments are processed in Indian Rupees (INR) through a third-party payment service. Bakhli does not store your card or bank account details.',
           ),
