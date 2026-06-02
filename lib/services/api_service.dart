@@ -8,6 +8,7 @@ import 'storage_service.dart';
 class ApiService {
   static late Dio _dio;
   static late Dio _nominatimDio;
+  static bool _isHandlingUnauthorized = false;
 
   static void init() {
     _dio = Dio(BaseOptions(
@@ -24,10 +25,12 @@ class ApiService {
         handler.next(options);
       },
       onError: (error, handler) async {
-        if (error.response?.statusCode == 401) {
+        if (error.response?.statusCode == 401 && !_isHandlingUnauthorized) {
+          _isHandlingUnauthorized = true;
           await StorageService.clearAll();
           AppToast.info('Session expired. Please log in again.');
           Get.offAllNamed(AppRoutes.login);
+          Future.delayed(const Duration(seconds: 3), () => _isHandlingUnauthorized = false);
         }
         handler.next(error);
       },
