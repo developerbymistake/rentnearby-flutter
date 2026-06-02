@@ -69,8 +69,8 @@ class TermsOfServiceScreen extends StatelessWidget {
             'Certain features within Bakhli require a paid membership. Membership fees are charged for access to those features and are non-refundable once activated. Activation of a membership does not carry any assurance of responses, inquiries, or rental agreements. All outcomes remain dependent on individual user interest and prevailing conditions. Payments are processed in Indian Rupees (INR) through a third-party payment service. Bakhli does not store your card or bank account details.',
           ),
           _sectionBody(
-            'Contact Visibility',
-            'Property owners retain complete control over the visibility of their contact information. Your mobile number will only be displayed to other users if you have chosen to make it visible through your profile settings. Bakhli presents contact details strictly in accordance with the preference you have set.',
+            'Listing Visibility',
+            'When a listing is published, the property\'s location and address are always visible to other users. This information is essential for prospective tenants to assess where the accommodation is situated and cannot be concealed. Your mobile number, on the other hand, is displayed by default on your listings and may be hidden at any time through your profile settings. When contact visibility is turned off, your phone number and direct contact options are no longer shown to other users.',
           ),
           _sectionBody(
             'Your Content',

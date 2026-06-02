@@ -46,7 +46,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
           ),
           _sectionBody(
             'What Is Publicly Visible',
-            'When you publish a listing on Bakhli, information such as photos, address, and rent is visible to all users. Your mobile number is displayed only if you have enabled contact visibility in your profile settings. You may update this preference at any time. When contact visibility is turned off, your phone number and contact options are not shown to other users.',
+            'When you publish a listing on Bakhli, your photos, property address, and rent amount are visible to all users. The property\'s location is always displayed and cannot be hidden, as it is essential information for prospective tenants seeking accommodation. Your mobile number is visible by default on your listings, but you may choose to hide it at any time through your profile settings. When contact visibility is turned off, your phone number and direct contact options are no longer shown to other users.',
           ),
           _sectionBody(
             'Data Retention and Right to Erasure',
