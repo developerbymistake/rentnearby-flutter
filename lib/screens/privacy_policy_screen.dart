@@ -19,58 +19,58 @@ class PrivacyPolicyScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _heading('Privacy Policy'),
-          _updated('Last updated: May 31, 2026'),
+          _updated('Last updated: June 2, 2026'),
           const SizedBox(height: 12),
           _body(
-            'Bakhli is committed to protecting your privacy. This Privacy Policy explains what information we collect, how we use it, and what rights you have regarding your data when you use the Bakhli app.',
+            'Bakhli is committed to handling your personal information with care and transparency. This Privacy Policy outlines what information is collected, how it is used, and the choices available to you.',
           ),
           _section(
             'Information We Collect',
             [
-              'Mobile number — verified via WhatsApp OTP during sign up. Used to create your account and allow tenants to contact you directly.',
-              'Your name — provided by you when setting up your profile. Displayed on your listings.',
-              'Location (GPS) — used only in real-time to show rooms near you. Your location is never stored on our servers.',
-              'Listing photos — images you upload are stored securely on our platform.',
-              'Payment data — listing activation payments are processed by a third-party payment gateway. Bakhli does not store your card or bank details.',
+              'Mobile number — collected during sign-up for account creation and verification purposes.',
+              'Your name — provided by you and displayed alongside your listings.',
+              'Location (GPS) — accessed in real-time solely to show nearby rental listings. Your location is not stored on Bakhli\'s servers.',
+              'Listing photos — images uploaded by you, stored securely for the purpose of displaying your listings.',
+              'Payment information — handled entirely by a third-party payment service. Bakhli does not receive, access, or store your card or bank account details.',
             ],
           ),
           _section(
             'How We Use Your Information',
             [
-              'To create and manage your account.',
-              'To display your listings — including photos, address, rent, and contact number — to other users of the platform.',
-              'To show you rental rooms available near your current location.',
-              'To process listing activation payments through our payment partner.',
-              'To improve the Bakhli platform and user experience.',
+              'To create and maintain your Bakhli account.',
+              'To display your listing details to other users, in line with the visibility preferences you have selected.',
+              'To show you rental listings available near your current location.',
+              'To facilitate listing-related payments through our payment partner.',
+              'To maintain and improve the quality of the service.',
             ],
           ),
           _sectionBody(
             'What Is Publicly Visible',
-            'When you post a listing on Bakhli, the details you provide — including photos, address, and rent amount — are visible to all users of the app. Your mobile number is shown on listings by default, but you can hide it at any time from the Profile screen using the "Contact visible to public" toggle. When hidden, your Call and WhatsApp contact buttons are not shown to other users.',
+            'When you publish a listing on Bakhli, information such as photos, address, and rent is visible to all users. Your mobile number is displayed only if you have enabled contact visibility in your profile settings. You may update this preference at any time. When contact visibility is turned off, your phone number and contact options are not shown to other users.',
           ),
           _sectionBody(
             'Data Retention and Right to Erasure',
-            'We retain your account data and listings for as long as your account is active. You may delete your account at any time from the Profile screen. Upon deletion, your account, all listings, plots, photos, and memberships are permanently and irreversibly removed from our systems. This right is provided under Section 13 of the Digital Personal Data Protection Act, 2023.',
+            'Your account information and listings are retained for as long as your account remains active. You may request deletion of your account at any time through the profile settings. Upon deletion, all associated data — including listings, photos, and membership records — is permanently removed from our systems. This right is provided in accordance with the Digital Personal Data Protection Act, 2023.',
           ),
           _sectionBody(
-            'Confidentiality and Security',
-            'We take reasonable measures to protect your data. However, no method of internet transmission or electronic storage is 100% secure. We strive to maintain strong security practices but cannot guarantee absolute protection against all threats.',
+            'Security',
+            'Reasonable technical and organisational measures are in place to protect your information. While every effort is made to safeguard your data, no system can be considered entirely free of risk.',
           ),
           _sectionBody(
             'Children\'s Privacy',
-            'Bakhli is intended for adults (18 years and older). We do not knowingly collect personal information from minors. If you believe a minor is using the platform, please contact us at supportbakhli@gmail.com and we will take appropriate action.',
+            'Bakhli is intended for individuals aged 18 and above. Information is not knowingly collected from minors. If you have reason to believe a minor has created an account, please write to us at supportbakhli@gmail.com.',
           ),
           _sectionBody(
             'Third-Party Services',
-            'OTP verification is delivered via WhatsApp. By using this service, you acknowledge that WhatsApp\'s Privacy Policy applies to the delivery of OTP messages.\n\nListing activation payments are processed by Razorpay, a licensed payment aggregator regulated by the Reserve Bank of India. Razorpay handles your payment information directly and is subject to their own Privacy Policy. Bakhli does not receive or store any card or bank account details.',
+            'Account verification is completed via a one-time password delivered through WhatsApp. This process is subject to WhatsApp\'s own Privacy Policy.\n\nPayment processing is handled by Razorpay, a licensed payment aggregator regulated by the Reserve Bank of India. All payment data is handled directly by Razorpay and governed by their Privacy Policy. Bakhli does not access or retain any financial credentials.',
           ),
           _sectionBody(
             'Changes to This Policy',
-            'We may update this Privacy Policy from time to time. When we do, we will update the "Last updated" date at the top of this page. We encourage you to review this policy periodically.',
+            'This Privacy Policy may be revised periodically. Any changes will be reflected in the \'Last updated\' date shown at the top of this document. We encourage you to review this policy from time to time.',
           ),
           _sectionBody(
             'Contact Us',
-            'If you have any questions or concerns about this Privacy Policy, please contact our Grievance Officer:\n\nName: Bakhli Team\nEmail: supportbakhli@gmail.com',
+            'For any questions or concerns regarding this Privacy Policy, please write to us at:\n\nEmail: supportbakhli@gmail.com',
           ),
           const SizedBox(height: 32),
           Center(
