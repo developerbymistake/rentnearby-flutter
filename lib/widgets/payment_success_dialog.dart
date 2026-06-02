@@ -18,8 +18,8 @@ class PaymentSuccessDialog extends StatefulWidget {
     this.isPlot = false,
     this.originalPrice = 0,
     required this.onDismiss,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<PaymentSuccessDialog> createState() => _PaymentSuccessDialogState();
@@ -117,7 +117,7 @@ class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
               decoration: BoxDecoration(
                 color: lightColor,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: color.withOpacity(0.35)),
+                border: Border.all(color: color.withValues(alpha: 0.35)),
               ),
               child: Text(
                 '${widget.planType} Plan',
@@ -193,7 +193,7 @@ class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
             const SizedBox(height: 16),
             AnimatedBuilder(
               animation: _progressCtrl,
-              builder: (_, __) => ClipRRect(
+              builder: (_, _) => ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: 1 - _progressCtrl.value,
@@ -255,7 +255,7 @@ class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
         decoration: BoxDecoration(
           color: lightColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

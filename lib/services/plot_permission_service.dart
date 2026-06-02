@@ -1,4 +1,3 @@
-import 'package:collection/collection.dart';
 import 'package:get/get.dart';
 import '../controllers/app_feature_controller.dart';
 import '../controllers/auth_controller.dart';
@@ -34,8 +33,9 @@ class PlotPermissionService {
     final freeLimit      = features.plotPaymentFreeLimit.value;
 
     if (!paymentEnabled) {
-      if (_ctrl.myPlots.length >= freeLimit)
+      if (_ctrl.myPlots.length >= freeLimit) {
         return PlotShowLimitDialog(maxPlots: freeLimit, hasPlan: true);
+      }
       return PlotAllowed();
     }
 

@@ -345,7 +345,7 @@ class ListingCard extends StatelessWidget {
           child: Switch(
             value: listing.isActive,
             onChanged: (_) => onToggleActive?.call(),
-            activeColor: const Color(0xFF10B981),
+            activeThumbColor: const Color(0xFF10B981),
             activeTrackColor: const Color(0xFFD1FAE5),
             inactiveThumbColor: const Color(0xFFF59E0B),
             inactiveTrackColor: const Color(0xFFFEF3C7),

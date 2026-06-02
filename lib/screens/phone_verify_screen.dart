@@ -239,7 +239,7 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset('assets/images/whatsapp_icon.png', width: 16, height: 16, errorBuilder: (_, __, ___) => const Icon(Icons.chat, color: Color(0xFF25D366), size: 16)),
+                  Image.asset('assets/images/whatsapp_icon.png', width: 16, height: 16, errorBuilder: (_, _, _) => const Icon(Icons.chat, color: Color(0xFF25D366), size: 16)),
                   const SizedBox(width: 6),
                   const Text('via WhatsApp',
                       style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Color(0xFF25D366), fontWeight: FontWeight.w600)),

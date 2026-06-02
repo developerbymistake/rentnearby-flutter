@@ -36,7 +36,7 @@ class AppToast {
       foregroundColor: Colors.white,
       alignment: Alignment.topCenter,
       autoCloseDuration: const Duration(seconds: 4),
-      closeButtonShowType: CloseButtonShowType.none,
+      closeButton: const ToastCloseButton(showType: CloseButtonShowType.none),
       showProgressBar: false,
       borderRadius: BorderRadius.circular(14),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

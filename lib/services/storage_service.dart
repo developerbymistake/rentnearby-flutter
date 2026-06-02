@@ -6,7 +6,7 @@ import '../models/user_model.dart';
 
 class StorageService {
   static const _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(),
   );
   static final _box = GetStorage();
   static String? _cachedToken;

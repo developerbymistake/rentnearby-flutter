@@ -34,8 +34,9 @@ class ListingPermissionService {
     final freeLimit      = features.roomPaymentFreeLimit.value;
 
     if (!paymentEnabled) {
-      if (_ctrl.myListings.length >= freeLimit)
+      if (_ctrl.myListings.length >= freeLimit) {
         return ListingShowLimitDialog(maxRooms: freeLimit, hasPlan: true);
+      }
       return ListingAllowed();
     }
 
