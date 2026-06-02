@@ -77,12 +77,20 @@ class TermsOfServiceScreen extends StatelessWidget {
             'By publishing a listing on Bakhli, you grant Bakhli a non-exclusive, royalty-free right to display that content to other users. Ownership of your content remains with you at all times, and you may remove your listing whenever you wish.',
           ),
           _sectionBody(
+            'Intellectual Property',
+            'All content available on Bakhli — including its design, layout, and features — is the property of Bakhli. Listing content such as photos and descriptions submitted by users remains the property of the respective user who submitted it. Users are expressly prohibited from copying, downloading, reproducing, distributing, or making any use of content posted by other users without the explicit consent of the original owner. Any unauthorised use of content found on Bakhli may result in immediate account suspension.',
+          ),
+          _sectionBody(
             'Account Suspension',
             'Bakhli reserves the right to restrict or permanently discontinue access to any account found to be in violation of these Terms, or associated with conduct that is harmful to other users. Such action may be taken at any time without prior notice.',
           ),
           _sectionBody(
             'Scope of Responsibility',
             'Bakhli\'s role is limited to enabling connections between property owners and individuals seeking rental accommodation. Any arrangement that follows — including negotiations, agreements, and financial transactions — takes place solely between the parties involved. Bakhli bears no responsibility for the outcome of any such arrangement, nor for any loss, inconvenience, or dispute that may arise from it.',
+          ),
+          _sectionBody(
+            'Governing Law and Jurisdiction',
+            'These Terms of Service are governed by and construed in accordance with the laws of India. Any dispute, claim, or controversy arising out of or in connection with these Terms, or from the use of Bakhli, shall be subject to the exclusive jurisdiction of the competent courts of India.',
           ),
           _sectionBody(
             'Changes to These Terms',
