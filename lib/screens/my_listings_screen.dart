@@ -21,7 +21,8 @@ class MyListingsScreen extends StatefulWidget {
   State<MyListingsScreen> createState() => _MyListingsScreenState();
 }
 
-class _MyListingsScreenState extends State<MyListingsScreen> {
+class _MyListingsScreenState extends State<MyListingsScreen>
+    with WidgetsBindingObserver {
   final _ctrl = Get.find<ListingController>();
   final _auth = Get.find<AuthController>();
   final _scrollCtrl = ScrollController();
@@ -38,27 +39,33 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ctrl.loadMyListings(page: 1);
     _scrollCtrl.addListener(_onScroll);
     _tabWorker = ever(_auth.tabIndex, (int idx) async {
       if (idx == 1 && !_ctrl.isLoading.value) {
         _refresh();
-        _ctrl.isMembershipLoading.value = true;
         try {
-          await _ctrl.getMembershipStatus();
-        } finally {
-          _ctrl.isMembershipLoading.value = false;
-        }
+          await _ctrl.loadMembership();
+        } catch (_) {}
       }
     });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabWorker?.dispose();
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _ctrl.loadMembership().catchError((_) {});
+    }
   }
 
   void _onScroll() {
@@ -340,7 +347,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   }
 
   void _showPaidUpgradeSheet({String listingId = ''}) async {
-    final plans = await _ctrl.getPlans();
+    final plans = _ctrl.roomPlans.value;
     final paidPlans = plans.values
         .where((p) => (p['originalPrice'] as num? ?? 0) > 0)
         .toList()
@@ -542,9 +549,9 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     }
 
     final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
-    final membership = await _ctrl.getMembershipStatus();
     if (mounted) setState(() => _goLiveLoadingId = null);
-    final plans = await _ctrl.getPlans();
+    final membership = _ctrl.roomMembership.value;
+    final plans      = _ctrl.roomPlans.value;
     final hasMembership = membership != null && (membership['hasMembership'] == true);
 
     if (hasMembership) {

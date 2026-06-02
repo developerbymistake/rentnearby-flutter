@@ -19,6 +19,8 @@ class PlotController extends GetxController {
   final exploreRefreshTrigger = 0.obs;
   final filterResetTrigger = 0.obs;
   final isPlotMembershipLoading = false.obs;
+  final plotMembership = Rxn<Map<String, dynamic>>();
+  final plotPlans = Rx<List<Map<String, dynamic>>>([]);
   int _myPlotsPage = 1;
 
   @override
@@ -145,6 +147,26 @@ class PlotController extends GetxController {
   Future<Map<String, dynamic>?> getPlotMembershipStatus() =>
       Get.find<PlotRepository>().getPlotMembershipStatus();
 
+  Future<void> loadPlotMembership() async {
+    isPlotMembershipLoading.value = true;
+    try {
+      final repo = Get.find<PlotRepository>();
+      final results = await Future.wait([
+        repo.getPlotMembershipStatus(),
+        repo.getPlotPlans(),
+      ]);
+      plotMembership.value = results[0] as Map<String, dynamic>?;
+      plotPlans.value = results[1] as List<Map<String, dynamic>>;
+    } finally {
+      isPlotMembershipLoading.value = false;
+    }
+  }
+
+  Future<void> reloadPlotMembership() async {
+    Get.find<PlotRepository>().invalidateMembership();
+    await loadPlotMembership();
+  }
+
   Future<Map<String, dynamic>?> activatePlotPlan(String plotId, String planType) async {
     try {
       final res = await ApiService.post('/plots/$plotId/create-order?planType=$planType', {});
@@ -155,6 +177,7 @@ class PlotController extends GetxController {
   Future<void> verifyPlotPayment(Map<String, dynamic> body) async {
     await ApiService.post('/plots/${body['plotId']}/verify-payment', body);
     Get.find<PlotRepository>().invalidateMembership();
+    loadPlotMembership(); // background refresh observable
     plotPostedTrigger.value++;
     await loadMyPlots(reset: true);
   }
@@ -169,6 +192,7 @@ class PlotController extends GetxController {
   Future<void> verifyPlotUpgradePayment(Map<String, dynamic> body) async {
     await ApiService.post('/plots/upgrade-plan/verify', body);
     Get.find<PlotRepository>().invalidateMembership();
+    loadPlotMembership(); // background refresh observable
     plotPostedTrigger.value++;
     await loadMyPlots(reset: true);
   }

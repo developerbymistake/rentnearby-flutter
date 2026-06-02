@@ -617,20 +617,14 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     if (mounted) setState(() => _isFinalizing = true);
     await _ctrl.loadMyPlots(reset: true);
 
+    _ctrl.reloadPlotMembership(); // background refresh — no await, user doesn't wait
     try {
-      final results = await Future.wait([
-        _ctrl.getPlotMembershipStatus(),
-        _ctrl.getPlotPlans(),
-      ]);
-      final membership = results[0] as Map<String, dynamic>?;
-      final plans = results[1] as List<Map<String, dynamic>>;
+      final membership    = _ctrl.plotMembership.value;
+      final plans         = _ctrl.plotPlans.value;
       final hasMembership = membership != null && (membership['hasMembership'] == true);
-      final planType = membership?['planType'] as String? ?? '';
-      final maxPlots = (membership?['maxPlots'] as num?)?.toInt() ?? 0;
-      final plansMap = <String, Map<String, dynamic>>{};
-      for (final p in plans) {
-        plansMap[p['planType'] as String] = p;
-      }
+      final planType      = membership?['planType'] as String? ?? '';
+      final maxPlots      = (membership?['maxPlotListings'] as num?)?.toInt() ?? 0;
+      final plansMap      = { for (final p in plans) p['planType'] as String: p };
       final currentPlanIsFree = (plansMap[planType]?['originalPrice'] as num? ?? 0) == 0;
       if (hasMembership && currentPlanIsFree && _ctrl.myPlots.length > maxPlots) {
         final paidPlans = plans.where((p) => (p['originalPrice'] as num? ?? 0) > 0).toList();

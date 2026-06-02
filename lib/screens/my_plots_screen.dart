@@ -24,7 +24,8 @@ class MyPlotsScreen extends StatefulWidget {
   State<MyPlotsScreen> createState() => _MyPlotsScreenState();
 }
 
-class _MyPlotsScreenState extends State<MyPlotsScreen> {
+class _MyPlotsScreenState extends State<MyPlotsScreen>
+    with WidgetsBindingObserver {
   final _ctrl = Get.find<PlotController>();
   final _auth = Get.find<AuthController>();
   final _scrollCtrl = ScrollController();
@@ -40,27 +41,33 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ctrl.loadMyPlots(reset: true);
     _scrollCtrl.addListener(_onScroll);
     _tabWorker = ever(_auth.tabIndex, (int idx) async {
       if (idx == 3 && !_ctrl.isLoading.value) {
         _refresh();
-        _ctrl.isPlotMembershipLoading.value = true;
         try {
-          await _ctrl.getPlotMembershipStatus();
-        } finally {
-          _ctrl.isPlotMembershipLoading.value = false;
-        }
+          await _ctrl.loadPlotMembership();
+        } catch (_) {}
       }
     });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabWorker?.dispose();
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _ctrl.loadPlotMembership().catchError((_) {});
+    }
   }
 
   void _onScroll() {
@@ -106,8 +113,9 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
       return;
     }
 
-    final membership = await _ctrl.getPlotMembershipStatus();
     if (mounted) setState(() => _goLiveLoadingId = null);
+    final membership = _ctrl.plotMembership.value;
+    final plans      = _ctrl.plotPlans.value;
     final hasMembership = membership != null && (membership['hasMembership'] == true);
     final canActivate = (membership ?? {})['canActivate'] as bool? ?? false;
 
@@ -121,7 +129,6 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
     if (hasMembership && !canActivate) {
       final maxPlots = (membership['maxPlotListings'] as num?)?.toInt() ?? 0;
       final planType = membership['planType'] as String? ?? '';
-      final plans = await _ctrl.getPlotPlans();
       final currentPlan = plans.firstWhereOrNull((p) => p['planType'] == planType);
       final currentPlanIsFree = currentPlan == null || (currentPlan['originalPrice'] as num? ?? 0) == 0;
       if (currentPlanIsFree) {
@@ -141,7 +148,6 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
       return;
     }
 
-    final plans = await _ctrl.getPlotPlans();
     if (!mounted) return;
 
     final hasUsedFree = _auth.user.value?.hasUsedFreePlotPlan ?? false;
@@ -168,7 +174,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen> {
   }
 
   void _showPaidUpgradePlotSheet({String plotId = ''}) async {
-    final plans = await _ctrl.getPlotPlans();
+    final plans = _ctrl.plotPlans.value;
     final paidPlans = plans.where((p) => (p['originalPrice'] as num? ?? 0) > 0).toList()
       ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0));
 

@@ -28,34 +28,31 @@ class ListingPermissionService {
   Future<ListingPermissionResult> check() async {
     if (_location.selectedDistrict.value == null) return ListingNeedsDistrict();
 
-    final _features      = Get.find<AppFeatureController>();
-    final paymentEnabled = _features.isRoomPaymentEnabled.value;
-    final freeLimit      = _features.roomPaymentFreeLimit.value;
+    final features       = Get.find<AppFeatureController>();
+    final paymentEnabled = features.isRoomPaymentEnabled.value;
+    final freeLimit      = features.roomPaymentFreeLimit.value;
 
     if (!paymentEnabled) {
-      if (_ctrl.myListings.length >= freeLimit) {
+      if (_ctrl.myListings.length >= freeLimit)
         return ListingShowLimitDialog(maxRooms: freeLimit, hasPlan: true);
-      }
       return ListingAllowed();
     }
 
-    final membership = await _ctrl.getMembershipStatus();
+    final membership = _ctrl.roomMembership.value;
+    final plans      = _ctrl.roomPlans.value;
 
     if (membership != null && membership['hasMembership'] == true) {
       final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 0;
       if (_ctrl.myListings.length >= maxRooms) {
         final planType = membership['planType'] as String? ?? '';
-        final plans = await _ctrl.getPlans();
-        final isFree = (plans[planType]?['originalPrice'] as num? ?? 0) == 0;
+        final isFree   = (plans[planType]?['originalPrice'] as num? ?? 0) == 0;
         return isFree
             ? ListingShowUpgradeSheet()
             : ListingShowLimitDialog(maxRooms: maxRooms, hasPlan: true);
       }
     } else {
       final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
-      final plans = await _ctrl.getPlans();
       final freePlan = plans.values
-          .toList()
           .firstWhereOrNull((p) => (p['originalPrice'] as num? ?? 0) == 0);
       final limit = (freePlan?['roomLimit'] as num?)?.toInt() ?? 1;
       if (_ctrl.myListings.length >= limit) {

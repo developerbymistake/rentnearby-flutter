@@ -19,6 +19,8 @@ class ListingController extends GetxController {
   final exploreRefreshTrigger = 0.obs;
   final filterResetTrigger = 0.obs;
   final isMembershipLoading = false.obs;
+  final roomMembership = Rxn<Map<String, dynamic>>();
+  final roomPlans = Rx<Map<String, Map<String, dynamic>>>({});
 
   @override
   void onInit() {
@@ -269,6 +271,7 @@ class ListingController extends GetxController {
         final success = data['success'] == true;
         if (success) {
           Get.find<ListingRepository>().invalidateMembership();
+          loadMembership(); // background refresh observable
           listingPostedTrigger.value++;
           await loadMyListings();
         } else {
@@ -306,6 +309,26 @@ class ListingController extends GetxController {
   Future<Map<String, dynamic>?> getMembershipStatus() =>
       Get.find<ListingRepository>().getMembershipStatus();
 
+  Future<void> loadMembership() async {
+    isMembershipLoading.value = true;
+    try {
+      final repo = Get.find<ListingRepository>();
+      final results = await Future.wait([
+        repo.getMembershipStatus(),
+        repo.getPlans(),
+      ]);
+      roomMembership.value = results[0] as Map<String, dynamic>?;
+      roomPlans.value = results[1] as Map<String, Map<String, dynamic>>;
+    } finally {
+      isMembershipLoading.value = false;
+    }
+  }
+
+  Future<void> reloadMembership() async {
+    Get.find<ListingRepository>().invalidateMembership();
+    await loadMembership();
+  }
+
   Future<Map<String, dynamic>> createUpgradeOrder(String planType) async {
     try {
       isLoading.value = true;
@@ -337,6 +360,7 @@ class ListingController extends GetxController {
         'razorpaySignature': razorpaySignature,
       });
       Get.find<ListingRepository>().invalidateMembership();
+      loadMembership(); // background refresh observable
       listingPostedTrigger.value++;
       await loadMyListings();
     } catch (e) {

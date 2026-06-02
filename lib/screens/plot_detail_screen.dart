@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
@@ -99,7 +100,53 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
     );
   }
 
-  Widget _buildLoader() => const Center(child: CircularProgressIndicator(color: Color(0xFF92400E)));
+  Widget _buildLoader() => Stack(
+    children: [
+      Shimmer.fromColors(
+        baseColor: AppColors.shimmerBase,
+        highlightColor: AppColors.shimmerHighlight,
+        child: SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(height: 380 + MediaQuery.of(context).padding.top, color: Colors.white),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(child: Container(height: 28, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)))),
+                    const SizedBox(width: 12),
+                    Container(width: 90, height: 36, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10))),
+                  ]),
+                  const SizedBox(height: 16),
+                  Container(height: 120, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
+                  const SizedBox(height: 24),
+                  Container(height: 14, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                  const SizedBox(height: 8),
+                  Container(height: 14, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                  const SizedBox(height: 8),
+                  Container(height: 14, width: 200, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                ]),
+              ),
+            ],
+          ),
+        ),
+      ),
+      Positioned(
+        top: MediaQuery.of(context).padding.top + 8,
+        left: 8,
+        child: GestureDetector(
+          onTap: () => Get.back(),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+            child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+          ),
+        ),
+      ),
+    ],
+  );
 
   Widget _buildContent() {
     if (_plot == null) return const Center(child: Text('Plot not found', style: TextStyle(fontFamily: 'Poppins')));

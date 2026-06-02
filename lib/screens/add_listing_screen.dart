@@ -553,24 +553,21 @@ class _AddListingScreenState extends State<AddListingScreen> {
     await _ctrl.loadMyListings();
 
     // If user is on a free (price=0) plan and at capacity, go straight to paid payment
+    _ctrl.reloadMembership(); // background refresh — no await, user doesn't wait
     try {
-      final results = await Future.wait([
-        _ctrl.getMembershipStatus(),
-        _ctrl.getPlans(),
-      ]);
-      final Map<String, dynamic>? membership = results[0];
-      final plans = results[1] as Map<String, Map<String, dynamic>>;
+      final membership = _ctrl.roomMembership.value;
+      final plans      = _ctrl.roomPlans.value;
       final hasMembership = membership != null && (membership['hasMembership'] == true);
-      final planType = membership?['planType'] as String? ?? '';
-      final maxRooms = (membership?['maxRooms'] as num?)?.toInt() ?? 0;
+      final planType      = membership?['planType'] as String? ?? '';
+      final maxRooms      = (membership?['maxRooms'] as num?)?.toInt() ?? 0;
       final currentPlanIsFree = (plans[planType]?['originalPrice'] as num? ?? 0) == 0;
 
       if (hasMembership && currentPlanIsFree && _ctrl.myListings.length > maxRooms) {
-        final _paidMatches = plans.values.cast<Map<String, dynamic>>().where((p) => (p['originalPrice'] as num? ?? 0) > 0);
-        if (_paidMatches.isNotEmpty) {
+        final paidMatches = plans.values.where((p) => (p['originalPrice'] as num? ?? 0) > 0);
+        if (paidMatches.isNotEmpty) {
           Get.offNamed(AppRoutes.paymentScreen, arguments: {
             'listingId': listingId,
-            'plan': _paidMatches.first,
+            'plan': paidMatches.first,
           });
         }
         return;
