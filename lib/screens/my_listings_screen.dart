@@ -592,13 +592,8 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     final isFree = (selectedPlan['originalPrice'] as num? ?? 0) == 0;
 
     if (isFree) {
-      try {
-        await _ctrl.activatePlan(listingId, selectedPlanType);
-        await _ctrl.loadMyListings();
-      } catch (e) {
-        AppToast.error('Could not activate plan: $e');
-        return;
-      }
+      final success = await _ctrl.activatePlan(listingId, selectedPlanType);
+      if (!success) return;
       if (!mounted) return;
       Get.dialog(
         PaymentSuccessDialog(

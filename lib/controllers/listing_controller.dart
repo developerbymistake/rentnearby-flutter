@@ -186,7 +186,7 @@ class ListingController extends GetxController {
     }
   }
 
-  Future<void> activatePlan(String listingId, String planType) async {
+  Future<bool> activatePlan(String listingId, String planType) async {
     try {
       isLoading.value = true;
       final res = await ApiService.post(
@@ -201,15 +201,16 @@ class ListingController extends GetxController {
 
       listingPostedTrigger.value++;
       await loadMyListings();
+      return true;
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not activate free plan.'));
-      rethrow;
+      return false;
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<Map<String, dynamic>> createPaymentOrder(String listingId, String planType) async {
+  Future<Map<String, dynamic>?> createPaymentOrder(String listingId, String planType) async {
     try {
       isLoading.value = true;
       final res = await ApiService.post(
@@ -243,7 +244,7 @@ class ListingController extends GetxController {
       };
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not create payment order.'));
-      rethrow;
+      return null;
     } finally {
       isLoading.value = false;
     }
@@ -281,7 +282,6 @@ class ListingController extends GetxController {
         throw Exception('Invalid payment response');
       }
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Payment verification failed.'));
       rethrow;
     } finally {
       isLoading.value = false;
@@ -329,7 +329,7 @@ class ListingController extends GetxController {
     await loadMembership();
   }
 
-  Future<Map<String, dynamic>> createUpgradeOrder(String planType) async {
+  Future<Map<String, dynamic>?> createUpgradeOrder(String planType) async {
     try {
       isLoading.value = true;
       final res = await ApiService.post('/listings/upgrade-plan/create-order', {'planType': planType});
@@ -342,7 +342,7 @@ class ListingController extends GetxController {
       };
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not create upgrade order.'));
-      rethrow;
+      return null;
     } finally {
       isLoading.value = false;
     }
@@ -364,7 +364,6 @@ class ListingController extends GetxController {
       listingPostedTrigger.value++;
       await loadMyListings();
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not verify upgrade payment.'));
       rethrow;
     }
   }

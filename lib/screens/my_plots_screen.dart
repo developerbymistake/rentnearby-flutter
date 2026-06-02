@@ -447,10 +447,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   Future<void> _activateFreePlotPlanDirect(String plotId, Map<String, dynamic> plan) async {
     final planType = plan['planType'] as String? ?? 'FREE';
     final result = await _ctrl.activatePlotPlan(plotId, planType);
-    if (result == null) {
-      AppToast.error('Could not activate plot. Please try again.');
-      return;
-    }
+    if (result == null) return; // controller already showed toast
     await _ctrl.loadMyPlots(reset: true);
     if (!mounted) return;
     Get.dialog(

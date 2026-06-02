@@ -19,7 +19,7 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   late Razorpay _razorpay;
-  bool _isLoading = false;
+  bool _isCreatingOrder = false;
   bool _isVerifying = false;
   bool _razorpayOpened = false;
   bool _payNowDisabled = false;
@@ -50,67 +50,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _onError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
-
-    _createOrder();
+    // Order is created only when user clicks "Pay Now" — not on screen load
   }
 
-  Future<void> _createOrder() async {
-    _razorpayOpened = false;
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      Map<String, dynamic>? response;
-      if (_isPlot) {
-        final plotCtrl = Get.find<PlotController>();
-        response = _isUpgrade
-            ? await plotCtrl.createPlotUpgradeOrder(_planType)
-            : await plotCtrl.activatePlotPlan(_plotId, _planType);
-      } else {
-        final listingCtrl = Get.find<ListingController>();
-        response = _isUpgrade
-            ? await listingCtrl.createUpgradeOrder(_planType)
-            : await listingCtrl.createPaymentOrder(_listingId, _planType);
-      }
-
-      if (!mounted) return;
-
-      if (response == null) {
-        setState(() => _error = 'Could not create payment order. Please try again.');
-        return;
-      }
-
-      final orderId = response['orderId'] as String?;
-      final amount = response['amount'] as int?;
-      final currency = response['currency'] as String? ?? 'INR';
-      final keyId = response['keyId'] as String?;
-
-      if (orderId == null || orderId.isEmpty) {
-        setState(() => _error = 'Invalid order from server');
-        return;
-      }
-
-      // For PAID plan: prepare Razorpay order details
-      if (keyId == null || keyId.isEmpty) {
-        setState(() => _error = 'Payment key not available from server');
-        return;
-      }
-
-      setState(() {
-        _order = {
-          'orderId': orderId,
-          'amount': amount ?? 0,
-          'currency': currency,
-          'keyId': keyId,
-        };
-      });
-    } catch (e) {
-      setState(() => _error = 'Could not create payment order: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+  Future<Map<String, dynamic>?> _fetchOrder() async {
+    Map<String, dynamic>? response;
+    if (_isPlot) {
+      final plotCtrl = Get.find<PlotController>();
+      response = _isUpgrade
+          ? await plotCtrl.createPlotUpgradeOrder(_planType)
+          : await plotCtrl.activatePlotPlan(_plotId, _planType);
+    } else {
+      final listingCtrl = Get.find<ListingController>();
+      response = _isUpgrade
+          ? await listingCtrl.createUpgradeOrder(_planType)
+          : await listingCtrl.createPaymentOrder(_listingId, _planType);
     }
+    return response;
   }
 
   String _formatPhone(String raw) {
@@ -120,33 +76,53 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return raw;
   }
 
-  void _openRazorpay() {
-    if (_order == null) return;
-    setState(() => _payNowDisabled = true);
-    _razorpayOpened = true;
-
-    final rawPhone = Get.find<AuthController>().user.value?.phoneNumber ?? '';
-    final options = {
-      'key': _order!['keyId'],
-      'amount': (_order!['amount'] as int) * 100,
-      'currency': _order!['currency'],
-      'order_id': _order!['orderId'],
-      'name': 'Bakhli',
-      'description': _isPlot
-          ? '$_planType Plan - ${_plan['days'] ?? 30} days, ${_plan['plotLimit'] ?? 1} plots'
-          : '$_planType Plan - ${_plan['days'] ?? 30} days, ${_plan['roomLimit'] ?? 2} rooms',
-      'prefill': {
-        'contact': _formatPhone(rawPhone),
-      },
-      'theme': {
-        'color': '#3399cc',
-      },
-    };
+  Future<void> _openRazorpay() async {
+    setState(() { _isCreatingOrder = true; _error = null; });
 
     try {
+      // Step 1: Create order on backend (only when Pay Now is tapped)
+      final response = await _fetchOrder();
+      if (!mounted) return;
+
+      if (response == null) {
+        setState(() => _error = 'Could not start payment. Please try again.');
+        return;
+      }
+
+      final orderId = response['orderId'] as String?;
+      final amount  = response['amount'] as int?;
+      final currency = response['currency'] as String? ?? 'INR';
+      final keyId   = response['keyId'] as String?;
+
+      if (orderId == null || orderId.isEmpty || keyId == null || keyId.isEmpty) {
+        setState(() => _error = 'Invalid order from server. Please try again.');
+        return;
+      }
+
+      _order = {'orderId': orderId, 'amount': amount ?? 0, 'currency': currency, 'keyId': keyId};
+
+      // Step 2: Open Razorpay SDK
+      setState(() { _razorpayOpened = true; _payNowDisabled = true; });
+
+      final rawPhone = Get.find<AuthController>().user.value?.phoneNumber ?? '';
+      final options = {
+        'key': keyId,
+        'amount': (amount ?? 0) * 100,
+        'currency': currency,
+        'order_id': orderId,
+        'name': 'Bakhli',
+        'description': _isPlot
+            ? '$_planType Plan - ${_plan['days'] ?? 30} days, ${_plan['plotLimit'] ?? 1} plots'
+            : '$_planType Plan - ${_plan['days'] ?? 30} days, ${_plan['roomLimit'] ?? 2} rooms',
+        'prefill': {'contact': _formatPhone(rawPhone)},
+        'theme': {'color': '#3399cc'},
+      };
+
       _razorpay.open(options);
     } catch (e) {
-      AppToast.error('Failed to open payment form: $e');
+      setState(() => _error = 'Could not start payment. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isCreatingOrder = false);
     }
   }
 
@@ -222,13 +198,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _isVerifying = false);
-      AppToast.error('Payment verification failed: $e');
+      AppToast.error('Payment verification failed. Please contact support if amount was deducted.');
     }
   }
 
   void _onError(PaymentFailureResponse response) {
     if (!_razorpayOpened) return;
-    setState(() => _payNowDisabled = false);
+    setState(() { _payNowDisabled = false; _razorpayOpened = false; });
+
+    // Cancel PENDING transaction on backend (fire and forget)
+    final orderId = _order?['orderId'] as String?;
+    if (orderId != null && orderId.isNotEmpty) {
+      ApiService.post('/payments/cancel-order', {'razorpayOrderId': orderId})
+          .catchError((_) {});
+    }
+    _order = null;
+
     if (response.code == Razorpay.PAYMENT_CANCELLED) {
       setState(() => _error = 'Payment was cancelled. Tap "Pay Now" to try again.');
     } else {
@@ -317,22 +302,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              if (_isLoading)
-                const CircularProgressIndicator()
-              else if (_error != null) ...[
+              if (_error != null) ...[
                 Text(
                   _error!,
                   style: const TextStyle(color: AppColors.error),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _createOrder,
-                  child: const Text('Retry'),
-                ),
-              ] else if (_order != null) ...[
+              ],
+              // Always show amount from plan args — no backend call needed on load
+              ...[
                 Text(
-                  '₹${_order!['amount']}',
+                  '₹${(_plan['originalPrice'] as num?)?.toInt() ?? 0}',
                   style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
@@ -398,19 +379,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: _payNowDisabled ? null : _openRazorpay,
+                      onPressed: (_payNowDisabled || _isCreatingOrder) ? null : _openRazorpay,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                       ),
-                      child: const Text(
-                        'Pay Now',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
+                      child: _isCreatingOrder
+                          ? const SizedBox(
+                              width: 22, height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                          : const Text(
+                              'Pay Now',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
                     ),
                   ),
               ],

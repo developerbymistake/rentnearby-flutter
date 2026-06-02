@@ -171,30 +171,44 @@ class PlotController extends GetxController {
     try {
       final res = await ApiService.post('/plots/$plotId/create-order?planType=$planType', {});
       return res['data'];
-    } catch (_) { return null; }
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not activate plot plan.'));
+      return null;
+    }
   }
 
   Future<void> verifyPlotPayment(Map<String, dynamic> body) async {
-    await ApiService.post('/plots/${body['plotId']}/verify-payment', body);
-    Get.find<PlotRepository>().invalidateMembership();
-    loadPlotMembership(); // background refresh observable
-    plotPostedTrigger.value++;
-    await loadMyPlots(reset: true);
+    try {
+      await ApiService.post('/plots/${body['plotId']}/verify-payment', body);
+      Get.find<PlotRepository>().invalidateMembership();
+      loadPlotMembership(); // background refresh observable
+      plotPostedTrigger.value++;
+      await loadMyPlots(reset: true);
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>?> createPlotUpgradeOrder(String planType) async {
     try {
       final res = await ApiService.post('/plots/upgrade-plan/create-order?planType=$planType', {});
       return res['data'];
-    } catch (_) { return null; }
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not create upgrade order.'));
+      return null;
+    }
   }
 
   Future<void> verifyPlotUpgradePayment(Map<String, dynamic> body) async {
-    await ApiService.post('/plots/upgrade-plan/verify', body);
-    Get.find<PlotRepository>().invalidateMembership();
-    loadPlotMembership(); // background refresh observable
-    plotPostedTrigger.value++;
-    await loadMyPlots(reset: true);
+    try {
+      await ApiService.post('/plots/upgrade-plan/verify', body);
+      Get.find<PlotRepository>().invalidateMembership();
+      loadPlotMembership(); // background refresh observable
+      plotPostedTrigger.value++;
+      await loadMyPlots(reset: true);
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<void> toggleActive(String id, bool currentIsActive) async {
