@@ -237,10 +237,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.textDark,
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: AppColors.textDark),
+        iconTheme: const IconThemeData(color: Colors.white),
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
@@ -256,7 +256,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             fontFamily: 'Poppins',
             fontWeight: FontWeight.w600,
             fontSize: 16,
-            color: AppColors.textDark,
+            color: Colors.white,
           ),
         ),
       ),
