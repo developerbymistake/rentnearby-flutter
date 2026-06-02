@@ -838,7 +838,7 @@ class _PlotCard extends StatelessWidget {
                   width: double.infinity,
                   child: plot.photos.isNotEmpty
                       ? Image.network(plot.photos.first, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _placeholder())
+                          errorBuilder: (_, _, _) => _placeholder())
                       : _placeholder(),
                 ),
               ),
@@ -930,7 +930,7 @@ class _PlotCard extends StatelessWidget {
                         child: Switch(
                           value: true,
                           onChanged: (_) => onToggleActive(),
-                          activeColor: const Color(0xFF10B981),
+                          activeThumbColor: const Color(0xFF10B981),
                           activeTrackColor: const Color(0xFFD1FAE5),
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
