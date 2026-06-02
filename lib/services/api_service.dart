@@ -10,6 +10,8 @@ class ApiService {
   static late Dio _nominatimDio;
   static bool _isHandlingUnauthorized = false;
 
+  static void beginLogout() => _isHandlingUnauthorized = true;
+
   static void init() {
     _dio = Dio(BaseOptions(
       baseUrl: AppConstants.baseUrl,

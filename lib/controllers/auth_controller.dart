@@ -150,6 +150,7 @@ class AuthController extends GetxController {
 
   Future<void> logout() async {
     isLoading.value = false;
+    ApiService.beginLogout();
     try {
       await ApiService.post('/auth/logout', {});
     } catch (_) {}
@@ -169,6 +170,7 @@ class AuthController extends GetxController {
   Future<void> deleteAccount() async {
     try {
       isLoading.value = true;
+      ApiService.beginLogout();
       await ApiService.delete('/account');
       await NotificationService.to.clearToken();
       try {
