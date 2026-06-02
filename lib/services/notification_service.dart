@@ -17,8 +17,9 @@ class NotificationService extends GetxService {
   static NotificationService get to => Get.find();
 
   // Tab indexes matching main_screen.dart tab order
+  static const int _tabExplore    = 0;
   static const int _tabMyListings = 1;
-  static const int _tabMyPlots = 3;
+  static const int _tabMyPlots    = 3;
 
   @override
   Future<void> onInit() async {
@@ -64,7 +65,11 @@ class NotificationService extends GetxService {
     if (!StorageService.isLoggedIn) return;
 
     final membershipType = message.data['membership_type'];
-    final tabIndex = membershipType == 'plot' ? _tabMyPlots : _tabMyListings;
+    final tabIndex = membershipType == 'plot'
+        ? _tabMyPlots
+        : membershipType == 'broadcast'
+            ? _tabExplore
+            : _tabMyListings;
     final currentRoute = Get.currentRoute;
 
     if (currentRoute == AppRoutes.main) {
