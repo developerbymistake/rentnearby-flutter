@@ -63,6 +63,6 @@ class RazorpayPaymentService {
   }
 
   void dispose() {
-    _razorpay.clear();
+    _razorpay.clear(); // removes all event listeners + cleans up
   }
 }

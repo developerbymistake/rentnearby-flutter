@@ -50,6 +50,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Worker? _loadingWorker;
   Worker? _refreshWorker;
   Worker? _tabWorker;
+  Worker? _filterResetWorker;
   bool _stale = false;
 
   List<_MapMarkerData> _markerData = [];
@@ -134,7 +135,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         _loadNearby();
       }
     });
-    ever(_listingCtrl.filterResetTrigger, (_) {
+    _filterResetWorker = ever(_listingCtrl.filterResetTrigger, (_) {
       if (mounted) setState(() { _selectedCity = null; _selectedRoomType = null; });
     });
     _loadingWorker = ever(_listingCtrl.isLoading, (loading) {
@@ -183,6 +184,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     _refreshWorker?.dispose();
     _mapPauseWorker?.dispose();
     _tabWorker?.dispose();
+    _filterResetWorker?.dispose();
     _radarController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();

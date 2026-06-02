@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -16,6 +17,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 class NotificationService extends GetxService {
   static NotificationService get to => Get.find();
 
+  StreamSubscription? _messageOpenedSub;
+  StreamSubscription? _tokenRefreshSub;
+
   // Tab indexes matching main_screen.dart tab order
   static const int _tabExplore    = 0;
   static const int _tabMyListings = 1;
@@ -31,12 +35,12 @@ class NotificationService extends GetxService {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     // Notification tap handlers — always active regardless of login state
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
+    _messageOpenedSub = FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) _handleNotificationTap(initialMessage);
 
     // Token refresh listener — only registers if logged in
-    FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
+    _tokenRefreshSub = FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
       if (StorageService.isLoggedIn) await _registerToken(token);
     });
 
@@ -148,4 +152,11 @@ class NotificationService extends GetxService {
 
   void onPermissionPromptDismissed() =>
       StorageService.saveNotifPromptDismissedAt();
+
+  @override
+  void onClose() {
+    _messageOpenedSub?.cancel();
+    _tokenRefreshSub?.cancel();
+    super.onClose();
+  }
 }

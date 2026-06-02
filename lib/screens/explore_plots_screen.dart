@@ -52,6 +52,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Worker? _loadingWorker;
   Worker? _refreshWorker;
   Worker? _tabWorker;
+  Worker? _filterResetWorker;
   bool _stale = false;
   List<_MapMarkerData> _markerData = [];
   double _radius = 1.0;
@@ -134,7 +135,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         _loadNearby();
       }
     });
-    ever(_plotCtrl.filterResetTrigger, (_) {
+    _filterResetWorker = ever(_plotCtrl.filterResetTrigger, (_) {
       if (mounted) setState(() { _selectedCity = null; _selectedPlotType = null; });
     });
     _loadingWorker = ever(_plotCtrl.isLoading, (loading) {
@@ -183,6 +184,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _refreshWorker?.dispose();
     _mapPauseWorker?.dispose();
     _tabWorker?.dispose();
+    _filterResetWorker?.dispose();
     _radarController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();

@@ -228,7 +228,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   void dispose() {
-    _razorpay.clear();
+    _razorpay.clear(); // removes all event listeners + cleans up
     super.dispose();
   }
 

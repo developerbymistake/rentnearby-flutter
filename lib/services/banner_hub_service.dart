@@ -62,6 +62,8 @@ class BannerHubService extends GetxService {
 
   Future<void> disconnect() async {
     try {
+      _connection?.off('BannerActivated');
+      _connection?.off('BannerDeactivated');
       await _connection?.stop();
     } catch (_) {}
     _connection = null;
