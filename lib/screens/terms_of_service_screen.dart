@@ -26,7 +26,7 @@ class TermsOfServiceScreen extends StatelessWidget {
           ),
           _sectionBody(
             'About Bakhli',
-            'Bakhli is a digital service that enables property owners across India to list rental accommodation and allows individuals to discover properties available near them. Bakhli is neither a broker nor an agent. All rental arrangements, negotiations, and agreements take place directly and exclusively between the property owner and the prospective tenant.',
+            'Bakhli helps property owners reach genuine prospective tenants by giving their listings visibility to people actively searching for accommodation nearby. For those looking for a place to stay, Bakhli makes it simple to discover available rooms and plots in their area — with the ability to view photos, location, rent, and contact the owner directly.\n\nBakhli is a digital service that enables property owners across India to list rental accommodation and allows individuals to discover properties available near them. Bakhli is neither a broker nor an agent. All rental arrangements, negotiations, and agreements take place directly and exclusively between the property owner and the prospective tenant.',
           ),
           _sectionBody(
             'Eligibility',
