@@ -65,8 +65,8 @@ class TermsOfServiceScreen extends StatelessWidget {
             'Bakhli strongly encourages all users to personally visit and inspect any property before entering into any agreement or making any payment to a property owner. Listing details are provided by owners and have not been independently verified. Any decision to visit a property, meet an owner in person, or proceed with a rental arrangement is made entirely at the user\'s own discretion and judgement. Bakhli has no involvement in, and accepts no responsibility for, any interaction, meeting, or transaction that takes place between users outside of Bakhli.',
           ),
           _sectionBody(
-            'Paid Memberships',
-            'Certain features within Bakhli require a paid membership. Membership fees are charged for access to those features and are non-refundable once activated. Activation of a membership does not carry any assurance of responses, inquiries, or rental agreements. All outcomes remain dependent on individual user interest and prevailing conditions. Payments are processed in Indian Rupees (INR) through a third-party payment service. Bakhli does not store your card or bank account details.',
+            'Memberships and Fees',
+            'Bakhli offers property owners the ability to list their accommodation at no cost under a basic free plan. For those seeking greater visibility, an optional paid membership is available and may be activated at any time. All membership charges, where applicable, are borne solely by the property owner. Tenants may discover listings and reach out to owners entirely free of charge. Bakhli does not levy any commission, brokerage, or fee of any kind on rental arrangements concluded between property owners and tenants.\n\nAll payments are processed in Indian Rupees (INR) through a third-party payment service. Membership fees are non-refundable once activated. Bakhli does not store your card or bank account details.',
           ),
           _sectionBody(
             'Listing Visibility',
