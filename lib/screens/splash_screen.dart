@@ -39,7 +39,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
   }
 
   Future<void> _start() async {
-    await Future.delayed(const Duration(milliseconds: 1800));
+    await Future.delayed(const Duration(milliseconds: 1200));
     _navigate();
   }
 
