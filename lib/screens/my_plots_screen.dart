@@ -32,6 +32,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   Worker? _tabWorker;
   bool _isAddingPlot = false;
   String? _goLiveLoadingId;
+  Future<void> _dataReady = Future.value();
   late final _permissionService = PlotPermissionService(
     _ctrl,
     _auth,
@@ -42,15 +43,18 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _ctrl.loadMyPlots(reset: true);
-    _ctrl.loadPlotMembership().catchError((_) {});
+    _dataReady = Future.wait([
+      _ctrl.loadMyPlots(reset: true),
+      _ctrl.loadPlotMembership(),
+    ]).then((_) {}).catchError((_) {});
     _scrollCtrl.addListener(_onScroll);
     _tabWorker = ever(_auth.tabIndex, (int idx) async {
       if (idx == 3 && !_ctrl.isLoading.value) {
-        _refresh();
-        try {
-          await _ctrl.loadPlotMembership();
-        } catch (_) {}
+        _dataReady = Future.wait([
+          _ctrl.loadMyPlots(reset: true),
+          _ctrl.loadPlotMembership(),
+        ]).then((_) {}).catchError((_) {});
+        await _dataReady;
       }
     });
   }
@@ -66,8 +70,11 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _ctrl.loadPlotMembership().catchError((_) {});
+    if (state == AppLifecycleState.resumed && _auth.tabIndex.value == 3) {
+      _dataReady = Future.wait([
+        _ctrl.loadMyPlots(reset: true),
+        _ctrl.loadPlotMembership(),
+      ]).then((_) {}).catchError((_) {});
     }
   }
 
@@ -83,9 +90,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     if (_isAddingPlot) return;
     setState(() => _isAddingPlot = true);
     try {
-      if (_ctrl.plotPlans.value.isEmpty) {
-        await _ctrl.loadPlotMembership();
-      }
+      await _dataReady;
       final result = await _permissionService.check();
       if (!mounted) return;
       switch (result) {

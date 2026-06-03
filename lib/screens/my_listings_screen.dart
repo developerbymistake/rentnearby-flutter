@@ -30,6 +30,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   int _page = 1;
   bool _isAddingRoom = false;
   String? _goLiveLoadingId;
+  Future<void> _dataReady = Future.value();
   late final _permissionService = ListingPermissionService(
     _ctrl,
     _auth,
@@ -40,15 +41,19 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _ctrl.loadMyListings(page: 1);
-    _ctrl.loadMembership().catchError((_) {});
+    _dataReady = Future.wait([
+      _ctrl.loadMyListings(page: 1),
+      _ctrl.loadMembership(),
+    ]).then((_) {}).catchError((_) {});
     _scrollCtrl.addListener(_onScroll);
     _tabWorker = ever(_auth.tabIndex, (int idx) async {
       if (idx == 1 && !_ctrl.isLoading.value) {
-        _refresh();
-        try {
-          await _ctrl.loadMembership();
-        } catch (_) {}
+        _page = 1;
+        _dataReady = Future.wait([
+          _ctrl.loadMyListings(page: 1),
+          _ctrl.loadMembership(),
+        ]).then((_) {}).catchError((_) {});
+        await _dataReady;
       }
     });
   }
@@ -64,8 +69,12 @@ class _MyListingsScreenState extends State<MyListingsScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _ctrl.loadMembership().catchError((_) {});
+    if (state == AppLifecycleState.resumed && _auth.tabIndex.value == 1) {
+      _page = 1;
+      _dataReady = Future.wait([
+        _ctrl.loadMyListings(page: 1),
+        _ctrl.loadMembership(),
+      ]).then((_) {}).catchError((_) {});
     }
   }
 
@@ -210,9 +219,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     if (_isAddingRoom) return;
     setState(() => _isAddingRoom = true);
     try {
-      if (_ctrl.roomPlans.value.isEmpty) {
-        await _ctrl.loadMembership();
-      }
+      await _dataReady;
       final result = await _permissionService.check();
       if (!mounted) return;
       switch (result) {
