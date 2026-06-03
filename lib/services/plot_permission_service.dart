@@ -49,7 +49,10 @@ class PlotPermissionService {
         final planType    = membership['planType'] as String? ?? '';
         final currentPlan = plans.firstWhereOrNull((p) => p['planType'] == planType);
         final isFree      = currentPlan == null || (currentPlan['originalPrice'] as num? ?? 0) == 0;
-        return isFree
+        final hasHigherPlan = plans.any((p) =>
+            (p['originalPrice'] as num? ?? 0) > 0 &&
+            (p['plotLimit'] as num? ?? 0) > maxPlots);
+        return hasHigherPlan
             ? PlotShowUpgradeSheet()
             : PlotShowLimitDialog(maxPlots: maxPlots, hasPlan: true);
       }
@@ -58,9 +61,12 @@ class PlotPermissionService {
       final freePlan    = plans.firstWhereOrNull((p) => (p['originalPrice'] as num? ?? 0) == 0);
       final limit       = (freePlan?['plotLimit'] as num?)?.toInt() ?? 1;
       if (_ctrl.myPlots.length >= limit) {
-        return hasUsedFree
+        final hasHigherPlan = plans.any((p) =>
+            (p['originalPrice'] as num? ?? 0) > 0 &&
+            (p['plotLimit'] as num? ?? 0) > _ctrl.myPlots.length);
+        return hasHigherPlan
             ? PlotShowUpgradeSheet()
-            : PlotShowLimitDialog(maxPlots: limit, hasPlan: false);
+            : PlotShowLimitDialog(maxPlots: _ctrl.myPlots.length, hasPlan: true);
       }
     }
     return PlotAllowed();

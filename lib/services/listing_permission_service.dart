@@ -46,9 +46,10 @@ class ListingPermissionService {
     if (membership != null && membership['hasMembership'] == true) {
       final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 0;
       if (_ctrl.myListings.length >= maxRooms) {
-        final planType = membership['planType'] as String? ?? '';
-        final isFree   = (plans[planType]?['originalPrice'] as num? ?? 0) == 0;
-        return isFree
+        final hasHigherPlan = plans.values.any((p) =>
+            (p['originalPrice'] as num? ?? 0) > 0 &&
+            (p['roomLimit'] as num? ?? 0) > maxRooms);
+        return hasHigherPlan
             ? ListingShowUpgradeSheet()
             : ListingShowLimitDialog(maxRooms: maxRooms, hasPlan: true);
       }
@@ -58,9 +59,12 @@ class ListingPermissionService {
           .firstWhereOrNull((p) => (p['originalPrice'] as num? ?? 0) == 0);
       final limit = (freePlan?['roomLimit'] as num?)?.toInt() ?? 1;
       if (_ctrl.myListings.length >= limit) {
-        return hasUsedFree
+        final hasHigherPlan = plans.values.any((p) =>
+            (p['originalPrice'] as num? ?? 0) > 0 &&
+            (p['roomLimit'] as num? ?? 0) > _ctrl.myListings.length);
+        return hasHigherPlan
             ? ListingShowUpgradeSheet()
-            : ListingShowLimitDialog(maxRooms: limit, hasPlan: false);
+            : ListingShowLimitDialog(maxRooms: _ctrl.myListings.length, hasPlan: true);
       }
     }
     return ListingAllowed();

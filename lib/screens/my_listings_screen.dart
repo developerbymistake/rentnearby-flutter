@@ -41,6 +41,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _ctrl.loadMyListings(page: 1);
+    _ctrl.loadMembership().catchError((_) {});
     _scrollCtrl.addListener(_onScroll);
     _tabWorker = ever(_auth.tabIndex, (int idx) async {
       if (idx == 1 && !_ctrl.isLoading.value) {
@@ -209,6 +210,9 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     if (_isAddingRoom) return;
     setState(() => _isAddingRoom = true);
     try {
+      if (_ctrl.roomPlans.value.isEmpty) {
+        await _ctrl.loadMembership();
+      }
       final result = await _permissionService.check();
       if (!mounted) return;
       switch (result) {
@@ -222,8 +226,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
           _showPaidUpgradeSheet();
       }
     } catch (_) {
-      AppToast.info('Adding room...');
-      Get.toNamed(AppRoutes.addListing);
+      AppToast.error('Could not verify your plan. Please try again.');
     } finally {
       if (mounted) setState(() => _isAddingRoom = false);
     }
@@ -346,17 +349,34 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     );
   }
 
-  void _showPaidUpgradeSheet({String listingId = ''}) async {
+  void _showPaidUpgradeSheet({String listingId = '', bool allowRenewal = false}) async {
     final plans = _ctrl.roomPlans.value;
-    final paidPlans = plans.values
-        .where((p) => (p['originalPrice'] as num? ?? 0) > 0)
+    final currentCount = _ctrl.myListings.length;
+
+    // Plans strictly above current room count (true upgrade)
+    final upgradePlans = (plans.values
+        .where((p) =>
+            (p['originalPrice'] as num? ?? 0) > 0 &&
+            (p['roomLimit'] as num? ?? 0) > currentCount)
         .toList()
-      ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0));
+      ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0)));
+
+    // Plans that match current room count (renewal — same level)
+    final renewalPlans = (plans.values
+        .where((p) =>
+            (p['originalPrice'] as num? ?? 0) > 0 &&
+            (p['roomLimit'] as num? ?? 0) >= currentCount)
+        .toList()
+      ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0)));
+
+    final displayPlans = allowRenewal
+        ? (upgradePlans.isNotEmpty ? upgradePlans : renewalPlans.isNotEmpty ? renewalPlans : plans.values.toList()..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0)))
+        : upgradePlans;
 
     if (!mounted) return;
 
-    String? selectedType = paidPlans.isNotEmpty
-        ? (paidPlans.first['planType'] as String? ?? '')
+    String? selectedType = displayPlans.isNotEmpty
+        ? (displayPlans.first['planType'] as String? ?? '')
         : null;
 
     const golden = Color(0xFFD4A017);
@@ -366,8 +386,8 @@ class _MyListingsScreenState extends State<MyListingsScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) {
-          final selectedPlan = paidPlans.isNotEmpty
-              ? paidPlans.firstWhere((p) => p['planType'] == selectedType, orElse: () => paidPlans.first)
+          final selectedPlan = displayPlans.isNotEmpty
+              ? displayPlans.firstWhere((p) => p['planType'] == selectedType, orElse: () => displayPlans.first)
               : null;
           final selOrigPrice = (selectedPlan?['originalPrice'] as num?)?.toInt() ?? 0;
           final btnLabel = selOrigPrice == 0 ? 'Activate FREE' : 'Continue  ₹$selOrigPrice';
@@ -407,13 +427,13 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                         Flexible(
                           child: SingleChildScrollView(
                             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                            child: paidPlans.isEmpty
+                            child: displayPlans.isEmpty
                                 ? const Padding(
                                     padding: EdgeInsets.all(24),
                                     child: Text('No plans available.', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight), textAlign: TextAlign.center),
                                   )
                                 : Column(
-                                    children: paidPlans.map((p) {
+                                    children: displayPlans.map((p) {
                                       final normalPrice = (p['price'] as num?)?.toInt() ?? 0;
                                       final origPrice = (p['originalPrice'] as num?)?.toInt() ?? 0;
                                       final disc = (p['discountPercent'] as num?)?.toInt() ?? 0;
@@ -555,27 +575,14 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     final hasMembership = membership != null && (membership['hasMembership'] == true);
 
     if (hasMembership) {
-      final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 0;
-      final activeRooms = (membership['activeRooms'] as num?)?.toInt() ?? 0;
-      final membershipPlanType = membership['planType'] as String? ?? '';
-
-      // Route by price: if current plan is free (originalPrice=0) and at capacity → upgrade to paid
-      final currentPlan = plans[membershipPlanType];
-      final currentPlanIsFree = currentPlan == null || (currentPlan['originalPrice'] as num? ?? 0) == 0;
-
-      if (activeRooms >= maxRooms && currentPlanIsFree) {
-        // At capacity on free plan → show upgrade dialog with paid plans
-        _showPaidUpgradeSheet(listingId: listingId);
-        return;
-      }
-
-      // Has remaining capacity → activate directly (free/no extra charge)
+      // Membership exists and days remain — activate directly.
+      // Room count limit is already enforced at Add Room time, no need to recheck here.
       _activateFreePlanDirect(listingId);
       return;
     }
 
     if (hasUsedFree) {
-      if (mounted) _showPaidUpgradeSheet(listingId: listingId);
+      if (mounted) _showPaidUpgradeSheet(listingId: listingId, allowRenewal: true);
       return;
     }
 

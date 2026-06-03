@@ -43,6 +43,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _ctrl.loadMyPlots(reset: true);
+    _ctrl.loadPlotMembership().catchError((_) {});
     _scrollCtrl.addListener(_onScroll);
     _tabWorker = ever(_auth.tabIndex, (int idx) async {
       if (idx == 3 && !_ctrl.isLoading.value) {
@@ -82,6 +83,9 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     if (_isAddingPlot) return;
     setState(() => _isAddingPlot = true);
     try {
+      if (_ctrl.plotPlans.value.isEmpty) {
+        await _ctrl.loadPlotMembership();
+      }
       final result = await _permissionService.check();
       if (!mounted) return;
       switch (result) {
@@ -95,8 +99,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
           _showPaidUpgradePlotSheet();
       }
     } catch (_) {
-      AppToast.info('Adding plot...');
-      Get.toNamed(AppRoutes.addPlot);
+      AppToast.error('Could not verify your plan. Please try again.');
     } finally {
       if (mounted) setState(() => _isAddingPlot = false);
     }
@@ -117,34 +120,18 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     final membership = _ctrl.plotMembership.value;
     final plans      = _ctrl.plotPlans.value;
     final hasMembership = membership != null && (membership['hasMembership'] == true);
-    final canActivate = (membership ?? {})['canActivate'] as bool? ?? false;
 
-    if (hasMembership && canActivate) {
-      // Existing membership with capacity — just toggle active directly
+    if (hasMembership) {
+      // Membership exists and days remain — activate directly.
+      // Plot count limit is already enforced at Add Plot time, no need to recheck here.
       await _ctrl.toggleActive(plotId, false);
       AppToast.success('Plot is now LIVE! 🎉');
       return;
     }
 
-    if (hasMembership && !canActivate) {
-      final maxPlots = (membership['maxPlotListings'] as num?)?.toInt() ?? 0;
-      final planType = membership['planType'] as String? ?? '';
-      final currentPlan = plans.firstWhereOrNull((p) => p['planType'] == planType);
-      final currentPlanIsFree = currentPlan == null || (currentPlan['originalPrice'] as num? ?? 0) == 0;
-      if (currentPlanIsFree) {
-        if (!mounted) return;
-        // At capacity on free plan → show upgrade dialog with paid plans from master table
-        _showPaidUpgradePlotSheet(plotId: plotId);
-        return;
-      } else {
-        if (mounted) _showPlotLimitDialog(maxPlots: maxPlots, hasPlan: true);
-      }
-      return;
-    }
-
     final hasUsedFreePlot = _auth.user.value?.hasUsedFreePlotPlan ?? false;
     if (hasUsedFreePlot) {
-      if (mounted) _showPaidUpgradePlotSheet(plotId: plotId);
+      if (mounted) _showPaidUpgradePlotSheet(plotId: plotId, allowRenewal: true);
       return;
     }
 
@@ -173,14 +160,31 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     }
   }
 
-  void _showPaidUpgradePlotSheet({String plotId = ''}) async {
+  void _showPaidUpgradePlotSheet({String plotId = '', bool allowRenewal = false}) async {
     final plans = _ctrl.plotPlans.value;
-    final paidPlans = plans.where((p) => (p['originalPrice'] as num? ?? 0) > 0).toList()
-      ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0));
+    final currentCount = _ctrl.myPlots.length;
+
+    final upgradePlans = (plans
+        .where((p) =>
+            (p['originalPrice'] as num? ?? 0) > 0 &&
+            (p['plotLimit'] as num? ?? 0) > currentCount)
+        .toList()
+      ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0)));
+
+    final renewalPlans = (plans
+        .where((p) =>
+            (p['originalPrice'] as num? ?? 0) > 0 &&
+            (p['plotLimit'] as num? ?? 0) >= currentCount)
+        .toList()
+      ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0)));
+
+    final displayPlans = allowRenewal
+        ? (upgradePlans.isNotEmpty ? upgradePlans : renewalPlans.isNotEmpty ? renewalPlans : plans.toList()..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0)))
+        : upgradePlans;
 
     if (!mounted) return;
 
-    String? selectedType = paidPlans.isNotEmpty ? (paidPlans.first['planType'] as String? ?? '') : null;
+    String? selectedType = displayPlans.isNotEmpty ? (displayPlans.first['planType'] as String? ?? '') : null;
 
     const golden = Color(0xFFD4A017);
     final screenH = MediaQuery.of(context).size.height;
@@ -189,8 +193,8 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) {
-          final selectedPlan = paidPlans.isNotEmpty
-              ? paidPlans.firstWhere((p) => p['planType'] == selectedType, orElse: () => paidPlans.first)
+          final selectedPlan = displayPlans.isNotEmpty
+              ? displayPlans.firstWhere((p) => p['planType'] == selectedType, orElse: () => displayPlans.first)
               : null;
           final selOrigPrice = (selectedPlan?['originalPrice'] as num?)?.toInt() ?? 0;
           final btnLabel = selOrigPrice == 0 ? 'Activate FREE' : 'Continue  ₹$selOrigPrice';
@@ -224,13 +228,13 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                         Flexible(
                           child: SingleChildScrollView(
                             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                            child: paidPlans.isEmpty
+                            child: displayPlans.isEmpty
                                 ? const Padding(
                                     padding: EdgeInsets.all(24),
                                     child: Text('No plans available.', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight), textAlign: TextAlign.center),
                                   )
                                 : Column(
-                                    children: paidPlans.map((p) {
+                                    children: displayPlans.map((p) {
                                       final normalPrice = (p['price'] as num?)?.toInt() ?? 0;
                                       final origPrice = (p['originalPrice'] as num?)?.toInt() ?? 0;
                                       final disc = (p['discountPercent'] as num?)?.toInt() ?? 0;
