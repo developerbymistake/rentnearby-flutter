@@ -540,6 +540,7 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
             focusNode: _otpFocus,
             autofocus: true,
             keyboardType: TextInputType.number,
+            autofillHints: const [],
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             defaultPinTheme: _defaultTheme,
             focusedPinTheme: _focusedTheme,

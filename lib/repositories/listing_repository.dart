@@ -19,7 +19,7 @@ class ListingRepository {
     }
     try {
       final res = await ApiService.get('/listings/plans');
-      final list = res['data'] as List;
+      final list = res as List;
       final result = <String, Map<String, dynamic>>{};
       for (final item in list) {
         final p = Map<String, dynamic>.from(item as Map);
@@ -40,7 +40,7 @@ class ListingRepository {
     }
     try {
       final res = await ApiService.get('/listings/payment/status');
-      _membershipCache = res['data'] as Map<String, dynamic>?;
+      _membershipCache = res as Map<String, dynamic>?;
       _membershipCacheTime = DateTime.now();
       return _membershipCache;
     } catch (_) {

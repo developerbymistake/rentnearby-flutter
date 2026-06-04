@@ -478,26 +478,47 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   void _confirmDelete(String id) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete Plot', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-        content: const Text('Are you sure? This will also delete all photos.',
-            style: TextStyle(fontFamily: 'Poppins')),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-                foregroundColor: Colors.white,
-                minimumSize: Size.zero,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
-            onPressed: () { Navigator.pop(context); _ctrl.deletePlot(id); },
-            child: const Text('Delete', style: TextStyle(fontFamily: 'Poppins')),
+      barrierDismissible: false,
+      builder: (ctx) {
+        bool isDeleting = false;
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('Delete Plot',
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+            content: const Text('Are you sure? This will also delete all photos.',
+                style: TextStyle(fontFamily: 'Poppins')),
+            actions: [
+              TextButton(
+                onPressed: isDeleting ? null : () => Navigator.pop(ctx),
+                child: const Text('Cancel',
+                    style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.error,
+                    foregroundColor: Colors.white,
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
+                onPressed: isDeleting
+                    ? null
+                    : () async {
+                        setDialogState(() => isDeleting = true);
+                        await _ctrl.deletePlot(id);
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      },
+                child: isDeleting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Text('Delete', style: TextStyle(fontFamily: 'Poppins')),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
