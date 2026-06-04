@@ -170,7 +170,7 @@ class PlotController extends GetxController {
   Future<Map<String, dynamic>?> activatePlotPlan(String plotId, String planType) async {
     try {
       final res = await ApiService.post('/plots/$plotId/create-order?planType=$planType', {});
-      return res['data'];
+      return res as Map<String, dynamic>?;
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not activate plot plan.'));
       return null;
@@ -192,7 +192,7 @@ class PlotController extends GetxController {
   Future<Map<String, dynamic>?> createPlotUpgradeOrder(String planType) async {
     try {
       final res = await ApiService.post('/plots/upgrade-plan/create-order?planType=$planType', {});
-      return res['data'];
+      return res as Map<String, dynamic>?;
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not create upgrade order.'));
       return null;
@@ -243,7 +243,7 @@ class PlotController extends GetxController {
   Future<PlotModel?> getById(String id) async {
     try {
       final res = await ApiService.get('/plots/$id');
-      return PlotModel.fromJson(res['data']);
+      return PlotModel.fromJson(res as Map<String, dynamic>);
     } catch (e) {
       if (e is DioException) {
         if (e.type == DioExceptionType.connectionTimeout ||

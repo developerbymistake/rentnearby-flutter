@@ -475,6 +475,45 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     );
   }
 
+  Widget _buildPlanStrip() {
+    final m = _ctrl.plotMembership.value;
+    if (m == null || m['hasMembership'] != true) return const SizedBox.shrink();
+    final plan = ((m['planType'] as String?) ?? '').toUpperCase();
+    final max  = (m['maxPlotListings'] as num?)?.toInt() ?? 0;
+    final used = _ctrl.myPlots.length;
+    final validUntilStr = m['validUntil'] as String?;
+    final daysText = validUntilStr != null ? _daysLeft(validUntilStr) : '';
+    final expired  = validUntilStr != null &&
+        DateTime.parse(validUntilStr).toUtc().isBefore(DateTime.now().toUtc());
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: _kBrown.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _kBrown.withValues(alpha: 0.2)),
+      ),
+      child: Row(children: [
+        const Icon(Icons.terrain_rounded, size: 15, color: _kBrown),
+        const SizedBox(width: 8),
+        Text('$plan  •  $used/$max plots  •  ',
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                color: _kBrown, fontWeight: FontWeight.w500)),
+        Text(daysText,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                fontWeight: expired ? FontWeight.w700 : FontWeight.w500,
+                color: expired ? AppColors.error : _kBrown)),
+      ]),
+    );
+  }
+
+  String _daysLeft(String s) {
+    final days = DateTime.parse(s).toUtc().difference(DateTime.now().toUtc()).inDays;
+    if (days < 0) return 'Expired';
+    if (days == 0) return 'Expires today';
+    return '$days days left';
+  }
+
   void _confirmDelete(String id) {
     showDialog(
       context: context,
@@ -484,13 +523,31 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         return StatefulBuilder(
           builder: (ctx, setDialogState) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('Delete Plot',
+            title: isDeleting ? null : const Text('Delete Plot',
                 style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-            content: const Text('Are you sure? This will also delete all photos.',
-                style: TextStyle(fontFamily: 'Poppins')),
-            actions: [
+            content: isDeleting
+                ? const SizedBox(
+                    height: 80,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(color: AppColors.error, strokeWidth: 2.5),
+                          SizedBox(height: 14),
+                          Text('Deleting...',
+                              style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 13,
+                                  color: AppColors.textMedium)),
+                        ],
+                      ),
+                    ),
+                  )
+                : const Text('Are you sure? This will also delete all photos.',
+                    style: TextStyle(fontFamily: 'Poppins')),
+            actions: isDeleting ? null : [
               TextButton(
-                onPressed: isDeleting ? null : () => Navigator.pop(ctx),
+                onPressed: () => Navigator.pop(ctx),
                 child: const Text('Cancel',
                     style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
               ),
@@ -500,20 +557,12 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                     foregroundColor: Colors.white,
                     minimumSize: Size.zero,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
-                onPressed: isDeleting
-                    ? null
-                    : () async {
-                        setDialogState(() => isDeleting = true);
-                        await _ctrl.deletePlot(id);
-                        if (ctx.mounted) Navigator.pop(ctx);
-                      },
-                child: isDeleting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text('Delete', style: TextStyle(fontFamily: 'Poppins')),
+                onPressed: () async {
+                  setDialogState(() => isDeleting = true);
+                  await _ctrl.deletePlot(id);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+                child: const Text('Delete', style: TextStyle(fontFamily: 'Poppins')),
               ),
             ],
           ),
@@ -536,6 +585,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         child: Column(
         children: [
           _buildHeader(),
+          Obx(() => _buildPlanStrip()),
           Expanded(
             child: Obx(() {
               final loading = _ctrl.isLoading.value;

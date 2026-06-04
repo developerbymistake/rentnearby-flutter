@@ -112,16 +112,14 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 child: Row(
                   children: [
-                    const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('My Rooms',
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Text('My Rooms',
                           style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 24,
                               fontWeight: FontWeight.w700,
                               color: Colors.white)),
-                      Text('Manage your listings',
-                          style: TextStyle(
-                              fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
+                      Obx(() => _buildRoomPlanSubtitle()),
                     ]),
                     const Spacer(),
                     GestureDetector(
@@ -678,6 +676,37 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         ),
       );
 
+  Widget _buildRoomPlanSubtitle() {
+    final m = _ctrl.roomMembership.value;
+    if (m == null || m['hasMembership'] != true) {
+      return const Text('Manage your listings',
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70));
+    }
+    final plan = ((m['planType'] as String?) ?? '').toUpperCase();
+    final max  = (m['maxRooms'] as num?)?.toInt() ?? 0;
+    final used = _ctrl.myListings.length;
+    final validUntilStr = m['validUntil'] as String?;
+    final daysText = validUntilStr != null ? _daysLeft(validUntilStr) : '';
+    final expired  = validUntilStr != null &&
+        DateTime.parse(validUntilStr).toUtc().isBefore(DateTime.now().toUtc());
+    return Row(children: [
+      Text('$plan  •  $used/$max rooms  •  ',
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: Colors.white70)),
+      Text(daysText,
+          style: TextStyle(
+              fontFamily: 'Poppins', fontSize: 11,
+              fontWeight: expired ? FontWeight.w700 : FontWeight.normal,
+              color: expired ? const Color(0xFFFF6B6B) : Colors.white70)),
+    ]);
+  }
+
+  String _daysLeft(String s) {
+    final days = DateTime.parse(s).toUtc().difference(DateTime.now().toUtc()).inDays;
+    if (days < 0) return 'Expired';
+    if (days == 0) return 'Expires today';
+    return '$days days left';
+  }
+
   void _confirmDelete(String id) {
     showDialog(
       context: context,
@@ -687,13 +716,31 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         return StatefulBuilder(
           builder: (ctx, setDialogState) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('Delete Listing',
+            title: isDeleting ? null : const Text('Delete Listing',
                 style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-            content: const Text('Are you sure? This will also delete all photos.',
-                style: TextStyle(fontFamily: 'Poppins')),
-            actions: [
+            content: isDeleting
+                ? const SizedBox(
+                    height: 80,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(color: AppColors.error, strokeWidth: 2.5),
+                          SizedBox(height: 14),
+                          Text('Deleting...',
+                              style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 13,
+                                  color: AppColors.textMedium)),
+                        ],
+                      ),
+                    ),
+                  )
+                : const Text('Are you sure? This will also delete all photos.',
+                    style: TextStyle(fontFamily: 'Poppins')),
+            actions: isDeleting ? null : [
               TextButton(
-                onPressed: isDeleting ? null : () => Navigator.pop(ctx),
+                onPressed: () => Navigator.pop(ctx),
                 child: const Text('Cancel',
                     style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
               ),
@@ -703,20 +750,12 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                     foregroundColor: Colors.white,
                     minimumSize: Size.zero,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
-                onPressed: isDeleting
-                    ? null
-                    : () async {
-                        setDialogState(() => isDeleting = true);
-                        await _ctrl.deleteListing(id);
-                        if (ctx.mounted) Navigator.pop(ctx);
-                      },
-                child: isDeleting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text('Delete', style: TextStyle(fontFamily: 'Poppins')),
+                onPressed: () async {
+                  setDialogState(() => isDeleting = true);
+                  await _ctrl.deleteListing(id);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+                child: const Text('Delete', style: TextStyle(fontFamily: 'Poppins')),
               ),
             ],
           ),
