@@ -19,7 +19,7 @@ class PlotRepository {
     }
     try {
       final res = await ApiService.get('/plots/plans');
-      _plansCache = List<Map<String, dynamic>>.from((res as List?) ?? []);
+      _plansCache = List<Map<String, dynamic>>.from((res['data'] as List?) ?? []);
       _plansCacheTime = DateTime.now();
       return _plansCache!;
     } catch (_) {
@@ -34,7 +34,7 @@ class PlotRepository {
     }
     try {
       final res = await ApiService.get('/plots/payment/status');
-      _membershipCache = res as Map<String, dynamic>?;
+      _membershipCache = res['data'] as Map<String, dynamic>?;
       _membershipCacheTime = DateTime.now();
       return _membershipCache;
     } catch (_) {

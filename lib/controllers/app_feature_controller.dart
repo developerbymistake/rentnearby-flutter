@@ -20,7 +20,7 @@ class AppFeatureController extends GetxController {
     _refreshing = true;
     try {
       final res = await ApiService.get('/admin/features');
-      final list = res as List;
+      final list = res['data'] as List;
       for (final item in list) {
         final key     = item['key'] as String?;
         final enabled = item['isEnabled'] == true;

@@ -194,7 +194,7 @@ class ListingController extends GetxController {
         {'planType': planType},
       );
 
-      final data = res;
+      final data = res['data'];
       if (data == null || data is! Map<String, dynamic>) {
         throw Exception('Invalid response from server');
       }
@@ -218,7 +218,7 @@ class ListingController extends GetxController {
         {'planType': planType},
       );
 
-      final data = res;
+      final data = res['data'];
       if (data == null || data is! Map<String, dynamic>) {
         throw Exception('Invalid order response from server');
       }
@@ -267,7 +267,7 @@ class ListingController extends GetxController {
         },
       );
 
-      final data = res;
+      final data = res['data'];
       if (data != null && data is Map<String, dynamic>) {
         final success = data['success'] == true;
         if (success) {
@@ -333,7 +333,7 @@ class ListingController extends GetxController {
     try {
       isLoading.value = true;
       final res = await ApiService.post('/listings/upgrade-plan/create-order', {'planType': planType});
-      final data = res as Map<String, dynamic>;
+      final data = res['data'] as Map<String, dynamic>;
       return {
         'orderId': data['orderId'] as String,
         'amount': (data['amount'] as num).toInt(),

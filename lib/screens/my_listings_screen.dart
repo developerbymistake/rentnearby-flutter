@@ -119,7 +119,8 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                               fontSize: 24,
                               fontWeight: FontWeight.w700,
                               color: Colors.white)),
-                      Obx(() => _buildRoomPlanSubtitle()),
+                      const Text('Manage your listings',
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
                     ]),
                     const Spacer(),
                     GestureDetector(
@@ -165,6 +166,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
             ),
           ),
 
+          Obx(() => _buildRoomPlanStrip()),
           Expanded(
             child: Obx(() {
               final isLoading = _ctrl.isLoading.value;
@@ -676,12 +678,9 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         ),
       );
 
-  Widget _buildRoomPlanSubtitle() {
+  Widget _buildRoomPlanStrip() {
     final m = _ctrl.roomMembership.value;
-    if (m == null || m['hasMembership'] != true) {
-      return const Text('Manage your listings',
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70));
-    }
+    if (m == null || m['hasMembership'] != true) return const SizedBox.shrink();
     final plan = ((m['planType'] as String?) ?? '').toUpperCase();
     final max  = (m['maxRooms'] as num?)?.toInt() ?? 0;
     final used = _ctrl.myListings.length;
@@ -689,15 +688,26 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     final daysText = validUntilStr != null ? _daysLeft(validUntilStr) : '';
     final expired  = validUntilStr != null &&
         DateTime.parse(validUntilStr).toUtc().isBefore(DateTime.now().toUtc());
-    return Row(children: [
-      Text('$plan  •  $used/$max rooms  •  ',
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: Colors.white70)),
-      Text(daysText,
-          style: TextStyle(
-              fontFamily: 'Poppins', fontSize: 11,
-              fontWeight: expired ? FontWeight.w700 : FontWeight.normal,
-              color: expired ? const Color(0xFFFF6B6B) : Colors.white70)),
-    ]);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Row(children: [
+        Icon(Icons.bed_rounded, size: 15, color: AppColors.primary),
+        const SizedBox(width: 8),
+        Text('$plan  •  $used/$max rooms  •  ',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                color: AppColors.primary, fontWeight: FontWeight.w500)),
+        Text(daysText,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                fontWeight: expired ? FontWeight.w700 : FontWeight.w500,
+                color: expired ? AppColors.error : AppColors.primary)),
+      ]),
+    );
   }
 
   String _daysLeft(String s) {
