@@ -98,13 +98,16 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (!mounted) return;
       if (loading) {
         setState(() {
-          _styleLoaded = false;
           _mapReady = false;
-          _mapController = null;
           _nativeUserDot = null;
         });
       } else {
-        setState(() {});
+        setState(() {
+          if (_mapController != null) {
+            _styleLoaded = true;
+            _mapReady = true;
+          }
+        });
       }
     });
 
@@ -163,7 +166,10 @@ class _ExploreScreenState extends State<ExploreScreen>
 
     _tabWorker = ever(_auth.tabIndex, (index) {
       if (index == 0) {
-        if (_stale && !mapShouldPause.value) _loadNearby();
+        if (_stale && !mapShouldPause.value) {
+          _loadNearby();
+          if (_mapReady && !_isCameraMoving) _fitToRadius();
+        }
       } else {
         if (_radarController.isAnimating) {
           _radarController.stop();

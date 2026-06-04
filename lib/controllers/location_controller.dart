@@ -28,6 +28,7 @@ class LocationController extends GetxController {
   int  _loadContextVersion = 0;
   bool _autoLoading        = false;
   bool _refreshing         = false;
+  bool _initRunning        = false;
   StreamSubscription<ServiceStatus>? _serviceStatusSub;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
@@ -83,6 +84,8 @@ class LocationController extends GetxController {
   // ── Location initialization ────────────────────────────────────────────────
 
   Future<void> _initLocation() async {
+    if (_initRunning) return;
+    _initRunning = true;
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       gpsEnabled.value = serviceEnabled;
@@ -134,6 +137,8 @@ class LocationController extends GetxController {
     } catch (_) {
       locationLoading.value = false;
       _tryAutoLoad();
+    } finally {
+      _initRunning = false;
     }
   }
 
@@ -202,6 +207,7 @@ class LocationController extends GetxController {
       }
 
       if (userLocation.value == null) {
+        if (_initRunning) return;
         locationLoading.value = true;
         await _initLocation();
         return;
