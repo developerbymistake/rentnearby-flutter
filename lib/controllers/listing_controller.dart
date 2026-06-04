@@ -199,6 +199,8 @@ class ListingController extends GetxController {
         throw Exception('Invalid response from server');
       }
 
+      Get.find<ListingRepository>().invalidateMembership();
+      loadMembership();
       listingPostedTrigger.value++;
       await loadMyListings();
       return true;

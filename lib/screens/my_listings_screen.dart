@@ -696,17 +696,44 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
-      child: Row(children: [
-        Icon(Icons.bed_rounded, size: 15, color: AppColors.primary),
-        const SizedBox(width: 8),
-        Text('$plan  •  $used/$max rooms  •  ',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                color: AppColors.primary, fontWeight: FontWeight.w500)),
-        Text(daysText,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                fontWeight: expired ? FontWeight.w700 : FontWeight.w500,
-                color: expired ? AppColors.error : AppColors.primary)),
-      ]),
+      child: IntrinsicHeight(
+        child: Row(children: [
+          Expanded(
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(Icons.bed_rounded, size: 13, color: AppColors.primary),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(plan,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                        color: AppColors.primary, fontWeight: FontWeight.w600)),
+              ),
+            ]),
+          ),
+          VerticalDivider(width: 1, thickness: 1, color: AppColors.primary.withValues(alpha: 0.2)),
+          Expanded(
+            child: Center(
+              child: Text('$used / $max rooms',
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                      color: AppColors.primary, fontWeight: FontWeight.w500)),
+            ),
+          ),
+          VerticalDivider(width: 1, thickness: 1, color: AppColors.primary.withValues(alpha: 0.2)),
+          Expanded(
+            child: Center(
+              child: Text(daysText,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                      fontWeight: expired ? FontWeight.w700 : FontWeight.w500,
+                      color: expired ? AppColors.error : AppColors.primary)),
+            ),
+          ),
+        ]),
+      ),
     );
   }
 

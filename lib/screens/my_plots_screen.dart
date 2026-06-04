@@ -9,6 +9,7 @@ import '../controllers/app_feature_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
+import '../repositories/plot_repository.dart';
 import '../services/plot_permission_service.dart';
 import '../models/plot_model.dart';
 import '../utils/app_toast.dart';
@@ -457,6 +458,8 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     final planType = plan['planType'] as String? ?? 'FREE';
     final result = await _ctrl.activatePlotPlan(plotId, planType);
     if (result == null) return; // controller already showed toast
+    Get.find<PlotRepository>().invalidateMembership();
+    _ctrl.loadPlotMembership();
     await _ctrl.loadMyPlots(reset: true);
     if (!mounted) return;
     Get.dialog(
@@ -493,17 +496,44 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _kBrown.withValues(alpha: 0.2)),
       ),
-      child: Row(children: [
-        const Icon(Icons.terrain_rounded, size: 15, color: _kBrown),
-        const SizedBox(width: 8),
-        Text('$plan  •  $used/$max plots  •  ',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                color: _kBrown, fontWeight: FontWeight.w500)),
-        Text(daysText,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                fontWeight: expired ? FontWeight.w700 : FontWeight.w500,
-                color: expired ? AppColors.error : _kBrown)),
-      ]),
+      child: IntrinsicHeight(
+        child: Row(children: [
+          Expanded(
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Icon(Icons.terrain_rounded, size: 13, color: _kBrown),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(plan,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                        color: _kBrown, fontWeight: FontWeight.w600)),
+              ),
+            ]),
+          ),
+          VerticalDivider(width: 1, thickness: 1, color: _kBrown.withValues(alpha: 0.2)),
+          Expanded(
+            child: Center(
+              child: Text('$used / $max plots',
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                      color: _kBrown, fontWeight: FontWeight.w500)),
+            ),
+          ),
+          VerticalDivider(width: 1, thickness: 1, color: _kBrown.withValues(alpha: 0.2)),
+          Expanded(
+            child: Center(
+              child: Text(daysText,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                      fontWeight: expired ? FontWeight.w700 : FontWeight.w500,
+                      color: expired ? AppColors.error : _kBrown)),
+            ),
+          ),
+        ]),
+      ),
     );
   }
 
