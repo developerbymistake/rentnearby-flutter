@@ -101,7 +101,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         _precomputeCircleCache();
         if (_mapReady) {
           _updateNativeRadiusCircle();
-          if (!_isCameraMoving) _fitToRadius();
+          _fitToRadius();
         }
       }
       if (_locationCtrl.selectedDistrict.value != null &&
@@ -110,6 +110,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       } else {
         _stale = true;
       }
+      setState(() {});
     });
 
     // Propagate user-dot position updates to the map.
@@ -723,8 +724,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                   ),
                 ),
 
-              // ── Layer 2: Shimmer overlay — only during map init, never for GPS state.
-              if (!_mapActive || !_mapReady)
+              // ── Layer 2: Shimmer — during map init OR before first GPS fix.
+              // GPS toggle does NOT re-show shimmer because userLocation is kept at
+              // last-known when GPS turns off. Only fresh-install/first-fix waits here.
+              if (!_mapActive || !_mapReady || _locationCtrl.userLocation.value == null)
                 _buildMapShimmer(),
 
               // ── Layer 2: Flutter widget marker overlay ──────────────────────

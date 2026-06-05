@@ -101,7 +101,10 @@ class _ExploreScreenState extends State<ExploreScreen>
         _precomputeCircleCache();
         if (_mapReady) {
           _updateNativeRadiusCircle();
-          if (!_isCameraMoving) _fitToRadius();
+          // Always fit — no _isCameraMoving guard here.
+          // This trigger fires when we first get a GPS fix; we must move the
+          // camera unconditionally so shimmer hides onto the correct location.
+          _fitToRadius();
         }
       }
       if (_locationCtrl.selectedDistrict.value != null &&
@@ -110,6 +113,8 @@ class _ExploreScreenState extends State<ExploreScreen>
       } else {
         _stale = true;
       }
+      // Rebuild so the shimmer condition (userLocation == null) re-evaluates.
+      setState(() {});
     });
 
     // Propagate user-dot position updates to the map.
@@ -771,8 +776,10 @@ class _ExploreScreenState extends State<ExploreScreen>
               ),
             ),
 
-          // ── Layer 2: Shimmer overlay — only during map init, never for GPS state.
-          if (!_mapActive || !_mapReady)
+          // ── Layer 2: Shimmer — during map init OR before first GPS fix.
+          // GPS toggle does NOT re-show shimmer because userLocation is kept at
+          // last-known when GPS turns off. Only fresh-install/first-fix waits here.
+          if (!_mapActive || !_mapReady || _locationCtrl.userLocation.value == null)
             _buildMapShimmer(),
 
 
