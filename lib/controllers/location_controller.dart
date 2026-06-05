@@ -21,8 +21,11 @@ class LocationController extends GetxController {
   final autoCity            = Rxn<CityModel>();
   final nearbyCities        = <CityModel>[].obs;
   final districtUnavailable = false.obs;
-  final gpsEnabled          = true.obs;
-  final isOffline           = false.obs;
+  final gpsEnabled               = true.obs;
+  final isOffline                = false.obs;
+  // Incremented each time a fresh GPS position is obtained — explore screens
+  // watch this to fit camera and reload data without depending on locationLoading.
+  final locationRefreshedTrigger = 0.obs;
 
   // Private guards
   int  _loadContextVersion = 0;
@@ -53,15 +56,52 @@ class LocationController extends GetxController {
     _serviceStatusSub = Geolocator.getServiceStatusStream().listen((status) {
       gpsEnabled.value = (status == ServiceStatus.enabled);
       if (status == ServiceStatus.enabled) {
-        if (userLocation.value == null && !locationLoading.value) {
+        if (userLocation.value != null) {
+          // Already have a location from before GPS was off.
+          // Fire the trigger immediately so screens reposition at once,
+          // then quietly fetch a fresh fix in the background.
+          locationRefreshedTrigger.value++;
+          _refreshLocation();
+        } else if (!locationLoading.value && !_initRunning) {
+          // No location at all (fresh install or permission just granted).
           locationLoading.value = true;
           _initLocation();
         }
       } else {
-        userLocation.value = null;
+        // Keep userLocation at its last-known value — never clear it on GPS off.
         locationLoading.value = false;
       }
     });
+  }
+
+  // ── Background location refresh (GPS came back, we already had a position) ──
+
+  Future<void> _refreshLocation() async {
+    if (_refreshing || _initRunning) return;
+    _refreshing = true;
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      userLocation.value = LatLng(pos.latitude, pos.longitude);
+      // Do NOT fire locationRefreshedTrigger here — it already fired immediately
+      // when GPS turned on (_setupServiceStream). A second trigger would cause a
+      // second API call and a visible pin-flash on screen.
+      // _userLocationWorker handles the dot + circle update automatically.
+      // If the user moved to a new district, _locationWorker fires the data reload.
+      final myVersion = ++_loadContextVersion;
+      final ctx = await _loadContext(pos.latitude, pos.longitude);
+      if (ctx == null) return;
+      if (myVersion != _loadContextVersion) return;
+      if (selectedDistrict.value == null ||
+          selectedDistrict.value!.id != ctx.district.id) {
+        autoCity.value = ctx.nearestCity;
+        selectedDistrict.value = ctx.district;
+      }
+    } catch (_) {
+    } finally {
+      _refreshing = false;
+    }
   }
 
   // ── Connectivity stream (one subscription for the entire app) ──────────────
@@ -123,6 +163,9 @@ class LocationController extends GetxController {
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       userLocation.value = LatLng(pos.latitude, pos.longitude);
+      // Signal explore screens that a fresh position arrived. They use this
+      // to fit the camera and reload data independently of locationLoading.
+      locationRefreshedTrigger.value++;
 
       // Version-controlled context update cancels any stale response.
       final myVersion = ++_loadContextVersion;
@@ -202,11 +245,12 @@ class LocationController extends GetxController {
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (userLocation.value != null) userLocation.value = null;
+        // GPS is off — keep userLocation at last-known, just return.
         return;
       }
 
       if (userLocation.value == null) {
+        // No fix ever obtained (fresh install) — run full init.
         if (_initRunning) return;
         locationLoading.value = true;
         await _initLocation();
@@ -217,6 +261,7 @@ class LocationController extends GetxController {
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       userLocation.value = LatLng(pos.latitude, pos.longitude);
+      locationRefreshedTrigger.value++;
 
       final ctx = await _loadContext(pos.latitude, pos.longitude);
       if (ctx == null) return;

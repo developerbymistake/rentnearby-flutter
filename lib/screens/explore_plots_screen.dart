@@ -46,7 +46,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   final _locationCtrl = Get.find<LocationController>();
   final _auth         = Get.find<AuthController>();
   Worker? _locationWorker;
-  Worker? _locationLoadingWorker;
+  Worker? _locationRefreshedWorker;
   Worker? _userLocationWorker;
   Worker? _postedWorker;
   Worker? _loadingWorker;
@@ -93,38 +93,49 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       }
     });
 
-    // Propagate loading state changes → map shimmer / map visible.
-    _locationLoadingWorker = ever(_locationCtrl.locationLoading, (bool loading) {
+    // Fit camera + reload data when a fresh GPS position arrives (GPS on/off/on,
+    // app resume, or first fix). locationLoading is no longer used by this screen.
+    _locationRefreshedWorker = ever(_locationCtrl.locationRefreshedTrigger, (_) {
       if (!mounted) return;
-      if (loading) {
-        setState(() {
-          _mapReady = false;
-          _nativeUserDot = null;
-        });
+      if (_selectedCity == null) {
+        _precomputeCircleCache();
+        if (_mapReady) {
+          _updateNativeRadiusCircle();
+          if (!_isCameraMoving) _fitToRadius();
+        }
+      }
+      if (_locationCtrl.selectedDistrict.value != null &&
+          _auth.tabIndex.value == 2 && !mapShouldPause.value) {
+        _loadNearby();
       } else {
-        setState(() {
-          if (_mapController != null) {
-            _styleLoaded = true;
-            _mapReady = true;
-          }
-        });
+        _stale = true;
       }
     });
 
     // Propagate user-dot position updates to the map.
     _userLocationWorker = ever(_locationCtrl.userLocation, (_) {
       if (!mounted) return;
-      // Only rebuild overlay when markers are visible — rebuilding mid-fade
-      // interrupts AnimatedOpacity and causes a visible flash on next show.
-      if (_pinsVisible && !_isCameraMoving) setState(() {});
       if (_mapReady) {
-        if (_locationCtrl.userLocation.value != null) {
+        final loc = _locationCtrl.userLocation.value;
+        if (loc != null) {
           if (_nativeUserDot == null) _initNativeUserDot();
           else _updateNativeUserDot();
+          // Keep radius circle centred on user when no city is manually selected.
+          if (_selectedCity == null) {
+            _precomputeCircleCache();
+            _updateNativeRadiusCircle();
+          }
+          // Patch user marker position in overlay without re-animating listing pins.
+          if (_markerData.isNotEmpty && _markerData.first.isUser) {
+            _markerData[0] = _buildUserMarkerData();
+          }
         } else {
-          _buildMarkers(animate: false);
+          if (_markerData.isNotEmpty && _markerData.first.isUser) {
+            _markerData.removeAt(0);
+          }
         }
       }
+      if (_pinsVisible && !_isCameraMoving) setState(() {});
     });
 
     _postedWorker = ever(_plotCtrl.plotPostedTrigger, (_) {
@@ -139,7 +150,13 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       }
     });
     _filterResetWorker = ever(_plotCtrl.filterResetTrigger, (_) {
-      if (mounted) setState(() { _selectedCity = null; _selectedPlotType = null; });
+      if (!mounted) return;
+      setState(() { _selectedCity = null; _selectedPlotType = null; });
+      // City was reset → searchCenter changed → redraw circle at new center.
+      if (_mapReady) {
+        _precomputeCircleCache();
+        _updateNativeRadiusCircle();
+      }
     });
     _loadingWorker = ever(_plotCtrl.isLoading, (loading) {
       if (!loading && _radarController.isAnimating) {
@@ -183,7 +200,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _locationWorker?.dispose();
-    _locationLoadingWorker?.dispose();
+    _locationRefreshedWorker?.dispose();
     _userLocationWorker?.dispose();
     _postedWorker?.dispose();
     _loadingWorker?.dispose();
@@ -276,6 +293,8 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   void _fitToRadius() {
     if (!_mapReady || !mounted) return;
     final center = _searchCenter;
+    _cameraCenter = center;
+    _precomputeCircleCache();      // always rebuild for current center before drawing
     _animateTo(center, _zoomForRadius(_radius, center.latitude));
     _updateNativeRadiusCircle();
   }
@@ -297,14 +316,18 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     );
   }
 
-  void _onStyleLoaded() {
+  void _onStyleLoaded() async {
     if (_styleLoaded) return;
     _styleLoaded = true;
-    _mapReady = true;
     if (!mounted) return;
+    // Initialise native layers BEFORE marking map ready.
+    // Any worker that checks _mapReady=true will find radius-source + user dot already
+    // on the map, so setGeoJsonSource / updateCircle calls won't silently fail.
+    await _initNativeCircle();
+    await _initNativeUserDot();
+    if (!mounted) return;
+    _mapReady = true;
     setState(() {});
-    _initNativeCircle();
-    _initNativeUserDot();
     _buildMarkers(animate: false);
     _fitToRadius();
   }
@@ -668,10 +691,9 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         builder: (context, constraints) {
           return Stack(
             children: [
-              // ── Layer 1: Map or loading shimmer ────────────────────────────
-              if (_locationCtrl.locationLoading.value || !_mapActive)
-                _buildMapShimmer()
-              else
+              // ── Layer 1: Map — stays alive for the screen's lifetime.
+              // Never destroyed by GPS toggle; shimmer overlays it instead.
+              if (_mapActive)
                 RepaintBoundary(
                   child: MapLibreMap(
                     styleString: "assets/map_style.json",
@@ -701,8 +723,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                   ),
                 ),
 
+              // ── Layer 2: Shimmer overlay — only during map init, never for GPS state.
+              if (!_mapActive || !_mapReady)
+                _buildMapShimmer(),
+
               // ── Layer 2: Flutter widget marker overlay ──────────────────────
-              if (!_locationCtrl.locationLoading.value && _mapReady)
+              if (_mapReady)
                 IgnorePointer(
                   ignoring: !_pinsVisible,
                   child: AnimatedOpacity(
