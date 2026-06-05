@@ -154,17 +154,18 @@ class LocationController extends GetxController {
       final lastKnown = await Geolocator.getLastKnownPosition();
       if (lastKnown != null) {
         userLocation.value = LatLng(lastKnown.latitude, lastKnown.longitude);
+        // Fire trigger immediately — shimmer hides and camera fits at once.
+        // Fresh GPS fix will fire the trigger a second time to refine position.
+        locationRefreshedTrigger.value++;
       }
       locationLoading.value = false;
       _tryAutoLoad();
 
-      // High-accuracy fix resolves in <1 s via network + GPS coarse fix.
+      // High-accuracy fix — refines position after last-known render.
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       userLocation.value = LatLng(pos.latitude, pos.longitude);
-      // Signal explore screens that a fresh position arrived. They use this
-      // to fit the camera and reload data independently of locationLoading.
       locationRefreshedTrigger.value++;
 
       // Version-controlled context update cancels any stale response.

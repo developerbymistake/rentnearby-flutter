@@ -153,10 +153,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _filterResetWorker = ever(_plotCtrl.filterResetTrigger, (_) {
       if (!mounted) return;
       setState(() { _selectedCity = null; _selectedPlotType = null; });
-      // City was reset → searchCenter changed → redraw circle at new center.
       if (_mapReady) {
         _precomputeCircleCache();
         _updateNativeRadiusCircle();
+        _fitToRadius();
       }
     });
     _loadingWorker = ever(_plotCtrl.isLoading, (loading) {

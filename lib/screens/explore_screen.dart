@@ -157,10 +157,10 @@ class _ExploreScreenState extends State<ExploreScreen>
     _filterResetWorker = ever(_listingCtrl.filterResetTrigger, (_) {
       if (!mounted) return;
       setState(() { _selectedCity = null; _selectedRoomType = null; });
-      // City was reset → searchCenter changed → redraw circle at new center.
       if (_mapReady) {
         _precomputeCircleCache();
         _updateNativeRadiusCircle();
+        _fitToRadius();
       }
     });
     _loadingWorker = ever(_listingCtrl.isLoading, (loading) {
