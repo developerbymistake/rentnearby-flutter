@@ -128,7 +128,8 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           }
           // Patch user marker position in overlay without re-animating listing pins.
           if (_markerData.isNotEmpty && _markerData.first.isUser) {
-            _markerData[0] = _buildUserMarkerData();
+            final m = _buildUserMarkerData();
+            if (m != null) _markerData[0] = m;
           }
         } else {
           if (_markerData.isNotEmpty && _markerData.first.isUser) {
@@ -412,7 +413,8 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     try {
       _revealTimer?.cancel();
       _radarController.repeat();
-      _markerData = _locationCtrl.userLocation.value != null ? [_buildUserMarkerData()] : [];
+      final userMarker = _buildUserMarkerData();
+      _markerData = userMarker != null ? [userMarker] : [];
       _revealedCount = _markerData.length;
       setState(() {});
       final center = _searchCenter;
@@ -432,25 +434,30 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     } catch (_) {}
   }
 
-  _MapMarkerData _buildUserMarkerData() => _MapMarkerData(
-        position: _locationCtrl.userLocation.value!,
-        width: 120,
-        height: 120,
-        isUser: true,
-        widget: AnimatedBuilder(
-          animation: _radarController,
-          builder: (context2, child2) => CustomPaint(
-            painter: _RadarPainter(
-                progress: _radarController.value,
-                color: const Color(0xFF92400E)),
-          ),
+  _MapMarkerData? _buildUserMarkerData() {
+    final loc = _locationCtrl.userLocation.value;
+    if (loc == null) return null;
+    return _MapMarkerData(
+      position: loc,
+      width: 120,
+      height: 120,
+      isUser: true,
+      widget: AnimatedBuilder(
+        animation: _radarController,
+        builder: (context2, child2) => CustomPaint(
+          painter: _RadarPainter(
+              progress: _radarController.value,
+              color: const Color(0xFF92400E)),
         ),
-      );
+      ),
+    );
+  }
 
   void _buildMarkers({bool animate = true}) {
     final data = <_MapMarkerData>[];
 
-    if (_locationCtrl.userLocation.value != null) data.add(_buildUserMarkerData());
+    final userMarker = _buildUserMarkerData();
+    if (userMarker != null) data.add(userMarker);
 
     var plots = _plotCtrl.nearbyPlots.toList()
       ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
