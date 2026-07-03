@@ -154,7 +154,25 @@ class ListingBottomSheet extends StatelessWidget {
                       ]),
                     )
                   else
-                    const SizedBox(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.textHint.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Iconsax.home_hashtag, size: 13, color: AppColors.textHint),
+                        const SizedBox(width: 5),
+                        const Text(
+                          'Unfurnished',
+                          style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textHint),
+                        ),
+                      ]),
+                    ),
                   const Spacer(),
                   const Icon(Iconsax.location, size: 13, color: AppColors.textHint),
                   const SizedBox(width: 4),
