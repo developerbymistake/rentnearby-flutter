@@ -22,3 +22,10 @@ class AppConstants {
   static const int maxMapMarkers = 50;
   static const List<double> radiusOptions = [1.0, 4.0, 8.0];
 }
+
+class FurnishedStatus {
+  static const String none = 'None';
+  static const String semi = 'Semi';
+  static const String full = 'Full';
+  static const List<String> values = [none, semi, full];
+}

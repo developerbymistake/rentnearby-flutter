@@ -12,6 +12,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../services/api_service.dart';
 import 'dart:io';
 import '../config/app_colors.dart';
+import '../config/app_constants.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/listing_controller.dart';
@@ -41,7 +42,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   String? _selectedDistrictId;
   String? _selectedCityId;
   String? _selectedRoomTypeId;
-  String _selectedFurnishedStatus = 'None';
+  String _selectedFurnishedStatus = FurnishedStatus.none;
   LatLng? _selectedLocation;
   LatLng? _userLocation;
   final _locationCtrl = Get.find<LocationController>();
@@ -64,7 +65,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _descCtrl.text.isNotEmpty ||
       _photos.isNotEmpty ||
       _addressCtrl.text.isNotEmpty ||
-      _selectedLocation != null;
+      _selectedLocation != null ||
+      _selectedFurnishedStatus != FurnishedStatus.none;
 
   @override
   void initState() {
@@ -565,33 +567,37 @@ class _AddListingScreenState extends State<AddListingScreen> {
     }
 
     if (mounted) setState(() => _isFinalizing = true);
-    await _ctrl.loadMyListings();
-
-    // If user is on a free (price=0) plan and at capacity, go straight to paid payment
-    _ctrl.reloadMembership(); // background refresh — no await, user doesn't wait
     try {
-      final membership = _ctrl.roomMembership.value;
-      final plans      = _ctrl.roomPlans.value;
-      final hasMembership = membership != null && (membership['hasMembership'] == true);
-      final planType      = membership?['planType'] as String? ?? '';
-      final maxRooms      = (membership?['maxRooms'] as num?)?.toInt() ?? 0;
-      final currentPlanIsFree = (plans[planType]?['originalPrice'] as num? ?? 0) == 0;
+      await _ctrl.loadMyListings();
 
-      if (hasMembership && currentPlanIsFree && _ctrl.myListings.length > maxRooms) {
-        final paidMatches = plans.values.where((p) => (p['originalPrice'] as num? ?? 0) > 0);
-        if (paidMatches.isNotEmpty) {
-          Get.offNamed(AppRoutes.paymentScreen, arguments: {
-            'listingId': listingId,
-            'plan': paidMatches.first,
-          });
+      // If user is on a free (price=0) plan and at capacity, go straight to paid payment
+      _ctrl.reloadMembership(); // background refresh — no await, user doesn't wait
+      try {
+        final membership = _ctrl.roomMembership.value;
+        final plans      = _ctrl.roomPlans.value;
+        final hasMembership = membership != null && (membership['hasMembership'] == true);
+        final planType      = membership?['planType'] as String? ?? '';
+        final maxRooms      = (membership?['maxRooms'] as num?)?.toInt() ?? 0;
+        final currentPlanIsFree = (plans[planType]?['originalPrice'] as num? ?? 0) == 0;
+
+        if (hasMembership && currentPlanIsFree && _ctrl.myListings.length > maxRooms) {
+          final paidMatches = plans.values.where((p) => (p['originalPrice'] as num? ?? 0) > 0);
+          if (paidMatches.isNotEmpty) {
+            Get.offNamed(AppRoutes.paymentScreen, arguments: {
+              'listingId': listingId,
+              'plan': paidMatches.first,
+            });
+          }
+          return;
         }
-        return;
-      }
-    } catch (_) {}
+      } catch (_) {}
 
-    if (mounted) Get.back();
-    Future.delayed(const Duration(milliseconds: 400), _ctrl.notifyListingPosted);
-    AppToast.success('Room listed successfully!');
+      if (mounted) Get.back();
+      Future.delayed(const Duration(milliseconds: 400), _ctrl.notifyListingPosted);
+      AppToast.success('Room listed successfully!');
+    } catch (_) {
+      if (mounted) Get.back();
+    }
   }
 
   InputDecoration _inputDec(String hint, {Widget? prefixIcon, String? prefix}) => InputDecoration(
@@ -924,7 +930,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ),
           itemCount: 3,
           itemBuilder: (_, i) {
-            const options = ['None', 'Semi', 'Full'];
+            const options = FurnishedStatus.values;
             final label = options[i];
             final active = _selectedFurnishedStatus == label;
             return GestureDetector(
