@@ -41,6 +41,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   String? _selectedDistrictId;
   String? _selectedCityId;
   String? _selectedRoomTypeId;
+  String _selectedFurnishedStatus = 'None';
   LatLng? _selectedLocation;
   LatLng? _userLocation;
   final _locationCtrl = Get.find<LocationController>();
@@ -469,6 +470,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
     final data = {
       'roomTypeId': _selectedRoomTypeId,
+      'furnishedStatus': _selectedFurnishedStatus,
       'description': _descCtrl.text.trim().isNotEmpty ? _descCtrl.text.trim() : null,
       'priceMonthly': _priceMonthlyCtrl.text.isNotEmpty ? int.tryParse(_priceMonthlyCtrl.text) : null,
       'latitude': pinLocation.latitude,
@@ -906,6 +908,48 @@ class _AddListingScreenState extends State<AddListingScreen> {
             },
           );
         }),
+      ),
+
+      _sectionCard(
+        title: 'Furnished Status *',
+        child: GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 2.6,
+          ),
+          itemCount: 3,
+          itemBuilder: (_, i) {
+            const options = ['None', 'Semi', 'Full'];
+            final label = options[i];
+            final active = _selectedFurnishedStatus == label;
+            return GestureDetector(
+              onTap: () => setState(() => _selectedFurnishedStatus = label),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  color: active ? AppColors.primary : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: active ? AppColors.primary : AppColors.divider,
+                      width: 1.5),
+                ),
+                child: Center(
+                  child: Text(label,
+                      style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: active ? Colors.white : AppColors.textMedium)),
+                ),
+              ),
+            );
+          },
+        ),
       ),
 
       _sectionCard(
