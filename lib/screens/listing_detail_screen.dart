@@ -21,13 +21,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   ListingModel? _listing;
   bool _loading = true;
   int _currentPhoto = 0;
+  double? _distanceKm;
 
   bool get _isOwner => _listing != null && _auth.user.value?.id == _listing!.userId;
 
   @override
   void initState() {
     super.initState();
-    final id = Get.arguments as String;
+    final args = Get.arguments;
+    final id = args is Map ? args['id'] as String : args as String;
+    _distanceKm = args is Map ? (args['distanceKm'] as num?)?.toDouble() : null;
     _ctrl.getById(id).then((l) {
       if (mounted) setState(() { _listing = l; _loading = false; });
     }).catchError((_) {
@@ -248,6 +251,39 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
                 ),
                 child: Column(children: [
+                  // Furnished + distance row
+                  if (l.furnishedStatus != 'None' || _distanceKm != null) ...[
+                    Row(children: [
+                      if (l.furnishedStatus != 'None')
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            const Icon(Iconsax.home_hashtag, size: 13, color: Color(0xFF8B5CF6)),
+                            const SizedBox(width: 5),
+                            Text('${l.furnishedStatus} Furnished',
+                                style: const TextStyle(
+                                    fontFamily: 'Poppins', fontSize: 12,
+                                    fontWeight: FontWeight.w500, color: Color(0xFF8B5CF6))),
+                          ]),
+                        ),
+                      const Spacer(),
+                      if (_distanceKm != null) ...[
+                        const Icon(Iconsax.location, size: 13, color: AppColors.textHint),
+                        const SizedBox(width: 4),
+                        Text('${_distanceKm!.toStringAsFixed(1)} km away',
+                            style: const TextStyle(
+                                fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                      ],
+                    ]),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(height: 1, color: AppColors.divider),
+                    ),
+                  ],
                   // Owner row
                   if (l.ownerName != null && l.ownerName!.isNotEmpty) ...[
                     _infoRow(Icons.person_rounded, 'Owner', l.ownerName!),

@@ -5,7 +5,8 @@ import '../config/app_routes.dart';
 
 class BottomSheetActionBar extends StatelessWidget {
   final String listingId;
-  const BottomSheetActionBar({super.key, required this.listingId});
+  final double? distanceKm;
+  const BottomSheetActionBar({super.key, required this.listingId, this.distanceKm});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +15,7 @@ class BottomSheetActionBar extends StatelessWidget {
       child: ElevatedButton.icon(
         onPressed: () {
           Navigator.pop(context);
-          Get.toNamed(AppRoutes.listingDetail, arguments: listingId);
+          Get.toNamed(AppRoutes.listingDetail, arguments: {'id': listingId, 'distanceKm': distanceKm});
         },
         icon: const Icon(Icons.arrow_forward_rounded, size: 18),
         label: const Text('View Details',

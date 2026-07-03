@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../config/app_constants.dart';
 import '../config/app_insets.dart';
 import '../models/listing_model.dart';
 import 'bottom_sheet_action_bar.dart';
@@ -130,17 +131,29 @@ class ListingBottomSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // Owner name + distance in same row
+                // Furnished chip + distance
                 Row(children: [
-                  if (listing.ownerName != null && listing.ownerName!.isNotEmpty) ...[
-                    const Icon(Icons.person_rounded, size: 15, color: AppColors.textHint),
-                    const SizedBox(width: 5),
-                    Text(
-                      listing.ownerName!,
-                      style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textMedium),
-                    ),
-                  ] else
+                  if (listing.furnishedStatus != FurnishedStatus.none)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Iconsax.home_hashtag, size: 13, color: Color(0xFF8B5CF6)),
+                        const SizedBox(width: 5),
+                        Text(
+                          '${listing.furnishedStatus} Furnished',
+                          style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF8B5CF6)),
+                        ),
+                      ]),
+                    )
+                  else
                     const SizedBox(),
                   const Spacer(),
                   const Icon(Iconsax.location, size: 13, color: AppColors.textHint),
@@ -153,7 +166,7 @@ class ListingBottomSheet extends StatelessWidget {
                 ]),
 
                 const SizedBox(height: 20),
-                BottomSheetActionBar(listingId: listing.id),
+                BottomSheetActionBar(listingId: listing.id, distanceKm: listing.distanceKm),
               ],
             ),
           ),

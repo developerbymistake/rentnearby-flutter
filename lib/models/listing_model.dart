@@ -20,6 +20,7 @@ class ListingModel {
   final List<String> photos;
   final DateTime createdAt;
   final DateTime? validUntil;
+  final String furnishedStatus;
 
   ListingModel({
     required this.id,
@@ -41,6 +42,7 @@ class ListingModel {
     required this.photos,
     required this.createdAt,
     this.validUntil,
+    this.furnishedStatus = 'None',
   });
 
   factory ListingModel.fromJson(Map<String, dynamic> json) => ListingModel(
@@ -67,6 +69,7 @@ class ListingModel {
         validUntil: json['validUntil'] != null
             ? DateTime.parse(json['validUntil'] as String)
             : null,
+        furnishedStatus: json['furnishedStatus'] ?? 'None',
       );
 
   String get priceDisplay =>
@@ -94,6 +97,7 @@ class NearbyListingModel {
   final String? thumbnailUrl;
   final double distanceKm;
   final bool isActive;
+  final String furnishedStatus;
 
   NearbyListingModel({
     required this.id,
@@ -106,6 +110,7 @@ class NearbyListingModel {
     this.thumbnailUrl,
     required this.distanceKm,
     required this.isActive,
+    this.furnishedStatus = 'None',
   });
 
   factory NearbyListingModel.fromJson(Map<String, dynamic> json) => NearbyListingModel(
@@ -123,6 +128,7 @@ class NearbyListingModel {
                 : '${AppConstants.serverUrl}${json['thumbnailUrl']}',
         distanceKm: (json['distanceKm'] as num).toDouble(),
         isActive: json['isActive'] ?? true,
+        furnishedStatus: json['furnishedStatus'] ?? 'None',
       );
 
   String get shortPrice =>
