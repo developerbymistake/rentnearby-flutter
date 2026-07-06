@@ -9,6 +9,7 @@ import '../services/storage_service.dart';
 import '../config/app_routes.dart';
 import '../utils/app_toast.dart';
 import 'listing_controller.dart';
+import 'report_controller.dart';
 import '../services/banner_hub_service.dart';
 
 class AuthController extends GetxController {
@@ -167,6 +168,7 @@ class AuthController extends GetxController {
     user.value = null;
     _syncProfileFields(null);
     Get.find<ListingController>().clearData();
+    Get.find<ReportController>().reportedListingIds.clear();
     Get.offAllNamed(AppRoutes.login);
   }
 
@@ -186,6 +188,7 @@ class AuthController extends GetxController {
       user.value = null;
       _syncProfileFields(null);
       Get.find<ListingController>().clearData();
+      Get.find<ReportController>().reportedListingIds.clear();
       Get.offAllNamed(AppRoutes.login);
     } catch (e) {
       AppToast.error(_dioMessage(e, 'Could not delete account. Please try again.'));
