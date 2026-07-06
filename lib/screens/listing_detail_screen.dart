@@ -6,8 +6,10 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
+import '../controllers/report_controller.dart';
 import '../models/listing_model.dart';
 import '../widgets/detail_action_bar.dart';
+import '../widgets/report_listing_sheet.dart';
 
 class ListingDetailScreen extends StatefulWidget {
   const ListingDetailScreen({super.key});
@@ -358,11 +360,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   Widget _buildActionBar() {
     final l = _listing!;
-    return DetailActionBar(
-      latitude: l.latitude,
-      longitude: l.longitude,
-      ownerPhone: l.ownerPhone,
-    );
+    final reportCtrl = Get.find<ReportController>();
+    return Obx(() => DetailActionBar(
+          latitude: l.latitude,
+          longitude: l.longitude,
+          ownerPhone: l.ownerPhone,
+          isOwner: _isOwner,
+          onReport: (l.hasReported || reportCtrl.reportedListingIds.contains(l.id))
+              ? null
+              : () => ReportListingSheet.show(context, listingId: l.id, listingType: 'Room'),
+        ));
   }
 
   Widget _infoRow(IconData icon, String label, String value, {Color? valueColor, Color? iconColor}) => Row(

@@ -8,6 +8,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
+import '../controllers/report_controller.dart';
 import '../repositories/listing_repository.dart';
 import '../repositories/plot_repository.dart';
 import '../repositories/user_repository.dart';
@@ -49,6 +50,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     Get.put(UserRepository());
     Get.put(ListingController());
     Get.put(PlotController());
+    Get.put(ReportController());
     _locationCtrl = Get.put(LocationController());
     _bannerCtrl = Get.put(BannerController());
     Get.put(BannerHubService());

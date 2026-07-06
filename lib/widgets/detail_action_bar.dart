@@ -7,7 +7,16 @@ class DetailActionBar extends StatelessWidget {
   final double? latitude;
   final double? longitude;
   final String? ownerPhone;
-  const DetailActionBar({super.key, this.latitude, this.longitude, this.ownerPhone});
+  final bool isOwner;
+  final VoidCallback? onReport;
+  const DetailActionBar({
+    super.key,
+    this.latitude,
+    this.longitude,
+    this.ownerPhone,
+    this.isOwner = false,
+    this.onReport,
+  });
 
   void _directions() async {
     if (latitude == null || longitude == null) return;
@@ -105,6 +114,25 @@ class DetailActionBar extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+          if (!isOwner) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onReport,
+                icon: Icon(onReport == null ? Icons.flag_rounded : Icons.flag_outlined, size: 18),
+                label: Text(onReport == null ? 'Reported' : 'Report this listing',
+                    style: const TextStyle(
+                        fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textMedium,
+                  side: const BorderSide(color: AppColors.divider),
+                  minimumSize: const Size(0, 44),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
             ),
           ],
         ],

@@ -6,8 +6,10 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/plot_controller.dart';
+import '../controllers/report_controller.dart';
 import '../models/plot_model.dart';
 import '../widgets/detail_action_bar.dart';
+import '../widgets/report_listing_sheet.dart';
 
 class PlotDetailScreen extends StatefulWidget {
   const PlotDetailScreen({super.key});
@@ -311,7 +313,16 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
 
   Widget _buildActionBar() {
     final p = _plot!;
-    return DetailActionBar(latitude: p.latitude, longitude: p.longitude, ownerPhone: p.ownerPhone);
+    final reportCtrl = Get.find<ReportController>();
+    return Obx(() => DetailActionBar(
+          latitude: p.latitude,
+          longitude: p.longitude,
+          ownerPhone: p.ownerPhone,
+          isOwner: _isOwner,
+          onReport: (p.hasReported || reportCtrl.reportedListingIds.contains(p.id))
+              ? null
+              : () => ReportListingSheet.show(context, listingId: p.id, listingType: 'Plot'),
+        ));
   }
 
   Widget _infoRow(IconData icon, String label, String value, {Color? valueColor, Color? iconColor}) => Row(

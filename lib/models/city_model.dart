@@ -59,3 +59,15 @@ class PlotTypeModel {
         sortOrder: json['sortOrder'] ?? 0,
       );
 }
+
+class ReportReasonModel {
+  final String id;
+  final String name;
+
+  ReportReasonModel({required this.id, required this.name});
+
+  factory ReportReasonModel.fromJson(Map<String, dynamic> json) => ReportReasonModel(
+        id: json['id'],
+        name: json['name'],
+      );
+}
