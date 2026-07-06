@@ -53,9 +53,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _shareApp() async {
     await SharePlus.instance.share(
       ShareParams(
-        text: 'Bakhli से किराए का घर ढूंढो — बिना दलाल, बिना कमीशन। 🏠\n'
+        text: 'Find nearby rooms, PG, flats & plots for rent near you. '
+            'Browse on a live map, and connect straight with owners.\n'
             'https://play.google.com/store/apps/details?id=com.rentnearby.rentnearby',
-        subject: 'Bakhli — किराए का घर ढूंढो आसानी से!',
+        subject: 'Discover your next address.',
       ),
     );
   }
@@ -67,6 +68,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Uri.parse('https://play.google.com/store/apps/details?id=com.rentnearby.rentnearby'),
         mode: LaunchMode.externalApplication,
       );
+    }
+  }
+
+  Future<void> _contactSupport() async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: 'supportbakhli@gmail.com',
+      query: 'subject=Bakhli Support Request',
+    );
+    if (!await launchUrl(uri)) {
+      AppToast.error('Could not open email app. Please email supportbakhli@gmail.com');
     }
   }
 
@@ -203,6 +215,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
                 ),
                 child: Column(children: [
+                  _legalTile(icon: Iconsax.message_question, label: 'Contact Support', onTap: _contactSupport),
+                  Divider(height: 1, indent: 56, color: AppColors.divider),
                   _legalTile(icon: Iconsax.star, label: 'Rate App', onTap: _rateApp),
                   Divider(height: 1, indent: 56, color: AppColors.divider),
                   _legalTile(icon: Iconsax.share, label: 'Share App', onTap: _shareApp),
