@@ -6,6 +6,8 @@ class GradientButton extends StatelessWidget {
   final String label;
   final bool isLoading;
   final double height;
+  final Gradient gradient;
+  final Color shadowColor;
 
   const GradientButton({
     super.key,
@@ -13,6 +15,8 @@ class GradientButton extends StatelessWidget {
     required this.label,
     this.isLoading = false,
     this.height = 52,
+    this.gradient = AppColors.primaryGradient,
+    this.shadowColor = AppColors.primary,
   });
 
   @override
@@ -29,14 +33,14 @@ class GradientButton extends StatelessWidget {
           width: double.infinity,
           height: height,
           decoration: BoxDecoration(
-            gradient: disabled ? null : AppColors.primaryGradient,
+            gradient: disabled ? null : gradient,
             color: disabled ? AppColors.textHint : null,
             borderRadius: BorderRadius.circular(14),
             boxShadow: disabled
                 ? []
                 : [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.35),
+                      color: shadowColor.withValues(alpha: 0.35),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),

@@ -69,6 +69,7 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
     'Residential' => Icons.home_rounded,
     'Commercial'  => Icons.store_rounded,
     'Agricultural'=> Icons.grass_rounded,
+    'Farmhouse'   => Icons.cottage_rounded,
     _             => Icons.landscape_rounded,
   };
 

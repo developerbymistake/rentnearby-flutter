@@ -991,6 +991,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           : allPlots;
       final count = filtered.length;
 
+      final rows = <List>[];
+      for (int i = 0; i < types.length; i += 2) {
+        rows.add(types.sublist(i, (i + 2).clamp(0, types.length)));
+      }
+
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
@@ -998,85 +1003,94 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           borderRadius: BorderRadius.circular(18),
           boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
         ),
-        child: Row(
-          children: [
-            // Count badge — same Expanded width as type chips
-            Expanded(
-              child: Container(
-                height: 52,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                width: 54,
+                constraints: const BoxConstraints(minHeight: 52),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF92400E), Color(0xFF78350F)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text('$count',
                         style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 22,
+                            fontFamily: 'Poppins', fontSize: 20,
                             fontWeight: FontWeight.w700, color: Colors.white)),
                     Text('plot${count == 1 ? '' : 's'}',
                         style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 11,
+                            fontFamily: 'Poppins', fontSize: 10,
                             fontWeight: FontWeight.w500, color: Colors.white)),
                   ],
                 ),
               ),
-            ),
-            // Type chips — same size as count badge
-            for (final type in types) ...[
-              const SizedBox(width: 6),
+              const SizedBox(width: 10),
               Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    final newType = _selectedPlotType == type.name ? null : type.name;
-                    setState(() => _selectedPlotType = newType);
-                    _buildMarkers();
-                    if (newType != null) {
-                      final hits = _plotCtrl.nearbyPlots
-                          .where((p) => p.plotType == newType)
-                          .length;
-                      if (hits > 0) _playTing();
-                    }
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: _selectedPlotType == type.name
-                          ? const Color(0xFF92400E)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: _selectedPlotType == type.name
-                            ? const Color(0xFF92400E)
-                            : AppColors.divider,
-                        width: 1.5,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: rows.asMap().entries.map((entry) {
+                    final rowIndex = entry.key;
+                    final row = entry.value;
+                    return Padding(
+                      padding: EdgeInsets.only(top: rowIndex > 0 ? 6 : 0),
+                      child: Row(
+                        children: List.generate(row.length, (colIndex) {
+                          final type = row[colIndex];
+                          final selected = _selectedPlotType == type.name;
+                          return Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                final newType = selected ? null : type.name as String?;
+                                setState(() => _selectedPlotType = newType);
+                                _buildMarkers();
+                                if (newType != null) {
+                                  final hits = _plotCtrl.nearbyPlots
+                                      .where((p) => p.plotType == newType)
+                                      .length;
+                                  if (hits > 0) _playTing();
+                                }
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                margin: EdgeInsets.only(right: colIndex < row.length - 1 ? 6 : 0),
+                                padding: const EdgeInsets.symmetric(vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: selected ? const Color(0xFF92400E) : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: selected ? const Color(0xFF92400E) : AppColors.divider,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(type.name,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: selected ? Colors.white : AppColors.textDark,
+                                      )),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
                       ),
-                    ),
-                    child: Center(
-                      child: Text(
-                          type.name.length > 5
-                              ? '${type.name.substring(0, 4)}.'
-                              : type.name,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'Poppins', fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: _selectedPlotType == type.name
-                                ? Colors.white
-                                : AppColors.textDark,
-                          )),
-                    ),
-                  ),
+                    );
+                  }).toList(),
                 ),
               ),
             ],
-          ],
+          ),
         ),
       );
     });
@@ -1226,6 +1240,7 @@ class _PlotBottomSheet extends StatelessWidget {
         'Residential' => const Color(0xFF3B82F6),
         'Commercial' => const Color(0xFFF59E0B),
         'Agricultural' => const Color(0xFF92400E),
+        'Farmhouse' => const Color(0xFF16A34A),
         _ => AppColors.primary,
       };
 

@@ -923,6 +923,7 @@ class _PlotCard extends StatelessWidget {
   Color _typeColor(String type) => switch (type) {
     'Commercial'   => const Color(0xFFF59E0B),
     'Agricultural' => const Color(0xFF92400E),
+    'Farmhouse'    => const Color(0xFF16A34A),
     _              => const Color(0xFF3B82F6),
   };
 
@@ -1054,28 +1055,36 @@ class _PlotCard extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF10B981), Color(0xFF059669)],
+                            ),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
                           ),
                           child: isGoLiveLoading
                               ? const SizedBox(
                                   width: 14,
                                   height: 14,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Color(0xFF10B981)),
+                                      strokeWidth: 2, color: Colors.white),
                                 )
                               : const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.rocket_launch_rounded, size: 14, color: Color(0xFF10B981)),
+                                    Icon(Icons.rocket_launch_rounded, size: 14, color: Colors.white),
                                     SizedBox(width: 4),
                                     Text('Make it Live',
                                         style: TextStyle(
                                             fontFamily: 'Poppins',
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
-                                            color: Color(0xFF10B981))),
+                                            color: Colors.white)),
                                   ],
                                 ),
                         ),

@@ -926,6 +926,8 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                         onPressed: isButtonDisabled ? null : _handleNext,
                         isLoading: _ctrl.isLoading.value || _isFinalizing,
                         label: _step == 0 ? 'Next: Location' : _step == 1 ? 'Next: Address' : _step == 2 ? 'Next: Photos' : 'Post Plot',
+                        gradient: const LinearGradient(colors: [Color(0xFF92400E), Color(0xFF78350F)]),
+                        shadowColor: const Color(0xFF92400E),
                       );
                     }),
                   ),
@@ -1016,40 +1018,47 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
           // Plot Type
           _sectionCard(
             title: 'Plot Type *',
-            child: Obx(() => Row(
-              children: _ctrl.plotTypes.asMap().entries.map((entry) {
-                final type = entry.value;
-                final active = _selectedPlotType == type.id;
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(left: entry.key == 0 ? 0 : 8),
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedPlotType = type.id),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: active ? const Color(0xFF92400E) : Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: active ? const Color(0xFF92400E) : AppColors.divider,
-                              width: 1.5),
-                        ),
-                        child: Center(
-                          child: Text(type.name,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: active ? Colors.white : AppColors.textMedium)),
-                        ),
+            child: Obx(() {
+              final types = _ctrl.plotTypes;
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 4.2,
+                ),
+                itemCount: types.length,
+                itemBuilder: (_, i) {
+                  final type = types[i];
+                  final active = _selectedPlotType == type.id;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedPlotType = type.id),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      decoration: BoxDecoration(
+                        color: active ? const Color(0xFF92400E) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: active ? const Color(0xFF92400E) : AppColors.divider,
+                            width: 1.5),
+                      ),
+                      child: Center(
+                        child: Text(type.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: active ? Colors.white : AppColors.textMedium)),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
-            )),
+                  );
+                },
+              );
+            }),
           ),
 
           // Area Unit
