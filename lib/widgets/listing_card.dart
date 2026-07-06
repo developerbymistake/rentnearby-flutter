@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../models/listing_model.dart';
+import 'pulse_once.dart';
 
 class ListingCard extends StatelessWidget {
   final ListingModel listing;
@@ -282,7 +283,8 @@ class ListingCard extends StatelessWidget {
   }
 
   Widget _makeItLiveButton() {
-    return GestureDetector(
+    return PulseOnce(
+      child: GestureDetector(
       onTap: isGoLiveLoading ? null : onGoLive,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -322,6 +324,7 @@ class ListingCard extends StatelessWidget {
                   ),
                 ],
               ),
+        ),
       ),
     );
   }

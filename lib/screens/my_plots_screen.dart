@@ -15,6 +15,7 @@ import '../models/plot_model.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/payment_success_dialog.dart';
+import '../widgets/pulse_once.dart';
 
 const _kBrown = Color(0xFF92400E);
 const _kBrownDark = Color(0xFF78350F);
@@ -1047,7 +1048,8 @@ class _PlotCard extends StatelessWidget {
                       ),
                     ] else ...[
                       // Inactive: show "Make it Live" button
-                      GestureDetector(
+                      PulseOnce(
+                        child: GestureDetector(
                         onTap: isGoLiveLoading ? null : onGoLive,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1076,6 +1078,7 @@ class _PlotCard extends StatelessWidget {
                                             color: Color(0xFF10B981))),
                                   ],
                                 ),
+                        ),
                         ),
                       ),
                     ],
