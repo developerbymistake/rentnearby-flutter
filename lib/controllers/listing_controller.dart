@@ -54,6 +54,7 @@ class ListingController extends GetxController {
 
   Future<void> loadMyListings({int page = 1}) async {
     try {
+      if (page == 1) myListings.clear();
       isLoading.value = true;
       final res = await ApiService.get('/listings/my', params: {'page': page, 'pageSize': 10});
       final items = (res['data']['items'] as List).map((e) => ListingModel.fromJson(e)).toList();
