@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Bakhli uses your location to show nearby rooms and plots, and to help you pin your listing's exact location.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Bakhli needs camera access so you can take photos of your room or plot listing.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Bakhli needs access to your photos so you can choose images for your room or plot listing.</string>
 </dict>
 </plist>
