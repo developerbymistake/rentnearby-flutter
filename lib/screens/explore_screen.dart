@@ -838,7 +838,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                       const Icon(Icons.location_on_rounded,
                           color: Colors.white, size: 22),
                       const SizedBox(width: 6),
-                      const Text('Bakhli',
+                      const Text('Explore Rooms',
                           style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 20,
