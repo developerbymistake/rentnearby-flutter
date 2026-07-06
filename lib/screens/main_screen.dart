@@ -14,6 +14,7 @@ import '../repositories/user_repository.dart';
 import '../controllers/app_feature_controller.dart';
 import '../controllers/banner_controller.dart';
 import '../services/banner_hub_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/district_banner_overlay.dart';
 import '../widgets/gradient_button.dart';
 import '../navigation/tab_router.dart';
@@ -29,6 +30,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   late final LocationController _locationCtrl;
   late final BannerController _bannerCtrl;
   Worker? _bannerDistrictWorker;
+  Worker? _digestTopicWorker;
 
   final _screens = const [
     TabNavigator(tabId: 0),
@@ -62,6 +64,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       _bannerCtrl.checkBanner(id);
       BannerHubService.to.connectForDistrict(id);
     }
+    _digestTopicWorker = ever(_locationCtrl.selectedDistrict, (district) {
+      NotificationService.to.updateDistrictTopic(district?.id.toString());
+    });
+    if (_locationCtrl.selectedDistrict.value != null) {
+      NotificationService.to.updateDistrictTopic(_locationCtrl.selectedDistrict.value!.id.toString());
+    }
     _auth.refreshProfile();
   }
 
@@ -69,6 +77,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _bannerDistrictWorker?.dispose();
+    _digestTopicWorker?.dispose();
     super.dispose();
   }
 

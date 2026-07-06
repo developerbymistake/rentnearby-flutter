@@ -158,6 +158,9 @@ class AuthController extends GetxController {
       await NotificationService.to.clearToken();
     } catch (_) {}
     try {
+      await NotificationService.to.clearDistrictTopic();
+    } catch (_) {}
+    try {
       await Get.find<BannerHubService>().disconnect();
     } catch (_) {}
     await StorageService.clearAll();
@@ -173,6 +176,9 @@ class AuthController extends GetxController {
       ApiService.beginLogout();
       await ApiService.delete('/account');
       await NotificationService.to.clearToken();
+      try {
+        await NotificationService.to.clearDistrictTopic();
+      } catch (_) {}
       try {
         await Get.find<BannerHubService>().disconnect();
       } catch (_) {}

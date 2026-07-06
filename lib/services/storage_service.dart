@@ -66,4 +66,13 @@ class StorageService {
 
   static void clearNotifPromptDismissedAt() =>
       _box.remove(AppConstants.notifPromptDismissedKey);
+
+  static Future<void> saveSubscribedDistrictTopic(String topic) async =>
+      _box.write(AppConstants.subscribedDistrictTopicKey, topic);
+
+  static String? getSubscribedDistrictTopic() =>
+      _box.read<String>(AppConstants.subscribedDistrictTopicKey);
+
+  static void clearSubscribedDistrictTopic() =>
+      _box.remove(AppConstants.subscribedDistrictTopicKey);
 }

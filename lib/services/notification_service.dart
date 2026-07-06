@@ -41,6 +41,14 @@ class NotificationService extends GetxService {
     // Token refresh listener — only registers if logged in
     _tokenRefreshSub = FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
       if (StorageService.isLoggedIn) await _registerToken(token);
+      // Defensive re-subscribe — cheap no-op if already subscribed, guards against
+      // any FCM-side token/topic association edge cases after a token refresh.
+      final topic = StorageService.getSubscribedDistrictTopic();
+      if (topic != null) {
+        try {
+          await FirebaseMessaging.instance.subscribeToTopic(topic);
+        } catch (_) {}
+      }
     });
 
     // Returning user: permission already granted — silently register token
@@ -151,6 +159,48 @@ class NotificationService extends GetxService {
 
   void onPermissionPromptDismissed() =>
       StorageService.saveNotifPromptDismissedAt();
+
+  /// Subscribes to the FCM topic for [districtId] (`district_<id>`), unsubscribing
+  /// from the previously-subscribed district topic first if it changed.
+  /// Pass null to unsubscribe without subscribing to a new one.
+  Future<void> updateDistrictTopic(String? districtId) async {
+    final previous = StorageService.getSubscribedDistrictTopic();
+    final next = districtId == null
+        ? null
+        : '${AppConstants.districtTopicPrefix}$districtId';
+    if (previous == next) return;
+
+    if (previous != null) {
+      try {
+        await FirebaseMessaging.instance.unsubscribeFromTopic(previous);
+      } catch (e) {
+        debugPrint('NotificationService: unsubscribe from $previous failed: $e');
+      }
+    }
+
+    if (next != null) {
+      try {
+        await FirebaseMessaging.instance.subscribeToTopic(next);
+        await StorageService.saveSubscribedDistrictTopic(next);
+        return;
+      } catch (e) {
+        debugPrint('NotificationService: subscribe to $next failed: $e');
+        return; // leave stored topic as-is — retried on next district-change event
+      }
+    }
+
+    StorageService.clearSubscribedDistrictTopic();
+  }
+
+  /// Unsubscribes from the currently-subscribed district topic, if any. Call on logout.
+  Future<void> clearDistrictTopic() async {
+    final topic = StorageService.getSubscribedDistrictTopic();
+    if (topic == null) return;
+    try {
+      await FirebaseMessaging.instance.unsubscribeFromTopic(topic);
+    } catch (_) {}
+    StorageService.clearSubscribedDistrictTopic();
+  }
 
   @override
   void onClose() {
