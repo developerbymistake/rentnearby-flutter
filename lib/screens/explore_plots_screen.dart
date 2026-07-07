@@ -786,7 +786,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                         Row(children: [
                           const Icon(Icons.terrain_rounded, color: Colors.white, size: 22),
                           const SizedBox(width: 6),
-                          const Text('Explore Plots',
+                          const Text('Plots',
                               style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontSize: 20,
