@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -106,7 +107,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     );
   }
 
-  Widget _buildLoader() => Stack(
+  Widget _buildLoader() => AnnotatedRegion<SystemUiOverlayStyle>(
+    value: const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+    ),
+    child: Stack(
     children: [
       Shimmer.fromColors(
         baseColor: AppColors.shimmerBase,
@@ -152,6 +159,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         ),
       ),
     ],
+    ),
   );
 
   Widget _buildContent() {
