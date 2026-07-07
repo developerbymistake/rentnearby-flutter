@@ -242,10 +242,16 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final minSheetHeight = MediaQuery.of(context).size.height * 0.55;
+    final minSheetHeight = MediaQuery.of(context).size.height * 0.62;
     return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: minSheetHeight),
-      child: Column(
+      constraints: BoxConstraints(
+        minHeight: minSheetHeight,
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
+      // Scrollable so the warning banner + keyboard (while typing the
+      // details field) can't push the buttons off-screen on short devices.
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -285,6 +291,37 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.35)),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline_rounded,
+                          size: 18, color: AppColors.warning),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Please report responsibly — misuse may lead to '
+                          'action on your account.',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            color: AppColors.textMedium,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
                 _reasonPicker(context),
                 const SizedBox(height: 20),
                 TextField(
@@ -354,6 +391,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
