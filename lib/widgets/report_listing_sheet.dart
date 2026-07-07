@@ -173,23 +173,56 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
       return PopupMenuButton<String>(
         onSelected: (id) => setState(() => _selectedReasonId = id),
         offset: const Offset(0, 52),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        color: AppColors.background,
+        elevation: 8,
+        // Material 3 tints popup surfaces with colorScheme.surfaceTint by
+        // default, which washes a white menu out to a flat gray — that's
+        // what was reading as "disabled". Kill the tint, keep it crisp white.
+        surfaceTintColor: Colors.transparent,
+        shadowColor: AppColors.shadow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: AppColors.divider, width: 1),
+        ),
         constraints: BoxConstraints(minWidth: fieldWidth, maxWidth: fieldWidth),
         itemBuilder: (_) => _ctrl.reportReasons
             .map(
-              (r) => PopupMenuItem<String>(
-                value: r.id,
-                child: Text(
-                  r.name,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w500,
-                    color: r.id == _selectedReasonId
-                        ? AppColors.primary
-                        : AppColors.textDark,
+              (r) {
+                final isSelected = r.id == _selectedReasonId;
+                return PopupMenuItem<String>(
+                  value: r.id,
+                  padding: EdgeInsets.zero,
+                  height: 46,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.08)
+                        : Colors.transparent,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            r.name,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
+                              fontWeight:
+                                  isSelected ? FontWeight.w600 : FontWeight.w500,
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : AppColors.textDark,
+                            ),
+                          ),
+                        ),
+                        if (isSelected)
+                          const Icon(Icons.check_rounded,
+                              size: 18, color: AppColors.primary),
+                      ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             )
             .toList(),
         child: Container(
