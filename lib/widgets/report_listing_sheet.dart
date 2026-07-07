@@ -15,6 +15,7 @@ class ReportListingSheet extends StatefulWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -35,6 +36,17 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
 
   bool get _isValid => _selectedReasonId != null && _detailsCtrl.text.trim().isNotEmpty;
 
+  InputDecoration _inputDec({String? hintText}) => InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+      );
+
   @override
   void initState() {
     super.initState();
@@ -53,20 +65,27 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Report this listing?',
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
         content: const Text(
           'Our team will review this listing based on the details you provide. Continue?',
-          style: TextStyle(fontFamily: 'Poppins'),
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+            child: const Text('Cancel',
+                style: TextStyle(fontFamily: 'Poppins', color: AppColors.primary, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              minimumSize: Size.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Report', style: TextStyle(fontFamily: 'Poppins')),
+            child: const Text('Report', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -103,36 +122,32 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
             child: Container(
               width: 40,
               height: 4,
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 20),
           const Text('Report this listing',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700)),
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           const SizedBox(height: 16),
           Obx(() => DropdownButtonFormField<String>(
                 initialValue: _selectedReasonId,
-                hint: const Text('Select a reason', style: TextStyle(fontFamily: 'Poppins')),
+                hint: const Text('Select a reason',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint)),
                 items: _ctrl.reportReasons
-                    .map((r) => DropdownMenuItem(value: r.id, child: Text(r.name, style: const TextStyle(fontFamily: 'Poppins'))))
+                    .map((r) => DropdownMenuItem(
+                        value: r.id,
+                        child: Text(r.name, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark))))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedReasonId = v),
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                ),
+                decoration: _inputDec(),
               )),
           const SizedBox(height: 12),
           TextField(
             controller: _detailsCtrl,
             maxLines: 3,
             onChanged: (_) => setState(() {}),
-            style: const TextStyle(fontFamily: 'Poppins'),
-            decoration: InputDecoration(
-              hintText: 'Please describe the issue (required)',
-              hintStyle: const TextStyle(fontFamily: 'Poppins'),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            ),
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
+            decoration: _inputDec(hintText: 'Please describe the issue (required)'),
           ),
           const SizedBox(height: 20),
           GradientButton(

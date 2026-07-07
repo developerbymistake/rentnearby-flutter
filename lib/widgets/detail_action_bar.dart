@@ -126,12 +126,20 @@ class DetailActionBar extends StatelessWidget {
                 label: Text(onReport == null ? 'Reported' : 'Report this listing',
                     style: const TextStyle(
                         fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textMedium,
-                  side: const BorderSide(color: AppColors.divider),
-                  minimumSize: const Size(0, 44),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
+                style: onReport == null
+                    ? OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textMedium,
+                        side: const BorderSide(color: AppColors.divider),
+                        minimumSize: const Size(0, 44),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      )
+                    : OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        backgroundColor: AppColors.error.withValues(alpha: 0.06),
+                        side: BorderSide(color: AppColors.error.withValues(alpha: 0.35)),
+                        minimumSize: const Size(0, 44),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
               ),
             ),
           ],
