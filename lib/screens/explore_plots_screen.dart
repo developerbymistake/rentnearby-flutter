@@ -93,8 +93,13 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       }
     });
 
-    // Fit camera + reload data when a fresh GPS position arrives (GPS on/off/on,
-    // app resume, or first fix). locationLoading is no longer used by this screen.
+    // Fit camera when a fresh GPS position arrives (GPS on/off/on, app resume,
+    // or first fix). locationLoading is no longer used by this screen.
+    // Data reload is NOT this worker's job — _locationWorker (above) reloads
+    // whenever selectedDistrict actually changes. This trigger fires twice on
+    // cold start (last-known fix, then refined fix) purely to hide the shimmer
+    // and fit the camera fast; reloading data here too would fire a redundant
+    // second /plots/nearby call for the same district.
     _locationRefreshedWorker = ever(_locationCtrl.locationRefreshedTrigger, (_) {
       if (!mounted) return;
       if (_selectedCity == null) {
@@ -103,12 +108,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           _updateNativeRadiusCircle();
           _fitToRadius();
         }
-      }
-      if (_locationCtrl.selectedDistrict.value != null &&
-          _auth.tabIndex.value == 2 && !mapShouldPause.value) {
-        _loadNearby();
-      } else {
-        _stale = true;
       }
       setState(() {});
     });
