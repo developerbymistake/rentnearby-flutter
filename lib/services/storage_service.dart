@@ -75,4 +75,41 @@ class StorageService {
 
   static void clearSubscribedDistrictTopic() =>
       _box.remove(AppConstants.subscribedDistrictTopicKey);
+
+  // ── District-switch feature: cached reference data ─────────────────────────
+  // Caches the *reference* lists (all districts, cities per district) so the
+  // location picker opens instantly. Never stores the user's manually-picked
+  // browsing district/city — that is in-memory only (see LocationController)
+  // and is intentionally never persisted here.
+
+  static Future<void> saveDistrictsCache(List<Map<String, dynamic>> items) async {
+    await _box.write(AppConstants.districtsCacheKey, items);
+    await _box.write('${AppConstants.districtsCacheKey}_savedAt', DateTime.now().toIso8601String());
+  }
+
+  static List<Map<String, dynamic>>? getDistrictsCache() {
+    final raw = _box.read<List>(AppConstants.districtsCacheKey);
+    return raw?.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  static DateTime? getDistrictsCacheSavedAt() {
+    final val = _box.read<String>('${AppConstants.districtsCacheKey}_savedAt');
+    return val == null ? null : DateTime.tryParse(val);
+  }
+
+  static Future<void> saveCitiesCache(String districtId, List<Map<String, dynamic>> items) async {
+    final key = '${AppConstants.citiesCacheKeyPrefix}$districtId';
+    await _box.write(key, items);
+    await _box.write('${key}_savedAt', DateTime.now().toIso8601String());
+  }
+
+  static List<Map<String, dynamic>>? getCitiesCache(String districtId) {
+    final raw = _box.read<List>('${AppConstants.citiesCacheKeyPrefix}$districtId');
+    return raw?.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  static DateTime? getCitiesCacheSavedAt(String districtId) {
+    final val = _box.read<String>('${AppConstants.citiesCacheKeyPrefix}${districtId}_savedAt');
+    return val == null ? null : DateTime.tryParse(val);
+  }
 }

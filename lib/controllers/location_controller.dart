@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../models/city_model.dart';
+import '../repositories/locations_repository.dart';
 import '../services/api_service.dart';
 
 class _LocationContext {
@@ -26,6 +27,52 @@ class LocationController extends GetxController {
   // Incremented each time a fresh GPS position is obtained — explore screens
   // watch this to fit camera and reload data without depending on locationLoading.
   final locationRefreshedTrigger = 0.obs;
+
+  // ── Manual district/city browsing (district-switch feature) ────────────────
+  // A user-initiated, TEMPORARY override for exploring a district other than
+  // their real one. Deliberately kept separate from `selectedDistrict`/
+  // `autoCity` above — it must never be read by listing creation or by the
+  // district-banner/notification-topic logic, both of which must always stay
+  // tied to the user's real, GPS-resolved district. It is in-memory only and
+  // is never persisted to disk: it resets to null on every app resume/cold
+  // start (see `resetBrowsing()` and its call in `refreshOnResume()`).
+  final browsingDistrict = Rxn<DistrictModel>();
+  final browsingCity     = Rxn<CityModel>();
+
+  /// The district whose listings should currently be shown: the browsed one
+  /// if the user is temporarily exploring elsewhere, otherwise the real one.
+  DistrictModel? get effectiveDistrict => browsingDistrict.value ?? selectedDistrict.value;
+
+  final _locationsRepo = LocationsRepository();
+  List<DistrictModel> _allDistricts = [];
+
+  /// Sets both the browsed district and the specific city within it the user
+  /// picked. Both are required together — there is no "current position"
+  /// concept for a district the user isn't physically in.
+  void setBrowsing(DistrictModel district, CityModel city) {
+    browsingDistrict.value = district;
+    browsingCity.value = city;
+  }
+
+  /// Discards any in-progress manual browsing and returns to the real district.
+  void resetBrowsing() {
+    browsingDistrict.value = null;
+    browsingCity.value = null;
+  }
+
+  /// All districts (active + inactive), for the "change district" list.
+  /// Cached by [LocationsRepository] — cheap to call repeatedly.
+  Future<List<DistrictModel>> loadAllDistricts({bool forceRefresh = false}) async {
+    _allDistricts = await _locationsRepo.getAllDistricts(forceRefresh: forceRefresh);
+    return _allDistricts;
+  }
+
+  /// Unique state names derived from the last-loaded district list.
+  /// Call [loadAllDistricts] first.
+  List<String> get browsableStates => _locationsRepo.statesFrom(_allDistricts);
+
+  Future<List<CityModel>> loadCitiesForDistrict(String districtId, {bool forceRefresh = false}) =>
+      _locationsRepo.getCitiesForDistrict(districtId, forceRefresh: forceRefresh);
 
   // Private guards
   int  _loadContextVersion = 0;
@@ -248,6 +295,11 @@ class LocationController extends GetxController {
   // ── Resume handler (called by both explore screens on app foreground) ───────
 
   Future<void> refreshOnResume() async {
+    // Manual browsing is temporary — always discard it on resume/cold start,
+    // regardless of what happens with the GPS refresh below. Unconditional
+    // and placed before the guard so it fires on every resume call.
+    resetBrowsing();
+
     // Guard: one refresh at a time, skip if location init is in progress.
     if (locationLoading.value || _refreshing) return;
     _refreshing = true;

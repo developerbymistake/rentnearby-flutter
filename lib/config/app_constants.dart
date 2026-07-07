@@ -11,6 +11,13 @@ class AppConstants {
   static const String notifPromptDismissedKey = 'notif_prompt_dismissed_at';
   static const String subscribedDistrictTopicKey = 'subscribed_district_topic';
 
+  // District-switch feature — cached reference data for the location picker.
+  // (Not the user's manual browsing choice — that is in-memory only, see
+  // LocationController.)
+  static const String districtsCacheKey = 'districts_cache';
+  static const String citiesCacheKeyPrefix = 'cities_cache_';
+  static const Duration locationsCacheTtl = Duration(hours: 24);
+
   static const String registerTokenPath = '/notifications/register-token';
   static const String districtTopicPrefix = 'district_';
 

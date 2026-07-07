@@ -17,8 +17,8 @@ import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
-import '../models/city_model.dart';
 import '../models/plot_model.dart';
+import '../widgets/location_switch_sheet.dart';
 
 class ExplorePlotsScreen extends StatefulWidget {
   const ExplorePlotsScreen({super.key});
@@ -53,11 +53,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Worker? _refreshWorker;
   Worker? _tabWorker;
   Worker? _filterResetWorker;
+  Worker? _browsingWorker;
   bool _stale = false;
   List<_MapMarkerData> _markerData = [];
   double _radius = 1.0;
   double _lastClusterZoom = 0;
-  CityModel? _selectedCity;
   bool _mapReady = false;
   bool _checkingPermission = false;
   Timer? _loadNearbyDebounceTimer;
@@ -93,6 +93,24 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       }
     });
 
+    // District-switch feature: reload + refit whenever the manually-browsed
+    // city changes — this covers both picking a city (own district or a
+    // browsed one) and resetting back to the real location (browsingCity
+    // becomes null again), mirroring _locationWorker above.
+    _browsingWorker = ever(_locationCtrl.browsingCity, (_) {
+      if (_auth.tabIndex.value == 2 && !mapShouldPause.value) {
+        _precomputeCircleCache();
+        _loadNearby();
+        // Unconditional, unlike the _isCameraMoving-gated calls elsewhere:
+        // this is a deliberate, explicit location pick by the user, not a
+        // passive GPS update — the camera must always move to it, even if
+        // it still thinks a previous gesture/animation is in flight.
+        if (_mapReady) _fitToRadius();
+      } else {
+        _stale = true;
+      }
+    });
+
     // Fit camera when a fresh GPS position arrives (GPS on/off/on, app resume,
     // or first fix). locationLoading is no longer used by this screen.
     // Data reload is NOT this worker's job — _locationWorker (above) reloads
@@ -103,7 +121,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     // always the right amount of camera movement, never redundant.
     _locationRefreshedWorker = ever(_locationCtrl.locationRefreshedTrigger, (_) {
       if (!mounted) return;
-      if (_selectedCity == null) {
+      if (_locationCtrl.browsingCity.value == null) {
         _precomputeCircleCache();
         if (_mapReady) {
           _updateNativeRadiusCircle();
@@ -122,7 +140,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           if (_nativeUserDot == null) _initNativeUserDot();
           else _updateNativeUserDot();
           // Keep radius circle centred on user when no city is manually selected.
-          if (_selectedCity == null) {
+          if (_locationCtrl.browsingCity.value == null) {
             _precomputeCircleCache();
             _updateNativeRadiusCircle();
           }
@@ -146,14 +164,16 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     });
     _refreshWorker = ever(_plotCtrl.exploreRefreshTrigger, (_) {
       _stale = true;
-      if (_locationCtrl.selectedDistrict.value != null &&
+      if (_locationCtrl.effectiveDistrict != null &&
           _auth.tabIndex.value == 2 && !mapShouldPause.value) {
         _loadNearby();
       }
     });
     _filterResetWorker = ever(_plotCtrl.filterResetTrigger, (_) {
       if (!mounted) return;
-      setState(() { _selectedCity = null; _selectedPlotType = null; });
+      // Manual browsing (own-district or cross-district) intentionally
+      // survives tab switches — only the plot-type filter resets here.
+      setState(() { _selectedPlotType = null; });
       if (_mapReady) {
         _precomputeCircleCache();
         _updateNativeRadiusCircle();
@@ -202,6 +222,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _locationWorker?.dispose();
+    _browsingWorker?.dispose();
     _locationRefreshedWorker?.dispose();
     _userLocationWorker?.dispose();
     _postedWorker?.dispose();
@@ -278,8 +299,9 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   LatLng get _searchCenter {
-    if (_selectedCity?.latitude != null && _selectedCity?.longitude != null) {
-      return LatLng(_selectedCity!.latitude!, _selectedCity!.longitude!);
+    final browsingCity = _locationCtrl.browsingCity.value;
+    if (browsingCity?.latitude != null && browsingCity?.longitude != null) {
+      return LatLng(browsingCity!.latitude!, browsingCity.longitude!);
     }
     final loc = _locationCtrl.userLocation.value;
     if (loc != null) return loc;
@@ -402,8 +424,9 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
 
   Future<void> _executeLoadNearby() async {
     if (_loadingNearby) return;
-    if (_locationCtrl.selectedDistrict.value == null) return;
-    final districtId = _locationCtrl.selectedDistrict.value!.id;
+    final district = _locationCtrl.effectiveDistrict;
+    if (district == null) return;
+    final districtId = district.id;
     if (mapShouldPause.value) { _stale = true; return; }
     _stale = false;
     _loadingNearby = true;
@@ -793,7 +816,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                                   fontWeight: FontWeight.w700,
                                   color: Colors.white)),
                           const Spacer(),
-                          _buildCityDropdown(),
+                          _buildLocationPill(),
                         ]),
                         const SizedBox(height: 12),
                         _buildRadiusChips(),
@@ -833,83 +856,21 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     );
   }
 
-  Widget _buildCityDropdown() {
+  /// Single entry point for the district-switch feature: shows the district
+  /// currently being viewed (real or manually browsed) + city, opens the
+  /// shared drill-down sheet on tap.
+  Widget _buildLocationPill() {
     return Obx(() {
-      final cs = _locationCtrl.nearbyCities;
-      if (cs.isEmpty) {
-        return _locationCtrl.selectedDistrict.value != null
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Iconsax.location, color: Colors.white, size: 13),
-                  const SizedBox(width: 5),
-                  Text(_locationCtrl.selectedDistrict.value!.name,
-                      style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white)),
-                ]),
-              )
-            : const SizedBox();
-      }
+      final district = _locationCtrl.effectiveDistrict;
+      if (district == null) return const SizedBox();
+      final cityName = _locationCtrl.browsingCity.value?.name ??
+          _locationCtrl.autoCity.value?.name ??
+          'Current';
+      final isBrowsingElsewhere = _locationCtrl.browsingDistrict.value != null &&
+          _locationCtrl.browsingDistrict.value!.id != _locationCtrl.selectedDistrict.value?.id;
 
-      final isCurrent = _selectedCity == null;
-      final displayName = isCurrent ? 'Current' : _selectedCity!.name;
-
-      return PopupMenuButton<String>(
-        onSelected: (id) {
-          if (id == '__current__') {
-            setState(() => _selectedCity = null);
-          } else {
-            final city = cs.firstWhereOrNull((c) => c.id == id);
-            if (city == null) return;
-            setState(() => _selectedCity = city);
-          }
-          _precomputeCircleCache();
-          _loadNearby();
-          if (_mapReady) _fitToRadius();
-        },
-        offset: const Offset(0, 40),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        itemBuilder: (_) => [
-          PopupMenuItem<String>(
-            value: '__current__',
-            child: Row(children: [
-              Icon(Icons.my_location_rounded,
-                  size: 14, color: isCurrent ? const Color(0xFF92400E) : AppColors.textLight),
-              const SizedBox(width: 10),
-              Text('Current',
-                  style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w500,
-                      color: isCurrent ? const Color(0xFF92400E) : AppColors.textDark)),
-            ]),
-          ),
-          ...cs.map((c) => PopupMenuItem<String>(
-                value: c.id,
-                child: Row(children: [
-                  Icon(Iconsax.location,
-                      size: 14,
-                      color: _selectedCity?.id == c.id
-                          ? const Color(0xFF92400E)
-                          : AppColors.textLight),
-                  const SizedBox(width: 10),
-                  Text(c.name,
-                      style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w500,
-                          color: _selectedCity?.id == c.id
-                              ? const Color(0xFF92400E)
-                              : AppColors.textDark)),
-                ]),
-              )),
-        ],
+      return GestureDetector(
+        onTap: () => LocationSwitchSheet.show(context),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
@@ -918,10 +879,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
             border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(isCurrent ? Icons.my_location_rounded : Iconsax.map,
+            Icon(isBrowsingElsewhere ? Iconsax.location : Icons.my_location_rounded,
                 color: Colors.white, size: 13),
             const SizedBox(width: 6),
-            Text(displayName,
+            Text('${district.name} · $cityName',
                 style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 13,
@@ -1096,7 +1057,9 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Widget _buildLocationFab() {
     return GestureDetector(
       onTap: () {
-        setState(() => _selectedCity = null);
+        // Also ends any manual district/city browsing — "recenter" and
+        // "return to my real district" are the same action here.
+        _locationCtrl.resetBrowsing();
         _precomputeCircleCache();
         _loadNearby();
         if (_mapReady) _fitToRadius();
