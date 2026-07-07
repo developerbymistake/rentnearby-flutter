@@ -166,52 +166,76 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
   Widget _reasonPicker(BuildContext context) {
     return Obx(() {
       final reasons = _ctrl.reportReasons;
-      // A real form-field dropdown reads as far more "clickable" here than a
-      // popup-menu-on-a-bottom-sheet did, and reuses the same _inputDec()
-      // styling as the details field below it, so the two fields match.
-      return DropdownButtonFormField<String>(
-        initialValue: _selectedReasonId,
-        isExpanded: true,
-        icon: const Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: AppColors.textMedium,
-          size: 22,
-        ),
-        iconSize: 22,
-        dropdownColor: AppColors.background,
-        elevation: 3,
-        borderRadius: BorderRadius.circular(14),
-        menuMaxHeight: 320,
-        style: const TextStyle(
+      final fieldWidth =
+          MediaQuery.of(context).size.width - 48; // matches 24+24 outer padding
+      // DropdownMenu is the Material 3 widget built for exactly this — it's
+      // built on MenuAnchor, which clips/repositions itself to stay inside
+      // the viewport, so it doesn't overflow the sheet the way the old
+      // DropdownButton menu route did.
+      return DropdownMenu<String>(
+        key: ValueKey(_selectedReasonId),
+        initialSelection: _selectedReasonId,
+        width: fieldWidth,
+        enableFilter: false,
+        enableSearch: false,
+        requestFocusOnTap: false,
+        hintText: 'Select a reason',
+        textStyle: const TextStyle(
           fontFamily: 'Poppins',
           fontSize: 14,
           color: AppColors.textDark,
         ),
-        decoration: _inputDec(hintText: 'Select a reason'),
-        hint: const Text(
-          'Select a reason',
-          style: TextStyle(
+        inputDecorationTheme: InputDecorationTheme(
+          hintStyle: const TextStyle(
             fontFamily: 'Poppins',
             fontSize: 14,
             color: AppColors.textHint,
           ),
+          filled: true,
+          fillColor: AppColors.surface,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.divider),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          ),
         ),
-        items: reasons
+        menuStyle: MenuStyle(
+          backgroundColor: const WidgetStatePropertyAll(AppColors.background),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          elevation: const WidgetStatePropertyAll(4),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: const BorderSide(color: AppColors.divider),
+            ),
+          ),
+        ),
+        dropdownMenuEntries: reasons
             .map(
-              (r) => DropdownMenuItem<String>(
+              (r) => DropdownMenuEntry<String>(
                 value: r.id,
-                child: Text(
-                  r.name,
-                  style: const TextStyle(
+                label: r.name,
+                style: MenuItemButton.styleFrom(
+                  textStyle: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
+                  foregroundColor: AppColors.textDark,
                 ),
               ),
             )
             .toList(),
-        onChanged: (id) => setState(() => _selectedReasonId = id),
+        onSelected: (id) => setState(() => _selectedReasonId = id),
       );
     });
   }
