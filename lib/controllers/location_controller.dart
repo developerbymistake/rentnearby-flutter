@@ -152,10 +152,10 @@ class LocationController extends GetxController {
 
       // Last-known fix renders the map immediately without waiting for GPS.
       final lastKnown = await Geolocator.getLastKnownPosition();
+      final firedTriggerForLastKnown = lastKnown != null;
       if (lastKnown != null) {
         userLocation.value = LatLng(lastKnown.latitude, lastKnown.longitude);
         // Fire trigger immediately — shimmer hides and camera fits at once.
-        // Fresh GPS fix will fire the trigger a second time to refine position.
         locationRefreshedTrigger.value++;
       }
       locationLoading.value = false;
@@ -166,7 +166,15 @@ class LocationController extends GetxController {
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
       userLocation.value = LatLng(pos.latitude, pos.longitude);
-      locationRefreshedTrigger.value++;
+      // Only fire the trigger here if the last-known fix never fired it —
+      // otherwise this is a silent refinement of a position the UI already
+      // reacted to: userLocation.value still updates the user's dot (via
+      // _userLocationWorker), but re-firing the trigger would fit the camera
+      // and hide/reshow the pin overlay a second time for no visible reason
+      // (same reasoning as _refreshLocation() below, which never double-fires).
+      if (!firedTriggerForLastKnown) {
+        locationRefreshedTrigger.value++;
+      }
 
       // Version-controlled context update cancels any stale response.
       final myVersion = ++_loadContextVersion;

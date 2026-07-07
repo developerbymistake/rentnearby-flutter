@@ -96,10 +96,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     // Fit camera when a fresh GPS position arrives (GPS on/off/on, app resume,
     // or first fix). locationLoading is no longer used by this screen.
     // Data reload is NOT this worker's job — _locationWorker (above) reloads
-    // whenever selectedDistrict actually changes. This trigger fires twice on
-    // cold start (last-known fix, then refined fix) purely to hide the shimmer
-    // and fit the camera fast; reloading data here too would fire a redundant
-    // second /plots/nearby call for the same district.
+    // whenever selectedDistrict actually changes. LocationController fires
+    // this trigger at most once per location-resolution event (see its
+    // _initLocation()/_refreshLocation() — refinement updates userLocation
+    // silently without re-firing), so a single _fitToRadius() here is
+    // always the right amount of camera movement, never redundant.
     _locationRefreshedWorker = ever(_locationCtrl.locationRefreshedTrigger, (_) {
       if (!mounted) return;
       if (_selectedCity == null) {
