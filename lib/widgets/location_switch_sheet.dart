@@ -20,12 +20,12 @@ class LocationSwitchSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => Padding(
-        // Keep the sheet above the keyboard while the search field is
-        // focused, matching ReportListingSheet's convention.
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: const LocationSwitchSheet(),
-      ),
+      // No manual keyboard padding here — this sheet has its own fixed
+      // height (see build() below), so padding the whole subtree up by the
+      // keyboard height on top of that fixed height fights it and pushes
+      // list content down away from the search box. The sheet computes its
+      // own height around the keyboard instead (see _sheetHeight()).
+      builder: (_) => const LocationSwitchSheet(),
     );
   }
 
@@ -199,8 +199,13 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
   Widget build(BuildContext context) {
     // Fixed height regardless of content — loading/empty/error states must
     // not shrink the sheet, that reads as broken and jumps around as data
-    // arrives.
-    final sheetHeight = MediaQuery.of(context).size.height * 0.75;
+    // arrives. Shrinks around the keyboard itself (rather than being padded
+    // above it) so it never exceeds the visible viewport — that mismatch is
+    // what pushed list content away from the search box when the keyboard
+    // was open.
+    final media = MediaQuery.of(context);
+    final visibleHeight = media.size.height - media.padding.top - media.viewInsets.bottom;
+    final sheetHeight = (media.size.height * 0.75).clamp(0.0, visibleHeight * 0.94);
     return SizedBox(
       height: sheetHeight,
       child: Column(
