@@ -43,18 +43,18 @@ class DetailActionBar extends StatelessWidget {
     if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
-  Widget _directionsButton({required bool paired}) {
+  Widget _directionsButton() {
     return ElevatedButton.icon(
       onPressed: _directions,
-      icon: Icon(Icons.near_me_rounded, size: paired ? 18 : 20),
-      label: Text(
-        paired ? 'Directions' : 'Get Directions',
-        style: TextStyle(fontFamily: 'Poppins', fontSize: paired ? 13 : 14, fontWeight: FontWeight.w600),
+      icon: const Icon(Icons.near_me_rounded, size: 20),
+      label: const Text(
+        'Get Directions',
+        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600),
       ),
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        minimumSize: Size(0, paired ? 50 : 52),
+        minimumSize: const Size(0, 52),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         elevation: 0,
       ),
@@ -66,8 +66,8 @@ class DetailActionBar extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: onReport,
       icon: Icon(reported ? Icons.flag_rounded : Icons.flag_outlined, size: 18),
-      label: Text(reported ? 'Reported' : 'Report',
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+      label: Text(reported ? 'Reported' : 'Report this listing',
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
       style: reported
           ? OutlinedButton.styleFrom(
               foregroundColor: AppColors.textMedium,
@@ -100,17 +100,8 @@ class DetailActionBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Row 1: Get Directions (+ Report, when not the owner)
-          if (showReport)
-            Row(
-              children: [
-                Expanded(child: _directionsButton(paired: true)),
-                const SizedBox(width: 10),
-                Expanded(child: _reportButton()),
-              ],
-            )
-          else
-            SizedBox(width: double.infinity, child: _directionsButton(paired: false)),
+          // Row 1: Get Directions — full width
+          SizedBox(width: double.infinity, child: _directionsButton()),
           if (hasPhone) ...[
             const SizedBox(height: 10),
             // Row 2: Call Owner + WhatsApp side by side
@@ -151,6 +142,11 @@ class DetailActionBar extends StatelessWidget {
                 ),
               ],
             ),
+          ],
+          if (showReport) ...[
+            const SizedBox(height: 10),
+            // Row 3: Report this listing — full width
+            SizedBox(width: double.infinity, child: _reportButton()),
           ],
         ],
       ),
