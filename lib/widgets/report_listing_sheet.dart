@@ -164,103 +164,54 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
   }
 
   Widget _reasonPicker(BuildContext context) {
-    final fieldWidth =
-        MediaQuery.of(context).size.width - 48; // matches 24+24 outer padding
     return Obx(() {
-      final selected = _ctrl.reportReasons.firstWhereOrNull(
-        (r) => r.id == _selectedReasonId,
-      );
-      return PopupMenuButton<String>(
-        onSelected: (id) => setState(() => _selectedReasonId = id),
-        offset: const Offset(0, 52),
-        color: AppColors.background,
-        elevation: 8,
-        // Material 3 tints popup surfaces with colorScheme.surfaceTint by
-        // default, which washes a white menu out to a flat gray — that's
-        // what was reading as "disabled". Kill the tint, keep it crisp white.
-        surfaceTintColor: Colors.transparent,
-        shadowColor: AppColors.shadow,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: AppColors.divider, width: 1),
+      final reasons = _ctrl.reportReasons;
+      // A real form-field dropdown reads as far more "clickable" here than a
+      // popup-menu-on-a-bottom-sheet did, and reuses the same _inputDec()
+      // styling as the details field below it, so the two fields match.
+      return DropdownButtonFormField<String>(
+        initialValue: _selectedReasonId,
+        isExpanded: true,
+        icon: const Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: AppColors.textMedium,
+          size: 22,
         ),
-        constraints: BoxConstraints(minWidth: fieldWidth, maxWidth: fieldWidth),
-        itemBuilder: (_) => _ctrl.reportReasons
-            .map(
-              (r) {
-                final isSelected = r.id == _selectedReasonId;
-                return PopupMenuItem<String>(
-                  value: r.id,
-                  padding: EdgeInsets.zero,
-                  height: 46,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    color: isSelected
-                        ? AppColors.primary.withValues(alpha: 0.08)
-                        : Colors.transparent,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            r.name,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 14,
-                              fontWeight:
-                                  isSelected ? FontWeight.w600 : FontWeight.w500,
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : AppColors.textDark,
-                            ),
-                          ),
-                        ),
-                        if (isSelected)
-                          const Icon(Icons.check_rounded,
-                              size: 18, color: AppColors.primary),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            )
-            .toList(),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.divider, width: 1.3),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+        iconSize: 22,
+        dropdownColor: AppColors.background,
+        elevation: 3,
+        borderRadius: BorderRadius.circular(14),
+        menuMaxHeight: 320,
+        style: const TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 14,
+          color: AppColors.textDark,
+        ),
+        decoration: _inputDec(hintText: 'Select a reason'),
+        hint: const Text(
+          'Select a reason',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 14,
+            color: AppColors.textHint,
           ),
-          child: Row(
-            children: [
-              Expanded(
+        ),
+        items: reasons
+            .map(
+              (r) => DropdownMenuItem<String>(
+                value: r.id,
                 child: Text(
-                  selected?.name ?? 'Select a reason',
-                  style: TextStyle(
+                  r.name,
+                  style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 14,
-                    color: selected == null
-                        ? AppColors.textHint
-                        : AppColors.textDark,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
-              const Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: AppColors.textMedium,
-                size: 20,
-              ),
-            ],
-          ),
-        ),
+            )
+            .toList(),
+        onChanged: (id) => setState(() => _selectedReasonId = id),
       );
     });
   }
