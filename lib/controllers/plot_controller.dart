@@ -36,14 +36,14 @@ class PlotController extends GetxController {
     } catch (_) {}
   }
 
-  Future<void> loadNearby(double lat, double lng, double radius, String cityId) async {
+  Future<void> loadNearby(double lat, double lng, double radius, String districtId) async {
     try {
       isLoading.value = true;
       final res = await ApiService.get('/plots/nearby', params: {
         'latitude': lat,
         'longitude': lng,
         'radius': radius,
-        'cityId': cityId,
+        'districtId': districtId,
       });
       nearbyPlots.value =
           (res['data']['items'] as List).map((e) => NearbyPlotModel.fromJson(e)).toList();

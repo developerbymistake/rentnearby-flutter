@@ -35,14 +35,14 @@ class ListingController extends GetxController {
     } catch (_) {}
   }
 
-  Future<void> loadNearby(double lat, double lng, double radius, String cityId) async {
+  Future<void> loadNearby(double lat, double lng, double radius, String districtId) async {
     try {
       isLoading.value = true;
       final res = await ApiService.get('/listings/nearby', params: {
         'latitude': lat,
         'longitude': lng,
         'radius': radius,
-        'cityId': cityId,
+        'districtId': districtId,
       });
       nearbyListings.value = (res['data']['items'] as List).map((e) => NearbyListingModel.fromJson(e)).toList();
     } catch (e) {

@@ -277,8 +277,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     }
   }
 
-  String? get _effectiveCityId => _selectedCity?.id ?? _locationCtrl.autoCity.value?.id;
-
   LatLng get _searchCenter {
     if (_selectedCity?.latitude != null && _selectedCity?.longitude != null) {
       return LatLng(_selectedCity!.latitude!, _selectedCity!.longitude!);
@@ -405,8 +403,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Future<void> _executeLoadNearby() async {
     if (_loadingNearby) return;
     if (_locationCtrl.selectedDistrict.value == null) return;
-    final cityId = _effectiveCityId;
-    if (cityId == null) return;
+    final districtId = _locationCtrl.selectedDistrict.value!.id;
     if (mapShouldPause.value) { _stale = true; return; }
     _stale = false;
     _loadingNearby = true;
@@ -418,7 +415,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       _revealedCount = _markerData.length;
       setState(() {});
       final center = _searchCenter;
-      await _plotCtrl.loadNearby(center.latitude, center.longitude, _radius, cityId);
+      await _plotCtrl.loadNearby(center.latitude, center.longitude, _radius, districtId);
       _radarController.stop();
       _radarController.reset();
       _buildMarkers();
