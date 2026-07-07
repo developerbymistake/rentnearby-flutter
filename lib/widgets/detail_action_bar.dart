@@ -43,9 +43,52 @@ class DetailActionBar extends StatelessWidget {
     if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
+  Widget _directionsButton({required bool paired}) {
+    return ElevatedButton.icon(
+      onPressed: _directions,
+      icon: Icon(Icons.near_me_rounded, size: paired ? 18 : 20),
+      label: Text(
+        paired ? 'Directions' : 'Get Directions',
+        style: TextStyle(fontFamily: 'Poppins', fontSize: paired ? 13 : 14, fontWeight: FontWeight.w600),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        minimumSize: Size(0, paired ? 50 : 52),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        elevation: 0,
+      ),
+    );
+  }
+
+  Widget _reportButton() {
+    final reported = onReport == null;
+    return OutlinedButton.icon(
+      onPressed: onReport,
+      icon: Icon(reported ? Icons.flag_rounded : Icons.flag_outlined, size: 18),
+      label: Text(reported ? 'Reported' : 'Report',
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+      style: reported
+          ? OutlinedButton.styleFrom(
+              foregroundColor: AppColors.textMedium,
+              side: const BorderSide(color: AppColors.divider),
+              minimumSize: const Size(0, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            )
+          : OutlinedButton.styleFrom(
+              foregroundColor: AppColors.error,
+              backgroundColor: AppColors.error.withValues(alpha: 0.06),
+              side: BorderSide(color: AppColors.error.withValues(alpha: 0.35)),
+              minimumSize: const Size(0, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasPhone = ownerPhone != null;
+    final showReport = !isOwner;
     return Container(
       padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + AppInsets.bottomViewPadding(context)),
       decoration: BoxDecoration(
@@ -57,24 +100,17 @@ class DetailActionBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Row 1: Get Directions — full width
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _directions,
-              icon: const Icon(Icons.near_me_rounded, size: 20),
-              label: const Text('Get Directions',
-                  style: TextStyle(
-                      fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(0, 52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
-            ),
-          ),
+          // Row 1: Get Directions (+ Report, when not the owner)
+          if (showReport)
+            Row(
+              children: [
+                Expanded(child: _directionsButton(paired: true)),
+                const SizedBox(width: 10),
+                Expanded(child: _reportButton()),
+              ],
+            )
+          else
+            SizedBox(width: double.infinity, child: _directionsButton(paired: false)),
           if (hasPhone) ...[
             const SizedBox(height: 10),
             // Row 2: Call Owner + WhatsApp side by side
@@ -114,33 +150,6 @@ class DetailActionBar extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ],
-          if (!isOwner) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onReport,
-                icon: Icon(onReport == null ? Icons.flag_rounded : Icons.flag_outlined, size: 18),
-                label: Text(onReport == null ? 'Reported' : 'Report this listing',
-                    style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-                style: onReport == null
-                    ? OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textMedium,
-                        side: const BorderSide(color: AppColors.divider),
-                        minimumSize: const Size(0, 44),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      )
-                    : OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.error,
-                        backgroundColor: AppColors.error.withValues(alpha: 0.06),
-                        side: BorderSide(color: AppColors.error.withValues(alpha: 0.35)),
-                        minimumSize: const Size(0, 44),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-              ),
             ),
           ],
         ],
