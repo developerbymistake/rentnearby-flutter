@@ -199,23 +199,29 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
   Widget build(BuildContext context) {
     // Fixed height regardless of content — loading/empty/error states must
     // not shrink the sheet, that reads as broken and jumps around as data
-    // arrives. Shrinks around the keyboard itself (rather than being padded
-    // above it) so it never exceeds the visible viewport — that mismatch is
-    // what pushed list content away from the search box when the keyboard
-    // was open.
+    // arrives. The height itself is computed from the device height only
+    // (keyboard excluded), so it never changes when the keyboard opens —
+    // instead the whole sheet is shifted upward by the keyboard height via
+    // the outer AnimatedPadding below, keeping header/search box/list all
+    // the same size throughout.
     final media = MediaQuery.of(context);
-    final visibleHeight = media.size.height - media.padding.top - media.viewInsets.bottom;
-    final sheetHeight = (media.size.height * 0.75).clamp(0.0, visibleHeight * 0.94);
-    return SizedBox(
-      height: sheetHeight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildHeader(),
-          _buildSearchBox(),
-          Expanded(child: _buildBody()),
-          const SizedBox(height: 12),
-        ],
+    final maxHeight = (media.size.height - media.padding.top) * 0.94;
+    final sheetHeight = (media.size.height * 0.75).clamp(0.0, maxHeight);
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
+      child: SizedBox(
+        height: sheetHeight,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildHeader(),
+            _buildSearchBox(),
+            Expanded(child: _buildBody()),
+            const SizedBox(height: 12),
+          ],
+        ),
       ),
     );
   }

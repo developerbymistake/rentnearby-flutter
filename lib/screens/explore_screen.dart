@@ -4,7 +4,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
@@ -862,10 +861,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                               fontWeight: FontWeight.w700,
                               color: Colors.white)),
                       const Spacer(),
-                      _buildLocationPill(),
+                      Flexible(child: _buildRadiusChips()),
                     ]),
-                    const SizedBox(height: 12),
-                    _buildRadiusChips(),
+                    const SizedBox(height: 10),
+                    _buildLocationPill(),
                   ]),
                 ),
               ),
@@ -912,28 +911,30 @@ class _ExploreScreenState extends State<ExploreScreen>
       final cityName = _locationCtrl.browsingCity.value?.name ??
           _locationCtrl.autoCity.value?.name ??
           'Current';
-      final isBrowsingElsewhere = _locationCtrl.browsingDistrict.value != null &&
-          _locationCtrl.browsingDistrict.value!.id != _locationCtrl.selectedDistrict.value?.id;
 
       return GestureDetector(
         onTap: () => LocationSwitchSheet.show(context),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(isBrowsingElsewhere ? Iconsax.location : Icons.my_location_rounded,
-                color: Colors.white, size: 13),
-            const SizedBox(width: 6),
-            Text('${district.name} · $cityName',
-                style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white)),
+          child: Row(children: [
+            const Icon(Icons.public_rounded, color: Colors.white, size: 15),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text('${district.name} · $cityName',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white)),
+            ),
             const SizedBox(width: 4),
             const Icon(Icons.keyboard_arrow_down_rounded,
                 color: Colors.white, size: 16),
@@ -945,13 +946,27 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Widget _buildRadiusChips() {
     final radii = AppConstants.radiusOptions;
-    return Row(
-      children: radii.asMap().entries.map((entry) {
-        final i = entry.key;
-        final r = entry.value;
-        final active = _radius == r;
-        return Expanded(
-          child: GestureDetector(
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: radii.asMap().entries.map((entry) {
+          final i = entry.key;
+          final r = entry.value;
+          final active = _radius == r;
+          return GestureDetector(
             onTap: () {
               _listingCtrl.nearbyListings.clear();
               setState(() => _radius = r);
@@ -960,28 +975,25 @@ class _ExploreScreenState extends State<ExploreScreen>
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
-              height: 34,
-              margin: EdgeInsets.only(right: i < radii.length - 1 ? 8 : 0),
-              padding: const EdgeInsets.symmetric(vertical: 7),
+              height: 26,
+              margin: EdgeInsets.only(right: i < radii.length - 1 ? 4 : 0),
+              padding: const EdgeInsets.symmetric(horizontal: 9),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: active
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
+                color: active ? Colors.white : Colors.transparent,
+                borderRadius: BorderRadius.circular(13),
               ),
-              child: Center(
-                child: Text('${r.toInt()} km',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: active ? AppColors.primary : Colors.white,
-                    )),
-              ),
+              child: Text('${r.toInt()} km',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: active ? AppColors.primary : Colors.white,
+                  )),
             ),
-          ),
-        );
-      }).toList(),
+          );
+        }).toList(),
+      ),
     );
   }
 
