@@ -230,8 +230,17 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
     final media = MediaQuery.of(context);
     final baseHeight = _baseHeight ?? media.size.height;
     final baseTopPadding = _baseTopPadding ?? media.padding.top;
-    final maxHeight = (baseHeight - baseTopPadding) * 0.94;
-    final sheetHeight = (baseHeight * 0.75).clamp(0.0, maxHeight);
+    final budget = baseHeight - baseTopPadding;
+    final preferredHeight = (baseHeight * 0.75).clamp(0.0, budget * 0.94);
+    // Safety net: AnimatedPadding below adds live viewInsets.bottom on top
+    // of this height. That's a no-op under pure adjustResize (viewInsets
+    // stays ~0), but isn't guaranteed on every device/keyboard — if it's
+    // ever nonzero, keep sheetHeight + viewInsets.bottom within the frozen
+    // budget so the sheet can never render partly above the visible screen.
+    // Bounded against the frozen budget (not live media.size.height), so
+    // this never reintroduces the original shrink-on-keyboard-open bug.
+    final sheetHeight =
+        preferredHeight.clamp(0.0, (budget - media.viewInsets.bottom).clamp(0.0, budget));
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
@@ -435,7 +444,6 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
     if (items.isEmpty) return _emptyState('No city matches "$_query"');
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      shrinkWrap: true,
       children: items,
     );
   }
@@ -459,7 +467,6 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
     if (filtered.isEmpty) return _emptyState('No district matches "$_query"');
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      shrinkWrap: true,
       children: filtered.map((d) {
         if (!d.isActive) {
           return _locationRow(
@@ -493,7 +500,6 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
     if (states.isEmpty) return _emptyState('No state matches "$_query"');
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      shrinkWrap: true,
       children: states
           .map((s) => _locationRow(
                 icon: Iconsax.map,
