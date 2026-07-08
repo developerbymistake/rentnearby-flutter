@@ -224,38 +224,31 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
     // live MediaQuery, so it never changes when the keyboard opens —
     // android:windowSoftInputMode="adjustResize" shrinks MediaQuery.size
     // itself while the keyboard is up, which previously fed straight into
-    // this formula and shrank the whole sheet. The sheet is additionally
-    // shifted upward by the keyboard height via the outer AnimatedPadding
-    // below (a no-op under adjustResize, but correct insurance either way).
+    // this formula and shrank the whole sheet.
+    //
+    // No manual keyboard padding/shifting here. An earlier version wrapped
+    // this in AnimatedPadding(bottom: media.viewInsets.bottom) to "shift the
+    // sheet above the keyboard" — but viewInsets.bottom is in fact nonzero
+    // on-device (not the ~0 this was assumed to be under adjustResize), so
+    // that padding painted a growing blank white gap between the list and
+    // the keyboard every time it opened. The modal route already positions
+    // this fixed-height sheet correctly against the live (keyboard-aware)
+    // window on its own — no extra padding is needed.
     final media = MediaQuery.of(context);
     final baseHeight = _baseHeight ?? media.size.height;
     final baseTopPadding = _baseTopPadding ?? media.padding.top;
-    final budget = baseHeight - baseTopPadding;
-    final preferredHeight = (baseHeight * 0.75).clamp(0.0, budget * 0.94);
-    // Safety net: AnimatedPadding below adds live viewInsets.bottom on top
-    // of this height. That's a no-op under pure adjustResize (viewInsets
-    // stays ~0), but isn't guaranteed on every device/keyboard — if it's
-    // ever nonzero, keep sheetHeight + viewInsets.bottom within the frozen
-    // budget so the sheet can never render partly above the visible screen.
-    // Bounded against the frozen budget (not live media.size.height), so
-    // this never reintroduces the original shrink-on-keyboard-open bug.
-    final sheetHeight =
-        preferredHeight.clamp(0.0, (budget - media.viewInsets.bottom).clamp(0.0, budget));
-    return AnimatedPadding(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
-      child: SizedBox(
-        height: sheetHeight,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeader(),
-            _buildSearchBox(),
-            Expanded(child: _buildBody()),
-            const SizedBox(height: 12),
-          ],
-        ),
+    final maxHeight = (baseHeight - baseTopPadding) * 0.94;
+    final sheetHeight = (baseHeight * 0.75).clamp(0.0, maxHeight);
+    return SizedBox(
+      height: sheetHeight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildHeader(),
+          _buildSearchBox(),
+          Expanded(child: _buildBody()),
+          const SizedBox(height: 12),
+        ],
       ),
     );
   }
