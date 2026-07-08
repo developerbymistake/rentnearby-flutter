@@ -860,8 +860,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
                               color: Colors.white)),
-                      const Spacer(),
-                      Flexible(child: _buildRadiusChips()),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildRadiusChips()),
                     ]),
                     const SizedBox(height: 10),
                     _buildLocationPill(),
@@ -960,42 +960,40 @@ class _ExploreScreenState extends State<ExploreScreen>
           ),
         ],
       ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         children: radii.asMap().entries.map((entry) {
           final i = entry.key;
           final r = entry.value;
           final active = _radius == r;
-          return GestureDetector(
-            onTap: () {
-              _listingCtrl.nearbyListings.clear();
-              setState(() => _radius = r);
-              _loadNearby();
-              if (_mapReady) _fitToRadius();
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              height: 26,
-              margin: EdgeInsets.only(right: i < radii.length - 1 ? 4 : 0),
-              padding: const EdgeInsets.symmetric(horizontal: 9),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: active ? Colors.white : Colors.transparent,
-                borderRadius: BorderRadius.circular(13),
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                _listingCtrl.nearbyListings.clear();
+                setState(() => _radius = r);
+                _loadNearby();
+                if (_mapReady) _fitToRadius();
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                height: 28,
+                margin: EdgeInsets.only(right: i < radii.length - 1 ? 4 : 0),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: active ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Text('${r.toInt()} km',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: active ? AppColors.primary : Colors.white,
+                    )),
               ),
-              child: Text('${r.toInt()} km',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: active ? AppColors.primary : Colors.white,
-                  )),
             ),
           );
         }).toList(),
-        ),
       ),
     );
   }
