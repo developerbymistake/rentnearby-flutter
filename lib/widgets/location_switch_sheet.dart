@@ -58,6 +58,18 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
   bool _closing = false;
   Worker? _externalResetWorker;
 
+  // Captured once (didChangeDependencies, before the keyboard can open) and
+  // reused for every build. AndroidManifest.xml sets
+  // windowSoftInputMode="adjustResize", so Android shrinks the actual app
+  // window when the keyboard opens — MediaQuery.size itself gets smaller,
+  // it isn't just viewInsets.bottom growing. Reading MediaQuery.size live in
+  // build() meant the sheet-height formula recomputed against that shrunk
+  // size and visibly shrank the whole sheet the moment the search field was
+  // focused. Freezing the baseline here keeps the sheet's height constant
+  // regardless of the keyboard.
+  double? _baseHeight;
+  double? _baseTopPadding;
+
   @override
   void initState() {
     super.initState();
@@ -76,6 +88,14 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
       _closing = true;
       Navigator.of(context).maybePop();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final media = MediaQuery.of(context);
+    _baseHeight ??= media.size.height;
+    _baseTopPadding ??= media.padding.top;
   }
 
   @override
@@ -199,14 +219,19 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
   Widget build(BuildContext context) {
     // Fixed height regardless of content — loading/empty/error states must
     // not shrink the sheet, that reads as broken and jumps around as data
-    // arrives. The height itself is computed from the device height only
-    // (keyboard excluded), so it never changes when the keyboard opens —
-    // instead the whole sheet is shifted upward by the keyboard height via
-    // the outer AnimatedPadding below, keeping header/search box/list all
-    // the same size throughout.
+    // arrives. Built from the frozen _baseHeight/_baseTopPadding (captured
+    // in didChangeDependencies, before the keyboard could open) rather than
+    // live MediaQuery, so it never changes when the keyboard opens —
+    // android:windowSoftInputMode="adjustResize" shrinks MediaQuery.size
+    // itself while the keyboard is up, which previously fed straight into
+    // this formula and shrank the whole sheet. The sheet is additionally
+    // shifted upward by the keyboard height via the outer AnimatedPadding
+    // below (a no-op under adjustResize, but correct insurance either way).
     final media = MediaQuery.of(context);
-    final maxHeight = (media.size.height - media.padding.top) * 0.94;
-    final sheetHeight = (media.size.height * 0.75).clamp(0.0, maxHeight);
+    final baseHeight = _baseHeight ?? media.size.height;
+    final baseTopPadding = _baseTopPadding ?? media.padding.top;
+    final maxHeight = (baseHeight - baseTopPadding) * 0.94;
+    final sheetHeight = (baseHeight * 0.75).clamp(0.0, maxHeight);
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,

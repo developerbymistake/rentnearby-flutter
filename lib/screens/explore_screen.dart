@@ -960,7 +960,9 @@ class _ExploreScreenState extends State<ExploreScreen>
           ),
         ],
       ),
-      child: Row(
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
         mainAxisSize: MainAxisSize.min,
         children: radii.asMap().entries.map((entry) {
           final i = entry.key;
@@ -993,6 +995,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             ),
           );
         }).toList(),
+        ),
       ),
     );
   }
