@@ -168,10 +168,11 @@ class ChatController extends GetxController {
     }
   }
 
-  Future<MessageModel?> respondSchedule(String messageId, String action, {DateTime? proposedAt}) async {
+  Future<MessageModel?> respondSchedule(String messageId, String action, {List<DateTime>? proposedAts, DateTime? acceptedAt}) async {
     try {
       final body = <String, dynamic>{'action': action};
-      if (proposedAt != null) body['proposedAt'] = proposedAt.toIso8601String();
+      if (proposedAts != null) body['proposedAts'] = proposedAts.map((d) => d.toIso8601String()).toList();
+      if (acceptedAt != null) body['acceptedAt'] = acceptedAt.toIso8601String();
       final res = await ApiService.post('/chat/messages/$messageId/schedule-response', body);
       return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
     } catch (e) {

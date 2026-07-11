@@ -93,8 +93,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
 
   Future<void> _pickAndProposeSchedule() async {
     final picked = await ChatSchedulePickerSheet.show(context);
-    if (picked == null) return;
-    await _send('schedule_proposal', {'proposedAt': picked.toIso8601String(), 'status': 'pending'});
+    if (picked == null || picked.isEmpty) return;
+    await _send('schedule_proposal', {
+      'proposedAts': picked.map((d) => d.toIso8601String()).toList(),
+      'status': 'pending',
+    });
   }
 
   Future<void> _answerQuestion(String answerKey, String answerText) =>
@@ -105,15 +108,20 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     if (msg != null && mounted) _messages.insert(0, msg);
   }
 
-  Future<void> _respondScheduleSimple(String messageId, String action) async {
-    final msg = await _chatCtrl.respondSchedule(messageId, action);
+  Future<void> _acceptScheduleSlot(String messageId, DateTime chosen) async {
+    final msg = await _chatCtrl.respondSchedule(messageId, 'accept', acceptedAt: chosen);
+    if (msg != null && mounted) _messages.insert(0, msg);
+  }
+
+  Future<void> _declineSchedule(String messageId) async {
+    final msg = await _chatCtrl.respondSchedule(messageId, 'decline');
     if (msg != null && mounted) _messages.insert(0, msg);
   }
 
   Future<void> _counterSchedule(String messageId) async {
     final picked = await ChatSchedulePickerSheet.show(context, title: 'Propose a different time');
-    if (picked == null) return;
-    final msg = await _chatCtrl.respondSchedule(messageId, 'counter', proposedAt: picked);
+    if (picked == null || picked.isEmpty) return;
+    final msg = await _chatCtrl.respondSchedule(messageId, 'counter', proposedAts: picked);
     if (msg != null && mounted) _messages.insert(0, msg);
   }
 
@@ -203,8 +211,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       onAnswerQuestion: _isOwner || !m.isMine ? _answerQuestion : null,
       onApproveContact: (isContactRequest && !m.isMine && _isOwner) ? () => _respondContact(m.id, true) : null,
       onDeclineContact: (isContactRequest && !m.isMine && _isOwner) ? () => _respondContact(m.id, false) : null,
-      onAcceptSchedule: isScheduleProposal && !m.isMine ? () => _respondScheduleSimple(m.id, 'accept') : null,
-      onDeclineSchedule: isScheduleProposal && !m.isMine ? () => _respondScheduleSimple(m.id, 'decline') : null,
+      onAcceptSlot: isScheduleProposal && !m.isMine ? (dt) => _acceptScheduleSlot(m.id, dt) : null,
+      onDeclineSchedule: isScheduleProposal && !m.isMine ? () => _declineSchedule(m.id) : null,
       onCounterSchedule: isScheduleProposal && !m.isMine ? () => _counterSchedule(m.id) : null,
       onCall: () {
         final phone = m.payload['phone'] as String?;

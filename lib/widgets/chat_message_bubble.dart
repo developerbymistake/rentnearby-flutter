@@ -9,7 +9,10 @@ class ChatMessageBubble extends StatelessWidget {
   final void Function(String answerKey, String answerText)? onAnswerQuestion;
   final VoidCallback? onApproveContact;
   final VoidCallback? onDeclineContact;
-  final VoidCallback? onAcceptSchedule;
+  // Called with whichever specific offered time the recipient tapped — a
+  // proposal can offer more than one slot, so there's no single implicit
+  // "accept" action anymore.
+  final void Function(DateTime)? onAcceptSlot;
   final VoidCallback? onDeclineSchedule;
   final VoidCallback? onCounterSchedule;
   final VoidCallback? onCall;
@@ -22,7 +25,7 @@ class ChatMessageBubble extends StatelessWidget {
     this.onAnswerQuestion,
     this.onApproveContact,
     this.onDeclineContact,
-    this.onAcceptSchedule,
+    this.onAcceptSlot,
     this.onDeclineSchedule,
     this.onCounterSchedule,
     this.onCall,
@@ -151,22 +154,46 @@ class ChatMessageBubble extends StatelessWidget {
 
   Widget _scheduleProposal(BuildContext context) {
     final status = message.payload['status'] as String? ?? 'pending';
-    final proposedAtRaw = message.payload['proposedAt'] as String?;
-    final proposedAt = proposedAtRaw != null ? DateTime.tryParse(proposedAtRaw) : null;
-    final label = proposedAt != null ? _formatDateTime(proposedAt) : 'a visit';
+    final rawList = message.payload['proposedAts'] as List<dynamic>? ?? const [];
+    final proposedAts = rawList
+        .map((e) => DateTime.tryParse(e as String? ?? ''))
+        .whereType<DateTime>()
+        .toList();
     final superseded = status == 'superseded';
-
-    final canRespond = !message.isMine && status == 'pending' && onAcceptSchedule != null;
+    final canRespond = !message.isMine && status == 'pending' && onAcceptSlot != null;
 
     return Opacity(
       opacity: superseded ? 0.45 : 1,
       child: _card(
         icon: Icons.calendar_month_rounded,
         title: message.isMine ? 'Visit proposed' : 'Visit requested',
-        subtitle: label,
+        subtitle: proposedAts.isEmpty ? 'a visit' : null,
+        // Every offered time is its own tappable chip — tapping one directly
+        // accepts that specific slot, since a proposal can offer more than one.
+        extra: proposedAts.isEmpty
+            ? null
+            : Wrap(spacing: 6, runSpacing: 6, children: proposedAts.map((dt) {
+                return canRespond
+                    ? OutlinedButton(
+                        onPressed: () => onAcceptSlot!(dt),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primaryLight),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: Text(_formatDateTime(dt),
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600)),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+                        child: Text(_formatDateTime(dt),
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+                      );
+              }).toList()),
         actions: canRespond
             ? [
-                _actionBtn('Accept', primary: true, onTap: onAcceptSchedule),
                 _actionBtn('Propose different time', primary: false, onTap: onCounterSchedule),
                 _actionBtn('Decline', primary: false, negative: true, onTap: onDeclineSchedule),
               ]
@@ -179,7 +206,14 @@ class ChatMessageBubble extends StatelessWidget {
   Widget _scheduleResponse(BuildContext context) {
     final status = message.payload['status'] as String? ?? 'declined';
     if (status == 'declined') return _system('Visit request declined');
-    return _card(icon: Icons.check_circle_outline_rounded, title: 'Visit confirmed', mine: message.isMine);
+    final confirmedAtRaw = message.payload['confirmedAt'] as String?;
+    final confirmedAt = confirmedAtRaw != null ? DateTime.tryParse(confirmedAtRaw) : null;
+    return _card(
+      icon: Icons.check_circle_outline_rounded,
+      title: 'Visit confirmed',
+      subtitle: confirmedAt != null ? _formatDateTime(confirmedAt) : null,
+      mine: message.isMine,
+    );
   }
 
   // ── shared building blocks ───────────────────────────────────────────────
@@ -219,6 +253,7 @@ class ChatMessageBubble extends StatelessWidget {
     required IconData icon,
     required String title,
     String? subtitle,
+    Widget? extra,
     List<Widget>? actions,
     required bool mine,
   }) =>
@@ -253,6 +288,10 @@ class ChatMessageBubble extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 34),
                 child: Text(subtitle, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
               ),
+            ],
+            if (extra != null) ...[
+              const SizedBox(height: 8),
+              Padding(padding: const EdgeInsets.only(left: 34), child: extra),
             ],
             if (actions != null) ...[
               const SizedBox(height: 10),

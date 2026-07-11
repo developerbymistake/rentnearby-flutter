@@ -8,8 +8,8 @@ class ChatSchedulePickerSheet extends StatefulWidget {
   final String title;
   const ChatSchedulePickerSheet({super.key, this.title = 'When would you like to visit?'});
 
-  static Future<DateTime?> show(BuildContext context, {String? title}) {
-    return showModalBottomSheet<DateTime>(
+  static Future<List<DateTime>?> show(BuildContext context, {String? title}) {
+    return showModalBottomSheet<List<DateTime>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
@@ -35,7 +35,9 @@ class _ChatSchedulePickerSheetState extends State<ChatSchedulePickerSheet> {
 
   late final List<DateTime> _dates = List.generate(7, (i) => DateTime.now().add(Duration(days: i)));
   int _selectedDateIndex = 0;
-  TimeOfDay? _selectedSlot;
+  // Multiple slots can be offered at once within the same date, so the other
+  // party has a choice rather than one rigid time.
+  final Set<TimeOfDay> _selectedSlots = {};
 
   bool _isPast(DateTime date, TimeOfDay slot) {
     final dt = DateTime(date.year, date.month, date.day, slot.hour, slot.minute);
@@ -66,7 +68,13 @@ class _ChatSchedulePickerSheetState extends State<ChatSchedulePickerSheet> {
                 final d = _dates[i];
                 final sel = i == _selectedDateIndex;
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedDateIndex = i),
+                  // Selected slots are specific to one date — switching date
+                  // clears them rather than silently reinterpreting the same
+                  // times against a different day.
+                  onTap: () => setState(() {
+                    _selectedDateIndex = i;
+                    _selectedSlots.clear();
+                  }),
                   child: Container(
                     width: 50,
                     decoration: BoxDecoration(
@@ -88,11 +96,16 @@ class _ChatSchedulePickerSheetState extends State<ChatSchedulePickerSheet> {
             ),
           ),
           const SizedBox(height: 16),
+          Text('Tap one or more times to offer a choice',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+          const SizedBox(height: 8),
           Wrap(spacing: 8, runSpacing: 8, children: _slots.map((slot) {
             final disabled = _isPast(selectedDate, slot);
-            final sel = _selectedSlot == slot;
+            final sel = _selectedSlots.contains(slot);
             return GestureDetector(
-              onTap: disabled ? null : () => setState(() => _selectedSlot = slot),
+              onTap: disabled
+                  ? null
+                  : () => setState(() => sel ? _selectedSlots.remove(slot) : _selectedSlots.add(slot)),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
@@ -113,11 +126,13 @@ class _ChatSchedulePickerSheetState extends State<ChatSchedulePickerSheet> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _selectedSlot == null
+              onPressed: _selectedSlots.isEmpty
                   ? null
                   : () => Navigator.pop(
                         context,
-                        DateTime(selectedDate.year, selectedDate.month, selectedDate.day, _selectedSlot!.hour, _selectedSlot!.minute),
+                        _selectedSlots
+                            .map((slot) => DateTime(selectedDate.year, selectedDate.month, selectedDate.day, slot.hour, slot.minute))
+                            .toList(),
                       ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary, foregroundColor: Colors.white,
@@ -126,7 +141,10 @@ class _ChatSchedulePickerSheetState extends State<ChatSchedulePickerSheet> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
               ),
-              child: const Text('Send this time →', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+              child: Text(
+                _selectedSlots.length > 1 ? 'Send these times →' : 'Send this time →',
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ]),
