@@ -9,6 +9,7 @@ class DetailActionBar extends StatelessWidget {
   final String? ownerPhone;
   final bool isOwner;
   final VoidCallback? onReport;
+  final VoidCallback? onChat;
   const DetailActionBar({
     super.key,
     this.latitude,
@@ -16,6 +17,7 @@ class DetailActionBar extends StatelessWidget {
     this.ownerPhone,
     this.isOwner = false,
     this.onReport,
+    this.onChat,
   });
 
   void _directions() async {
@@ -61,6 +63,35 @@ class DetailActionBar extends StatelessWidget {
     );
   }
 
+  Widget _chatButton({required bool primary}) {
+    return primary
+        ? ElevatedButton.icon(
+            onPressed: onChat,
+            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+            label: const Text('Chat',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(0, 52),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 0,
+            ),
+          )
+        : OutlinedButton.icon(
+            onPressed: onChat,
+            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+            label: const Text('Chat instead',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primaryLight),
+              minimumSize: const Size(0, 46),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          );
+  }
+
   Widget _reportButton() {
     final reported = onReport == null;
     return OutlinedButton.icon(
@@ -102,9 +133,15 @@ class DetailActionBar extends StatelessWidget {
         children: [
           // Row 1: Get Directions — full width
           SizedBox(width: double.infinity, child: _directionsButton()),
+          // Row 2: Chat — the only contact option when the owner has hidden
+          // their number (ownerPhone == null); a secondary option otherwise.
+          if (onChat != null && !hasPhone) ...[
+            const SizedBox(height: 10),
+            SizedBox(width: double.infinity, child: _chatButton(primary: true)),
+          ],
           if (hasPhone) ...[
             const SizedBox(height: 10),
-            // Row 2: Call Owner + WhatsApp side by side
+            // Row 3: Call Owner + WhatsApp side by side
             Row(
               children: [
                 Expanded(
@@ -142,10 +179,14 @@ class DetailActionBar extends StatelessWidget {
                 ),
               ],
             ),
+            if (onChat != null) ...[
+              const SizedBox(height: 10),
+              SizedBox(width: double.infinity, child: _chatButton(primary: false)),
+            ],
           ],
           if (showReport) ...[
             const SizedBox(height: 10),
-            // Row 3: Report this listing — full width
+            // Row 4: Report this listing — full width
             SizedBox(width: double.infinity, child: _reportButton()),
           ],
         ],

@@ -5,10 +5,13 @@ import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/chat_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/report_controller.dart';
 import '../models/listing_model.dart';
+import '../utils/app_toast.dart';
 import '../widgets/detail_action_bar.dart';
 import '../widgets/report_listing_sheet.dart';
 
@@ -377,7 +380,25 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           onReport: (l.hasReported || reportCtrl.reportedListingIds.contains(l.id))
               ? null
               : () => ReportListingSheet.show(context, listingId: l.id, listingType: 'Room'),
+          onChat: _isOwner ? null : () => _openChat(l),
         ));
+  }
+
+  Future<void> _openChat(ListingModel l) async {
+    final conv = await Get.find<ChatController>().createOrGetConversation('Room', l.id);
+    if (conv == null) {
+      AppToast.error('Could not start chat. Please try again.');
+      return;
+    }
+    Get.toNamed(AppRoutes.chatConversation, arguments: {
+      'conversationId': conv.id,
+      'listingType': conv.listingType,
+      'listingId': conv.listingId,
+      'otherPartyName': conv.otherPartyName,
+      'listingTitle': conv.listingTitle,
+      'isOwner': conv.isOwner,
+      'status': conv.status,
+    });
   }
 
   Widget _infoRow(IconData icon, String label, String value, {Color? valueColor, Color? iconColor}) => Row(
