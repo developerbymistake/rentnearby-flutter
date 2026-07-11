@@ -14,7 +14,9 @@ import '../repositories/plot_repository.dart';
 import '../repositories/user_repository.dart';
 import '../controllers/app_feature_controller.dart';
 import '../controllers/banner_controller.dart';
+import '../controllers/chat_controller.dart';
 import '../services/banner_hub_service.dart';
+import '../services/chat_hub_service.dart';
 import '../services/notification_service.dart';
 import '../widgets/district_banner_overlay.dart';
 import '../widgets/gradient_button.dart';
@@ -30,6 +32,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final _auth = Get.find<AuthController>();
   late final LocationController _locationCtrl;
   late final BannerController _bannerCtrl;
+  late final ChatController _chatCtrl;
   Worker? _bannerDistrictWorker;
   Worker? _digestTopicWorker;
 
@@ -39,6 +42,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     TabNavigator(tabId: 2),
     TabNavigator(tabId: 3),
     TabNavigator(tabId: 4),
+    TabNavigator(tabId: 5),
   ];
 
   @override
@@ -54,6 +58,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _locationCtrl = Get.put(LocationController());
     _bannerCtrl = Get.put(BannerController());
     Get.put(BannerHubService());
+    _chatCtrl = Get.put(ChatController());
+    Get.put(ChatHubService());
+    _chatCtrl.loadConversations();
     WidgetsBinding.instance.addObserver(this);
     _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
       if (district != null) {
@@ -481,13 +488,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             _navItem(2, Iconsax.location, Iconsax.location5, 'Plots'),
             _navItem(3, Iconsax.document, Iconsax.document5, 'My Plots'),
             _navItem(4, Iconsax.user, Iconsax.user5, 'Profile'),
+            _navItem(5, Iconsax.message, Iconsax.message5, 'Chats', badgeCount: _chatCtrl.unreadCount.value),
           ],
         ),
       ),
     );
   }
 
-  Widget _navItem(int index, IconData icon, IconData activeIcon, String label) {
+  Widget _navItem(int index, IconData icon, IconData activeIcon, String label, {int badgeCount = 0}) {
     final isActive = _auth.tabIndex.value == index;
     return Expanded(
       child: GestureDetector(
@@ -515,15 +523,31 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: Icon(
-                  isActive ? activeIcon : icon,
-                  key: ValueKey(isActive),
-                  color: isActive ? AppColors.primary : AppColors.textHint,
-                  size: 24,
+              Stack(clipBehavior: Clip.none, children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    isActive ? activeIcon : icon,
+                    key: ValueKey(isActive),
+                    color: isActive ? AppColors.primary : AppColors.textHint,
+                    size: 24,
+                  ),
                 ),
-              ),
+                if (badgeCount > 0)
+                  Positioned(
+                    right: -6, top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      constraints: const BoxConstraints(minWidth: 16),
+                      decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
+                      child: Text(
+                        badgeCount > 99 ? '99+' : '$badgeCount',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
+                      ),
+                    ),
+                  ),
+              ]),
               const SizedBox(height: 4),
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 200),

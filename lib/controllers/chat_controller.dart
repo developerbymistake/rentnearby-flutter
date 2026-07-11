@@ -1,0 +1,187 @@
+import 'dart:convert';
+import 'package:get/get.dart';
+import '../models/conversation_model.dart';
+import '../models/message_model.dart';
+import '../models/question_template_model.dart';
+import '../services/api_service.dart';
+
+class ChatController extends GetxController {
+  final conversations = <ConversationModel>[].obs;
+  final conversationsLoading = false.obs;
+  final unreadCount = 0.obs;
+
+  final questionTemplates = <QuestionTemplateModel>[].obs;
+  bool _templatesLoaded = false;
+
+  // Broadcast points for ChatHubService — any currently-open conversation
+  // screen listens to these via its own ever() worker, filtering by
+  // conversationId, without needing a direct dependency on the hub service.
+  final incomingMessage = Rxn<MessageModel>();
+  final readEvent = Rxn<Map<String, dynamic>>();
+
+  Future<void> loadConversations({bool forceRefresh = false}) async {
+    if (conversationsLoading.value) return;
+    conversationsLoading.value = true;
+    try {
+      final res = await ApiService.get('/chat/conversations');
+      final items = (res['data']['items'] as List)
+          .map((e) => ConversationModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      conversations.value = items;
+      _recomputeUnreadCount();
+    } catch (_) {
+    } finally {
+      conversationsLoading.value = false;
+    }
+  }
+
+  Future<List<QuestionTemplateModel>> loadQuestionTemplates({bool forceRefresh = false}) async {
+    if (_templatesLoaded && !forceRefresh) return questionTemplates;
+    try {
+      final res = await ApiService.get('/chat/question-templates');
+      final items = (res['data'] as List)
+          .map((e) => QuestionTemplateModel.fromJson(e as Map<String, dynamic>))
+          .where((t) => t.isActive)
+          .toList();
+      questionTemplates.value = items;
+      _templatesLoaded = true;
+    } catch (_) {}
+    return questionTemplates;
+  }
+
+  Future<ConversationModel?> createOrGetConversation(String listingType, String listingId) async {
+    try {
+      final res = await ApiService.post('/chat/conversations', {
+        'listingType': listingType,
+        'listingId': listingId,
+      });
+      final model = ConversationModel.fromJson(res['data'] as Map<String, dynamic>);
+      if (!conversations.any((c) => c.id == model.id)) {
+        conversations.insert(0, model);
+      }
+      return model;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> markRead(String conversationId) async {
+    final index = conversations.indexWhere((c) => c.id == conversationId);
+    if (index != -1 && conversations[index].unreadCount > 0) {
+      // Optimistic — the badge should drop the moment the user opens the thread,
+      // not wait on a round-trip.
+      _recomputeUnreadCount(excludingConversationId: conversationId);
+    }
+    try {
+      await ApiService.post('/chat/conversations/$conversationId/read', {});
+      await loadConversations();
+    } catch (_) {}
+  }
+
+  // Called by ChatHubService when a live "UnreadCountChanged" event arrives —
+  // zero REST call, mirrors BannerController.applyFromPush.
+  void applyUnreadCountChanged(String conversationId, int newUnreadCount) {
+    final index = conversations.indexWhere((c) => c.id == conversationId);
+    if (index != -1) {
+      final c = conversations[index];
+      conversations[index] = ConversationModel(
+        id: c.id, listingType: c.listingType, listingId: c.listingId,
+        listingTitle: c.listingTitle, listingThumbnailUrl: c.listingThumbnailUrl,
+        otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
+        isOwner: c.isOwner, status: c.status, lastMessageAt: DateTime.now(),
+        lastMessagePreview: c.lastMessagePreview, unreadCount: newUnreadCount,
+      );
+      conversations.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+    } else {
+      loadConversations();
+    }
+    _recomputeUnreadCount();
+  }
+
+  // Called by ChatHubService on a live "MessageReceived" event — bumps the
+  // conversation-list preview/timestamp immediately, and broadcasts the raw
+  // message for whichever conversation screen (if any) is currently open.
+  void applyIncomingMessage(Map<String, dynamic> data) {
+    final message = MessageModel.fromJson(data);
+    final index = conversations.indexWhere((c) => c.id == message.conversationId);
+    if (index != -1) {
+      final c = conversations[index];
+      conversations[index] = ConversationModel(
+        id: c.id, listingType: c.listingType, listingId: c.listingId,
+        listingTitle: c.listingTitle, listingThumbnailUrl: c.listingThumbnailUrl,
+        otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
+        isOwner: c.isOwner, status: c.status, lastMessageAt: message.createdAt,
+        lastMessagePreview: c.lastMessagePreview, unreadCount: c.unreadCount,
+      );
+      conversations.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+    } else {
+      loadConversations();
+    }
+    incomingMessage.value = message;
+  }
+
+  void applyMessagesRead(Map<String, dynamic> data) => readEvent.value = data;
+
+  // ── Message history + sending ───────────────────────────────────────────
+
+  Future<List<MessageModel>> getMessages(String conversationId, {DateTime? before}) async {
+    try {
+      final res = await ApiService.get(
+        '/chat/conversations/$conversationId/messages',
+        params: before != null ? {'before': before.toIso8601String()} : null,
+      );
+      return (res['data']['items'] as List)
+          .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<MessageModel?> sendMessage(String conversationId, String type, Map<String, dynamic> payload) async {
+    try {
+      final res = await ApiService.post('/chat/conversations/$conversationId/messages', {
+        'type': type,
+        'payloadJson': jsonEncode(payload),
+      });
+      return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<MessageModel?> respondContact(String messageId, bool approve) async {
+    try {
+      final res = await ApiService.post('/chat/messages/$messageId/contact-response', {'approve': approve});
+      return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<MessageModel?> respondSchedule(String messageId, String action, {DateTime? proposedAt}) async {
+    try {
+      final body = <String, dynamic>{'action': action};
+      if (proposedAt != null) body['proposedAt'] = proposedAt.toIso8601String();
+      final res = await ApiService.post('/chat/messages/$messageId/schedule-response', body);
+      return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> blockUser(String userId) async {
+    try {
+      await ApiService.post('/chat/users/$userId/block', {});
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _recomputeUnreadCount({String? excludingConversationId}) {
+    unreadCount.value = conversations
+        .where((c) => c.id != excludingConversationId)
+        .fold(0, (sum, c) => sum + c.unreadCount);
+  }
+}

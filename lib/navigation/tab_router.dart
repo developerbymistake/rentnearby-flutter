@@ -4,6 +4,7 @@ import '../screens/my_listings_screen.dart';
 import '../screens/explore_plots_screen.dart';
 import '../screens/my_plots_screen.dart';
 import '../screens/profile_screen.dart';
+import '../screens/chats_list_screen.dart';
 import 'tab_keys.dart';
 
 Widget _rootScreen(int tabId) {
@@ -13,6 +14,7 @@ Widget _rootScreen(int tabId) {
     case 2: return const ExplorePlotsScreen();
     case 3: return const MyPlotsScreen();
     case 4: return const ProfileScreen();
+    case 5: return const ChatsListScreen();
     default: return const SizedBox.shrink();
   }
 }
