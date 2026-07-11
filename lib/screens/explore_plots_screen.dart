@@ -880,14 +880,27 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
             const Icon(Icons.public_rounded, color: Colors.white, size: 15),
             const SizedBox(width: 7),
             Expanded(
-              child: Text('${district.name} · $cityName',
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white)),
+              child: Text.rich(
+                TextSpan(children: [
+                  TextSpan(text: district.name),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(Icons.chevron_right_rounded,
+                          size: 14, color: Colors.white.withValues(alpha: 0.7)),
+                    ),
+                  ),
+                  TextSpan(text: cityName),
+                ]),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white),
+              ),
             ),
             const SizedBox(width: 4),
             const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 16),
