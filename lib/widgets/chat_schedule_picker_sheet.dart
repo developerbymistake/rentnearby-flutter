@@ -11,6 +11,7 @@ class ChatSchedulePickerSheet extends StatefulWidget {
   static Future<DateTime?> show(BuildContext context, {String? title}) {
     return showModalBottomSheet<DateTime>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => ChatSchedulePickerSheet(title: title ?? 'When would you like to visit?'),

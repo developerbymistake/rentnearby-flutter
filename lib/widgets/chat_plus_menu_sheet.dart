@@ -27,6 +27,7 @@ class ChatPlusMenuSheet extends StatelessWidget {
   }) {
     return showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => ChatPlusMenuSheet(
@@ -40,35 +41,42 @@ class ChatPlusMenuSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The question list is server/admin-driven (unbounded from this widget's
+    // point of view) — capped + scrollable so a listing with many questions
+    // degrades to a scroll, not a RenderFlex overflow.
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.75;
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 14),
-          if (questions.isNotEmpty) ...[
-            _sectionLabel('About this listing'),
-            ...questions.map((q) => _item(
-                  context,
-                  icon: Icons.help_outline_rounded,
-                  label: q.questionText,
-                  onTap: () {
-                    Navigator.pop(context);
-                    onAskQuestion(q);
-                  },
-                )),
-          ],
-          _sectionLabel('Contact'),
-          _item(context, icon: Icons.call_outlined, label: 'Request contact number', onTap: () {
-            Navigator.pop(context);
-            onRequestContact();
-          }),
-          _sectionLabel('Visit'),
-          _item(context, icon: Icons.calendar_month_rounded, label: 'Schedule a visit', onTap: () {
-            Navigator.pop(context);
-            onScheduleVisit();
-          }),
-        ]),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 14),
+            if (questions.isNotEmpty) ...[
+              _sectionLabel('About this listing'),
+              ...questions.map((q) => _item(
+                    context,
+                    icon: Icons.help_outline_rounded,
+                    label: q.questionText,
+                    onTap: () {
+                      Navigator.pop(context);
+                      onAskQuestion(q);
+                    },
+                  )),
+            ],
+            _sectionLabel('Contact'),
+            _item(context, icon: Icons.call_outlined, label: 'Request contact number', onTap: () {
+              Navigator.pop(context);
+              onRequestContact();
+            }),
+            _sectionLabel('Visit'),
+            _item(context, icon: Icons.calendar_month_rounded, label: 'Schedule a visit', onTap: () {
+              Navigator.pop(context);
+              onScheduleVisit();
+            }),
+          ]),
+        ),
       ),
     );
   }
