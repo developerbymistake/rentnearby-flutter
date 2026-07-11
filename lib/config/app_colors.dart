@@ -31,6 +31,7 @@ class AppColors {
   static const Color surface = Color(0xFFEFF6FF);
   static const Color cardBg = Color(0xFFFFFFFF);
   static const Color scaffoldBg = Color(0xFFF8FAFF);
+  static const Color chatBg = Color(0xFFE7ECF3);
 
   // Text
   static const Color textDark = Color(0xFF0F172A);

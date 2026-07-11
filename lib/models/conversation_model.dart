@@ -2,6 +2,8 @@ class ConversationModel {
   final String id;
   final String listingType; // "Room" | "Plot"
   final String listingId;
+  final String? roomTypeId; // set when listingType == "Room"
+  final String? plotTypeId; // set when listingType == "Plot"
   final String listingTitle;
   final String? listingThumbnailUrl;
   final String otherPartyId;
@@ -16,6 +18,8 @@ class ConversationModel {
     required this.id,
     required this.listingType,
     required this.listingId,
+    this.roomTypeId,
+    this.plotTypeId,
     required this.listingTitle,
     this.listingThumbnailUrl,
     required this.otherPartyId,
@@ -33,6 +37,8 @@ class ConversationModel {
         id: json['id'] as String,
         listingType: json['listingType'] as String,
         listingId: json['listingId'] as String,
+        roomTypeId: json['roomTypeId'] as String?,
+        plotTypeId: json['plotTypeId'] as String?,
         listingTitle: json['listingTitle'] as String? ?? '',
         listingThumbnailUrl: json['listingThumbnailUrl'] as String?,
         otherPartyId: json['otherPartyId'] as String,

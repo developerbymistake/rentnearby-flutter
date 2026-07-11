@@ -67,24 +67,51 @@ class ChatMessageBubble extends StatelessWidget {
     final bubble = _bubbleRow(text, mine: message.isMine);
 
     // Show reply options under the other party's question, if we know its catalog entry.
+    // Rendered as a vertical, right-aligned stack of "ghost" bubbles — each one previews
+    // what the eventual sent message would look like, so it reads as picking a reply to
+    // send rather than filling in a form field.
     if (!message.isMine && template != null && template.answerOptions.isNotEmpty && onAnswerQuestion != null) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         bubble,
         Padding(
-          padding: const EdgeInsets.only(left: 4, top: 4, bottom: 4),
-          child: Wrap(spacing: 6, runSpacing: 6, children: template.answerOptions.map((opt) {
-            final negative = opt.sentiment == 'negative';
-            return OutlinedButton(
-              onPressed: () => onAnswerQuestion!(opt.key, opt.text),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: negative ? AppColors.error : AppColors.primary,
-                side: BorderSide(color: negative ? AppColors.error.withValues(alpha: 0.4) : AppColors.primaryLight),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              ),
-              child: Text(opt.text, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
-            );
-          }).toList()),
+          padding: const EdgeInsets.only(top: 4, bottom: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: template.answerOptions.map((opt) {
+              final negative = opt.sentiment == 'negative';
+              final color = negative ? AppColors.error : AppColors.primary;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () => onAnswerQuestion!(opt.key, opt.text),
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 260),
+                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(14), topRight: const Radius.circular(14),
+                          bottomLeft: const Radius.circular(14), bottomRight: const Radius.circular(3),
+                        ),
+                        border: Border.all(color: color.withValues(alpha: 0.45), width: 1.4, style: BorderStyle.solid),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Flexible(
+                          child: Text(opt.text,
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(Icons.chevron_right_rounded, size: 16, color: color.withValues(alpha: 0.6)),
+                      ]),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
         ),
       ]);
     }
@@ -226,6 +253,7 @@ class ChatMessageBubble extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
           decoration: BoxDecoration(
             color: mine ? AppColors.primary : Colors.white,
+            border: mine ? null : Border.all(color: AppColors.divider),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(14), topRight: const Radius.circular(14),
               bottomLeft: Radius.circular(mine ? 14 : 3),

@@ -94,6 +94,7 @@ class ChatController extends GetxController {
       conversations[index] = ConversationModel(
         id: c.id, listingType: c.listingType, listingId: c.listingId,
         listingTitle: c.listingTitle, listingThumbnailUrl: c.listingThumbnailUrl,
+        roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
         otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
         isOwner: c.isOwner, status: c.status, lastMessageAt: DateTime.now(),
         lastMessagePreview: c.lastMessagePreview, unreadCount: newUnreadCount,
@@ -116,6 +117,7 @@ class ChatController extends GetxController {
       conversations[index] = ConversationModel(
         id: c.id, listingType: c.listingType, listingId: c.listingId,
         listingTitle: c.listingTitle, listingThumbnailUrl: c.listingThumbnailUrl,
+        roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
         otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
         isOwner: c.isOwner, status: c.status, lastMessageAt: message.createdAt,
         lastMessagePreview: c.lastMessagePreview, unreadCount: c.unreadCount,
@@ -145,11 +147,12 @@ class ChatController extends GetxController {
     }
   }
 
-  Future<MessageModel?> sendMessage(String conversationId, String type, Map<String, dynamic> payload) async {
+  Future<MessageModel?> sendMessage(String conversationId, String type, Map<String, dynamic> payload, {String? respondsToMessageId}) async {
     try {
       final res = await ApiService.post('/chat/conversations/$conversationId/messages', {
         'type': type,
         'payloadJson': jsonEncode(payload),
+        if (respondsToMessageId != null) 'respondsToMessageId': respondsToMessageId,
       });
       return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
     } catch (e) {
@@ -187,6 +190,16 @@ class ChatController extends GetxController {
       return true;
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not block this user. Please try again.'));
+      return false;
+    }
+  }
+
+  Future<bool> unblockUser(String userId) async {
+    try {
+      await ApiService.post('/chat/users/$userId/unblock', {});
+      return true;
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not unblock this user. Please try again.'));
       return false;
     }
   }
