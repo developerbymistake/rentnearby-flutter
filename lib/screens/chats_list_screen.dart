@@ -266,8 +266,8 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   Widget _conversationCard(ConversationModel c) {
     final unread = c.unreadCount > 0;
     return Material(
-      // Background is always white now — unread is signaled by the border, the bold
-      // name/preview text, and the count badge instead of a background tint.
+      // Background is always white now — unread is signaled by the bold name/preview
+      // text and the count badge instead of a background tint or border.
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
@@ -277,18 +277,16 @@ class _ChatsListScreenState extends State<ChatsListScreen>
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: unread
-                  ? AppColors.primary.withValues(alpha: 0.30)
-                  : AppColors.primary.withValues(alpha: 0.14),
-            ),
-            // Weighted toward the bottom (larger offset, a touch darker) so a white card
-            // reads as clearly lifted off the page background instead of just outlined.
+            // No border, and a neutral black-based shadow (not primary-tinted) — a
+            // colored border/shadow was reading as "the card itself looks dark/tinted"
+            // even though the fill was already pure white. Matches the shadow pattern
+            // already used elsewhere in the app (create_banner_screen.dart's fields,
+            // question_templates_screen.dart's cards).
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.20),
-                blurRadius: 16,
-                offset: const Offset(0, 5),
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
             ],
           ),

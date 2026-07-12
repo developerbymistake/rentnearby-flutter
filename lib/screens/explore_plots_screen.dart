@@ -733,19 +733,22 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     return (centerPx - edgePx).distance;
   }
 
-  // Keeps the empty-radius chip's anchor point inside the visible screen even when the
-  // circle itself is bigger than the viewport (large radius / high zoom) — without this,
-  // the anchor (the circle's true top edge) can land off-screen and the chip disappears
-  // entirely. Clamped inward, it ends up on whichever part of the boundary — or, for a
-  // very large circle, just inside it — actually fits on screen.
-  static Offset _clampChipAnchor(Offset raw, Size screenSize) {
+  // Anchors the empty-radius chip toward the TOP of the circle, capping how far up it
+  // can sit at whichever is smaller: 65% of the circle's own computed radius, or
+  // however much room is left before the header. The 65% (not 100%) margin is
+  // deliberate: `radiusPx` comes from a hand-rolled Mercator projection that has to
+  // independently match wherever MapLibre's native GL renderer actually draws the
+  // circle layer, and any small drift between the two (device pixel ratio, native map
+  // padding, projection rounding) can make the computed radius larger than the true
+  // on-screen one — which pushes a 100%-radius anchor past the real boundary, i.e.
+  // visibly outside the circle. Capping the *offset distance* itself (not clamping x/y
+  // separately) is what guarantees the point stays inside the circle at every zoom
+  // level regardless of that drift.
+  static Offset _radiusTopAnchor(Offset center, double radiusPx, Size screenSize) {
     const topMargin = 150.0; // clears the gradient header
-    const bottomMargin = 150.0; // clears the filter panel / bottom nav
-    const sideMargin = 80.0; // half the chip's typical width
-    return Offset(
-      raw.dx.clamp(sideMargin, screenSize.width - sideMargin),
-      raw.dy.clamp(topMargin, screenSize.height - bottomMargin),
-    );
+    final insetRadius = radiusPx * 0.65;
+    final maxUpward = (center.dy - topMargin).clamp(0.0, insetRadius);
+    return Offset(center.dx, center.dy - maxUpward);
   }
 
   void _showDetail(NearbyPlotModel plot) {
@@ -831,12 +834,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                         }),
                         if (_filteredPlots.isEmpty && !_loadingNearby && !_reloadPending && _hasLoadedOnce)
                           Builder(builder: (_) {
-                            // Anchored to the TOP EDGE of the radius circle (not its center) —
-                            // the chip's tail tip lands exactly on the boundary, projected the
-                            // same way every marker above is, so it stays visually locked to
-                            // the circle as the user pans instead of drifting away from a
-                            // screen-fixed hint. The circle's own center (where the user's
-                            // location pin sits) stays completely uncluttered.
+                            // Anchored to the TOP of the radius circle — the chip's tail tip
+                            // lands on the boundary when the circle fits on screen, or just
+                            // inside it (never outside) when the circle is bigger than the
+                            // viewport. The circle's own center (where the user's location pin
+                            // sits) stays completely uncluttered.
                             final radiusPx = _radiusPixelRadius(constraints.biggest);
                             final sp = _projectToScreen(
                               _searchCenter,
@@ -844,10 +846,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                               _currentZoom,
                               constraints.biggest,
                             );
-                            final anchor = _clampChipAnchor(
-                              Offset(sp.dx, sp.dy - radiusPx),
-                              constraints.biggest,
-                            );
+                            final anchor = _radiusTopAnchor(sp, radiusPx, constraints.biggest);
                             return Positioned(
                               left: anchor.dx,
                               top: anchor.dy,
