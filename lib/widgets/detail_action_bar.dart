@@ -50,7 +50,7 @@ class DetailActionBar extends StatelessWidget {
       onPressed: _directions,
       icon: const Icon(Icons.near_me_rounded, size: 20),
       label: const Text(
-        'Get Directions',
+        'Directions',
         style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600),
       ),
       style: ElevatedButton.styleFrom(
@@ -63,33 +63,21 @@ class DetailActionBar extends StatelessWidget {
     );
   }
 
-  Widget _chatButton({required bool primary}) {
-    return primary
-        ? ElevatedButton.icon(
-            onPressed: onChat,
-            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
-            label: const Text('Chat',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(0, 52),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              elevation: 0,
-            ),
-          )
-        : OutlinedButton.icon(
-            onPressed: onChat,
-            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-            label: const Text('Chat instead',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.primaryLight),
-              minimumSize: const Size(0, 46),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-          );
+  // Always the white/outlined style — stays visually consistent whether Chat
+  // is the sole contact method (phone hidden) or paired alongside Call/WhatsApp.
+  Widget _chatButton() {
+    return OutlinedButton.icon(
+      onPressed: onChat,
+      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+      label: const Text('Chat',
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.primary,
+        side: const BorderSide(color: AppColors.primaryLight),
+        minimumSize: const Size(0, 46),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    );
   }
 
   Widget _reportButton() {
@@ -131,14 +119,20 @@ class DetailActionBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Row 1: Get Directions — full width
-          SizedBox(width: double.infinity, child: _directionsButton()),
-          // Row 2: Chat — the only contact option when the owner has hidden
-          // their number (ownerPhone == null); a secondary option otherwise.
-          if (onChat != null && !hasPhone) ...[
-            const SizedBox(height: 10),
-            SizedBox(width: double.infinity, child: _chatButton(primary: true)),
-          ],
+          // Row 1: Chat + Directions — always paired when onChat is available,
+          // regardless of whether the owner's phone is visible (Chat is the sole
+          // contact method in that case, or sits alongside Call/WhatsApp below —
+          // either way, same layout, same outlined style).
+          if (onChat != null)
+            Row(
+              children: [
+                Expanded(child: _chatButton()),
+                const SizedBox(width: 10),
+                Expanded(child: _directionsButton()),
+              ],
+            )
+          else
+            SizedBox(width: double.infinity, child: _directionsButton()),
           if (hasPhone) ...[
             const SizedBox(height: 10),
             // Row 3: Call Owner + WhatsApp side by side
@@ -179,10 +173,6 @@ class DetailActionBar extends StatelessWidget {
                 ),
               ],
             ),
-            if (onChat != null) ...[
-              const SizedBox(height: 10),
-              SizedBox(width: double.infinity, child: _chatButton(primary: false)),
-            ],
           ],
           if (showReport) ...[
             const SizedBox(height: 10),
