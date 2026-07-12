@@ -11,6 +11,9 @@ const _pauseRoutes = {
   '/chat-conversation',
   '/my-listings',
   '/my-plots',
+  '/listing-reports',
+  '/report-detail',
+  '/my-filed-reports',
 };
 
 class MapPauseObserver extends NavigatorObserver {

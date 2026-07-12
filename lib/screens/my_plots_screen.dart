@@ -640,6 +640,11 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                         onGoLive: () => _showPaymentDialog(plots[i].id),
                         onDelete: () => _confirmDelete(plots[i].id),
                         isGoLiveLoading: _goLiveLoadingId == plots[i].id,
+                        onReportsTap: () => Get.toNamed(AppRoutes.listingReports, arguments: {
+                          'listingId': plots[i].id,
+                          'listingType': 'Plot',
+                          'title': plots[i].areaDisplay,
+                        }),
                       ),
                     );
                   },
@@ -907,6 +912,7 @@ class _PlotCard extends StatelessWidget {
   final VoidCallback onGoLive;
   final VoidCallback onDelete;
   final bool isGoLiveLoading;
+  final VoidCallback? onReportsTap;
 
   const _PlotCard({
     required this.plot,
@@ -914,6 +920,7 @@ class _PlotCard extends StatelessWidget {
     required this.onGoLive,
     required this.onDelete,
     this.isGoLiveLoading = false,
+    this.onReportsTap,
   });
 
   Color _typeColor(String type) => switch (type) {
@@ -922,6 +929,39 @@ class _PlotCard extends StatelessWidget {
     'Farmhouse'    => const Color(0xFF16A34A),
     _              => const Color(0xFF3B82F6),
   };
+
+  Widget _buildReportAlertStrip() {
+    final count = plot.pendingReportCount;
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      child: GestureDetector(
+        onTap: onReportsTap,
+        child: Container(
+          width: double.infinity,
+          color: AppColors.reportAlert,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              const Icon(Iconsax.warning_2, size: 15, color: Colors.white),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '$count report${count == 1 ? '' : 's'} on this listing',
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, size: 16, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -936,11 +976,14 @@ class _PlotCard extends StatelessWidget {
       ),
       child: Column(
         children: [
+          if (plot.pendingReportCount > 0) _buildReportAlertStrip(),
           // Thumbnail strip with status badge overlay
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: BorderRadius.vertical(
+                  top: plot.pendingReportCount > 0 ? Radius.zero : const Radius.circular(16),
+                ),
                 child: SizedBox(
                   height: 100,
                   width: double.infinity,

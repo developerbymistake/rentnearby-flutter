@@ -83,6 +83,7 @@ class PlotModel {
   final DateTime? validUntil;
   final DateTime createdAt;
   final bool hasReported;
+  final int pendingReportCount;
 
   PlotModel({
     required this.id,
@@ -106,6 +107,7 @@ class PlotModel {
     this.validUntil,
     required this.createdAt,
     this.hasReported = false,
+    this.pendingReportCount = 0,
   });
 
   factory PlotModel.fromJson(Map<String, dynamic> json) => PlotModel(
@@ -132,6 +134,7 @@ class PlotModel {
         validUntil: json['validUntil'] != null ? DateTime.parse(json['validUntil']) : null,
         createdAt: DateTime.parse(json['createdAt']),
         hasReported: json['hasReported'] ?? false,
+        pendingReportCount: json['pendingReportCount'] ?? 0,
       );
 
   String get areaDisplay => _formatArea(areaValue, areaUnit);

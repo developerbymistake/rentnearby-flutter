@@ -70,6 +70,9 @@ class NotificationService extends GetxService {
     AppRoutes.addListing,
     AppRoutes.addPlot,
     AppRoutes.paymentScreen,
+    AppRoutes.listingReports,
+    AppRoutes.reportDetail,
+    AppRoutes.myFiledReports,
   };
 
   void _handleNotificationTap(RemoteMessage message) {
@@ -84,6 +87,11 @@ class NotificationService extends GetxService {
     // here — the backend would need to add those fields to the push payload first.
     final isChatMessage = message.data['conversation_id'] != null;
     final membershipType = message.data['membership_type'];
+    final reportListingId = message.data['listing_id'];
+    final reportListingType = message.data['listing_type'];
+    // Only report pushes carry listing_id — room/plot membership pushes never did,
+    // so this can't collide with the membershipType 'room'/'plot' branch below.
+    final isReportMessage = reportListingId != null;
     final currentRoute = Get.currentRoute;
 
     // Broadcast still lands on the resident Explore tab; Room/Plot membership
@@ -91,6 +99,12 @@ class NotificationService extends GetxService {
     void goToDestination() {
       if (isChatMessage) {
         Get.find<AuthController>().tabIndex.value = _tabChats;
+      } else if (isReportMessage) {
+        Get.toNamed(AppRoutes.listingReports, arguments: {
+          'listingId': reportListingId,
+          'listingType': reportListingType ?? 'Room',
+          'title': message.data['listing_title'] ?? 'your listing',
+        });
       } else if (membershipType == 'broadcast') {
         Get.find<AuthController>().tabIndex.value = _tabExplore;
       } else {

@@ -12,6 +12,7 @@ class ListingCard extends StatelessWidget {
   final VoidCallback? onToggleActive;
   final VoidCallback? onGoLive;
   final bool isGoLiveLoading;
+  final VoidCallback? onReportsTap;
 
   const ListingCard({
     super.key,
@@ -21,6 +22,7 @@ class ListingCard extends StatelessWidget {
     this.onToggleActive,
     this.onGoLive,
     this.isGoLiveLoading = false,
+    this.onReportsTap,
   });
 
   @override
@@ -42,9 +44,43 @@ class ListingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (listing.pendingReportCount > 0) _buildReportAlertStrip(),
             _buildPhotoSection(),
             _buildContentSection(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportAlertStrip() {
+    final count = listing.pendingReportCount;
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      child: GestureDetector(
+        onTap: onReportsTap,
+        child: Container(
+          width: double.infinity,
+          color: AppColors.reportAlert,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              const Icon(Iconsax.warning_2, size: 15, color: Colors.white),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '$count report${count == 1 ? '' : 's'} on this listing',
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, size: 16, color: Colors.white),
+            ],
+          ),
         ),
       ),
     );
@@ -54,7 +90,9 @@ class ListingCard extends StatelessWidget {
     return Stack(
       children: [
         ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          borderRadius: BorderRadius.vertical(
+            top: listing.pendingReportCount > 0 ? Radius.zero : const Radius.circular(16),
+          ),
           child: listing.photos.isNotEmpty
               ? CachedNetworkImage(
                   imageUrl: listing.photos.first,

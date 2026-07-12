@@ -197,6 +197,11 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                         onDelete: () => _confirmDelete(listings[i].id),
                         onGoLive: () => _showPaymentDialog(listings[i].id),
                         isGoLiveLoading: _goLiveLoadingId == listings[i].id,
+                        onReportsTap: () => Get.toNamed(AppRoutes.listingReports, arguments: {
+                          'listingId': listings[i].id,
+                          'listingType': 'Room',
+                          'title': listings[i].roomTypeName ?? 'Room for Rent',
+                        }),
                       ),
                     );
                   },

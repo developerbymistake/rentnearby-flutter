@@ -220,6 +220,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _legalTile(icon: Iconsax.star, label: 'Rate App', onTap: _rateApp),
                   Divider(height: 1, indent: 56, color: AppColors.divider),
                   _legalTile(icon: Iconsax.share, label: 'Share App', onTap: _shareApp),
+                  Divider(height: 1, indent: 56, color: AppColors.divider),
+                  _legalTile(icon: Iconsax.flag, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
                 ]),
               ),
             ),

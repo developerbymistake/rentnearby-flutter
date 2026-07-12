@@ -22,6 +22,7 @@ class ListingModel {
   final DateTime? validUntil;
   final String furnishedStatus;
   final bool hasReported;
+  final int pendingReportCount;
 
   ListingModel({
     required this.id,
@@ -45,6 +46,7 @@ class ListingModel {
     this.validUntil,
     this.furnishedStatus = 'None',
     this.hasReported = false,
+    this.pendingReportCount = 0,
   });
 
   factory ListingModel.fromJson(Map<String, dynamic> json) => ListingModel(
@@ -73,6 +75,7 @@ class ListingModel {
             : null,
         furnishedStatus: json['furnishedStatus'] ?? 'None',
         hasReported: json['hasReported'] ?? false,
+        pendingReportCount: json['pendingReportCount'] ?? 0,
       );
 
   String get priceDisplay =>
