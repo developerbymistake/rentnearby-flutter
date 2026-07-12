@@ -8,6 +8,9 @@ const _pauseRoutes = {
   '/onboarding',
   '/listing-detail',
   '/plot-detail',
+  '/chat-conversation',
+  '/my-listings',
+  '/my-plots',
 };
 
 class MapPauseObserver extends NavigatorObserver {

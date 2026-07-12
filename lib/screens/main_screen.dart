@@ -41,8 +41,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     TabNavigator(tabId: 1),
     TabNavigator(tabId: 2),
     TabNavigator(tabId: 3),
-    TabNavigator(tabId: 4),
-    TabNavigator(tabId: 5),
   ];
 
   @override
@@ -484,11 +482,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         child: Row(
           children: [
             _navItem(0, Iconsax.map, Iconsax.map5, 'Rooms'),
-            _navItem(1, Iconsax.building, Iconsax.building5, 'My Rooms'),
-            _navItem(2, Iconsax.location, Iconsax.location5, 'Plots'),
-            _navItem(3, Iconsax.document, Iconsax.document5, 'My Plots'),
-            _navItem(4, Iconsax.user, Iconsax.user5, 'Profile'),
-            _navItem(5, Iconsax.message, Iconsax.message5, 'Chats', badgeCount: _chatCtrl.unreadCount.value),
+            _navItem(1, Iconsax.location, Iconsax.location5, 'Plots'),
+            _navItem(2, Iconsax.message, Iconsax.message5, 'Chats', badgeCount: _chatCtrl.unreadCount.value),
+            _navItem(3, Iconsax.user, Iconsax.user5, 'Profile'),
           ],
         ),
       ),
@@ -503,10 +499,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           if (index == 0 && _auth.tabIndex.value != 0) {
             Get.find<ListingController>().exploreRefreshTrigger.value++;
           }
-          if (index == 2 && _auth.tabIndex.value != 2) {
+          if (index == 1 && _auth.tabIndex.value != 1) {
             Get.find<PlotController>().exploreRefreshTrigger.value++;
           }
-          if (index == 4 && _auth.tabIndex.value != 4) _auth.profileTabTrigger.value++;
+          if (index == 3 && _auth.tabIndex.value != 3) _auth.profileTabTrigger.value++;
           Get.find<ListingController>().filterResetTrigger.value++;
           Get.find<PlotController>().filterResetTrigger.value++;
           _auth.tabIndex.value = index;

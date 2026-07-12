@@ -26,7 +26,6 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   final _ctrl = Get.find<ListingController>();
   final _auth = Get.find<AuthController>();
   final _scrollCtrl = ScrollController();
-  Worker? _tabWorker;
   int _page = 1;
   bool _isAddingRoom = false;
   String? _goLiveLoadingId;
@@ -46,22 +45,11 @@ class _MyListingsScreenState extends State<MyListingsScreen>
       _ctrl.loadMembership(),
     ]).then((_) {}).catchError((_) {});
     _scrollCtrl.addListener(_onScroll);
-    _tabWorker = ever(_auth.tabIndex, (int idx) async {
-      if (idx == 1 && !_ctrl.isLoading.value) {
-        _page = 1;
-        _dataReady = Future.wait([
-          _ctrl.loadMyListings(page: 1),
-          _ctrl.loadMembership(),
-        ]).then((_) {}).catchError((_) {});
-        await _dataReady;
-      }
-    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _tabWorker?.dispose();
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     super.dispose();
@@ -69,7 +57,10 @@ class _MyListingsScreenState extends State<MyListingsScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _auth.tabIndex.value == 1) {
+    // No longer gated on tabIndex — this screen is now a pushed route (not a
+    // resident IndexedStack tab), so "app resumed while this screen is on
+    // top" is itself the correct condition for a refresh.
+    if (state == AppLifecycleState.resumed) {
       _page = 1;
       _dataReady = Future.wait([
         _ctrl.loadMyListings(page: 1),
@@ -109,9 +100,13 @@ class _MyListingsScreenState extends State<MyListingsScreen>
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                padding: const EdgeInsets.fromLTRB(4, 8, 20, 24),
                 child: Row(
                   children: [
+                    IconButton(
+                      onPressed: () => Get.back(),
+                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                    ),
                     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       const Text('My Rooms',
                           style: TextStyle(
@@ -616,7 +611,10 @@ class _MyListingsScreenState extends State<MyListingsScreen>
           maxRooms: (selectedPlan['roomLimit'] as num?)?.toInt() ?? 1,
           originalPrice: (selectedPlan['originalPrice'] as num?)?.toInt() ?? 0,
           onDismiss: () {
-            Get.find<AuthController>().tabIndex.value = 1;
+            // Already on this screen when the dialog shows (triggered from the
+            // "Make it Live" flow here) — refresh so the newly-activated plan's
+            // status reflects immediately, instead of the old tab-reselect no-op.
+            _refresh();
           },
         ),
         barrierDismissible: false,

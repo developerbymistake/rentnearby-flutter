@@ -7,6 +7,8 @@ import '../screens/main_screen.dart';
 import '../screens/listing_detail_screen.dart';
 import '../screens/add_listing_screen.dart';
 import '../screens/add_plot_screen.dart';
+import '../screens/my_listings_screen.dart';
+import '../screens/my_plots_screen.dart';
 import '../screens/payment_screen.dart';
 import '../screens/plot_detail_screen.dart';
 import '../screens/chat_conversation_screen.dart';
@@ -23,6 +25,8 @@ class AppRoutes {
   static const String plotDetail = '/plot-detail';
   static const String addListing = '/add-listing';
   static const String addPlot = '/add-plot';
+  static const String myListings = '/my-listings';
+  static const String myPlots = '/my-plots';
   static const String paymentScreen = '/payment-screen';
   static const String chatConversation = '/chat-conversation';
   static final routes = [
@@ -78,6 +82,18 @@ class AppRoutes {
     GetPage(
       name: addPlot,
       page: () => const AddPlotScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: myListings,
+      page: () => const MyListingsScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: myPlots,
+      page: () => const MyPlotsScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

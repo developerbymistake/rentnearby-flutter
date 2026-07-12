@@ -191,7 +191,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             originalPrice: (_plan['originalPrice'] as num?)?.toInt() ?? 0,
             onDismiss: () {
               Get.until((route) => route.settings.name == AppRoutes.main);
-              Get.find<AuthController>().tabIndex.value = _isPlot ? 3 : 1;
+              Get.toNamed(_isPlot ? AppRoutes.myPlots : AppRoutes.myListings);
             },
           ),
           barrierDismissible: false,

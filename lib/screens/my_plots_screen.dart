@@ -31,7 +31,6 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   final _ctrl = Get.find<PlotController>();
   final _auth = Get.find<AuthController>();
   final _scrollCtrl = ScrollController();
-  Worker? _tabWorker;
   bool _isAddingPlot = false;
   String? _goLiveLoadingId;
   Future<void> _dataReady = Future.value();
@@ -50,21 +49,11 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
       _ctrl.loadPlotMembership(),
     ]).then((_) {}).catchError((_) {});
     _scrollCtrl.addListener(_onScroll);
-    _tabWorker = ever(_auth.tabIndex, (int idx) async {
-      if (idx == 3 && !_ctrl.isLoading.value) {
-        _dataReady = Future.wait([
-          _ctrl.loadMyPlots(reset: true),
-          _ctrl.loadPlotMembership(),
-        ]).then((_) {}).catchError((_) {});
-        await _dataReady;
-      }
-    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _tabWorker?.dispose();
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     super.dispose();
@@ -72,7 +61,10 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _auth.tabIndex.value == 3) {
+    // No longer gated on tabIndex — this screen is now a pushed route (not a
+    // resident IndexedStack tab), so "app resumed while this screen is on
+    // top" is itself the correct condition for a refresh.
+    if (state == AppLifecycleState.resumed) {
       _dataReady = Future.wait([
         _ctrl.loadMyPlots(reset: true),
         _ctrl.loadPlotMembership(),
@@ -471,9 +463,9 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         maxPlots: (plan['plotLimit'] as num?)?.toInt() ?? 1,
         isPlot: true,
         originalPrice: (plan['originalPrice'] as num?)?.toInt() ?? 0,
-        onDismiss: () {
-          Get.find<AuthController>().tabIndex.value = 3;
-        },
+        // Data is already reloaded above (line 456) before this dialog even shows —
+        // the old tabIndex set was a no-op-turned-obsolete once tab 3 stopped existing.
+        onDismiss: () {},
       ),
       barrierDismissible: false,
     );
@@ -672,9 +664,13 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         child: SafeArea(
           bottom: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            padding: const EdgeInsets.fromLTRB(4, 8, 20, 24),
             child: Row(
               children: [
+                IconButton(
+                  onPressed: () => Get.back(),
+                  icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                ),
                 const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('My Plots',
                       style: TextStyle(

@@ -19,10 +19,9 @@ class NotificationService extends GetxService {
   StreamSubscription? _messageOpenedSub;
   StreamSubscription? _tokenRefreshSub;
 
-  // Tab indexes matching main_screen.dart tab order
-  static const int _tabExplore    = 0;
-  static const int _tabMyListings = 1;
-  static const int _tabMyPlots    = 3;
+  // Tab index matching main_screen.dart tab order — Explore is the only one of
+  // these destinations still a resident tab; My Rooms/My Plots are pushed routes.
+  static const int _tabExplore = 0;
 
   @override
   Future<void> onInit() async {
@@ -76,21 +75,27 @@ class NotificationService extends GetxService {
     if (!StorageService.isLoggedIn) return;
 
     final membershipType = message.data['membership_type'];
-    final tabIndex = membershipType == 'plot'
-        ? _tabMyPlots
-        : membershipType == 'broadcast'
-            ? _tabExplore
-            : _tabMyListings;
     final currentRoute = Get.currentRoute;
 
+    // Broadcast still lands on the resident Explore tab; Room/Plot membership
+    // notifications now push the My Rooms/My Plots route (no longer tabs).
+    void goToDestination() {
+      if (membershipType == 'broadcast') {
+        Get.find<AuthController>().tabIndex.value = _tabExplore;
+      } else {
+        Get.toNamed(membershipType == 'plot' ? AppRoutes.myPlots : AppRoutes.myListings);
+      }
+    }
+
     if (currentRoute == AppRoutes.main) {
-      // Already on main screen — just switch tab, IndexedStack handles it, no rebuild
-      Get.find<AuthController>().tabIndex.value = tabIndex;
+      // Already on main screen — no rebuild needed for the tab case; the
+      // pushed-route case just navigates on top.
+      goToDestination();
     } else if (_routesOnTopOfMain.contains(currentRoute)) {
       // Detail/add screens are on top of main — main screen is alive underneath
       // Pop back to main WITHOUT recreating it (IndexedStack state preserved)
       Get.until((route) => route.settings.name == AppRoutes.main);
-      Get.find<AuthController>().tabIndex.value = tabIndex;
+      goToDestination();
     } else {
       // Main screen is NOT in stack: terminated app, login, splash, onboarding
       // Navigate fresh — double postFrameCallback waits for MainScreen.initState()
@@ -98,7 +103,7 @@ class NotificationService extends GetxService {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (Get.isRegistered<AuthController>()) {
-            Get.find<AuthController>().tabIndex.value = tabIndex;
+            goToDestination();
           }
         });
       });

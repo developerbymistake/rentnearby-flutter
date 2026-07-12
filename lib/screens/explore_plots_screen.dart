@@ -82,7 +82,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     // Trigger data load whenever LocationController resolves the district.
     _locationWorker = ever(_locationCtrl.selectedDistrict, (_) {
       if (_locationCtrl.selectedDistrict.value != null) {
-        if (_auth.tabIndex.value == 2 && !mapShouldPause.value) {
+        if (_auth.tabIndex.value == 1 && !mapShouldPause.value) {
           _precomputeCircleCache();
           _loadNearby();
           if (_mapReady && !_isCameraMoving) _fitToRadius();
@@ -97,7 +97,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     // browsed one) and resetting back to the real location (browsingCity
     // becomes null again), mirroring _locationWorker above.
     _browsingWorker = ever(_locationCtrl.browsingCity, (_) {
-      if (_auth.tabIndex.value == 2 && !mapShouldPause.value) {
+      if (_auth.tabIndex.value == 1 && !mapShouldPause.value) {
         _precomputeCircleCache();
         _loadNearby();
         // Unconditional, unlike the _isCameraMoving-gated calls elsewhere:
@@ -159,12 +159,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
 
     _postedWorker = ever(_plotCtrl.plotPostedTrigger, (_) {
       _stale = true;
-      if (_auth.tabIndex.value == 2 && !mapShouldPause.value) _loadNearby();
+      if (_auth.tabIndex.value == 1 && !mapShouldPause.value) _loadNearby();
     });
     _refreshWorker = ever(_plotCtrl.exploreRefreshTrigger, (_) {
       _stale = true;
       if (_locationCtrl.effectiveDistrict != null &&
-          _auth.tabIndex.value == 2 && !mapShouldPause.value) {
+          _auth.tabIndex.value == 1 && !mapShouldPause.value) {
         _loadNearby();
       }
     });
@@ -198,12 +198,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         });
       } else {
         setState(() => _mapActive = true);
-        if (_auth.tabIndex.value == 2 && _stale) _loadNearby();
+        if (_auth.tabIndex.value == 1 && _stale) _loadNearby();
       }
     });
 
     _tabWorker = ever(_auth.tabIndex, (index) {
-      if (index == 2) {
+      if (index == 1) {
         if (_stale && !mapShouldPause.value) {
           _loadNearby();
           if (_mapReady && !_isCameraMoving) _fitToRadius();
@@ -806,14 +806,42 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                       child: Column(children: [
                         Row(children: [
-                          const Icon(Icons.terrain_rounded, color: Colors.white, size: 22),
-                          const SizedBox(width: 6),
-                          const Text('Plots',
-                              style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white)),
+                          GestureDetector(
+                            onTap: () => Get.toNamed(AppRoutes.myPlots),
+                            child: Container(
+                              padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.12),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: const BoxDecoration(
+                                        color: Color(0xFF92400E), shape: BoxShape.circle),
+                                    child: const Icon(Icons.add_rounded, size: 15, color: Colors.white),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Text('Plot',
+                                      style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF92400E))),
+                                ],
+                              ),
+                            ),
+                          ),
                           const SizedBox(width: 12),
                           Expanded(child: _buildRadiusChips()),
                         ]),

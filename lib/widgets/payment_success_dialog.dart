@@ -226,9 +226,9 @@ class _PaymentSuccessDialogState extends State<PaymentSuccessDialog>
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Explore',
-                  style: TextStyle(
+                child: Text(
+                  widget.isPlot ? 'My Plots' : 'My Rooms',
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     fontFamily: 'Poppins',

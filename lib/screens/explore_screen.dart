@@ -8,6 +8,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
+import '../config/app_routes.dart';
 import '../controllers/app_feature_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../config/app_map_state.dart';
@@ -851,15 +852,42 @@ class _ExploreScreenState extends State<ExploreScreen>
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                   child: Column(children: [
                     Row(children: [
-                      const Icon(Icons.location_on_rounded,
-                          color: Colors.white, size: 22),
-                      const SizedBox(width: 6),
-                      const Text('Rooms',
-                          style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white)),
+                      GestureDetector(
+                        onTap: () => Get.toNamed(AppRoutes.myListings),
+                        child: Container(
+                          padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: const BoxDecoration(
+                                    color: AppColors.primary, shape: BoxShape.circle),
+                                child: const Icon(Icons.add_rounded, size: 15, color: Colors.white),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text('Room',
+                                  style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary)),
+                            ],
+                          ),
+                        ),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(child: _buildRadiusChips()),
                     ]),
