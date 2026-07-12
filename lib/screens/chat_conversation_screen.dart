@@ -1,3 +1,4 @@
+import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,6 +8,7 @@ import '../models/message_model.dart';
 import '../models/question_template_model.dart';
 import '../services/chat_hub_service.dart';
 import '../widgets/chat_message_bubble.dart';
+import '../widgets/chat_next_slot_bubble.dart';
 import '../widgets/chat_plus_menu_sheet.dart';
 import '../widgets/chat_schedule_picker_sheet.dart';
 
@@ -31,6 +33,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
 
   final _messages = <MessageModel>[].obs;
   final _loading = true.obs;
+  // Drives the inline "next slot" bubble's Sending… state. A single shared flag is enough —
+  // every send path below is awaited sequentially from this screen's own UI thread, so only
+  // one send can ever be in flight at a time.
+  final _sending = false.obs;
   Worker? _incomingWorker;
   Worker? _readWorker;
 
@@ -117,8 +123,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   }
 
   Future<void> _send(String type, Map<String, dynamic> payload) async {
-    final msg = await _chatCtrl.sendMessage(_conversationId, type, payload);
-    if (msg != null && mounted) _messages.insert(0, msg);
+    _sending.value = true;
+    try {
+      final msg = await _chatCtrl.sendMessage(_conversationId, type, payload);
+      if (msg != null && mounted) _messages.insert(0, msg);
+    } finally {
+      if (mounted) _sending.value = false;
+    }
   }
 
   Future<void> _pickAndProposeSchedule() async {
@@ -180,17 +191,27 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
           Expanded(
             child: Obx(() {
               if (_loading.value) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-              if (_messages.isEmpty) return _buildEmpty();
+              // Built *after* the loading check so a brand-new, empty conversation still gets
+              // the inline "next slot" bubble as its only item — that's the only way to open
+              // the "+" menu now that there's no bar fixed to the bottom.
               final renderList = _buildRenderList();
-              return ListView.builder(
+              if (renderList.isEmpty) return _buildEmpty();
+              // ListView(children:) rather than .builder — every item already carries a
+              // stable ValueKey, and a new message inserted at the front shifts every
+              // later item's array index by one. .builder's default delegate can't match
+              // a keyed child across an index shift (no findChildIndexCallback), so it
+              // would tear down and remount every existing bubble on each new message,
+              // replaying their entrance animation. The list-delegate this constructor
+              // uses reconciles by key regardless of index, so existing bubbles keep their
+              // State/AnimationController and the fade-in only ever plays once.
+              return ListView(
                 reverse: true,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                itemCount: renderList.length,
-                itemBuilder: (_, i) => renderList[i],
+                children: renderList,
               );
             }),
           ),
-          Obx(() => _status.value == 'Active' ? _buildComposer() : _buildInactiveNotice()),
+          Obx(() => _status.value != 'Active' ? _buildInactiveNotice() : const SizedBox.shrink()),
         ]),
       ),
     );
@@ -220,14 +241,31 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     // question ends up rendering above its own answer, positioned at the question's own
     // chronological slot rather than wherever the answer happened to actually arrive.
     final items = <Widget>[];
+    // Index 0 renders at the visual bottom, so the "next slot" bubble — the inline
+    // replacement for the old fixed composer — goes first, for both roles alike.
+    if (_status.value == 'Active') {
+      items.add(KeyedSubtree(
+        key: const ValueKey('ghost-slot'),
+        child: Obx(() => ChatNextSlotBubble(onTap: _openPlusMenu, sending: _sending.value)),
+      ));
+    }
     for (final m in _messages) {
       if (answerMessageIds.contains(m.id)) continue; // rendered attached to its question below
       final answer = m.type == 'quick_reply' ? answerByQuestionId[m.id] : null;
-      if (answer != null) items.add(_buildBubble(answer));
-      items.add(_buildBubble(m, answered: answer != null));
+      if (answer != null) items.add(_animatedBubble(answer.id, _buildBubble(answer)));
+      items.add(_animatedBubble(m.id, _buildBubble(m, answered: answer != null)));
     }
     return items;
   }
+
+  // Keys each bubble by its stable message id so Flutter's reconciliation reuses the same
+  // Element/State across unrelated Obx rebuilds (e.g. a read-receipt flip) — FadeInUp only
+  // (re)starts from initState, so a preserved State means the entrance plays exactly once,
+  // on first mount, and never replays on messages that were already on screen.
+  Widget _animatedBubble(String id, Widget child) => KeyedSubtree(
+        key: ValueKey(id),
+        child: FadeInUp(duration: const Duration(milliseconds: 320), from: 16, child: child),
+      );
 
   Widget _buildHeader(BuildContext context) {
     return Container(
@@ -344,13 +382,17 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     if (confirmed == true && mounted) _status.value = 'Active';
   }
 
+  // Only reachable once the conversation is no longer Active (an Active conversation always
+  // has at least the inline "next slot" bubble as an item) — the inactive notice below
+  // already explains why messaging is unavailable, so this just needs to say there's
+  // nothing here.
   Widget _buildEmpty() => Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Icon(Icons.waving_hand_rounded, size: 44, color: AppColors.textHint),
             const SizedBox(height: 12),
-            const Text('Tap + below to ask a question',
+            const Text('No messages in this conversation',
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
           ]),
         ),
@@ -377,41 +419,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
         final phone = m.payload['phone'] as String?;
         if (phone != null) _whatsapp(phone);
       },
-    );
-  }
-
-  Widget _buildComposer() {
-    return Container(
-      padding: EdgeInsets.fromLTRB(10, 8, 10, 8 + MediaQuery.viewPaddingOf(context).bottom),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 10, offset: Offset(0, -3))],
-      ),
-      child: Row(children: [
-        GestureDetector(
-          onTap: _openPlusMenu,
-          child: Container(
-            width: 38, height: 38,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              border: Border.all(color: AppColors.primaryLight),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.add_rounded, color: AppColors.primary, size: 22),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Container(
-            height: 38,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20)),
-            alignment: Alignment.centerLeft,
-            child: const Text('Choose an option…',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textHint)),
-          ),
-        ),
-      ]),
     );
   }
 

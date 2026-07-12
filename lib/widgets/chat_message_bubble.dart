@@ -1,3 +1,4 @@
+import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../models/message_model.dart';
@@ -81,35 +82,42 @@ class ChatMessageBubble extends StatelessWidget {
           padding: const EdgeInsets.only(top: 4, bottom: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: template.answerOptions.map((opt) {
+            children: template.answerOptions.asMap().entries.map((entry) {
+              final i = entry.key;
+              final opt = entry.value;
               final negative = opt.sentiment == 'negative';
               final color = negative ? AppColors.error : AppColors.primary;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () => onAnswerQuestion!(opt.key, opt.text),
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 260),
-                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.07),
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(14), topRight: const Radius.circular(14),
-                          bottomLeft: const Radius.circular(14), bottomRight: const Radius.circular(3),
+              return FadeInUp(
+                duration: const Duration(milliseconds: 260),
+                delay: Duration(milliseconds: 40 * i),
+                from: 12,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => onAnswerQuestion!(opt.key, opt.text),
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 260),
+                        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.07),
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(14), topRight: const Radius.circular(14),
+                            bottomLeft: const Radius.circular(14), bottomRight: const Radius.circular(3),
+                          ),
+                          border: Border.all(color: color.withValues(alpha: 0.45), width: 1.4, style: BorderStyle.solid),
                         ),
-                        border: Border.all(color: color.withValues(alpha: 0.45), width: 1.4, style: BorderStyle.solid),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Flexible(
+                            child: Text(opt.text,
+                                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(Icons.chevron_right_rounded, size: 16, color: color.withValues(alpha: 0.6)),
+                        ]),
                       ),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Flexible(
-                          child: Text(opt.text,
-                              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: color)),
-                        ),
-                        const SizedBox(width: 6),
-                        Icon(Icons.chevron_right_rounded, size: 16, color: color.withValues(alpha: 0.6)),
-                      ]),
                     ),
                   ),
                 ),
@@ -148,35 +156,39 @@ class ChatMessageBubble extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _system('Contact shared'),
       if (phone != null)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: onCall,
-                icon: const Icon(Icons.call_rounded, size: 18),
-                label: const Text('Call', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
+        FadeInUp(
+          duration: const Duration(milliseconds: 280),
+          from: 12,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: onCall,
+                  icon: const Icon(Icons.call_rounded, size: 18),
+                  label: const Text('Call', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: onWhatsApp,
-                icon: const Icon(Icons.chat_rounded, size: 18),
-                label: const Text('WhatsApp', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF25D366), foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: onWhatsApp,
+                  icon: const Icon(Icons.chat_rounded, size: 18),
+                  label: const Text('WhatsApp', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366), foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
                 ),
               ),
-            ),
-          ]),
+            ]),
+          ),
         ),
     ]);
   }
@@ -203,8 +215,9 @@ class ChatMessageBubble extends StatelessWidget {
         // accepts that specific slot, since a proposal can offer more than one.
         extra: proposedAts.isEmpty
             ? null
-            : Wrap(spacing: 6, runSpacing: 6, children: proposedAts.map((dt) {
-                return canRespond
+            : Wrap(spacing: 6, runSpacing: 6, children: proposedAts.asMap().entries.map((entry) {
+                final dt = entry.value;
+                final chip = canRespond
                     ? OutlinedButton(
                         onPressed: () => onAcceptSlot!(dt),
                         style: OutlinedButton.styleFrom(
@@ -222,6 +235,12 @@ class ChatMessageBubble extends StatelessWidget {
                         child: Text(_formatDateTime(dt),
                             style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
                       );
+                return FadeInUp(
+                  duration: const Duration(milliseconds: 260),
+                  delay: Duration(milliseconds: 40 * entry.key),
+                  from: 10,
+                  child: chip,
+                );
               }).toList()),
         actions: canRespond
             ? [
@@ -348,7 +367,16 @@ class ChatMessageBubble extends StatelessWidget {
             ],
             if (actions != null) ...[
               const SizedBox(height: 10),
-              Column(children: actions.map((a) => Padding(padding: const EdgeInsets.only(bottom: 6), child: a)).toList()),
+              Column(
+                children: actions.asMap().entries.map((entry) {
+                  return FadeInUp(
+                    duration: const Duration(milliseconds: 260),
+                    delay: Duration(milliseconds: 40 * entry.key),
+                    from: 12,
+                    child: Padding(padding: const EdgeInsets.only(bottom: 6), child: entry.value),
+                  );
+                }).toList(),
+              ),
             ],
             if (mine) ...[
               const SizedBox(height: 6),
