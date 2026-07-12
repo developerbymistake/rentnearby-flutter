@@ -38,25 +38,25 @@ class _EmptyRadiusHintState extends State<EmptyRadiusHint> with SingleTickerProv
       scale: _scale,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
-          width: 34, height: 34,
+          width: 40, height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: AppColors.warning.withValues(alpha: 0.14),
             border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
           ),
-          child: const Icon(Icons.search_off_rounded, size: 17, color: Color(0xFFB45309)),
+          child: const Icon(Icons.search_off_rounded, size: 20, color: AppColors.warning),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.94),
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(10),
             boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
           ),
           child: Text(
             widget.label,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF78350F)),
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
           ),
         ),
       ]),

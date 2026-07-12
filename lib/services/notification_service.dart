@@ -19,9 +19,10 @@ class NotificationService extends GetxService {
   StreamSubscription? _messageOpenedSub;
   StreamSubscription? _tokenRefreshSub;
 
-  // Tab index matching main_screen.dart tab order — Explore is the only one of
-  // these destinations still a resident tab; My Rooms/My Plots are pushed routes.
+  // Tab index matching main_screen.dart tab order — Explore and Chats are resident
+  // tabs; My Rooms/My Plots are pushed routes, handled separately below.
   static const int _tabExplore = 0;
+  static const int _tabChats = 2;
 
   @override
   Future<void> onInit() async {
@@ -74,13 +75,23 @@ class NotificationService extends GetxService {
   void _handleNotificationTap(RemoteMessage message) {
     if (!StorageService.isLoggedIn) return;
 
+    // Chat pushes (ChatFcmService.SendAsync on the backend) carry only `conversation_id` —
+    // no `membership_type` and no type discriminator at all — so this must be checked first,
+    // ahead of the membership branch below, or it silently falls through and misroutes to
+    // My Listings. This lands on the Chats tab (the chat list), not the specific conversation:
+    // the payload doesn't carry enough (listingType, otherPartyId, etc.) to open
+    // ChatConversationScreen directly without an extra API round-trip, which is out of scope
+    // here — the backend would need to add those fields to the push payload first.
+    final isChatMessage = message.data['conversation_id'] != null;
     final membershipType = message.data['membership_type'];
     final currentRoute = Get.currentRoute;
 
     // Broadcast still lands on the resident Explore tab; Room/Plot membership
     // notifications now push the My Rooms/My Plots route (no longer tabs).
     void goToDestination() {
-      if (membershipType == 'broadcast') {
+      if (isChatMessage) {
+        Get.find<AuthController>().tabIndex.value = _tabChats;
+      } else if (membershipType == 'broadcast') {
         Get.find<AuthController>().tabIndex.value = _tabExplore;
       } else {
         Get.toNamed(membershipType == 'plot' ? AppRoutes.myPlots : AppRoutes.myListings);

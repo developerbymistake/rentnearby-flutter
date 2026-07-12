@@ -18,7 +18,8 @@ class ChatConversationScreen extends StatefulWidget {
   State<ChatConversationScreen> createState() => _ChatConversationScreenState();
 }
 
-class _ChatConversationScreenState extends State<ChatConversationScreen> with WidgetsBindingObserver {
+class _ChatConversationScreenState extends State<ChatConversationScreen>
+    with WidgetsBindingObserver {
   final _chatCtrl = Get.find<ChatController>();
 
   late final String _conversationId;
@@ -28,14 +29,15 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   late final String _otherPartyId;
   late final String _otherPartyName;
   late final String _listingTitle;
+  late final String? _area;
   late final bool _isOwner;
   final _status = ''.obs;
 
   final _messages = <MessageModel>[].obs;
   final _loading = true.obs;
-  // Drives the inline "next slot" bubble's Sending… state. A single shared flag is enough —
-  // every send path below is awaited sequentially from this screen's own UI thread, so only
-  // one send can ever be in flight at a time.
+  // Dims the inline "next slot" bubble and disables its tap while a send is in flight. A
+  // single shared flag is enough — every send path below is awaited sequentially from this
+  // screen's own UI thread, so only one send can ever be in flight at a time.
   final _sending = false.obs;
   Worker? _incomingWorker;
   Worker? _readWorker;
@@ -51,6 +53,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     _otherPartyId = args['otherPartyId'] as String? ?? '';
     _otherPartyName = args['otherPartyName'] as String? ?? 'User';
     _listingTitle = args['listingTitle'] as String? ?? '';
+    _area = args['area'] as String?;
     _isOwner = args['isOwner'] as bool? ?? false;
     _status.value = args['status'] as String? ?? 'Active';
 
@@ -62,7 +65,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
 
     _incomingWorker = ever<MessageModel?>(_chatCtrl.incomingMessage, (m) {
       if (m == null || m.conversationId != _conversationId || !mounted) return;
-      if (!_messages.any((x) => x.id == m.id)) _messages.insert(0, m);
+      _insertIfNew(m);
       if (!m.isMine) _chatCtrl.markRead(_conversationId);
     });
 
@@ -75,7 +78,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       if (data['readByUserId'] != _otherPartyId) return;
       final now = DateTime.now();
       _messages.value = _messages
-          .map((m) => (m.isMine && m.readAt == null) ? m.copyWith(readAt: now) : m)
+          .map(
+            (m) => (m.isMine && m.readAt == null) ? m.copyWith(readAt: now) : m,
+          )
           .toList();
     });
   }
@@ -99,9 +104,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   Future<void> _loadHistory() async {
     _loading.value = true;
     final result = await _chatCtrl.getMessages(_conversationId);
-    _messages.value = result.items.reversed.toList();
+    // Backend already returns newest-first (matches every insert(0, ...) call below) —
+    // do NOT reverse this, or the thread renders chronologically backwards.
+    _messages.value = result.items.toList();
     if (result.status != null) _status.value = result.status!;
     _loading.value = false;
+  }
+
+  // The backend pushes every new message over SignalR to the whole conversation group —
+  // including the sender's own connection — *before* the sender's own REST call even
+  // returns. So the same message can arrive twice: once via _incomingWorker's hub echo,
+  // once via the awaited response below. Every insert site must dedup by id.
+  void _insertIfNew(MessageModel msg) {
+    if (!_messages.any((x) => x.id == msg.id)) _messages.insert(0, msg);
   }
 
   void _openPlusMenu() {
@@ -111,12 +126,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     final questions = _isOwner
         ? const <QuestionTemplateModel>[]
         : _chatCtrl.questionTemplates
-            .where((t) => t.appliesTo(_listingType, targetRoomTypeId: _roomTypeId, targetPlotTypeId: _plotTypeId))
-            .toList();
+              .where(
+                (t) => t.appliesTo(
+                  _listingType,
+                  targetRoomTypeId: _roomTypeId,
+                  targetPlotTypeId: _plotTypeId,
+                ),
+              )
+              .toList();
     ChatPlusMenuSheet.show(
       context,
       questions: questions,
-      onAskQuestion: (q) => _send('quick_reply', {'key': q.key, 'text': q.questionText}),
+      onAskQuestion: (q) =>
+          _send('quick_reply', {'key': q.key, 'text': q.questionText}),
       onRequestContact: () => _send('contact_request', {}),
       onScheduleVisit: _pickAndProposeSchedule,
     );
@@ -126,7 +148,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     _sending.value = true;
     try {
       final msg = await _chatCtrl.sendMessage(_conversationId, type, payload);
-      if (msg != null && mounted) _messages.insert(0, msg);
+      if (msg != null && mounted) _insertIfNew(msg);
     } finally {
       if (mounted) _sending.value = false;
     }
@@ -141,78 +163,121 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     });
   }
 
-  Future<void> _answerQuestion(String questionMessageId, String answerKey, String answerText) async {
-    final msg = await _chatCtrl.sendMessage(
-      _conversationId, 'quick_reply', {'key': answerKey, 'text': answerText},
-      respondsToMessageId: questionMessageId,
-    );
-    if (msg != null && mounted) _messages.insert(0, msg);
+  Future<void> _answerQuestion(
+    String questionMessageId,
+    String answerKey,
+    String answerText,
+  ) async {
+    final msg = await _chatCtrl.sendMessage(_conversationId, 'quick_reply', {
+      'key': answerKey,
+      'text': answerText,
+    }, respondsToMessageId: questionMessageId);
+    if (msg != null && mounted) _insertIfNew(msg);
   }
 
   Future<void> _respondContact(String messageId, bool approve) async {
     final msg = await _chatCtrl.respondContact(messageId, approve);
-    if (msg != null && mounted) _messages.insert(0, msg);
+    if (msg != null && mounted) _insertIfNew(msg);
   }
 
   Future<void> _acceptScheduleSlot(String messageId, DateTime chosen) async {
-    final msg = await _chatCtrl.respondSchedule(messageId, 'accept', acceptedAt: chosen);
-    if (msg != null && mounted) _messages.insert(0, msg);
+    final msg = await _chatCtrl.respondSchedule(
+      messageId,
+      'accept',
+      acceptedAt: chosen,
+    );
+    if (msg != null && mounted) _insertIfNew(msg);
   }
 
   Future<void> _declineSchedule(String messageId) async {
     final msg = await _chatCtrl.respondSchedule(messageId, 'decline');
-    if (msg != null && mounted) _messages.insert(0, msg);
+    if (msg != null && mounted) _insertIfNew(msg);
   }
 
   Future<void> _counterSchedule(String messageId) async {
-    final picked = await ChatSchedulePickerSheet.show(context, title: 'Propose a different time');
+    final picked = await ChatSchedulePickerSheet.show(
+      context,
+      title: 'Propose a different time',
+    );
     if (picked == null || picked.isEmpty) return;
-    final msg = await _chatCtrl.respondSchedule(messageId, 'counter', proposedAts: picked);
-    if (msg != null && mounted) _messages.insert(0, msg);
+    final msg = await _chatCtrl.respondSchedule(
+      messageId,
+      'counter',
+      proposedAts: picked,
+    );
+    if (msg != null && mounted) _insertIfNew(msg);
   }
 
   Future<void> _call(String phone) async {
     final url = Uri.parse('tel:+91$phone');
-    if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
+    if (await canLaunchUrl(url))
+      launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _whatsapp(String phone) async {
     final url = Uri.parse('https://wa.me/91$phone');
-    if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
+    if (await canLaunchUrl(url))
+      launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   @override
   Widget build(BuildContext context) {
+    // _buildHeader() now owns the top-safe-area itself (its gradient Container wraps a
+    // SafeArea(bottom:false) internally, matching explore_screen.dart's header) — the
+    // gradient genuinely extends behind the status bar, so this screen no longer needs an
+    // AnnotatedRegion override; it inherits the same app-wide light-icon default every other
+    // gradient-headed screen already renders correctly against.
     return Scaffold(
       backgroundColor: AppColors.chatBg,
-      body: SafeArea(
-        child: Column(children: [
+      body: Column(
+        children: [
           _buildHeader(context),
           Expanded(
-            child: Obx(() {
-              if (_loading.value) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-              // Built *after* the loading check so a brand-new, empty conversation still gets
-              // the inline "next slot" bubble as its only item — that's the only way to open
-              // the "+" menu now that there's no bar fixed to the bottom.
-              final renderList = _buildRenderList();
-              if (renderList.isEmpty) return _buildEmpty();
-              // ListView(children:) rather than .builder — every item already carries a
-              // stable ValueKey, and a new message inserted at the front shifts every
-              // later item's array index by one. .builder's default delegate can't match
-              // a keyed child across an index shift (no findChildIndexCallback), so it
-              // would tear down and remount every existing bubble on each new message,
-              // replaying their entrance animation. The list-delegate this constructor
-              // uses reconciles by key regardless of index, so existing bubbles keep their
-              // State/AnimationController and the fade-in only ever plays once.
-              return ListView(
-                reverse: true,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                children: renderList,
-              );
-            }),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Obx(() {
+                      if (_loading.value)
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary,
+                          ),
+                        );
+                      // Built *after* the loading check so a brand-new, empty conversation still gets
+                      // the inline "next slot" bubble as its only item — that's the only way to open
+                      // the "+" menu now that there's no bar fixed to the bottom.
+                      final renderList = _buildRenderList();
+                      if (renderList.isEmpty) return _buildEmpty();
+                      // ListView(children:) rather than .builder — every item already carries a
+                      // stable ValueKey, and a new message inserted at the front shifts every
+                      // later item's array index by one. .builder's default delegate can't match
+                      // a keyed child across an index shift (no findChildIndexCallback), so it
+                      // would tear down and remount every existing bubble on each new message,
+                      // replaying their entrance animation. The list-delegate this constructor
+                      // uses reconciles by key regardless of index, so existing bubbles keep their
+                      // State/AnimationController and the fade-in only ever plays once.
+                      return ListView(
+                        reverse: true,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        children: renderList,
+                      );
+                    }),
+                  ),
+                  Obx(
+                    () => _status.value != 'Active'
+                        ? _buildInactiveNotice()
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
           ),
-          Obx(() => _status.value != 'Active' ? _buildInactiveNotice() : const SizedBox.shrink()),
-        ]),
+        ],
       ),
     );
   }
@@ -229,7 +294,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       // Only fold into a group if the question it answers is actually loaded — an older
       // question outside the currently-loaded history page must not cause its answer to
       // be silently dropped; render it as its own standalone bubble instead.
-      if (m.type == 'quick_reply' && respondsTo != null && loadedIds.contains(respondsTo)) {
+      if (m.type == 'quick_reply' &&
+          respondsTo != null &&
+          loadedIds.contains(respondsTo)) {
         answerByQuestionId[respondsTo] = m;
       }
     }
@@ -244,16 +311,27 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
     // Index 0 renders at the visual bottom, so the "next slot" bubble — the inline
     // replacement for the old fixed composer — goes first, for both roles alike.
     if (_status.value == 'Active') {
-      items.add(KeyedSubtree(
-        key: const ValueKey('ghost-slot'),
-        child: Obx(() => ChatNextSlotBubble(onTap: _openPlusMenu, sending: _sending.value)),
-      ));
+      items.add(
+        KeyedSubtree(
+          key: const ValueKey('ghost-slot'),
+          child: Obx(
+            () => ChatNextSlotBubble(
+              onTap: _openPlusMenu,
+              sending: _sending.value,
+            ),
+          ),
+        ),
+      );
     }
     for (final m in _messages) {
-      if (answerMessageIds.contains(m.id)) continue; // rendered attached to its question below
+      if (answerMessageIds.contains(m.id))
+        continue; // rendered attached to its question below
       final answer = m.type == 'quick_reply' ? answerByQuestionId[m.id] : null;
-      if (answer != null) items.add(_animatedBubble(answer.id, _buildBubble(answer)));
-      items.add(_animatedBubble(m.id, _buildBubble(m, answered: answer != null)));
+      if (answer != null)
+        items.add(_animatedBubble(answer.id, _buildBubble(answer)));
+      items.add(
+        _animatedBubble(m.id, _buildBubble(m, answered: answer != null)),
+      );
     }
     return items;
   }
@@ -263,48 +341,99 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   // (re)starts from initState, so a preserved State means the entrance plays exactly once,
   // on first mount, and never replays on messages that were already on screen.
   Widget _animatedBubble(String id, Widget child) => KeyedSubtree(
-        key: ValueKey(id),
-        child: FadeInUp(duration: const Duration(milliseconds: 320), from: 16, child: child),
-      );
+    key: ValueKey(id),
+    child: FadeInUp(
+      duration: const Duration(milliseconds: 320),
+      from: 16,
+      child: child,
+    ),
+  );
 
   Widget _buildHeader(BuildContext context) {
+    // SafeArea lives INSIDE the gradient Container (not wrapping it) — same pattern
+    // explore_screen.dart's header already uses — so the gradient's own paint area starts
+    // at the very top of the screen, genuinely extending behind the status bar, and only the
+    // Row's content gets padded down to clear it. This is what makes the status bar read as
+    // "part of the navy header" instead of a separate light strip above it.
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-      child: Row(children: [
-        IconButton(
-          onPressed: () => Get.back(),
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-        ),
-        CircleAvatar(
-          radius: 18,
-          backgroundColor: Colors.white.withValues(alpha: 0.2),
-          child: Text(_otherPartyName.isNotEmpty ? _otherPartyName[0].toUpperCase() : '?',
-              style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: Colors.white)),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            Text(_otherPartyName,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14.5, fontWeight: FontWeight.w600, color: Colors.white)),
-            Text('${_listingType == 'Room' ? '🏠' : '📍'} $_listingTitle',
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: Colors.white.withValues(alpha: 0.8))),
-          ]),
-        ),
-        if (_isOwner)
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
-            onSelected: (_) => _confirmBlockUser(),
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'block',
-                child: Text('Block this user', style: TextStyle(fontFamily: 'Poppins', color: AppColors.error)),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () => Get.back(),
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
               ),
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                child: Text(
+                  _otherPartyName.isNotEmpty
+                      ? _otherPartyName[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _otherPartyName,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      '${_listingType == 'Room' ? '🏠' : '📍'} $_listingTitle'
+                      '${_area != null && _area.isNotEmpty ? ' · $_area' : ''}',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_isOwner)
+                PopupMenuButton<String>(
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    color: Colors.white,
+                  ),
+                  onSelected: (_) => _confirmBlockUser(),
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'block',
+                      child: Text(
+                        'Block this user',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
-      ]),
+        ),
+      ),
     );
   }
 
@@ -316,17 +445,40 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Block this user?', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          content: Text('$_otherPartyName will no longer be able to message you in any conversation.',
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, color: AppColors.textMedium)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Block this user?',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Text(
+            '$_otherPartyName will no longer be able to message you in any conversation.',
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 13.5,
+              color: AppColors.textMedium,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: blocking ? null : () => Navigator.pop(ctx, false),
-              child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  color: AppColors.textLight,
+                ),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+              ),
               onPressed: blocking
                   ? null
                   : () async {
@@ -335,8 +487,18 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
                       if (ctx.mounted) Navigator.pop(ctx, ok);
                     },
               child: blocking
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Block', style: TextStyle(fontFamily: 'Poppins')),
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Block',
+                      style: TextStyle(fontFamily: 'Poppins'),
+                    ),
             ),
           ],
         ),
@@ -353,17 +515,40 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Unblock this user?', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-          content: Text('$_otherPartyName will be able to message you again.',
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, color: AppColors.textMedium)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Unblock this user?',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Text(
+            '$_otherPartyName will be able to message you again.',
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 13.5,
+              color: AppColors.textMedium,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: unblocking ? null : () => Navigator.pop(ctx, false),
-              child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  color: AppColors.textLight,
+                ),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
               onPressed: unblocking
                   ? null
                   : () async {
@@ -372,8 +557,18 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
                       if (ctx.mounted) Navigator.pop(ctx, ok);
                     },
               child: unblocking
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Unblock', style: TextStyle(fontFamily: 'Poppins')),
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Unblock',
+                      style: TextStyle(fontFamily: 'Poppins'),
+                    ),
             ),
           ],
         ),
@@ -387,30 +582,57 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   // already explains why messaging is unavailable, so this just needs to say there's
   // nothing here.
   Widget _buildEmpty() => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.waving_hand_rounded, size: 44, color: AppColors.textHint),
-            const SizedBox(height: 12),
-            const Text('No messages in this conversation',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-          ]),
-        ),
-      );
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.waving_hand_rounded,
+            size: 44,
+            color: AppColors.textHint,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'No messages in this conversation',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 13,
+              color: AppColors.textLight,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _buildBubble(MessageModel m, {bool answered = false}) {
     final isContactRequest = m.type == 'contact_request';
     final isScheduleProposal = m.type == 'schedule_proposal';
-    final canAnswer = !answered && m.type == 'quick_reply' && (_isOwner || !m.isMine);
+    final canAnswer =
+        !answered && m.type == 'quick_reply' && (_isOwner || !m.isMine);
     return ChatMessageBubble(
       message: m,
       templates: _chatCtrl.questionTemplates,
-      onAnswerQuestion: canAnswer ? (answerKey, answerText) => _answerQuestion(m.id, answerKey, answerText) : null,
-      onApproveContact: (isContactRequest && !m.isMine && _isOwner) ? () => _respondContact(m.id, true) : null,
-      onDeclineContact: (isContactRequest && !m.isMine && _isOwner) ? () => _respondContact(m.id, false) : null,
-      onAcceptSlot: isScheduleProposal && !m.isMine ? (dt) => _acceptScheduleSlot(m.id, dt) : null,
-      onDeclineSchedule: isScheduleProposal && !m.isMine ? () => _declineSchedule(m.id) : null,
-      onCounterSchedule: isScheduleProposal && !m.isMine ? () => _counterSchedule(m.id) : null,
+      onAnswerQuestion: canAnswer
+          ? (answerKey, answerText) =>
+                _answerQuestion(m.id, answerKey, answerText)
+          : null,
+      onApproveContact: (isContactRequest && !m.isMine && _isOwner)
+          ? () => _respondContact(m.id, true)
+          : null,
+      onDeclineContact: (isContactRequest && !m.isMine && _isOwner)
+          ? () => _respondContact(m.id, false)
+          : null,
+      onAcceptSlot: isScheduleProposal && !m.isMine
+          ? (dt) => _acceptScheduleSlot(m.id, dt)
+          : null,
+      onDeclineSchedule: isScheduleProposal && !m.isMine
+          ? () => _declineSchedule(m.id)
+          : null,
+      onCounterSchedule: isScheduleProposal && !m.isMine
+          ? () => _counterSchedule(m.id)
+          : null,
       onCall: () {
         final phone = m.payload['phone'] as String?;
         if (phone != null) _call(phone);
@@ -425,30 +647,59 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   Widget _buildInactiveNotice() {
     final isBlockedByMe = _status.value == 'Blocked' && _isOwner;
     final text = switch (_status.value) {
-      'ListingRemoved' => 'This listing has been removed — you can no longer send messages here.',
-      'ListingInactive' => 'This listing is currently inactive — you can no longer send messages here.',
-      'Blocked' => isBlockedByMe
-          ? "You've blocked this user — they can no longer message you."
-          : 'You can no longer message in this conversation.',
+      'ListingRemoved' =>
+        'This listing has been removed — you can no longer send messages here.',
+      'ListingInactive' =>
+        'This listing is currently inactive — you can no longer send messages here.',
+      'Blocked' =>
+        isBlockedByMe
+            ? "You've blocked this user — they can no longer message you."
+            : 'You can no longer message in this conversation.',
       _ => 'This conversation is no longer active.',
     };
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.viewPaddingOf(context).bottom),
+      // Bottom safe-area is already reserved once by the SafeArea(top:false) wrapping the
+      // whole column this sits in (default bottom:true) — adding MediaQuery's bottom inset
+      // again here would double it up.
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: const BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 10, offset: Offset(0, -3))],
-      ),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text(text, textAlign: TextAlign.center,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textLight)),
-        if (isBlockedByMe) ...[
-          const SizedBox(height: 6),
-          TextButton(
-            onPressed: _confirmUnblockUser,
-            child: const Text('Unblock', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.primary)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 10,
+            offset: Offset(0, -3),
           ),
         ],
-      ]),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12.5,
+              color: AppColors.textLight,
+            ),
+          ),
+          if (isBlockedByMe) ...[
+            const SizedBox(height: 6),
+            TextButton(
+              onPressed: _confirmUnblockUser,
+              child: const Text(
+                'Unblock',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

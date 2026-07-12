@@ -14,8 +14,12 @@ class ChatsListScreen extends StatefulWidget {
   State<ChatsListScreen> createState() => _ChatsListScreenState();
 }
 
-class _ChatsListScreenState extends State<ChatsListScreen> with WidgetsBindingObserver {
+class _ChatsListScreenState extends State<ChatsListScreen>
+    with WidgetsBindingObserver {
   final _ctrl = Get.find<ChatController>();
+  final _searchCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
+  String _query = '';
 
   @override
   void initState() {
@@ -23,6 +27,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> with WidgetsBindingOb
     WidgetsBinding.instance.addObserver(this);
     ChatHubService.to.connect();
     _ctrl.loadConversations();
+    // Fires near the bottom of whatever's currently loaded — searches over the
+    // already-loaded list too, so scrolling to load more naturally widens what a
+    // search can match (there's no server-side text search endpoint to query directly).
+    _scrollCtrl.addListener(() {
+      if (_scrollCtrl.position.pixels >=
+          _scrollCtrl.position.maxScrollExtent - 200) {
+        _ctrl.loadMoreConversations();
+      }
+    });
   }
 
   @override
@@ -36,6 +49,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> with WidgetsBindingOb
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _searchCtrl.dispose();
+    _scrollCtrl.dispose();
     ChatHubService.to.disconnect();
     super.dispose();
   }
@@ -43,175 +58,440 @@ class _ChatsListScreenState extends State<ChatsListScreen> with WidgetsBindingOb
   Future<void> _refresh() => _ctrl.loadConversations(forceRefresh: true);
 
   void _openConversation(ConversationModel c) {
-    Get.toNamed(AppRoutes.chatConversation, arguments: {
-      'conversationId': c.id,
-      'listingType': c.listingType,
-      'listingId': c.listingId,
-      'roomTypeId': c.roomTypeId,
-      'plotTypeId': c.plotTypeId,
-      'otherPartyId': c.otherPartyId,
-      'otherPartyName': c.otherPartyName,
-      'listingTitle': c.listingTitle,
-      'isOwner': c.isOwner,
-      'status': c.status,
-    });
+    Get.toNamed(
+      AppRoutes.chatConversation,
+      arguments: {
+        'conversationId': c.id,
+        'listingType': c.listingType,
+        'listingId': c.listingId,
+        'roomTypeId': c.roomTypeId,
+        'plotTypeId': c.plotTypeId,
+        'otherPartyId': c.otherPartyId,
+        'otherPartyName': c.otherPartyName,
+        'listingTitle': c.listingTitle,
+        'area': c.area,
+        'isOwner': c.isOwner,
+        'status': c.status,
+      },
+    );
+  }
+
+  List<ConversationModel> _filtered(List<ConversationModel> items) {
+    if (_query.trim().isEmpty) return items;
+    final q = _query.trim().toLowerCase();
+    return items
+        .where(
+          (c) =>
+              c.otherPartyName.toLowerCase().contains(q) ||
+              c.listingTitle.toLowerCase().contains(q) ||
+              (c.area?.toLowerCase().contains(q) ?? false),
+        )
+        .toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    // SafeArea lives INSIDE the gradient Container (not wrapping it) — same pattern
+    // chat_conversation_screen.dart's and explore_screen.dart's headers already use — so the
+    // gradient's own paint area starts at the very top of the screen, genuinely extending
+    // behind the status bar, and only the title text gets padded down to clear it. This
+    // screen then inherits the app-wide light-icon default, same as every other
+    // gradient-headed screen, instead of needing its own AnnotatedRegion override.
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
-      body: SafeArea(
-        bottom: false,
-        child: Column(children: [
+      body: Column(
+        children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-            decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-            child: const Text('Chats',
-                style: TextStyle(
-                    fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
-          ),
-          Expanded(
-            child: Obx(() {
-              final loading = _ctrl.conversationsLoading.value;
-              final items = _ctrl.conversations;
-
-              if (loading && items.isEmpty) return _buildShimmer();
-              if (items.isEmpty) return _buildEmpty();
-
-              return RefreshIndicator(
-                color: AppColors.primary,
-                onRefresh: _refresh,
-                child: ListView.separated(
-                  padding: EdgeInsets.only(bottom: 16 + AppInsets.bottomViewPadding(context)),
-                  itemCount: items.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, indent: 78, color: AppColors.divider),
-                  itemBuilder: (_, i) => _conversationTile(items[i]),
+            decoration: const BoxDecoration(
+              gradient: AppColors.primaryGradient,
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                child: const Text(
+                  'Chats',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
-              );
-            }),
-          ),
-        ]),
-      ),
-    );
-  }
-
-  Widget _conversationTile(ConversationModel c) {
-    final unread = c.unreadCount > 0;
-    return InkWell(
-      onTap: () => _openConversation(c),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(children: [
-          Stack(children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: AppColors.surface,
-              child: Text(
-                c.otherPartyName.isNotEmpty ? c.otherPartyName[0].toUpperCase() : '?',
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.primary),
               ),
             ),
-            if (!c.isActive)
-              Positioned(
-                right: 0, bottom: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                  child: const Icon(Icons.block_rounded, size: 12, color: AppColors.textHint),
-                ),
-              ),
-          ]),
-          const SizedBox(width: 12),
+          ),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Expanded(
-                  child: Text(c.otherPartyName,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontSize: 14.5,
-                          fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
-                          color: AppColors.textDark)),
-                ),
-                Text(_timeAgo(c.lastMessageAt),
-                    style: TextStyle(
-                        fontFamily: 'Poppins', fontSize: 11,
-                        color: unread ? AppColors.primary : AppColors.textHint,
-                        fontWeight: unread ? FontWeight.w600 : FontWeight.w400)),
-              ]),
-              const SizedBox(height: 2),
-              Text('${c.listingType == 'Room' ? '🏠' : '📍'} ${c.listingTitle}',
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight)),
-              const SizedBox(height: 3),
-              Row(children: [
-                Expanded(
-                  child: Text(c.lastMessagePreview ?? 'Say hi 👋',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontSize: 13,
-                          fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
-                          color: unread ? AppColors.textDark : AppColors.textMedium)),
-                ),
-                if (unread) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(20)),
-                    child: Text(c.unreadCount > 99 ? '99+' : '${c.unreadCount}',
-                        style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+            child: SafeArea(
+              top: false,
+              bottom: false,
+              child: Column(
+                children: [
+                  _buildSearchBox(),
+                  Expanded(
+                    child: Obx(() {
+                      final loading = _ctrl.conversationsLoading.value;
+                      final items = _ctrl.conversations;
+
+                      if (loading && items.isEmpty) return _buildShimmer();
+                      if (items.isEmpty) return _buildEmpty();
+
+                      final filtered = _filtered(items);
+                      if (filtered.isEmpty) return _buildNoMatches();
+
+                      final loadingMore = _ctrl.loadingMoreConversations.value;
+                      return RefreshIndicator(
+                        color: AppColors.primary,
+                        onRefresh: _refresh,
+                        child: ListView.builder(
+                          controller: _scrollCtrl,
+                          padding: EdgeInsets.fromLTRB(
+                            14,
+                            8,
+                            14,
+                            14 + AppInsets.bottomViewPadding(context),
+                          ),
+                          itemCount: filtered.length + (loadingMore ? 1 : 0),
+                          itemBuilder: (_, i) {
+                            if (i >= filtered.length)
+                              return _buildLoadMoreSpinner();
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _conversationCard(filtered[i]),
+                            );
+                          },
+                        ),
+                      );
+                    }),
                   ),
                 ],
-              ]),
-            ]),
+              ),
+            ),
           ),
-        ]),
+        ],
       ),
     );
   }
 
-  Widget _buildEmpty() => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.chat_bubble_outline_rounded, size: 56, color: AppColors.textHint),
-            const SizedBox(height: 16),
-            const Text('No conversations yet',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-            const SizedBox(height: 6),
-            const Text('Start a chat from any room or plot listing',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-          ]),
-        ),
-      );
-
-  Widget _buildShimmer() => Shimmer.fromColors(
-        baseColor: AppColors.shimmerBase,
-        highlightColor: AppColors.shimmerHighlight,
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: 6,
-          itemBuilder: (_, __) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(children: [
-              const CircleAvatar(radius: 26, backgroundColor: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Container(height: 12, width: 120, color: Colors.white),
-                  const SizedBox(height: 8),
-                  Container(height: 10, width: 180, color: Colors.white),
-                ]),
-              ),
-            ]),
+  // Same field/style as the location picker's search box (location_switch_sheet.dart) —
+  // reusing the app's one established search-field pattern rather than inventing another.
+  Widget _buildSearchBox() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+      child: TextField(
+        controller: _searchCtrl,
+        onChanged: (v) => setState(() => _query = v),
+        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5),
+        decoration: InputDecoration(
+          hintText: 'Search by name or address',
+          hintStyle: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 13.5,
+            color: AppColors.textHint,
+          ),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            size: 20,
+            color: AppColors.textHint,
+          ),
+          filled: true,
+          fillColor: AppColors.surface,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
         ),
-      );
+      ),
+    );
+  }
+
+  Widget _conversationCard(ConversationModel c) {
+    final unread = c.unreadCount > 0;
+    return Material(
+      color: unread ? const Color(0xFFF3F7FF) : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _openConversation(c),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: unread
+                  ? AppColors.primary.withValues(alpha: 0.12)
+                  : const Color(0xFFEEF2FB),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.07),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 23,
+                    backgroundColor: AppColors.primary,
+                    child: Opacity(
+                      opacity: c.isActive ? 1 : 0.55,
+                      child: Text(
+                        c.otherPartyName.isNotEmpty
+                            ? c.otherPartyName[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (!c.isActive)
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.fromBorderSide(
+                            BorderSide(color: AppColors.divider),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.block_rounded,
+                          size: 11,
+                          color: AppColors.textHint,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            c.otherPartyName,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14.5,
+                              fontWeight: unread
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          _timeAgo(c.lastMessageAt),
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 11,
+                            color: unread
+                                ? AppColors.primary
+                                : AppColors.textHint,
+                            fontWeight: unread
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${c.listingType == 'Room' ? '🏠' : '📍'} ${c.listingTitle}'
+                      '${c.area != null && c.area!.isNotEmpty ? ' · ${c.area}' : ''}',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11.5,
+                        color: AppColors.textLight,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            c.lastMessagePreview ?? 'Say hi 👋',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 13,
+                              fontWeight: unread
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: unread
+                                  ? AppColors.textDark
+                                  : AppColors.textMedium,
+                            ),
+                          ),
+                        ),
+                        if (unread) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            constraints: const BoxConstraints(minWidth: 20),
+                            height: 20,
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              c.unreadCount > 99 ? '99+' : '${c.unreadCount}',
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadMoreSpinner() => const Padding(
+    padding: EdgeInsets.symmetric(vertical: 16),
+    child: Center(
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: AppColors.primary,
+        ),
+      ),
+    ),
+  );
+
+  Widget _buildEmpty() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.chat_bubble_outline_rounded,
+            size: 56,
+            color: AppColors.textHint,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No conversations yet',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Start a chat from any room or plot listing',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 13,
+              color: AppColors.textLight,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _buildNoMatches() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.search_off_rounded,
+            size: 48,
+            color: AppColors.textHint,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'No matches for "$_query"',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textDark,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _buildShimmer() => Shimmer.fromColors(
+    baseColor: AppColors.shimmerBase,
+    highlightColor: AppColors.shimmerHighlight,
+    child: ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      itemCount: 6,
+      itemBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              const CircleAvatar(radius: 23, backgroundColor: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(height: 12, width: 120, color: Colors.white),
+                    const SizedBox(height: 8),
+                    Container(height: 10, width: 180, color: Colors.white),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 
   static String _timeAgo(DateTime dt) {
     final diff = DateTime.now().toUtc().difference(dt.toUtc());

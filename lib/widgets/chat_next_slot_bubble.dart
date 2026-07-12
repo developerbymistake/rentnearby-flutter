@@ -25,35 +25,29 @@ class ChatNextSlotBubble extends StatelessWidget {
       alignment: Alignment.centerRight,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 3),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: _radius,
-            onTap: sending ? null : onTap,
-            child: CustomPaint(
-              painter: _DashedRRectPainter(color: AppColors.primary.withValues(alpha: 0.55), radius: _radius),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.055),
-                  borderRadius: _radius,
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  if (sending) ...[
-                    const SizedBox(
-                      width: 14, height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('Sending…',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                  ] else ...[
+        child: AnimatedOpacity(
+          opacity: sending ? 0.55 : 1.0,
+          duration: const Duration(milliseconds: 150),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: _radius,
+              onTap: sending ? null : onTap,
+              child: CustomPaint(
+                painter: _DashedRRectPainter(color: AppColors.primary.withValues(alpha: 0.55), radius: _radius),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.055),
+                    borderRadius: _radius,
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
                     const Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
                     const SizedBox(width: 5),
                     const Text('Ask something',
                         style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                  ],
-                ]),
+                  ]),
+                ),
               ),
             ),
           ),

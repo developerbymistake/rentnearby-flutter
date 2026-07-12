@@ -69,6 +69,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   // `_loadingNearby` doesn't flip true until the 300ms debounce fires, leaving a gap where
   // the empty-radius hint would flash over the previous radius's still-visible pins.
   bool _reloadPending = false;
+  // Guards the empty-radius hint against showing before a real fetch has ever completed —
+  // on a fresh install, _loadingNearby/_reloadPending both stay false for several seconds
+  // while GPS + district resolution run (see LocationController._initLocation), during which
+  // nearbyPlots is simply empty because nothing has been requested yet, not because a
+  // search came back with zero results.
+  bool _hasLoadedOnce = false;
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
@@ -453,6 +459,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     } finally {
       _loadingNearby = false;
       _reloadPending = false;
+      _hasLoadedOnce = true;
     }
   }
 
@@ -795,8 +802,28 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                             child: d.widget,
                           );
                         }),
-                        if (_filteredPlots.isEmpty && !_loadingNearby && !_reloadPending)
-                          const Center(child: EmptyRadiusHint(label: 'No plots in this radius')),
+                        if (_filteredPlots.isEmpty && !_loadingNearby && !_reloadPending && _hasLoadedOnce)
+                          Builder(builder: (_) {
+                            // Positioned at _searchCenter (the point the native radius circle
+                            // is actually drawn around), projected the same way every marker
+                            // above is — not screen-Center() — so it stays visually locked to
+                            // the circle as the user pans, instead of the circle drifting away
+                            // from a screen-fixed hint.
+                            final sp = _projectToScreen(
+                              _searchCenter,
+                              _cameraCenter ?? _searchCenter,
+                              _currentZoom,
+                              constraints.biggest,
+                            );
+                            return Positioned(
+                              left: sp.dx,
+                              top: sp.dy,
+                              child: FractionalTranslation(
+                                translation: const Offset(-0.5, -0.5),
+                                child: const EmptyRadiusHint(label: 'No plots in this radius'),
+                              ),
+                            );
+                          }),
                       ],
                     ),
                   ),
@@ -820,7 +847,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                       child: Column(children: [
+                        _buildLocationPill(),
+                        const SizedBox(height: 10),
                         Row(children: [
+                          Expanded(child: _buildRadiusChips()),
+                          const SizedBox(width: 12),
                           GestureDetector(
                             onTap: () => Get.toNamed(AppRoutes.myPlots),
                             child: Container(
@@ -857,11 +888,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                               ),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(child: _buildRadiusChips()),
                         ]),
-                        const SizedBox(height: 10),
-                        _buildLocationPill(),
                       ]),
                     ),
                   ),

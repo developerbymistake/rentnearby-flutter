@@ -10,6 +10,11 @@ import '../utils/app_toast.dart';
 class ChatController extends GetxController {
   final conversations = <ConversationModel>[].obs;
   final conversationsLoading = false.obs;
+  // Separate from conversationsLoading (which gates the initial-load shimmer) — this is for
+  // the scroll-triggered "load next page" spinner at the bottom of an already-populated list.
+  final loadingMoreConversations = false.obs;
+  final hasMoreConversations = true.obs;
+  static const _conversationsPageSize = 20;
   final unreadCount = 0.obs;
 
   final questionTemplates = <QuestionTemplateModel>[].obs;
@@ -25,15 +30,37 @@ class ChatController extends GetxController {
     if (conversationsLoading.value) return;
     conversationsLoading.value = true;
     try {
-      final res = await ApiService.get('/chat/conversations');
+      final res = await ApiService.get('/chat/conversations',
+          params: {'offset': 0, 'limit': _conversationsPageSize});
       final items = (res['data']['items'] as List)
           .map((e) => ConversationModel.fromJson(e as Map<String, dynamic>))
           .toList();
       conversations.value = items;
+      hasMoreConversations.value = items.length >= _conversationsPageSize;
       _recomputeUnreadCount();
     } catch (_) {
     } finally {
       conversationsLoading.value = false;
+    }
+  }
+
+  // Appends the next page. Offset is simply the number of conversations already loaded —
+  // safe because this list is never sparse/filtered client-side (search filters the already
+  // -loaded items in the UI layer, it doesn't remove them from this source list).
+  Future<void> loadMoreConversations() async {
+    if (conversationsLoading.value || loadingMoreConversations.value || !hasMoreConversations.value) return;
+    loadingMoreConversations.value = true;
+    try {
+      final res = await ApiService.get('/chat/conversations',
+          params: {'offset': conversations.length, 'limit': _conversationsPageSize});
+      final items = (res['data']['items'] as List)
+          .map((e) => ConversationModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      conversations.addAll(items);
+      hasMoreConversations.value = items.length >= _conversationsPageSize;
+    } catch (_) {
+    } finally {
+      loadingMoreConversations.value = false;
     }
   }
 
@@ -93,7 +120,7 @@ class ChatController extends GetxController {
       final c = conversations[index];
       conversations[index] = ConversationModel(
         id: c.id, listingType: c.listingType, listingId: c.listingId,
-        listingTitle: c.listingTitle, listingThumbnailUrl: c.listingThumbnailUrl,
+        listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
         roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
         otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
         isOwner: c.isOwner, status: c.status, lastMessageAt: DateTime.now(),
@@ -116,11 +143,15 @@ class ChatController extends GetxController {
       final c = conversations[index];
       conversations[index] = ConversationModel(
         id: c.id, listingType: c.listingType, listingId: c.listingId,
-        listingTitle: c.listingTitle, listingThumbnailUrl: c.listingThumbnailUrl,
+        listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
         roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
         otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
         isOwner: c.isOwner, status: c.status, lastMessageAt: message.createdAt,
-        lastMessagePreview: c.lastMessagePreview, unreadCount: c.unreadCount,
+        // Falls back to the previous preview for message types without a plain 'text'
+        // payload field (contact/schedule cards) — still correct, just not live-updating
+        // for those specific types until the next full list reload.
+        lastMessagePreview: message.payload['text'] as String? ?? c.lastMessagePreview,
+        unreadCount: c.unreadCount,
       );
       conversations.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
     } else {
