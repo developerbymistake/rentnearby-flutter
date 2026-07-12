@@ -816,11 +816,13 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                         }),
                         if (_filteredPlots.isEmpty && !_loadingNearby && !_reloadPending && _hasLoadedOnce)
                           Builder(builder: (_) {
-                            // Positioned at _searchCenter (the point the native radius circle
-                            // is actually drawn around), projected the same way every marker
-                            // above is — not screen-Center() — so it stays visually locked to
-                            // the circle as the user pans, instead of the circle drifting away
-                            // from a screen-fixed hint.
+                            // Anchored to the TOP EDGE of the radius circle (not its center) —
+                            // the chip's tail tip lands exactly on the boundary, projected the
+                            // same way every marker above is, so it stays visually locked to
+                            // the circle as the user pans instead of drifting away from a
+                            // screen-fixed hint. The circle's own center (where the user's
+                            // location pin sits) stays completely uncluttered.
+                            final radiusPx = _radiusPixelRadius(constraints.biggest);
                             final sp = _projectToScreen(
                               _searchCenter,
                               _cameraCenter ?? _searchCenter,
@@ -829,12 +831,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                             );
                             return Positioned(
                               left: sp.dx,
-                              top: sp.dy,
+                              top: sp.dy - radiusPx,
                               child: FractionalTranslation(
-                                translation: const Offset(-0.5, -0.5),
+                                translation: const Offset(-0.5, -1.0),
                                 child: EmptyRadiusHint(
                                   label: 'No plots in this radius',
-                                  circleRadiusPx: _radiusPixelRadius(constraints.biggest),
+                                  circleRadiusPx: radiusPx,
                                 ),
                               ),
                             );

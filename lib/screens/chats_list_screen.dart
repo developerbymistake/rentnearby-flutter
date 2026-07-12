@@ -117,7 +117,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
     // screen then inherits the app-wide light-icon default, same as every other
     // gradient-headed screen, instead of needing its own AnnotatedRegion override.
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.surface,
       body: Column(
         children: [
           Container(
@@ -266,7 +266,10 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   Widget _conversationCard(ConversationModel c) {
     final unread = c.unreadCount > 0;
     return Material(
-      color: unread ? const Color(0xFFF3F7FF) : Colors.white,
+      // Was #F3F7FF — nearly identical to the page's own #EFF6FF background, so an
+      // unread card barely stood out. Deeper, clearly-more-saturated blue so it still
+      // reads as "highlighted" against the new page background.
+      color: unread ? const Color(0xFFDCE9FB) : Colors.white,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
