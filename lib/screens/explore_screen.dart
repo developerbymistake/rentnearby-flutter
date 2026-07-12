@@ -745,6 +745,21 @@ class _ExploreScreenState extends State<ExploreScreen>
     return (centerPx - edgePx).distance;
   }
 
+  // Keeps the empty-radius chip's anchor point inside the visible screen even when the
+  // circle itself is bigger than the viewport (large radius / high zoom) — without this,
+  // the anchor (the circle's true top edge) can land off-screen and the chip disappears
+  // entirely. Clamped inward, it ends up on whichever part of the boundary — or, for a
+  // very large circle, just inside it — actually fits on screen.
+  static Offset _clampChipAnchor(Offset raw, Size screenSize) {
+    const topMargin = 150.0; // clears the gradient header
+    const bottomMargin = 150.0; // clears the filter panel / bottom nav
+    const sideMargin = 80.0; // half the chip's typical width
+    return Offset(
+      raw.dx.clamp(sideMargin, screenSize.width - sideMargin),
+      raw.dy.clamp(topMargin, screenSize.height - bottomMargin),
+    );
+  }
+
   static Offset _projectToScreen(LatLng ll, LatLng center, double zoom, Size screenSize) {
     const tileSize = 512.0;
     final scale = tileSize * pow(2.0, zoom);
@@ -878,9 +893,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                           _currentZoom,
                           constraints.biggest,
                         );
+                        final anchor = _clampChipAnchor(
+                          Offset(sp.dx, sp.dy - radiusPx),
+                          constraints.biggest,
+                        );
                         return Positioned(
-                          left: sp.dx,
-                          top: sp.dy - radiusPx,
+                          left: anchor.dx,
+                          top: anchor.dy,
                           child: FractionalTranslation(
                             translation: const Offset(-0.5, -1.0),
                             child: EmptyRadiusHint(
@@ -1055,7 +1074,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.18),

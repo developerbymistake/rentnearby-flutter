@@ -266,10 +266,9 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   Widget _conversationCard(ConversationModel c) {
     final unread = c.unreadCount > 0;
     return Material(
-      // Was #F3F7FF — nearly identical to the page's own #EFF6FF background, so an
-      // unread card barely stood out. Deeper, clearly-more-saturated blue so it still
-      // reads as "highlighted" against the new page background.
-      color: unread ? const Color(0xFFDCE9FB) : Colors.white,
+      // Background is always white now — unread is signaled by the border, the bold
+      // name/preview text, and the count badge instead of a background tint.
+      color: Colors.white,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -280,14 +279,16 @@ class _ChatsListScreenState extends State<ChatsListScreen>
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: unread
-                  ? AppColors.primary.withValues(alpha: 0.35)
-                  : AppColors.primary.withValues(alpha: 0.10),
+                  ? AppColors.primary.withValues(alpha: 0.30)
+                  : AppColors.primary.withValues(alpha: 0.14),
             ),
+            // Weighted toward the bottom (larger offset, a touch darker) so a white card
+            // reads as clearly lifted off the page background instead of just outlined.
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.14),
-                blurRadius: 14,
-                offset: const Offset(0, 3),
+                color: AppColors.primary.withValues(alpha: 0.20),
+                blurRadius: 16,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
