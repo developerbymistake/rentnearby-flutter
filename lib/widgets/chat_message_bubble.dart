@@ -46,6 +46,10 @@ class ChatMessageBubble extends StatelessWidget {
       case 'schedule_response':
         return _scheduleResponse(context);
       default:
+        // Defensive fallback only — the backend never emits Type == "system" (or any other
+        // unrecognized type) today. Kept so an unrecognized future type renders as a plain
+        // status pill instead of crashing the switch (message.type is a raw wire string, not
+        // an enum, so exhaustiveness can't be checked at compile time).
         return _system(message.payload['text'] as String? ?? '');
     }
   }
@@ -261,10 +265,31 @@ class ChatMessageBubble extends StatelessWidget {
             ),
             boxShadow: mine ? null : [BoxShadow(color: AppColors.shadow, blurRadius: 6, offset: const Offset(0, 2))],
           ),
-          child: Text(text,
-              style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13.5,
-                  color: mine ? Colors.white : AppColors.textDark)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(text,
+                  style: TextStyle(
+                      fontFamily: 'Poppins', fontSize: 13.5,
+                      color: mine ? Colors.white : AppColors.textDark)),
+              if (mine) ...[
+                const SizedBox(height: 2),
+                _readTick(message.readAt != null),
+              ],
+            ],
+          ),
+        ),
+      );
+
+  // onDark: true for _bubbleRow's navy "mine" background, false for _card's always-white
+  // background — the "sent" (not-yet-read) tick color needs to stay visible on either.
+  Widget _readTick(bool read, {bool onDark = true}) => Padding(
+        padding: const EdgeInsets.only(top: 1),
+        child: Icon(
+          read ? Icons.done_all_rounded : Icons.done_rounded,
+          size: 14,
+          color: read ? const Color(0xFF34B7F1) : (onDark ? Colors.white70 : AppColors.textHint),
         ),
       );
 
@@ -324,6 +349,10 @@ class ChatMessageBubble extends StatelessWidget {
             if (actions != null) ...[
               const SizedBox(height: 10),
               Column(children: actions.map((a) => Padding(padding: const EdgeInsets.only(bottom: 6), child: a)).toList()),
+            ],
+            if (mine) ...[
+              const SizedBox(height: 6),
+              Align(alignment: Alignment.centerRight, child: _readTick(message.readAt != null, onDark: false)),
             ],
           ]),
         ),

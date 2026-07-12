@@ -32,6 +32,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   final _messages = <MessageModel>[].obs;
   final _loading = true.obs;
   Worker? _incomingWorker;
+  Worker? _readWorker;
 
   @override
   void initState() {
@@ -58,6 +59,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
       if (!_messages.any((x) => x.id == m.id)) _messages.insert(0, m);
       if (!m.isMine) _chatCtrl.markRead(_conversationId);
     });
+
+    _readWorker = ever<Map<String, dynamic>?>(_chatCtrl.readEvent, (data) {
+      if (data == null || !mounted) return;
+      if (data['conversationId'] != _conversationId) return;
+      // Only the OTHER party's read counts — our own markRead() call (fired on open and on
+      // every incoming message above) broadcasts this same event back to our own open screen
+      // too, since both sides share the conversation_{id} SignalR group.
+      if (data['readByUserId'] != _otherPartyId) return;
+      final now = DateTime.now();
+      _messages.value = _messages
+          .map((m) => (m.isMine && m.readAt == null) ? m.copyWith(readAt: now) : m)
+          .toList();
+    });
   }
 
   @override
@@ -71,14 +85,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> with Wi
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _incomingWorker?.dispose();
+    _readWorker?.dispose();
     ChatHubService.to.disconnect();
     super.dispose();
   }
 
   Future<void> _loadHistory() async {
     _loading.value = true;
-    final items = await _chatCtrl.getMessages(_conversationId);
-    _messages.value = items.reversed.toList();
+    final result = await _chatCtrl.getMessages(_conversationId);
+    _messages.value = result.items.reversed.toList();
+    if (result.status != null) _status.value = result.status!;
     _loading.value = false;
   }
 

@@ -5,7 +5,7 @@ class MessageModel {
   final String conversationId;
   final String senderId;
   final bool isMine;
-  final String type; // quick_reply | contact_request | contact_response | schedule_proposal | schedule_response | system
+  final String type; // quick_reply | contact_request | contact_response | schedule_proposal | schedule_response
   final String payloadJson;
   // Which message this one answers — only set on quick_reply answers, so an answer can be
   // paired with its own question regardless of how many other questions are pending.
@@ -43,5 +43,17 @@ class MessageModel {
         respondsToMessageId: json['respondsToMessageId'] as String?,
         readAt: json['readAt'] != null ? DateTime.parse(json['readAt'] as String) : null,
         createdAt: DateTime.parse(json['createdAt'] as String),
+      );
+
+  MessageModel copyWith({DateTime? readAt}) => MessageModel(
+        id: id,
+        conversationId: conversationId,
+        senderId: senderId,
+        isMine: isMine,
+        type: type,
+        payloadJson: payloadJson,
+        respondsToMessageId: respondsToMessageId,
+        readAt: readAt ?? this.readAt,
+        createdAt: createdAt,
       );
 }

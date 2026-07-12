@@ -133,17 +133,19 @@ class ChatController extends GetxController {
 
   // ── Message history + sending ───────────────────────────────────────────
 
-  Future<List<MessageModel>> getMessages(String conversationId, {DateTime? before}) async {
+  Future<({List<MessageModel> items, String? status})> getMessages(String conversationId, {DateTime? before}) async {
     try {
       final res = await ApiService.get(
         '/chat/conversations/$conversationId/messages',
         params: before != null ? {'before': before.toIso8601String()} : null,
       );
-      return (res['data']['items'] as List)
+      final items = (res['data']['items'] as List)
           .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
           .toList();
+      final status = res['data']['conversationStatus'] as String?;
+      return (items: items, status: status);
     } catch (_) {
-      return [];
+      return (items: <MessageModel>[], status: null);
     }
   }
 
