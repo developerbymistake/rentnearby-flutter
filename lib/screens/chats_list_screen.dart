@@ -4,6 +4,7 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../models/conversation_model.dart';
 import '../services/chat_hub_service.dart';
@@ -17,9 +18,12 @@ class ChatsListScreen extends StatefulWidget {
 class _ChatsListScreenState extends State<ChatsListScreen>
     with WidgetsBindingObserver {
   final _ctrl = Get.find<ChatController>();
+  final _auth = Get.find<AuthController>();
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   String _query = '';
+  bool _searchOpen = false;
+  Worker? _chatsTabWorker;
 
   @override
   void initState() {
@@ -36,6 +40,20 @@ class _ChatsListScreenState extends State<ChatsListScreen>
         _ctrl.loadMoreConversations();
       }
     });
+    // ChatsListScreen lives inside main_screen.dart's IndexedStack, so this State is
+    // never disposed on tab switch — without this, a search left open would stay open
+    // when leaving and returning to the Chats tab. Same reset-on-revisit pattern
+    // profile_screen.dart already uses via profileTabTrigger.
+    _chatsTabWorker = ever(_auth.chatsTabTrigger, (_) => _closeSearch());
+  }
+
+  void _closeSearch() {
+    if (!mounted) return;
+    setState(() {
+      _searchOpen = false;
+      _query = '';
+    });
+    _searchCtrl.clear();
   }
 
   @override
@@ -49,6 +67,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _chatsTabWorker?.dispose();
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
     ChatHubService.to.disconnect();
@@ -109,15 +128,37 @@ class _ChatsListScreenState extends State<ChatsListScreen>
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                child: const Text(
-                  'Chats',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Messages',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        final opening = !_searchOpen;
+                        setState(() {
+                          _searchOpen = opening;
+                          if (!opening) _query = '';
+                        });
+                        if (!opening) _searchCtrl.clear();
+                      },
+                      icon: Icon(
+                        _searchOpen
+                            ? Icons.close_rounded
+                            : Icons.search_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -128,7 +169,18 @@ class _ChatsListScreenState extends State<ChatsListScreen>
               bottom: false,
               child: Column(
                 children: [
-                  _buildSearchBox(),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: _searchOpen
+                        ? AnimatedOpacity(
+                            duration: const Duration(milliseconds: 220),
+                            opacity: _searchOpen ? 1 : 0,
+                            child: _buildSearchBox(),
+                          )
+                        : const SizedBox(width: double.infinity),
+                  ),
                   Expanded(
                     child: Obx(() {
                       final loading = _ctrl.conversationsLoading.value;
@@ -146,6 +198,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
                         onRefresh: _refresh,
                         child: ListView.builder(
                           controller: _scrollCtrl,
+                          physics: const AlwaysScrollableScrollPhysics(),
                           padding: EdgeInsets.fromLTRB(
                             14,
                             8,
@@ -224,13 +277,13 @@ class _ChatsListScreenState extends State<ChatsListScreen>
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: unread
-                  ? AppColors.primary.withValues(alpha: 0.12)
-                  : const Color(0xFFEEF2FB),
+                  ? AppColors.primary.withValues(alpha: 0.35)
+                  : AppColors.primary.withValues(alpha: 0.10),
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.07),
-                blurRadius: 10,
+                color: AppColors.primary.withValues(alpha: 0.14),
+                blurRadius: 14,
                 offset: const Offset(0, 3),
               ),
             ],

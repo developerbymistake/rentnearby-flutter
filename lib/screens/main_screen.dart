@@ -502,6 +502,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           if (index == 1 && _auth.tabIndex.value != 1) {
             Get.find<PlotController>().exploreRefreshTrigger.value++;
           }
+          if (index == 2 && _auth.tabIndex.value != 2) _auth.chatsTabTrigger.value++;
           if (index == 3 && _auth.tabIndex.value != 3) _auth.profileTabTrigger.value++;
           Get.find<ListingController>().filterResetTrigger.value++;
           Get.find<PlotController>().filterResetTrigger.value++;

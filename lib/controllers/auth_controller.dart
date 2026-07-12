@@ -17,6 +17,7 @@ class AuthController extends GetxController {
   final user = Rxn<UserModel>();
   final tabIndex = 0.obs;
   final profileTabTrigger = 0.obs;
+  final chatsTabTrigger = 0.obs;
 
   // Granular profile observables — each fires only when its specific field changes
   final profileName = ''.obs;

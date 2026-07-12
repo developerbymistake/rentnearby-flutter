@@ -39,6 +39,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   // single shared flag is enough — every send path below is awaited sequentially from this
   // screen's own UI thread, so only one send can ever be in flight at a time.
   final _sending = false.obs;
+  final _scrollCtrl = ScrollController();
   Worker? _incomingWorker;
   Worker? _readWorker;
 
@@ -66,6 +67,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     _incomingWorker = ever<MessageModel?>(_chatCtrl.incomingMessage, (m) {
       if (m == null || m.conversationId != _conversationId || !mounted) return;
       _insertIfNew(m);
+      // The backend pushes this echo to the sender's own SignalR connection before the
+      // sender's own REST call returns — so for our own messages, this is usually the
+      // *first* confirmation of delivery, arriving before _send()'s finally block. Clear
+      // the ghost's disabled state here too instead of only on the slower REST path, or
+      // it stays visibly disabled for a beat after the message has already gone through.
+      if (m.isMine && _sending.value) _sending.value = false;
       if (!m.isMine) _chatCtrl.markRead(_conversationId);
     });
 
@@ -97,18 +104,30 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     WidgetsBinding.instance.removeObserver(this);
     _incomingWorker?.dispose();
     _readWorker?.dispose();
+    _scrollCtrl.dispose();
     ChatHubService.to.disconnect();
     super.dispose();
   }
 
   Future<void> _loadHistory() async {
-    _loading.value = true;
+    // Only show the full-screen spinner on the very first load. Pull-to-refresh also
+    // calls this method, and by then _messages is already populated — swapping the whole
+    // list out for a centered spinner mid-pull would fight RefreshIndicator's own
+    // top-of-list spinner instead of complementing it.
+    final isFirstLoad = _messages.isEmpty;
+    if (isFirstLoad) _loading.value = true;
     final result = await _chatCtrl.getMessages(_conversationId);
-    // Backend already returns newest-first (matches every insert(0, ...) call below) —
-    // do NOT reverse this, or the thread renders chronologically backwards.
-    _messages.value = result.items.toList();
+    // Backend returns newest-first (OrderByDescending(CreatedAt)) — the thread now
+    // renders as a normal (non-reversed) top-to-bottom list, oldest at top, so this
+    // needs reversing to chronological order before display.
+    _messages.value = result.items.reversed.toList();
     if (result.status != null) _status.value = result.status!;
-    _loading.value = false;
+    if (isFirstLoad) {
+      _loading.value = false;
+      // Jump (not animate) straight to the bottom on cold open — same as the reference
+      // demo's behavior, and there's nothing to animate from on first paint.
+      _scrollToBottom(animate: false);
+    }
   }
 
   // The backend pushes every new message over SignalR to the whole conversation group —
@@ -116,7 +135,34 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   // returns. So the same message can arrive twice: once via _incomingWorker's hub echo,
   // once via the awaited response below. Every insert site must dedup by id.
   void _insertIfNew(MessageModel msg) {
-    if (!_messages.any((x) => x.id == msg.id)) _messages.insert(0, msg);
+    if (_messages.any((x) => x.id == msg.id)) return;
+    _messages.add(msg);
+    // Always follow our own messages to the bottom. For messages from the other party,
+    // only follow if we're already near the bottom — otherwise someone scrolled up
+    // reading history would get yanked back down by an unrelated incoming message.
+    if (msg.isMine || _isNearBottom()) _scrollToBottom();
+  }
+
+  bool _isNearBottom() {
+    if (!_scrollCtrl.hasClients) return true;
+    final pos = _scrollCtrl.position;
+    return pos.maxScrollExtent - pos.pixels < 80;
+  }
+
+  void _scrollToBottom({bool animate = true}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollCtrl.hasClients) return;
+      final target = _scrollCtrl.position.maxScrollExtent;
+      if (animate) {
+        _scrollCtrl.animateTo(
+          target,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+        );
+      } else {
+        _scrollCtrl.jumpTo(target);
+      }
+    });
   }
 
   void _openPlusMenu() {
@@ -251,20 +297,32 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                       final renderList = _buildRenderList();
                       if (renderList.isEmpty) return _buildEmpty();
                       // ListView(children:) rather than .builder — every item already carries a
-                      // stable ValueKey, and a new message inserted at the front shifts every
-                      // later item's array index by one. .builder's default delegate can't match
-                      // a keyed child across an index shift (no findChildIndexCallback), so it
-                      // would tear down and remount every existing bubble on each new message,
-                      // replaying their entrance animation. The list-delegate this constructor
-                      // uses reconciles by key regardless of index, so existing bubbles keep their
-                      // State/AnimationController and the fade-in only ever plays once.
-                      return ListView(
-                        reverse: true,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+                      // stable ValueKey, and a new message appended at the end shifts nothing
+                      // for existing items, but a keyed delegate reconciling by key (not index)
+                      // is still what lets existing bubbles keep their State/AnimationController
+                      // so the fade-in only ever plays once.
+                      // Non-reversed: a normal top-to-bottom list packs short content at the
+                      // TOP (matching chat-live-demo-v4.html's plain flex-column thread) instead
+                      // of bottom-pinning it the way ListView(reverse:true) always does
+                      // regardless of content length — _scrollToBottom() (called on load and on
+                      // every new message near the bottom) does the "stick to latest" job
+                      // manually instead, same as the demo's own scrollTop=scrollHeight.
+                      // AlwaysScrollableScrollPhysics so a short conversation (fewer messages
+                      // than fill the viewport) still feels draggable and lets RefreshIndicator
+                      // trigger — default physics refuse to scroll at all once content is
+                      // shorter than the viewport.
+                      return RefreshIndicator(
+                        color: AppColors.primary,
+                        onRefresh: _loadHistory,
+                        child: ListView(
+                          controller: _scrollCtrl,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          children: renderList,
                         ),
-                        children: renderList,
                       );
                     }),
                   ),
@@ -302,14 +360,26 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     }
     final answerMessageIds = answerByQuestionId.values.map((m) => m.id).toSet();
 
-    // Built newest-first (mirrors `_messages`) for a `reverse: true` ListView, where a
-    // lower array index renders lower/newer on screen. Within a matched pair the answer
-    // is appended *before* its question — despite being the newer message — so the
-    // question ends up rendering above its own answer, positioned at the question's own
-    // chronological slot rather than wherever the answer happened to actually arrive.
+    // Built oldest-first (mirrors `_messages`) for a normal top-to-bottom ListView.
+    // Within a matched pair the question is appended first, then its answer directly
+    // after — so the question still renders above its own answer, positioned at the
+    // question's own chronological slot rather than wherever the answer actually arrived.
     final items = <Widget>[];
-    // Index 0 renders at the visual bottom, so the "next slot" bubble — the inline
-    // replacement for the old fixed composer — goes first, for both roles alike.
+    for (final m in _messages) {
+      if (answerMessageIds.contains(m.id))
+        continue; // rendered attached to its question below
+      final answer = m.type == 'quick_reply' ? answerByQuestionId[m.id] : null;
+      items.add(
+        _animatedBubble(m.id, _buildBubble(m, answered: answer != null)),
+      );
+      if (answer != null)
+        items.add(_animatedBubble(answer.id, _buildBubble(answer)));
+    }
+    // The "next slot" bubble — the inline replacement for the old fixed composer — goes
+    // last, chronologically after every message currently in the thread, for both roles
+    // alike. On a short/new conversation this is what makes it sit right under the last
+    // message near the TOP of the screen (matching chat-live-demo-v4.html's plain
+    // flex-column thread) instead of being glued to the bottom of the screen.
     if (_status.value == 'Active') {
       items.add(
         KeyedSubtree(
@@ -321,16 +391,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
             ),
           ),
         ),
-      );
-    }
-    for (final m in _messages) {
-      if (answerMessageIds.contains(m.id))
-        continue; // rendered attached to its question below
-      final answer = m.type == 'quick_reply' ? answerByQuestionId[m.id] : null;
-      if (answer != null)
-        items.add(_animatedBubble(answer.id, _buildBubble(answer)));
-      items.add(
-        _animatedBubble(m.id, _buildBubble(m, answered: answer != null)),
       );
     }
     return items;

@@ -733,6 +733,18 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
+  // On-screen pixel radius of the radius circle actually drawn on the map right now —
+  // reuses the exact same polygon point (north edge, angle 0) and projection the native
+  // circle layer and every marker are already positioned with, so it tracks zoom/pan
+  // exactly instead of a separately-tuned formula drifting out of sync.
+  double _radiusPixelRadius(Size screenSize) {
+    final cam = _cameraCenter ?? _searchCenter;
+    final edge = _circlePolygonPoints(_searchCenter, _radius)[0];
+    final centerPx = _projectToScreen(_searchCenter, cam, _currentZoom, screenSize);
+    final edgePx = _projectToScreen(edge, cam, _currentZoom, screenSize);
+    return (centerPx - edgePx).distance;
+  }
+
   static Offset _projectToScreen(LatLng ll, LatLng center, double zoom, Size screenSize) {
     const tileSize = 512.0;
     final scale = tileSize * pow(2.0, zoom);
@@ -869,7 +881,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                           top: sp.dy,
                           child: FractionalTranslation(
                             translation: const Offset(-0.5, -0.5),
-                            child: const EmptyRadiusHint(label: 'No rooms in this radius'),
+                            child: EmptyRadiusHint(
+                              label: 'No rooms in this radius',
+                              circleRadiusPx: _radiusPixelRadius(constraints.biggest),
+                            ),
                           ),
                         );
                       }),
@@ -986,12 +1001,18 @@ class _ExploreScreenState extends State<ExploreScreen>
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(children: [
-            const Icon(Icons.public_rounded, color: Colors.white, size: 15),
+            const Icon(Icons.public_rounded, color: AppColors.primary, size: 15),
             const SizedBox(width: 7),
             Expanded(
               child: Text.rich(
@@ -1002,7 +1023,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Icon(Icons.chevron_right_rounded,
-                          size: 14, color: Colors.white.withValues(alpha: 0.7)),
+                          size: 14, color: AppColors.primary.withValues(alpha: 0.6)),
                     ),
                   ),
                   TextSpan(text: cityName),
@@ -1012,13 +1033,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                 style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white),
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary),
               ),
             ),
             const SizedBox(width: 4),
             const Icon(Icons.keyboard_arrow_down_rounded,
-                color: Colors.white, size: 16),
+                color: AppColors.primary, size: 16),
           ]),
         ),
       );

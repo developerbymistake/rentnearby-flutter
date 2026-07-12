@@ -6,7 +6,11 @@ import '../config/app_colors.dart';
 // every state; this is the only thing that changes.
 class EmptyRadiusHint extends StatefulWidget {
   final String label;
-  const EmptyRadiusHint({super.key, required this.label});
+  // On-screen pixel radius of the radius circle currently drawn on the map — the hint
+  // scales down against this as the user zooms out, so it never spills outside the
+  // (shrinking) circle the way a fixed-size hint does.
+  final double circleRadiusPx;
+  const EmptyRadiusHint({super.key, required this.label, required this.circleRadiusPx});
 
   @override
   State<EmptyRadiusHint> createState() => _EmptyRadiusHintState();
@@ -34,21 +38,30 @@ class _EmptyRadiusHintState extends State<EmptyRadiusHint> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    // 100px is roughly the on-screen circle radius the original fixed sizing (40px
+    // badge, 13px label) reads well against — below that, shrink proportionally so
+    // zooming out never pushes the hint outside the (now-smaller) circle. Capped at 1.0
+    // rather than growing further when zoomed in — the original design already looks
+    // right there. Text gets a gentler floor than the icon badge so the label stays
+    // legible even at the smallest sizes.
+    final iconScale = (widget.circleRadiusPx / 100).clamp(0.45, 1.0);
+    final textScale = (widget.circleRadiusPx / 100).clamp(0.75, 1.0);
+    final badgeSize = 40.0 * iconScale;
     return ScaleTransition(
       scale: _scale,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
-          width: 40, height: 40,
+          width: badgeSize, height: badgeSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: AppColors.warning.withValues(alpha: 0.14),
             border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
           ),
-          child: const Icon(Icons.search_off_rounded, size: 20, color: AppColors.warning),
+          child: Icon(Icons.search_off_rounded, size: 20 * iconScale, color: AppColors.warning),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8 * iconScale),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          padding: EdgeInsets.symmetric(horizontal: 12 * textScale, vertical: 7 * textScale),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.94),
             borderRadius: BorderRadius.circular(10),
@@ -56,7 +69,7 @@ class _EmptyRadiusHintState extends State<EmptyRadiusHint> with SingleTickerProv
           ),
           child: Text(
             widget.label,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 13 * textScale, fontWeight: FontWeight.w600, color: AppColors.textDark),
           ),
         ),
       ]),

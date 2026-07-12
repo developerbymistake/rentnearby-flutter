@@ -721,6 +721,18 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     return Offset(screenSize.width / 2 + dx, screenSize.height / 2 + dy);
   }
 
+  // On-screen pixel radius of the radius circle actually drawn on the map right now —
+  // reuses the exact same polygon point (north edge, angle 0) and projection the native
+  // circle layer and every marker are already positioned with, so it tracks zoom/pan
+  // exactly instead of a separately-tuned formula drifting out of sync.
+  double _radiusPixelRadius(Size screenSize) {
+    final cam = _cameraCenter ?? _searchCenter;
+    final edge = _circlePolygonPoints(_searchCenter, _radius)[0];
+    final centerPx = _projectToScreen(_searchCenter, cam, _currentZoom, screenSize);
+    final edgePx = _projectToScreen(edge, cam, _currentZoom, screenSize);
+    return (centerPx - edgePx).distance;
+  }
+
   void _showDetail(NearbyPlotModel plot) {
     final isAuth = _auth.user.value != null;
     showModalBottomSheet(
@@ -820,7 +832,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                               top: sp.dy,
                               child: FractionalTranslation(
                                 translation: const Offset(-0.5, -0.5),
-                                child: const EmptyRadiusHint(label: 'No plots in this radius'),
+                                child: EmptyRadiusHint(
+                                  label: 'No plots in this radius',
+                                  circleRadiusPx: _radiusPixelRadius(constraints.biggest),
+                                ),
                               ),
                             );
                           }),
@@ -942,12 +957,18 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(children: [
-            const Icon(Icons.public_rounded, color: Colors.white, size: 15),
+            const Icon(Icons.public_rounded, color: Color(0xFF92400E), size: 15),
             const SizedBox(width: 7),
             Expanded(
               child: Text.rich(
@@ -958,7 +979,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Icon(Icons.chevron_right_rounded,
-                          size: 14, color: Colors.white.withValues(alpha: 0.7)),
+                          size: 14, color: const Color(0xFF92400E).withValues(alpha: 0.6)),
                     ),
                   ),
                   TextSpan(text: cityName),
@@ -968,12 +989,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white),
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF92400E)),
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 16),
+            const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF92400E), size: 16),
           ]),
         ),
       );
