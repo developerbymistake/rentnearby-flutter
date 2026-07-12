@@ -15,6 +15,7 @@ import '../config/app_map_state.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../models/listing_model.dart';
+import '../widgets/empty_radius_hint.dart';
 import '../widgets/listing_bottom_sheet.dart';
 import '../widgets/location_switch_sheet.dart';
 
@@ -62,6 +63,12 @@ class _ExploreScreenState extends State<ExploreScreen>
   Timer? _loadNearbyDebounceTimer;
   String? _selectedRoomType;
   bool _loadingNearby = false;
+  // Spans from the moment a reload is requested (radius/location/filter change) through
+  // the debounce wait and the fetch itself — wider than `_loadingNearby`, which only covers
+  // the fetch. Without this, a radius-chip tap clears `nearbyListings` synchronously but
+  // `_loadingNearby` doesn't flip true until the 300ms debounce fires, leaving a gap where
+  // the empty-radius hint would flash over the previous radius's still-visible pins.
+  bool _reloadPending = false;
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
@@ -429,6 +436,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   // ── Listings load ─────────────────────────────────────────────────────────
 
   void _loadNearby() {
+    _reloadPending = true;
     _loadNearbyDebounceTimer?.cancel();
     _loadNearbyDebounceTimer =
         Timer(const Duration(milliseconds: 300), () async {
@@ -439,9 +447,9 @@ class _ExploreScreenState extends State<ExploreScreen>
   Future<void> _executeLoadNearby() async {
     if (_loadingNearby) return;
     final district = _locationCtrl.effectiveDistrict;
-    if (district == null) return;
+    if (district == null) { _reloadPending = false; return; }
     final districtId = district.id;
-    if (mapShouldPause.value) { _stale = true; return; }
+    if (mapShouldPause.value) { _stale = true; _reloadPending = false; return; }
     _stale = false;
     _loadingNearby = true;
     try {
@@ -460,6 +468,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (_listingCtrl.nearbyListings.isNotEmpty) _playTing();
     } finally {
       _loadingNearby = false;
+      _reloadPending = false;
     }
   }
 
@@ -490,20 +499,23 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
   }
 
+  // Single source of truth for "what matches the current room-type filter" — used by both
+  // the marker builder below and the filter panel's count badge, so the two can never drift.
+  List<NearbyListingModel> get _filteredListings {
+    final all = _listingCtrl.nearbyListings.toList();
+    return _selectedRoomType == null
+        ? all
+        : all.where((l) => l.roomTypeName == _selectedRoomType).toList();
+  }
+
   void _buildMarkers({bool animate = true}) {
     final data = <_MapMarkerData>[];
 
     final userMarker = _buildUserMarkerData();
     if (userMarker != null) data.add(userMarker);
 
-    var listings = _listingCtrl.nearbyListings.toList()
+    final listings = _filteredListings
       ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-
-    if (_selectedRoomType != null) {
-      listings = listings
-          .where((l) => l.roomTypeName == _selectedRoomType)
-          .toList();
-    }
 
     final filtered = listings.take(AppConstants.maxMapMarkers).toList();
     final clusters = _mapReady
@@ -816,24 +828,25 @@ class _ExploreScreenState extends State<ExploreScreen>
                 duration: const Duration(milliseconds: 100),
                 child: Stack(
                   fit: StackFit.expand,
-                  children: _markerData
-                      .take(_revealedCount)
-                      .map((d) {
-                        final sp = _projectToScreen(
-                          d.position,
-                          _cameraCenter ?? _searchCenter,
-                          _currentZoom,
-                          constraints.biggest,
-                        );
-                        return Positioned(
-                          left: sp.dx - d.width / 2,
-                          top: sp.dy - d.height / 2,
-                          width: d.width,
-                          height: d.height,
-                          child: d.widget,
-                        );
-                      })
-                      .toList(),
+                  children: [
+                    ..._markerData.take(_revealedCount).map((d) {
+                      final sp = _projectToScreen(
+                        d.position,
+                        _cameraCenter ?? _searchCenter,
+                        _currentZoom,
+                        constraints.biggest,
+                      );
+                      return Positioned(
+                        left: sp.dx - d.width / 2,
+                        top: sp.dy - d.height / 2,
+                        width: d.width,
+                        height: d.height,
+                        child: d.widget,
+                      );
+                    }),
+                    if (_filteredListings.isEmpty && !_loadingNearby && !_reloadPending)
+                      const Center(child: EmptyRadiusHint(label: 'No rooms in this radius')),
+                  ],
                 ),
               ),
             ),
@@ -1044,13 +1057,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       final types = _listingCtrl.roomTypes;
       if (types.isEmpty) return const SizedBox.shrink();
 
-      final allListings = _listingCtrl.nearbyListings.toList();
-      final filtered = _selectedRoomType != null
-          ? allListings
-              .where((l) => l.roomTypeName == _selectedRoomType)
-              .toList()
-          : allListings;
-      final count = filtered.length;
+      final count = _filteredListings.length;
 
       final rows = <List>[];
       for (int i = 0; i < types.length; i += 3) {

@@ -17,6 +17,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../models/plot_model.dart';
+import '../widgets/empty_radius_hint.dart';
 import '../widgets/location_switch_sheet.dart';
 
 class ExplorePlotsScreen extends StatefulWidget {
@@ -62,6 +63,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Timer? _loadNearbyDebounceTimer;
   String? _selectedPlotType;
   bool _loadingNearby = false;
+  // Spans from the moment a reload is requested (radius/location/filter change) through
+  // the debounce wait and the fetch itself — wider than `_loadingNearby`, which only covers
+  // the fetch. Without this, a radius-chip tap clears `nearbyPlots` synchronously but
+  // `_loadingNearby` doesn't flip true until the 300ms debounce fires, leaving a gap where
+  // the empty-radius hint would flash over the previous radius's still-visible pins.
+  bool _reloadPending = false;
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
@@ -415,6 +422,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   void _loadNearby() {
+    _reloadPending = true;
     _loadNearbyDebounceTimer?.cancel();
     _loadNearbyDebounceTimer = Timer(const Duration(milliseconds: 300), () async {
       await _executeLoadNearby();
@@ -424,9 +432,9 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Future<void> _executeLoadNearby() async {
     if (_loadingNearby) return;
     final district = _locationCtrl.effectiveDistrict;
-    if (district == null) return;
+    if (district == null) { _reloadPending = false; return; }
     final districtId = district.id;
-    if (mapShouldPause.value) { _stale = true; return; }
+    if (mapShouldPause.value) { _stale = true; _reloadPending = false; return; }
     _stale = false;
     _loadingNearby = true;
     try {
@@ -444,6 +452,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       if (_plotCtrl.nearbyPlots.isNotEmpty) _playTing();
     } finally {
       _loadingNearby = false;
+      _reloadPending = false;
     }
   }
 
@@ -472,18 +481,23 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     );
   }
 
+  // Single source of truth for "what matches the current plot-type filter" — used by both
+  // the marker builder below and the filter panel's count badge, so the two can never drift.
+  List<NearbyPlotModel> get _filteredPlots {
+    final all = _plotCtrl.nearbyPlots.toList();
+    return _selectedPlotType == null
+        ? all
+        : all.where((p) => p.plotType == _selectedPlotType).toList();
+  }
+
   void _buildMarkers({bool animate = true}) {
     final data = <_MapMarkerData>[];
 
     final userMarker = _buildUserMarkerData();
     if (userMarker != null) data.add(userMarker);
 
-    var plots = _plotCtrl.nearbyPlots.toList()
+    final plots = _filteredPlots
       ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-
-    if (_selectedPlotType != null) {
-      plots = plots.where((p) => p.plotType == _selectedPlotType).toList();
-    }
 
     final filtered = plots.take(AppConstants.maxMapMarkers).toList();
     final clusters = _mapReady
@@ -765,24 +779,25 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                     duration: const Duration(milliseconds: 100),
                     child: Stack(
                       fit: StackFit.expand,
-                      children: _markerData
-                          .take(_revealedCount)
-                          .map((d) {
-                            final sp = _projectToScreen(
-                              d.position,
-                              _cameraCenter ?? _searchCenter,
-                              _currentZoom,
-                              constraints.biggest,
-                            );
-                            return Positioned(
-                              left: sp.dx - d.width / 2,
-                              top: sp.dy - d.height / 2,
-                              width: d.width,
-                              height: d.height,
-                              child: d.widget,
-                            );
-                          })
-                          .toList(),
+                      children: [
+                        ..._markerData.take(_revealedCount).map((d) {
+                          final sp = _projectToScreen(
+                            d.position,
+                            _cameraCenter ?? _searchCenter,
+                            _currentZoom,
+                            constraints.biggest,
+                          );
+                          return Positioned(
+                            left: sp.dx - d.width / 2,
+                            top: sp.dy - d.height / 2,
+                            width: d.width,
+                            height: d.height,
+                            child: d.widget,
+                          );
+                        }),
+                        if (_filteredPlots.isEmpty && !_loadingNearby && !_reloadPending)
+                          const Center(child: EmptyRadiusHint(label: 'No plots in this radius')),
+                      ],
                     ),
                   ),
                 ),
@@ -999,11 +1014,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       final types = _plotCtrl.plotTypes.toList();
       if (types.isEmpty) return const SizedBox.shrink();
 
-      final allPlots = _plotCtrl.nearbyPlots.toList();
-      final filtered = _selectedPlotType != null
-          ? allPlots.where((p) => p.plotType == _selectedPlotType).toList()
-          : allPlots;
-      final count = filtered.length;
+      final count = _filteredPlots.length;
 
       final rows = <List>[];
       for (int i = 0; i < types.length; i += 2) {
