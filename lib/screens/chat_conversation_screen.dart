@@ -43,6 +43,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   final _scrollCtrl = ScrollController();
   Worker? _incomingWorker;
   Worker? _readWorker;
+  Worker? _statusWorker;
 
   @override
   void initState() {
@@ -96,6 +97,15 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
           )
           .toList();
     });
+
+    // Live block/unblock by either party — reaches this device too when it's the one that
+    // just blocked/unblocked (harmless, same value it already set optimistically), since both
+    // sides share the conversation_{id} SignalR group while this screen is open.
+    _statusWorker = ever<Map<String, dynamic>?>(_chatCtrl.conversationStatusChanged, (data) {
+      if (data == null || !mounted) return;
+      if (data['conversationId'] != _conversationId) return;
+      _status.value = data['status'] as String;
+    });
   }
 
   @override
@@ -110,6 +120,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     WidgetsBinding.instance.removeObserver(this);
     _incomingWorker?.dispose();
     _readWorker?.dispose();
+    _statusWorker?.dispose();
     _scrollCtrl.dispose();
     ChatHubService.to.disconnect();
     super.dispose();

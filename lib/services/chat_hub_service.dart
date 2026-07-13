@@ -71,6 +71,14 @@ class ChatHubService extends GetxService {
       } catch (_) {}
     });
 
+    _connection!.on('ConversationStatusChanged', (args) {
+      if (args == null || args.isEmpty) return;
+      try {
+        final data = Map<String, dynamic>.from(args[0] as Map);
+        chatCtrl.applyConversationStatusChanged(data['conversationId'] as String, data['status'] as String);
+      } catch (_) {}
+    });
+
     _connection!.onreconnected(({String? connectionId}) {
       chatCtrl.loadConversations();
     });
@@ -90,6 +98,7 @@ class ChatHubService extends GetxService {
       _connection?.off('MessageReceived');
       _connection?.off('UnreadCountChanged');
       _connection?.off('MessagesRead');
+      _connection?.off('ConversationStatusChanged');
       await _connection?.stop();
     } catch (_) {}
     _connection = null;

@@ -25,6 +25,7 @@ class ChatController extends GetxController {
   // conversationId, without needing a direct dependency on the hub service.
   final incomingMessage = Rxn<MessageModel>();
   final readEvent = Rxn<Map<String, dynamic>>();
+  final conversationStatusChanged = Rxn<Map<String, dynamic>>();
 
   Future<void> loadConversations({bool forceRefresh = false}) async {
     if (conversationsLoading.value) return;
@@ -161,6 +162,26 @@ class ChatController extends GetxController {
   }
 
   void applyMessagesRead(Map<String, dynamic> data) => readEvent.value = data;
+
+  // Called by ChatHubService on a live "ConversationStatusChanged" event (block/unblock by
+  // either party) — updates the Chats-list row's status immediately (drives the dimmed
+  // avatar/block badge in chats_list_screen.dart) and broadcasts for whichever conversation
+  // screen (if any) is currently open, same two-surface shape as applyIncomingMessage.
+  void applyConversationStatusChanged(String conversationId, String status) {
+    final index = conversations.indexWhere((c) => c.id == conversationId);
+    if (index != -1) {
+      final c = conversations[index];
+      conversations[index] = ConversationModel(
+        id: c.id, listingType: c.listingType, listingId: c.listingId,
+        listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
+        roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
+        otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
+        isOwner: c.isOwner, status: status, lastMessageAt: c.lastMessageAt,
+        lastMessagePreview: c.lastMessagePreview, unreadCount: c.unreadCount,
+      );
+    }
+    conversationStatusChanged.value = {'conversationId': conversationId, 'status': status};
+  }
 
   // ── Message history + sending ───────────────────────────────────────────
 

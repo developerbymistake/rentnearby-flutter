@@ -58,23 +58,26 @@ class ApiService {
     return res.data;
   }
 
-  // `?? <String, dynamic>{}` below: a 204 No Content response (e.g. block/unblock) has a
-  // null body — without this, returning it against this method's non-nullable Map signature
-  // throws a TypeError *after* the request already succeeded on the wire, so callers land in
-  // their catch block and report failure for an action that actually went through.
+  // A 204 No Content response (e.g. block/unblock) has no Content-Type header, so Dio's
+  // transformer doesn't treat it as JSON and decodes the empty body as "" rather than null
+  // (see dio's sync_transformer.dart) — a plain `res.data ?? <String, dynamic>{}` guard misses
+  // that case, since "" isn't null, and returning it against this method's non-nullable Map
+  // signature throws a TypeError *after* the request already succeeded on the wire, landing
+  // callers in their catch block reporting failure for an action that actually went through.
+  // Checking the actual runtime type covers every non-Map body, not just null.
   static Future<Map<String, dynamic>> post(String path, Map<String, dynamic> data) async {
     final res = await _dio.post(path, data: data);
-    return res.data ?? <String, dynamic>{};
+    return res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
   }
 
   static Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? params}) async {
     final res = await _dio.get(path, queryParameters: params);
-    return res.data ?? <String, dynamic>{};
+    return res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
   }
 
   static Future<Map<String, dynamic>> put(String path, Map<String, dynamic> data) async {
     final res = await _dio.put(path, data: data);
-    return res.data ?? <String, dynamic>{};
+    return res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
   }
 
   static Future<void> delete(String path) async {
@@ -87,6 +90,6 @@ class ApiService {
     void Function(int sent, int total)? onSendProgress,
   }) async {
     final res = await _dio.post(path, data: data, onSendProgress: onSendProgress);
-    return res.data ?? <String, dynamic>{};
+    return res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
   }
 }
