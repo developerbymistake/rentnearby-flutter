@@ -86,7 +86,7 @@ Future<Uint8List> _buildInitialAvatarBytes(String senderName) async {
 Future<void> _showChatNotification(String conversationId, String title, String body) async {
   final plugin = FlutterLocalNotificationsPlugin();
   await plugin.initialize(
-    const InitializationSettings(
+    settings: const InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
     ),
   ); // fresh instance — no singleton sharing across isolates (the background handler runs in a separate one)
@@ -98,10 +98,10 @@ Future<void> _showChatNotification(String conversationId, String title, String b
   await StorageService.saveChatStackedLines(conversationId, stacked);
 
   await plugin.show(
-    conversationId.hashCode,
-    title,
-    stacked.last,
-    NotificationDetails(
+    id: conversationId.hashCode,
+    title: title,
+    body: stacked.last,
+    notificationDetails: NotificationDetails(
       android: AndroidNotificationDetails(
         _chatChannelId,
         _chatChannelName,
@@ -194,7 +194,7 @@ class NotificationService extends GetxService {
 
   Future<void> _initLocalNotifications() async {
     await _localNotifications.initialize(
-      const InitializationSettings(
+      settings: const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ),
       onDidReceiveNotificationResponse: _onLocalNotificationTap,
@@ -383,7 +383,7 @@ class NotificationService extends GetxService {
   /// read in-app never resurfaces stacked under a future notification for the same thread.
   void dismissChatNotification(String conversationId) {
     StorageService.clearChatStackedLines(conversationId);
-    unawaited(_localNotifications.cancel(conversationId.hashCode));
+    unawaited(_localNotifications.cancel(id: conversationId.hashCode));
   }
 
   Future<void> _registerToken(String token) async {
