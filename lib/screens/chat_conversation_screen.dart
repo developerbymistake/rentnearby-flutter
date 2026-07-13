@@ -260,12 +260,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
-  Future<void> _whatsapp(String phone) async {
-    final url = Uri.parse('https://wa.me/91$phone');
-    if (await canLaunchUrl(url))
-      launchUrl(url, mode: LaunchMode.externalApplication);
-  }
-
   @override
   Widget build(BuildContext context) {
     // _buildHeader() now owns the top-safe-area itself (its gradient Container wraps a
@@ -671,6 +665,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     final isScheduleProposal = m.type == 'schedule_proposal';
     final canAnswer =
         !answered && m.type == 'quick_reply' && (_isOwner || !m.isMine);
+    // A schedule_proposal or contact_request that's already been answered must never
+    // show its action buttons again. The backend links every response back to the
+    // original message via respondsToMessageId (same FK column quick_reply answers
+    // already use), so its presence anywhere in the loaded thread means this request is
+    // done — checked here instead of trusting the original message's own payload, which
+    // the backend never updates in place for either type's plain approve/decline path.
+    final scheduleAlreadyResponded = isScheduleProposal &&
+        _messages.any((x) => x.respondsToMessageId == m.id);
+    final contactAlreadyResponded = isContactRequest &&
+        _messages.any((x) => x.respondsToMessageId == m.id);
     return ChatMessageBubble(
       message: m,
       templates: _chatCtrl.questionTemplates,
@@ -678,28 +682,24 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
           ? (answerKey, answerText) =>
                 _answerQuestion(m.id, answerKey, answerText)
           : null,
-      onApproveContact: (isContactRequest && !m.isMine && _isOwner)
+      onApproveContact: (isContactRequest && !m.isMine && _isOwner && !contactAlreadyResponded)
           ? () => _respondContact(m.id, true)
           : null,
-      onDeclineContact: (isContactRequest && !m.isMine && _isOwner)
+      onDeclineContact: (isContactRequest && !m.isMine && _isOwner && !contactAlreadyResponded)
           ? () => _respondContact(m.id, false)
           : null,
-      onAcceptSlot: isScheduleProposal && !m.isMine
+      onAcceptSlot: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded
           ? (dt) => _acceptScheduleSlot(m.id, dt)
           : null,
-      onDeclineSchedule: isScheduleProposal && !m.isMine
+      onDeclineSchedule: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded
           ? () => _declineSchedule(m.id)
           : null,
-      onCounterSchedule: isScheduleProposal && !m.isMine
+      onCounterSchedule: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded
           ? () => _counterSchedule(m.id)
           : null,
       onCall: () {
         final phone = m.payload['phone'] as String?;
         if (phone != null) _call(phone);
-      },
-      onWhatsApp: () {
-        final phone = m.payload['phone'] as String?;
-        if (phone != null) _whatsapp(phone);
       },
     );
   }

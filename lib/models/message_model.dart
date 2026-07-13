@@ -41,8 +41,12 @@ class MessageModel {
         type: json['type'] as String,
         payloadJson: json['payloadJson'] as String? ?? '{}',
         respondsToMessageId: json['respondsToMessageId'] as String?,
-        readAt: json['readAt'] != null ? DateTime.parse(json['readAt'] as String) : null,
-        createdAt: DateTime.parse(json['createdAt'] as String),
+        // tryParse, not parse: a malformed/missing timestamp should drop this one field to
+        // null/now rather than throw and take the whole message list down with it (a single
+        // bad row previously meant every message in the conversation vanished behind the
+        // framework's release-mode error placeholder, not just the one row).
+        readAt: (json['readAt'] as String?) != null ? DateTime.tryParse(json['readAt'] as String) : null,
+        createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
       );
 
   MessageModel copyWith({DateTime? readAt}) => MessageModel(
