@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/chat_controller.dart';
+import '../models/conversation_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
@@ -81,10 +83,7 @@ class NotificationService extends GetxService {
     // Chat pushes (ChatFcmService.SendAsync on the backend) carry only `conversation_id` —
     // no `membership_type` and no type discriminator at all — so this must be checked first,
     // ahead of the membership branch below, or it silently falls through and misroutes to
-    // My Listings. This lands on the Chats tab (the chat list), not the specific conversation:
-    // the payload doesn't carry enough (listingType, otherPartyId, etc.) to open
-    // ChatConversationScreen directly without an extra API round-trip, which is out of scope
-    // here — the backend would need to add those fields to the push payload first.
+    // My Listings.
     final isChatMessage = message.data['conversation_id'] != null;
     final membershipType = message.data['membership_type'];
     final reportListingId = message.data['listing_id'];
@@ -98,7 +97,7 @@ class NotificationService extends GetxService {
     // notifications now push the My Rooms/My Plots route (no longer tabs).
     void goToDestination() {
       if (isChatMessage) {
-        Get.find<AuthController>().tabIndex.value = _tabChats;
+        _openChatConversation(message.data['conversation_id'] as String); // fire-and-forget
       } else if (isReportMessage) {
         Get.toNamed(AppRoutes.listingReports, arguments: {
           'listingId': reportListingId,
@@ -133,6 +132,58 @@ class NotificationService extends GetxService {
         });
       });
     }
+  }
+
+  // Chat pushes only carry `conversation_id` — ChatConversationScreen needs more
+  // (listingType, otherPartyId, title, isOwner, status) to render, which already lives
+  // in ChatController.conversations (populated by loadConversations(), same fields
+  // chats_list_screen.dart's _openConversation already maps into nav arguments). Land
+  // on the Chats tab immediately as a safe fallback view, then open the specific
+  // conversation once its data is available.
+  Future<void> _openChatConversation(String conversationId) async {
+    Get.find<AuthController>().tabIndex.value = _tabChats;
+
+    if (!Get.isRegistered<ChatController>()) return;
+    final chatCtrl = Get.find<ChatController>();
+
+    ConversationModel? find() =>
+        chatCtrl.conversations.firstWhereOrNull((c) => c.id == conversationId);
+
+    var conv = find();
+    if (conv == null) {
+      // MainScreen.initState() already kicks off its own loadConversations() before this
+      // ever runs (and ChatsListScreen's own call no-ops against the same in-flight guard) —
+      // calling loadConversations() again here would no-op instantly too. Wait out the
+      // existing load instead of firing a redundant one.
+      if (chatCtrl.conversationsLoading.value) {
+        final done = Completer<void>();
+        late final Worker worker;
+        worker = ever<bool>(chatCtrl.conversationsLoading, (loading) {
+          if (!loading && !done.isCompleted) done.complete();
+        });
+        await done.future.timeout(const Duration(seconds: 10), onTimeout: () {});
+        worker.dispose();
+      } else {
+        await chatCtrl.loadConversations();
+      }
+      conv = find();
+    }
+
+    if (conv == null) return; // not on page 1 / not found — stays on Chats list, not a dead end
+
+    Get.toNamed(AppRoutes.chatConversation, arguments: {
+      'conversationId': conv.id,
+      'listingType': conv.listingType,
+      'listingId': conv.listingId,
+      'roomTypeId': conv.roomTypeId,
+      'plotTypeId': conv.plotTypeId,
+      'otherPartyId': conv.otherPartyId,
+      'otherPartyName': conv.otherPartyName,
+      'listingTitle': conv.listingTitle,
+      'area': conv.area,
+      'isOwner': conv.isOwner,
+      'status': conv.status,
+    });
   }
 
   Future<void> _registerToken(String token) async {
