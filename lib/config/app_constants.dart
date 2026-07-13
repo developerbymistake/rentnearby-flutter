@@ -29,7 +29,7 @@ class AppConstants {
   static const double fallbackLng = 79.0193;
   static const double clusterRadius = 500.0;
   static const int maxMapMarkers = 50;
-  static const List<double> radiusOptions = [1.0, 4.0, 8.0];
+  static const List<double> radiusOptions = [1.0, 5.0, 10.0];
 }
 
 class FurnishedStatus {
