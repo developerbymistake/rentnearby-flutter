@@ -72,6 +72,9 @@ dependencies:
   firebase_core: ^3.13.1
   firebase_messaging: ^15.2.5
 
+  # Local push notifications (WhatsApp-style chat notifications)
+  flutter_local_notifications: ^22.0.1
+
   cupertino_icons: ^1.0.8
   signalr_netcore: ^1.4.4
 

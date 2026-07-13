@@ -1,7 +1,12 @@
 import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
@@ -10,9 +15,109 @@ import '../models/conversation_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 
+const String _chatChannelId = 'chat_messages';
+const String _chatChannelName = 'Chat messages';
+const int _maxStackedLines = 8;
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Background messages are shown automatically by FCM on Android.
+  final conversationId = message.data['conversation_id'] as String?;
+  if (conversationId == null) return; // not a chat push — report/membership/broadcast unaffected
+
+  WidgetsFlutterBinding.ensureInitialized();
+  await GetStorage.init();
+  await _showChatNotification(
+    conversationId,
+    message.data['title'] as String? ?? 'New message',
+    message.data['body'] as String? ?? '',
+  );
+}
+
+// Android's action-button-tap callback — this design has no action buttons, so a plain tap
+// shouldn't route here in practice (it should hit onDidReceiveNotificationResponse, or the
+// cold-start getNotificationAppLaunchDetails() check, instead). Kept as a documented no-op
+// for forward-compatibility; verify on-device which callback actually fires for a plain tap
+// in each app state.
+@pragma('vm:entry-point')
+void _onBackgroundNotificationTap(NotificationResponse response) {}
+
+// Draws a circular initial-letter avatar matching chats_list_screen.dart's existing
+// per-conversation avatar exactly (solid navy AppColors.primary, white bold initial) — there
+// are no real profile photos in this app and no per-user color palette, so this is always
+// the same fixed navy circle, never derived from userId/name.
+Future<Uint8List> _buildInitialAvatarBytes(String senderName) async {
+  const size = 128.0;
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, size, size));
+
+  canvas.drawCircle(
+    const Offset(size / 2, size / 2),
+    size / 2,
+    Paint()..color = AppColors.primary,
+  );
+
+  final initial = senderName.trim().isNotEmpty ? senderName.trim()[0].toUpperCase() : '?';
+  final textPainter = TextPainter(
+    text: TextSpan(
+      text: initial,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: size * 0.45,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  textPainter.paint(
+    canvas,
+    Offset((size - textPainter.width) / 2, (size - textPainter.height) / 2),
+  );
+
+  final image = await recorder.endRecording().toImage(size.toInt(), size.toInt());
+  final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+  return byteData!.buffer.asUint8List();
+}
+
+// Single source of truth for building/showing a chat notification — called from the killed-app
+// background handler, the foreground listener, and nowhere else. Stacks consecutive messages
+// from the same conversation into one notification (WhatsApp-like) via a small persisted
+// per-conversation line cache, since flutter_local_notifications has no API to read back an
+// already-shown notification's InboxStyle lines.
+Future<void> _showChatNotification(String conversationId, String title, String body) async {
+  final plugin = FlutterLocalNotificationsPlugin();
+  await plugin.initialize(
+    const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    ),
+  ); // fresh instance — no singleton sharing across isolates (the background handler runs in a separate one)
+
+  final lines = StorageService.getChatStackedLines(conversationId)..add(body);
+  final stacked = lines.length > _maxStackedLines
+      ? lines.sublist(lines.length - _maxStackedLines)
+      : lines;
+  await StorageService.saveChatStackedLines(conversationId, stacked);
+
+  await plugin.show(
+    conversationId.hashCode,
+    title,
+    stacked.last,
+    NotificationDetails(
+      android: AndroidNotificationDetails(
+        _chatChannelId,
+        _chatChannelName,
+        importance: Importance.high,
+        priority: Priority.high,
+        styleInformation: InboxStyleInformation(
+          stacked,
+          contentTitle: title,
+          summaryText: stacked.length > 1 ? '${stacked.length} messages' : null,
+        ),
+        largeIcon: ByteArrayAndroidBitmap(await _buildInitialAvatarBytes(title)),
+        autoCancel: true,
+      ),
+    ),
+    payload: conversationId,
+  );
 }
 
 class NotificationService extends GetxService {
@@ -20,6 +125,8 @@ class NotificationService extends GetxService {
 
   StreamSubscription? _messageOpenedSub;
   StreamSubscription? _tokenRefreshSub;
+  StreamSubscription? _foregroundMessageSub;
+  final _localNotifications = FlutterLocalNotificationsPlugin();
 
   // Tab index matching main_screen.dart tab order — Explore and Chats are resident
   // tabs; My Rooms/My Plots are pushed routes, handled separately below.
@@ -39,6 +146,26 @@ class NotificationService extends GetxService {
     _messageOpenedSub = FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) _handleNotificationTap(initialMessage);
+
+    // Chat pushes are data-only (see ChatFcmService.cs), so FCM routes them to onMessage
+    // while the app is foregrounded, never auto-displaying anything — build the same
+    // stacked/avatar notification here too, unless the user is already looking at that
+    // exact conversation.
+    _foregroundMessageSub = FirebaseMessaging.onMessage.listen((message) async {
+      final conversationId = message.data['conversation_id'] as String?;
+      if (conversationId == null) return;
+      if (Get.currentRoute == AppRoutes.chatConversation &&
+          (Get.arguments as Map?)?['conversationId'] == conversationId) {
+        return;
+      }
+      await _showChatNotification(
+        conversationId,
+        message.data['title'] as String? ?? 'New message',
+        message.data['body'] as String? ?? '',
+      );
+    });
+
+    await _initLocalNotifications();
 
     // Token refresh listener — only registers if logged in
     _tokenRefreshSub = FirebaseMessaging.instance.onTokenRefresh.listen((token) async {
@@ -65,6 +192,41 @@ class NotificationService extends GetxService {
     }
   }
 
+  Future<void> _initLocalNotifications() async {
+    await _localNotifications.initialize(
+      const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      ),
+      onDidReceiveNotificationResponse: _onLocalNotificationTap,
+      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationTap,
+    );
+
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(const AndroidNotificationChannel(
+          _chatChannelId,
+          _chatChannelName,
+          description: 'Notifications for new chat messages',
+          importance: Importance.high,
+        ));
+
+    // Cold start: app was killed and launched by tapping our own local notification — a
+    // DIFFERENT signal from FirebaseMessaging.getInitialMessage() above, which only detects
+    // taps on Play-Services-auto-rendered notifications (chat is no longer auto-rendered
+    // at all, since chat pushes are data-only).
+    final launchDetails = await _localNotifications.getNotificationAppLaunchDetails();
+    final payload = launchDetails?.notificationResponse?.payload;
+    if (launchDetails?.didNotificationLaunchApp == true && payload != null) {
+      _navigateToChatConversation(payload);
+    }
+  }
+
+  void _onLocalNotificationTap(NotificationResponse response) {
+    if (!StorageService.isLoggedIn) return;
+    final conversationId = response.payload;
+    if (conversationId != null) _navigateToChatConversation(conversationId);
+  }
+
   // Screens pushed ON TOP of main screen — main is underneath in the stack
   static const _routesOnTopOfMain = {
     AppRoutes.listingDetail,
@@ -80,10 +242,13 @@ class NotificationService extends GetxService {
   void _handleNotificationTap(RemoteMessage message) {
     if (!StorageService.isLoggedIn) return;
 
-    // Chat pushes (ChatFcmService.SendAsync on the backend) carry only `conversation_id` —
-    // no `membership_type` and no type discriminator at all — so this must be checked first,
-    // ahead of the membership branch below, or it silently falls through and misroutes to
-    // My Listings.
+    // Chat pushes are data-only now (see ChatFcmService.cs) and are never auto-rendered
+    // by Play Services, so this branch is normally dead for real chat pushes — the plugin's
+    // own onMessage/onBackgroundMessage + our local-notification tap handling own that path
+    // instead. Kept (not deleted) because it's not fully unreachable: a manually-composed
+    // Firebase Console test push always includes a Notification block, and a tester could
+    // still add conversation_id as a custom data key for QA — that combined-payload message
+    // WOULD flow through onMessageOpenedApp with data populated, hitting this exact branch.
     final isChatMessage = message.data['conversation_id'] != null;
     final membershipType = message.data['membership_type'];
     final reportListingId = message.data['listing_id'];
@@ -97,7 +262,7 @@ class NotificationService extends GetxService {
     // notifications now push the My Rooms/My Plots route (no longer tabs).
     void goToDestination() {
       if (isChatMessage) {
-        _openChatConversation(message.data['conversation_id'] as String); // fire-and-forget
+        _navigateToChatConversation(message.data['conversation_id'] as String);
       } else if (isReportMessage) {
         Get.toNamed(AppRoutes.listingReports, arguments: {
           'listingId': reportListingId,
@@ -129,6 +294,27 @@ class NotificationService extends GetxService {
           if (Get.isRegistered<AuthController>()) {
             goToDestination();
           }
+        });
+      });
+    }
+  }
+
+  // Shared route-state juggling for both trigger sources — FCM's own tap tracking
+  // (_handleNotificationTap, for the narrow still-possible case documented above) and
+  // flutter_local_notifications' own tap tracking (_onLocalNotificationTap / cold-start
+  // getNotificationAppLaunchDetails), which is what actually fires for real chat pushes now.
+  void _navigateToChatConversation(String conversationId) {
+    final currentRoute = Get.currentRoute;
+    if (currentRoute == AppRoutes.main) {
+      _openChatConversation(conversationId);
+    } else if (_routesOnTopOfMain.contains(currentRoute)) {
+      Get.until((route) => route.settings.name == AppRoutes.main);
+      _openChatConversation(conversationId);
+    } else {
+      Get.offAllNamed(AppRoutes.main);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (Get.isRegistered<AuthController>()) _openChatConversation(conversationId);
         });
       });
     }
@@ -171,6 +357,11 @@ class NotificationService extends GetxService {
 
     if (conv == null) return; // not on page 1 / not found — stays on Chats list, not a dead end
 
+    // Stacked-notification cleanup lives in ChatConversationScreen.initState() instead of
+    // here — that runs regardless of HOW the screen was reached (this notification-tap path,
+    // or a plain manual tap from chats_list_screen.dart's own conversation list), so it's the
+    // one place that reliably fires every time the conversation is actually opened.
+
     Get.toNamed(AppRoutes.chatConversation, arguments: {
       'conversationId': conv.id,
       'listingType': conv.listingType,
@@ -184,6 +375,15 @@ class NotificationService extends GetxService {
       'isOwner': conv.isOwner,
       'status': conv.status,
     });
+  }
+
+  /// Clears a conversation's stacked-notification state (recent lines cache + the tray
+  /// notification itself, if still showing). Call this whenever the conversation screen is
+  /// actually opened — regardless of navigation source — so a message the user has already
+  /// read in-app never resurfaces stacked under a future notification for the same thread.
+  void dismissChatNotification(String conversationId) {
+    StorageService.clearChatStackedLines(conversationId);
+    unawaited(_localNotifications.cancel(conversationId.hashCode));
   }
 
   Future<void> _registerToken(String token) async {
@@ -287,6 +487,7 @@ class NotificationService extends GetxService {
   void onClose() {
     _messageOpenedSub?.cancel();
     _tokenRefreshSub?.cancel();
+    _foregroundMessageSub?.cancel();
     super.onClose();
   }
 }

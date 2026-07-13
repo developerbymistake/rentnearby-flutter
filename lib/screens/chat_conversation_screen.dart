@@ -7,6 +7,7 @@ import '../controllers/chat_controller.dart';
 import '../models/message_model.dart';
 import '../models/question_template_model.dart';
 import '../services/chat_hub_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/chat_message_bubble.dart';
 import '../widgets/chat_next_slot_bubble.dart';
 import '../widgets/chat_plus_menu_sheet.dart';
@@ -63,6 +64,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     ChatHubService.to.connect(conversationId: _conversationId);
     _chatCtrl.markRead(_conversationId);
     _chatCtrl.loadQuestionTemplates();
+    // Runs regardless of how this screen was reached (notification tap or a plain manual
+    // tap from the Chats list) — the one place that reliably fires every time this
+    // conversation is actually opened, so a message already read in-app never resurfaces
+    // stacked under a future chat notification for this same thread.
+    NotificationService.to.dismissChatNotification(_conversationId);
 
     _incomingWorker = ever<MessageModel?>(_chatCtrl.incomingMessage, (m) {
       if (m == null || m.conversationId != _conversationId || !mounted) return;

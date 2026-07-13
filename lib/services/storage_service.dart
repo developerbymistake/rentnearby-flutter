@@ -112,4 +112,18 @@ class StorageService {
     final val = _box.read<String>('${AppConstants.citiesCacheKeyPrefix}${districtId}_savedAt');
     return val == null ? null : DateTime.tryParse(val);
   }
+
+  // ── Chat notification stacking ──────────────────────────────────────────
+  // See AppConstants.chatStackedLinesKeyPrefix — persists recent message lines per
+  // conversation across separate background-isolate invocations of the FCM handler.
+
+  static Future<void> saveChatStackedLines(String conversationId, List<String> lines) async =>
+      _box.write('${AppConstants.chatStackedLinesKeyPrefix}$conversationId', lines);
+
+  static List<String> getChatStackedLines(String conversationId) =>
+      _box.read<List>('${AppConstants.chatStackedLinesKeyPrefix}$conversationId')
+          ?.cast<String>() ?? <String>[];
+
+  static void clearChatStackedLines(String conversationId) =>
+      _box.remove('${AppConstants.chatStackedLinesKeyPrefix}$conversationId');
 }
