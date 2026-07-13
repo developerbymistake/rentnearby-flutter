@@ -471,25 +471,45 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                 ),
               ),
               if (_isOwner)
-                PopupMenuButton<String>(
-                  icon: const Icon(
-                    Icons.more_vert_rounded,
-                    color: Colors.white,
-                  ),
-                  onSelected: (_) => _confirmBlockUser(),
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'block',
-                      child: Text(
-                        'Block this user',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          color: AppColors.error,
+                Obx(() {
+                  final isBlocked = _status.value == 'Blocked';
+                  return PopupMenuButton<String>(
+                    icon: const Icon(
+                      Icons.more_vert_rounded,
+                      color: Colors.white,
+                    ),
+                    elevation: 6,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    onSelected: (_) =>
+                        isBlocked ? _confirmUnblockUser() : _confirmBlockUser(),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: isBlocked ? 'unblock' : 'block',
+                        child: Row(
+                          children: [
+                            Icon(
+                              isBlocked
+                                  ? Icons.check_circle_outline_rounded
+                                  : Icons.block_rounded,
+                              size: 18,
+                              color: isBlocked ? AppColors.primary : AppColors.error,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              isBlocked ? 'Unblock the user' : 'Block this user',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                color: isBlocked ? AppColors.primary : AppColors.error,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  );
+                }),
             ],
           ),
         ),
@@ -538,6 +558,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
                 foregroundColor: Colors.white,
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
               onPressed: blocking
                   ? null
@@ -608,6 +630,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
               onPressed: unblocking
                   ? null

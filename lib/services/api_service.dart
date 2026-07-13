@@ -58,19 +58,23 @@ class ApiService {
     return res.data;
   }
 
+  // `?? <String, dynamic>{}` below: a 204 No Content response (e.g. block/unblock) has a
+  // null body — without this, returning it against this method's non-nullable Map signature
+  // throws a TypeError *after* the request already succeeded on the wire, so callers land in
+  // their catch block and report failure for an action that actually went through.
   static Future<Map<String, dynamic>> post(String path, Map<String, dynamic> data) async {
     final res = await _dio.post(path, data: data);
-    return res.data;
+    return res.data ?? <String, dynamic>{};
   }
 
   static Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? params}) async {
     final res = await _dio.get(path, queryParameters: params);
-    return res.data;
+    return res.data ?? <String, dynamic>{};
   }
 
   static Future<Map<String, dynamic>> put(String path, Map<String, dynamic> data) async {
     final res = await _dio.put(path, data: data);
-    return res.data;
+    return res.data ?? <String, dynamic>{};
   }
 
   static Future<void> delete(String path) async {
@@ -83,6 +87,6 @@ class ApiService {
     void Function(int sent, int total)? onSendProgress,
   }) async {
     final res = await _dio.post(path, data: data, onSendProgress: onSendProgress);
-    return res.data;
+    return res.data ?? <String, dynamic>{};
   }
 }
