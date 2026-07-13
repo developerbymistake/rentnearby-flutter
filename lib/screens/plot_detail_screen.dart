@@ -11,7 +11,6 @@ import '../controllers/chat_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../controllers/report_controller.dart';
 import '../models/plot_model.dart';
-import '../utils/app_toast.dart';
 import '../widgets/detail_action_bar.dart';
 import '../widgets/report_listing_sheet.dart';
 
@@ -339,10 +338,7 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
 
   Future<void> _openChat(PlotModel p) async {
     final conv = await Get.find<ChatController>().createOrGetConversation('Plot', p.id);
-    if (conv == null) {
-      AppToast.error('Could not start chat. Please try again.');
-      return;
-    }
+    if (conv == null) return; // controller already showed the specific error toast
     Get.toNamed(AppRoutes.chatConversation, arguments: {
       'conversationId': conv.id,
       'listingType': conv.listingType,

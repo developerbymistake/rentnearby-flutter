@@ -11,7 +11,6 @@ import '../controllers/chat_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/report_controller.dart';
 import '../models/listing_model.dart';
-import '../utils/app_toast.dart';
 import '../widgets/detail_action_bar.dart';
 import '../widgets/report_listing_sheet.dart';
 
@@ -386,10 +385,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   Future<void> _openChat(ListingModel l) async {
     final conv = await Get.find<ChatController>().createOrGetConversation('Room', l.id);
-    if (conv == null) {
-      AppToast.error('Could not start chat. Please try again.');
-      return;
-    }
+    if (conv == null) return; // controller already showed the specific error toast
     Get.toNamed(AppRoutes.chatConversation, arguments: {
       'conversationId': conv.id,
       'listingType': conv.listingType,
