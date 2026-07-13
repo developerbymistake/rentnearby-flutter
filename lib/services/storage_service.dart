@@ -114,15 +114,22 @@ class StorageService {
   }
 
   // ── Chat notification stacking ──────────────────────────────────────────
-  // See AppConstants.chatStackedLinesKeyPrefix — persists recent message lines per
-  // conversation across separate background-isolate invocations of the FCM handler.
+  // See AppConstants.chatStackedLinesKeyPrefix — persists recent messages (text + the time
+  // each one arrived) per conversation across separate background-isolate invocations of the
+  // FCM handler. Each entry is stored as a {'text': String, 'timestamp': int (epoch ms)} map
+  // so MessagingStyleInformation can render every stacked line with its own real timestamp
+  // instead of stamping all of them with the notification's current display time.
 
-  static Future<void> saveChatStackedLines(String conversationId, List<String> lines) async =>
-      _box.write('${AppConstants.chatStackedLinesKeyPrefix}$conversationId', lines);
+  static Future<void> saveChatStackedLines(
+    String conversationId,
+    List<Map<String, dynamic>> messages,
+  ) async =>
+      _box.write('${AppConstants.chatStackedLinesKeyPrefix}$conversationId', messages);
 
-  static List<String> getChatStackedLines(String conversationId) =>
+  static List<Map<String, dynamic>> getChatStackedLines(String conversationId) =>
       _box.read<List>('${AppConstants.chatStackedLinesKeyPrefix}$conversationId')
-          ?.cast<String>() ?? <String>[];
+          ?.map((e) => Map<String, dynamic>.from(e as Map))
+          .toList() ?? <Map<String, dynamic>>[];
 
   static void clearChatStackedLines(String conversationId) =>
       _box.remove('${AppConstants.chatStackedLinesKeyPrefix}$conversationId');

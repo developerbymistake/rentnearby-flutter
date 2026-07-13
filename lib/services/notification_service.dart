@@ -81,8 +81,15 @@ Future<Uint8List> _buildInitialAvatarBytes(String senderName) async {
 // Single source of truth for building/showing a chat notification — called from the killed-app
 // background handler, the foreground listener, and nowhere else. Stacks consecutive messages
 // from the same conversation into one notification (WhatsApp-like) via a small persisted
-// per-conversation line cache, since flutter_local_notifications has no API to read back an
-// already-shown notification's InboxStyle lines.
+// per-conversation message cache, since flutter_local_notifications has no API to read back an
+// already-shown notification's style contents.
+//
+// Uses MessagingStyleInformation (not InboxStyleInformation) specifically so Android renders
+// the sender's avatar as the circular icon on the LEFT, matching WhatsApp exactly — InboxStyle
+// has no concept of a per-message Person, so Android falls back to drawing the large icon on
+// the right instead. MessagingStyle also lets the contact's name be the notification's own
+// title (derived from the single Person below) instead of a separate bold name line repeated
+// above the message body, which is the second WhatsApp-parity issue this fixes.
 Future<void> _showChatNotification(String conversationId, String title, String body) async {
   final plugin = FlutterLocalNotificationsPlugin();
   await plugin.initialize(
@@ -91,28 +98,44 @@ Future<void> _showChatNotification(String conversationId, String title, String b
     ),
   ); // fresh instance — no singleton sharing across isolates (the background handler runs in a separate one)
 
-  final lines = StorageService.getChatStackedLines(conversationId)..add(body);
-  final stacked = lines.length > _maxStackedLines
-      ? lines.sublist(lines.length - _maxStackedLines)
-      : lines;
+  final avatarBytes = await _buildInitialAvatarBytes(title);
+  final sender = Person(
+    key: conversationId,
+    name: title,
+    icon: ByteArrayAndroidIcon(avatarBytes),
+  );
+
+  final stored = StorageService.getChatStackedLines(conversationId)
+    ..add({'text': body, 'timestamp': DateTime.now().millisecondsSinceEpoch});
+  final stacked = stored.length > _maxStackedLines
+      ? stored.sublist(stored.length - _maxStackedLines)
+      : stored;
   await StorageService.saveChatStackedLines(conversationId, stacked);
+
+  final messages = stacked
+      .map((m) => Message(
+            m['text'] as String,
+            DateTime.fromMillisecondsSinceEpoch(m['timestamp'] as int),
+            sender,
+          ))
+      .toList();
 
   await plugin.show(
     id: conversationId.hashCode,
     title: title,
-    body: stacked.last,
+    body: body,
     notificationDetails: NotificationDetails(
       android: AndroidNotificationDetails(
         _chatChannelId,
         _chatChannelName,
         importance: Importance.high,
         priority: Priority.high,
-        styleInformation: InboxStyleInformation(
-          stacked,
-          contentTitle: title,
-          summaryText: stacked.length > 1 ? '${stacked.length} messages' : null,
+        styleInformation: MessagingStyleInformation(
+          const Person(name: 'You'),
+          groupConversation: false,
+          messages: messages,
         ),
-        largeIcon: ByteArrayAndroidBitmap(await _buildInitialAvatarBytes(title)),
+        largeIcon: ByteArrayAndroidBitmap(avatarBytes),
         autoCancel: true,
       ),
     ),
