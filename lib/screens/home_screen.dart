@@ -10,6 +10,14 @@ import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/location_controller.dart';
+import '../widgets/selectable_chip.dart';
+
+const _kPlotColor = Color(0xFF92400E);
+const _kPlotGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0xFF92400E), Color(0xFF78350F)],
+);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -183,6 +191,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ── Rooms/Plots toggle, floating in the hero's bottom edge ─────────────────
+  // Same chip design as the Rooms/Plots toggle on ViewAllScreen and the real
+  // type-filter chips (SelectableChip) — gradient fill + shadow on the
+  // selected chip for a richer feel appropriate to the hero, not the flat
+  // fill ViewAllScreen's utilitarian toggle uses.
 
   Widget _buildToggle() {
     return Transform.translate(
@@ -191,54 +203,32 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Obx(() {
           final active = _home.activeTab.value;
-          return Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, 10)),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(child: _toggleSegment('rooms', Iconsax.home, 'Rooms', active == 'rooms')),
-                Expanded(child: _toggleSegment('plots', Icons.landscape_rounded, 'Plots', active == 'plots')),
-              ],
-            ),
+          return Row(
+            children: [
+              Expanded(
+                child: SelectableChip(
+                  label: 'Rooms',
+                  icon: Iconsax.home,
+                  selected: active == 'rooms',
+                  activeColor: AppColors.primary,
+                  gradient: AppColors.primaryGradient,
+                  onTap: () => _home.setActiveTab('rooms'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SelectableChip(
+                  label: 'Plots',
+                  icon: Icons.landscape_rounded,
+                  selected: active == 'plots',
+                  activeColor: _kPlotColor,
+                  gradient: _kPlotGradient,
+                  onTap: () => _home.setActiveTab('plots'),
+                ),
+              ),
+            ],
           );
         }),
-      ),
-    );
-  }
-
-  Widget _toggleSegment(String key, IconData icon, String label, bool isActive) {
-    return GestureDetector(
-      onTap: () => _home.setActiveTab(key),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isActive ? AppColors.surface : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 15, color: isActive ? AppColors.primary : AppColors.textHint),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                color: isActive ? AppColors.primary : AppColors.textHint,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
