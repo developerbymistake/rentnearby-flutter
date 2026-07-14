@@ -46,11 +46,11 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildHero(context),
               _buildToggle(),
-              const SizedBox(height: 6),
+              const SizedBox(height: 2),
               _buildListingsSection(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 15),
               _buildQuickActions(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 15),
               _buildPopularAreas(),
               const SizedBox(height: 20),
               _buildPromoBanner(),
@@ -151,14 +151,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(16),
-        border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.28)),
-          left: BorderSide(color: Colors.white.withValues(alpha: 0.28)),
-          right: const BorderSide(color: Colors.white, width: 3),
-          bottom: const BorderSide(color: Colors.white, width: 3),
-        ),
+        color: Colors.white.withValues(alpha: 0.14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         children: [
           Expanded(
-            child: _quickAction(Iconsax.home, 'Find Room', AppColors.primary, AppColors.surface, () {
+            child: _quickAction(Iconsax.home, 'Find Room', AppColors.primary, AppColors.primary.withValues(alpha: 0.1), () {
               _auth.tabIndex.value = AppTabs.rooms;
             }),
           ),
@@ -423,9 +418,6 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(
                 color: bg,
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(color: color.withValues(alpha: 0.32), blurRadius: 16, offset: const Offset(4, 10)),
-                ],
               ),
               child: Icon(icon, color: color, size: 20),
             ),
