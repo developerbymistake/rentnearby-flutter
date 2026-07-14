@@ -542,12 +542,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             GestureDetector(
-              onTap: () => Get.toNamed(AppRoutes.addListing),
+              onTap: () => Get.toNamed(AppRoutes.myListings),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                 decoration: const BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.all(Radius.circular(20))),
                 child: const Text(
-                  'Post Now',
+                  'My Room',
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
                 ),
               ),
