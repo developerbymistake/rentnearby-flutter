@@ -11,6 +11,7 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_constants.dart';
 import '../config/app_map_state.dart';
+import '../config/app_tabs.dart';
 import '../controllers/app_feature_controller.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
@@ -95,7 +96,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     // Trigger data load whenever LocationController resolves the district.
     _locationWorker = ever(_locationCtrl.selectedDistrict, (_) {
       if (_locationCtrl.selectedDistrict.value != null) {
-        if (_auth.tabIndex.value == 1 && !mapShouldPause.value) {
+        if (_auth.tabIndex.value == AppTabs.plots && !mapShouldPause.value) {
           _precomputeCircleCache();
           _loadNearby();
           if (_mapReady && !_isCameraMoving) _fitToRadius();
@@ -110,7 +111,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     // browsed one) and resetting back to the real location (browsingCity
     // becomes null again), mirroring _locationWorker above.
     _browsingWorker = ever(_locationCtrl.browsingCity, (_) {
-      if (_auth.tabIndex.value == 1 && !mapShouldPause.value) {
+      if (_auth.tabIndex.value == AppTabs.plots && !mapShouldPause.value) {
         _precomputeCircleCache();
         _loadNearby();
         // Unconditional, unlike the _isCameraMoving-gated calls elsewhere:
@@ -172,12 +173,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
 
     _postedWorker = ever(_plotCtrl.plotPostedTrigger, (_) {
       _stale = true;
-      if (_auth.tabIndex.value == 1 && !mapShouldPause.value) _loadNearby();
+      if (_auth.tabIndex.value == AppTabs.plots && !mapShouldPause.value) _loadNearby();
     });
     _refreshWorker = ever(_plotCtrl.exploreRefreshTrigger, (_) {
       _stale = true;
       if (_locationCtrl.effectiveDistrict != null &&
-          _auth.tabIndex.value == 1 && !mapShouldPause.value) {
+          _auth.tabIndex.value == AppTabs.plots && !mapShouldPause.value) {
         _loadNearby();
       }
     });
@@ -211,12 +212,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         });
       } else {
         setState(() => _mapActive = true);
-        if (_auth.tabIndex.value == 1 && _stale) _loadNearby();
+        if (_auth.tabIndex.value == AppTabs.plots && _stale) _loadNearby();
       }
     });
 
     _tabWorker = ever(_auth.tabIndex, (index) {
-      if (index == 1) {
+      if (index == AppTabs.plots) {
         if (_stale && !mapShouldPause.value) {
           _loadNearby();
           if (_mapReady && !_isCameraMoving) _fitToRadius();

@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../config/app_routes.dart';
+import '../config/app_tabs.dart';
 import '../utils/app_toast.dart';
 import 'listing_controller.dart';
 import 'report_controller.dart';
@@ -15,7 +16,7 @@ import '../services/banner_hub_service.dart';
 class AuthController extends GetxController {
   final isLoading = false.obs;
   final user = Rxn<UserModel>();
-  final tabIndex = 0.obs;
+  final tabIndex = AppTabs.home.obs;
   final profileTabTrigger = 0.obs;
   final chatsTabTrigger = 0.obs;
 
