@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/chat_controller.dart';
+import '../controllers/location_controller.dart';
 import '../controllers/view_all_controller.dart';
 import '../widgets/filter_sort_sheet.dart';
 import '../widgets/listing_grid_card.dart';
 import '../widgets/location_pill.dart';
-import '../widgets/selectable_chip.dart';
+import '../widgets/sliding_chip_toggle.dart';
 
 const _kPlotGradient = LinearGradient(
   begin: Alignment.topLeft,
@@ -111,7 +113,13 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                       child: Row(
                         children: [
                           IconButton(
-                            onPressed: () => Get.back(),
+                            onPressed: () {
+                              // Only View All resets browsing-elsewhere back to the
+                              // current district on exit — Explore Rooms/Plots keep
+                              // their own persistent browsing state on purpose.
+                              Get.find<LocationController>().resetBrowsing();
+                              Get.back();
+                            },
                             icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
                           ),
                           Expanded(
@@ -161,24 +169,21 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SelectableChip(
-                      label: 'Rooms',
-                      selected: isRooms,
-                      activeColor: AppColors.primary,
-                      onTap: () => _ctrl.setType(ViewAllListingType.rooms),
-                    ),
+              child: SlidingChipToggle(
+                selectedIndex: isRooms ? 0 : 1,
+                onChanged: (i) => _ctrl.setType(i == 0 ? ViewAllListingType.rooms : ViewAllListingType.plots),
+                options: [
+                  ToggleOption(
+                    label: 'Rooms',
+                    icon: Icons.home_rounded,
+                    activeColor: AppColors.primary,
+                    gradient: AppColors.primaryGradient,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SelectableChip(
-                      label: 'Plots',
-                      selected: !isRooms,
-                      activeColor: _kPlotColor,
-                      onTap: () => _ctrl.setType(ViewAllListingType.plots),
-                    ),
+                  ToggleOption(
+                    label: 'Plots',
+                    icon: Icons.landscape_rounded,
+                    activeColor: _kPlotColor,
+                    gradient: _kPlotGradient,
                   ),
                 ],
               ),
@@ -189,7 +194,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                 onRefresh: () => _ctrl.loadPage(reset: true),
                 child: Obx(() {
                   if (_ctrl.isLoading.value) {
-                    return const Center(child: CircularProgressIndicator());
+                    return _buildGridShimmer();
                   }
                   final items = _ctrl.items;
                   if (items.isEmpty) {
@@ -240,6 +245,27 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
           ],
         );
       }),
+    );
+  }
+
+  Widget _buildGridShimmer() {
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      physics: const AlwaysScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.72,
+      ),
+      itemCount: 6,
+      itemBuilder: (_, __) => Shimmer.fromColors(
+        baseColor: AppColors.shimmerBase,
+        highlightColor: AppColors.shimmerHighlight,
+        child: Container(
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+        ),
+      ),
     );
   }
 }

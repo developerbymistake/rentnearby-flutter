@@ -46,7 +46,7 @@ class ListingGridCard extends StatelessWidget {
             child: Stack(
               children: [
                 SizedBox(
-                  height: 112,
+                  height: 130,
                   width: double.infinity,
                   child: thumbnailUrl != null
                       ? CachedNetworkImage(
@@ -75,10 +75,10 @@ class ListingGridCard extends StatelessWidget {
                   child: GestureDetector(
                     onTap: onViewDetails,
                     child: Container(
-                      width: 22,
-                      height: 22,
+                      width: 26,
+                      height: 26,
                       decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), shape: BoxShape.circle),
-                      child: const Icon(Iconsax.eye, size: 11, color: AppColors.primary),
+                      child: const Icon(Iconsax.eye, size: 14, color: AppColors.primary),
                     ),
                   ),
                 ),

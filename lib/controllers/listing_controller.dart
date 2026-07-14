@@ -18,6 +18,12 @@ class ListingController extends GetxController {
   final listingPostedTrigger = 0.obs;
   final exploreRefreshTrigger = 0.obs;
   final filterResetTrigger = 0.obs;
+  /// Bumped ONLY by toggleActive() after the server confirms an active-status
+  /// change — unlike exploreRefreshTrigger (also bumped on every Rooms/Plots
+  /// tab switch by main_screen.dart, for Explore's own unrelated needs), this
+  /// is the narrow signal HomeController listens to, so it never reloads on
+  /// bare navigation.
+  final listingStatusChangedTrigger = 0.obs;
   final isMembershipLoading = false.obs;
   final roomMembership = Rxn<Map<String, dynamic>>();
   final roomPlans = Rx<Map<String, Map<String, dynamic>>>({});
@@ -165,6 +171,7 @@ class ListingController extends GetxController {
       AppToast.success(isActive ? 'Listing hidden.' : 'Room is now LIVE! 🎉');
       if (isActive) nearbyListings.removeWhere((l) => l.id == id);
       exploreRefreshTrigger.value++;
+      listingStatusChangedTrigger.value++;
       await loadMyListings();
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not update listing status.'));

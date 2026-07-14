@@ -10,7 +10,7 @@ import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/location_controller.dart';
-import '../widgets/selectable_chip.dart';
+import '../widgets/sliding_chip_toggle.dart';
 
 const _kPlotColor = Color(0xFF92400E);
 const _kPlotGradient = LinearGradient(
@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
           bottomRight: Radius.circular(24),
         ),
       ),
-      padding: EdgeInsets.fromLTRB(20, AppInsets.topViewPadding(context) + 14, 20, 30),
+      padding: EdgeInsets.fromLTRB(20, AppInsets.topViewPadding(context) + 14, 20, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -191,10 +191,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ── Rooms/Plots toggle, floating in the hero's bottom edge ─────────────────
-  // Same chip design as the Rooms/Plots toggle on ViewAllScreen and the real
-  // type-filter chips (SelectableChip) — gradient fill + shadow on the
-  // selected chip for a richer feel appropriate to the hero, not the flat
-  // fill ViewAllScreen's utilitarian toggle uses.
+  // Single sliding track (SlidingChipToggle), not two independent chips —
+  // the gradient pill physically slides between Rooms/Plots.
 
   Widget _buildToggle() {
     return Transform.translate(
@@ -203,28 +201,21 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Obx(() {
           final active = _home.activeTab.value;
-          return Row(
-            children: [
-              Expanded(
-                child: SelectableChip(
-                  label: 'Rooms',
-                  icon: Iconsax.home,
-                  selected: active == 'rooms',
-                  activeColor: AppColors.primary,
-                  gradient: AppColors.primaryGradient,
-                  onTap: () => _home.setActiveTab('rooms'),
-                ),
+          return SlidingChipToggle(
+            selectedIndex: active == 'rooms' ? 0 : 1,
+            onChanged: (i) => _home.setActiveTab(i == 0 ? 'rooms' : 'plots'),
+            options: [
+              ToggleOption(
+                label: 'Rooms',
+                icon: Iconsax.home,
+                activeColor: AppColors.primary,
+                gradient: AppColors.primaryGradient,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SelectableChip(
-                  label: 'Plots',
-                  icon: Icons.landscape_rounded,
-                  selected: active == 'plots',
-                  activeColor: _kPlotColor,
-                  gradient: _kPlotGradient,
-                  onTap: () => _home.setActiveTab('plots'),
-                ),
+              ToggleOption(
+                label: 'Plots',
+                icon: Icons.landscape_rounded,
+                activeColor: _kPlotColor,
+                gradient: _kPlotGradient,
               ),
             ],
           );
@@ -599,7 +590,7 @@ class _HomeListingCard extends StatelessWidget {
             child: Stack(
               children: [
                 SizedBox(
-                  height: 88,
+                  height: 108,
                   width: double.infinity,
                   child: thumbnailUrl != null
                       ? CachedNetworkImage(

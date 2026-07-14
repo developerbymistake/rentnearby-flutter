@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import '../services/api_service.dart';
+import 'listing_controller.dart';
 import 'location_controller.dart';
+import 'plot_controller.dart';
 
 class HomeRoomModel {
   final String id;
@@ -79,6 +81,8 @@ class HomeController extends GetxController {
   final activeTab = 'rooms'.obs;
 
   Worker? _districtWorker;
+  Worker? _plotRefreshWorker;
+  Worker? _roomRefreshWorker;
   String? _loadedDistrictId;
 
   @override
@@ -92,6 +96,18 @@ class HomeController extends GetxController {
         if (district != null) loadHomeData(district.id);
       },
     );
+
+    // A room/plot's active status only changes via My Rooms/My Plots'
+    // toggleActive(), which bumps listingStatusChangedTrigger only after the
+    // server confirms the change — a genuine "the data changed" signal, not
+    // a bare tab-switch. Deliberately NOT exploreRefreshTrigger: that one is
+    // also bumped unconditionally on every switch to the Rooms/Plots bottom
+    // tab (main_screen.dart, for Explore's own unrelated refresh needs), so
+    // listening to it here would silently reload Home on plain navigation —
+    // exactly the behaviour this fix must not reintroduce.
+    _plotRefreshWorker = ever(Get.find<PlotController>().listingStatusChangedTrigger, (_) => _forceReload());
+    _roomRefreshWorker = ever(Get.find<ListingController>().listingStatusChangedTrigger, (_) => _forceReload());
+
     final current = locationCtrl.effectiveDistrict;
     if (current != null) loadHomeData(current.id);
   }
@@ -99,7 +115,16 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     _districtWorker?.dispose();
+    _plotRefreshWorker?.dispose();
+    _roomRefreshWorker?.dispose();
     super.onClose();
+  }
+
+  void _forceReload() {
+    final district = Get.find<LocationController>().effectiveDistrict;
+    if (district == null) return;
+    _loadedDistrictId = null;
+    loadHomeData(district.id);
   }
 
   void setActiveTab(String tab) => activeTab.value = tab;

@@ -135,8 +135,21 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
                   const SizedBox(height: 16),
                   Text('Sort by', style: _sectionLabelStyle),
                   const SizedBox(height: 8),
+                  // Newest alone on its own row (it's the default), the
+                  // directional pair (price/area low-high, high-low) below it.
+                  SizedBox(
+                    width: double.infinity,
+                    child: SelectableChip(
+                      label: _sortOptions[0].label,
+                      selected: _sort == _sortOptions[0].value,
+                      activeColor: _activeColor,
+                      onTap: () => setState(() => _sort = _sortOptions[0].value),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     children: _sortOptions
+                        .skip(1)
                         .map((o) => Expanded(
                               child: Padding(
                                 padding: EdgeInsets.only(right: o != _sortOptions.last ? 6 : 0),
