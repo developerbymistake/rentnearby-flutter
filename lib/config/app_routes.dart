@@ -109,13 +109,19 @@ class AppRoutes {
     ),
     GetPage(
       name: viewAllRooms,
-      page: () => const ViewAllScreen(listingType: ViewAllListingType.rooms),
+      page: () => ViewAllScreen(
+        listingType: ViewAllListingType.rooms,
+        initialTypeId: (Get.arguments as Map?)?['typeId'] as String?,
+      ),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
       name: viewAllPlots,
-      page: () => const ViewAllScreen(listingType: ViewAllListingType.plots),
+      page: () => ViewAllScreen(
+        listingType: ViewAllListingType.plots,
+        initialTypeId: (Get.arguments as Map?)?['typeId'] as String?,
+      ),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

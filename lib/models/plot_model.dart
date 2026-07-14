@@ -61,6 +61,67 @@ class NearbyPlotModel {
   String get areaDisplay => _formatArea(areaValue, areaUnit);
 }
 
+/// "Find Near Me" tour result — same shape as [NearbyPlotModel] plus
+/// [plotTypeId], needed so a tour started under a type filter can hand off
+/// into View All pre-filtered to the same type.
+class NearMePlotModel {
+  final String id;
+  final double areaValue;
+  final String areaUnit;
+  final String plotTypeId;
+  final String plotType;
+  final double latitude;
+  final double longitude;
+  final String? thumbnailUrl;
+  final String? ownerName;
+  final String? ownerPhone;
+  final double distanceKm;
+  final bool isActive;
+
+  NearMePlotModel({
+    required this.id,
+    required this.areaValue,
+    required this.areaUnit,
+    required this.plotTypeId,
+    required this.plotType,
+    required this.latitude,
+    required this.longitude,
+    this.thumbnailUrl,
+    this.ownerName,
+    this.ownerPhone,
+    required this.distanceKm,
+    required this.isActive,
+  });
+
+  factory NearMePlotModel.fromJson(Map<String, dynamic> json) => NearMePlotModel(
+        id: json['id'],
+        areaValue: (json['areaValue'] as num).toDouble(),
+        areaUnit: json['areaUnit'],
+        plotTypeId: json['plotTypeId'],
+        plotType: json['plotType'],
+        latitude: (json['latitude'] as num).toDouble(),
+        longitude: (json['longitude'] as num).toDouble(),
+        thumbnailUrl: json['thumbnailUrl'] == null
+            ? null
+            : json['thumbnailUrl'].toString().startsWith('http')
+                ? json['thumbnailUrl']
+                : '${AppConstants.serverUrl}${json['thumbnailUrl']}',
+        ownerName: json['ownerName'],
+        ownerPhone: json['ownerPhone'],
+        distanceKm: (json['distanceKm'] as num).toDouble(),
+        isActive: json['isActive'] ?? true,
+      );
+
+  double get areaSqft => switch (areaUnit) {
+    'bigha' => areaValue * 27000,
+    'acre'  => areaValue * 43560,
+    'nali'  => areaValue * 2152.78,
+    _       => areaValue,
+  };
+
+  String get areaDisplay => _formatArea(areaValue, areaUnit);
+}
+
 class PlotModel {
   final String id;
   final String userId;

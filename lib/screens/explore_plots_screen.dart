@@ -18,8 +18,12 @@ import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../models/plot_model.dart';
+import '../utils/app_toast.dart';
 import '../widgets/empty_radius_hint.dart';
 import '../widgets/location_switch_sheet.dart';
+import '../widgets/near_me_plot_detail_sheet.dart';
+import '../widgets/near_me_tour_card.dart';
+import '../widgets/near_me_tour_state.dart';
 
 class ExplorePlotsScreen extends StatefulWidget {
   const ExplorePlotsScreen({super.key});
@@ -81,6 +85,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Timer? _revealTimer;
   late AnimationController _radarController;
 
+  // "Find Near Me" — a plain field, never a GetX singleton (mapShouldPause is
+  // global and shared with Explore Rooms; this must stay screen-local so the
+  // two tours can never see or clobber each other).
+  final _tour = NearMeTour<NearMePlotModel>();
 
   @override
   void initState() {
@@ -326,6 +334,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   void _fitToRadius() {
+    // True single choke point for camera control — several workers
+    // (location/browsing/refresh/filter-reset/tab) and the recenter FAB all
+    // call this directly, not just _loadNearby(). Guarding only _loadNearby()
+    // left this callable while a tour is active, silently snapping the
+    // camera to the default radius view without ending the tour.
+    if (_tour.isActive) return;
     if (!_mapReady || !mounted) return;
     final center = _searchCenter;
     _cameraCenter = center;
@@ -363,8 +377,17 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     if (!mounted) return;
     _mapReady = true;
     setState(() {});
-    _buildMarkers(animate: false);
-    _fitToRadius();
+    if (_tour.isActive) {
+      // Resuming into an active tour (e.g. back from "View Details", My
+      // Plots, Chat — any route in MapPauseObserver's _pauseRoutes) — land
+      // the camera back on the exact pin/index the tour was at, not the
+      // default radius view. Tour data itself already survived (this is a
+      // plain field), only the map's native layers were torn down.
+      _flyToTourResult(_tour.currentIndex);
+    } else {
+      _buildMarkers(animate: false);
+      _fitToRadius();
+    }
   }
 
   Future<void> _initNativeCircle() async {
@@ -429,6 +452,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   void _loadNearby() {
+    // Single choke point: while a "Find Near Me" tour is active, none of the
+    // six workers above (location/browsing/posted/refresh/filter-reset/tab)
+    // may clobber the tour's markers/camera. Mark stale so a real reload
+    // still happens the moment the tour ends (_cancelTour) or the map is
+    // rebuilt after a pause (_onStyleLoaded's resume branch).
+    if (_tour.isActive) { _stale = true; return; }
     _reloadPending = true;
     _loadNearbyDebounceTimer?.cancel();
     _loadNearbyDebounceTimer = Timer(const Duration(milliseconds: 300), () async {
@@ -762,6 +791,122 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     );
   }
 
+  // ── "Find Near Me" tour ───────────────────────────────────────────────────
+
+  Future<void> _startNearMeTour() async {
+    final districtId = _locationCtrl.effectiveDistrict?.id;
+    if (districtId == null) return;
+    final typeId = _selectedPlotType == null
+        ? null
+        : _plotCtrl.plotTypes.firstWhereOrNull((t) => t.name == _selectedPlotType)?.id;
+    final center = _searchCenter;
+    final ok = await _plotCtrl.findNearMe(center.latitude, center.longitude, districtId, plotTypeId: typeId);
+    if (!ok || !mounted) return;
+    if (_plotCtrl.nearMePlots.isEmpty) {
+      AppToast.error('No plots found nearby.');
+      return;
+    }
+    setState(() => _tour.start(_plotCtrl.nearMePlots, totalMatching: _plotCtrl.nearMeTotalMatching.value));
+    _flyToTourResult(0);
+  }
+
+  void _buildTourMarkers() {
+    final data = <_MapMarkerData>[];
+    final userMarker = _buildUserMarkerData();
+    if (userMarker != null) data.add(userMarker);
+
+    for (var i = 0; i < _tour.results.length; i++) {
+      final p = _tour.results[i];
+      final active = i == _tour.currentIndex;
+      final areaText = p.areaDisplay;
+      final chipW = (areaText.length * 8.5 + 28).clamp(60.0, 110.0);
+      data.add(_MapMarkerData(
+        position: LatLng(p.latitude, p.longitude),
+        width: chipW,
+        height: 34,
+        widget: IgnorePointer(
+          ignoring: !active,
+          child: Opacity(
+            opacity: active ? 1.0 : 0.35,
+            child: GestureDetector(
+              onTap: active ? _showTourDetail : null,
+              child: _AnimatedPin(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(17),
+                    border: Border.all(color: const Color(0xFF92400E), width: active ? 2.5 : 2),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      areaText,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF78350F),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ));
+    }
+    setState(() {
+      _markerData = data;
+      _revealedCount = data.length;
+    });
+  }
+
+  void _flyToTourResult(int index) {
+    if (index < 0 || index >= _tour.results.length) return;
+    _buildTourMarkers();
+    final p = _tour.results[index];
+    _animateTo(LatLng(p.latitude, p.longitude), 16.0);
+  }
+
+  void _tourPrev() {
+    _tour.prev();
+    setState(() {});
+    _flyToTourResult(_tour.currentIndex);
+  }
+
+  void _tourNext() {
+    _tour.next();
+    setState(() {});
+    _flyToTourResult(_tour.currentIndex);
+  }
+
+  void _cancelTour() {
+    setState(() => _tour.reset());
+    _buildMarkers();
+    _fitToRadius();
+    if (_stale) _loadNearby();
+  }
+
+  void _showTourDetail() {
+    if (!_tour.isActive) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => NearMePlotDetailSheet(plot: _tour.current),
+    );
+  }
+
+  void _goToViewAllFromTour() {
+    final typeId = _selectedPlotType == null
+        ? null
+        : _plotCtrl.plotTypes.firstWhereOrNull((t) => t.name == _selectedPlotType)?.id;
+    Get.toNamed(AppRoutes.viewAllPlots, arguments: {'typeId': typeId});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -833,7 +978,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                             child: d.widget,
                           );
                         }),
-                        if (_filteredPlots.isEmpty && !_loadingNearby && !_reloadPending && _hasLoadedOnce)
+                        if (_filteredPlots.isEmpty && !_loadingNearby && !_reloadPending && _hasLoadedOnce && !_tour.isActive)
                           Builder(builder: (_) {
                             // Anchored to the TOP of the radius circle — the chip's tail tip
                             // lands on the boundary when the circle fits on screen, or just
@@ -853,9 +998,45 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                               top: anchor.dy,
                               child: FractionalTranslation(
                                 translation: const Offset(-0.5, -1.0),
-                                child: EmptyRadiusHint(
-                                  label: 'No plots in this radius',
-                                  circleRadiusPx: radiusPx,
+                                child: Column(
+                                  children: [
+                                    EmptyRadiusHint(
+                                      label: 'No plots in this radius',
+                                      circleRadiusPx: radiusPx,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    GestureDetector(
+                                      onTap: _startNearMeTour,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            colors: [Color(0xFF92400E), Color(0xFF78350F)],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(20),
+                                          boxShadow: [
+                                            BoxShadow(color: const Color(0xFF92400E).withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 5)),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Obx(() => _plotCtrl.isLoadingNearMe.value
+                                                ? const SizedBox(
+                                                    width: 12, height: 12,
+                                                    child: CircularProgressIndicator(strokeWidth: 1.8, color: Colors.white),
+                                                  )
+                                                : const Icon(Icons.radar_rounded, size: 14, color: Colors.white)),
+                                            const SizedBox(width: 7),
+                                            const Text('Find Near Me',
+                                                style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             );
@@ -883,47 +1064,79 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                       child: Column(children: [
-                        _buildLocationPill(),
+                        IgnorePointer(
+                          ignoring: _tour.isActive,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 200),
+                            opacity: _tour.isActive ? 0.45 : 1.0,
+                            child: _buildLocationPill(),
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         Row(children: [
-                          Expanded(child: _buildRadiusChips()),
-                          const SizedBox(width: 12),
-                          GestureDetector(
-                            onTap: () => Get.toNamed(AppRoutes.myPlots),
-                            child: Container(
-                              padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.12),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 20,
-                                    height: 20,
-                                    decoration: const BoxDecoration(
-                                        color: Color(0xFF92400E), shape: BoxShape.circle),
-                                    child: const Icon(Icons.add_rounded, size: 15, color: Colors.white),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  const Text('Plot',
-                                      style: TextStyle(
-                                          fontFamily: 'Poppins',
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF92400E))),
-                                ],
+                          Expanded(
+                            child: IgnorePointer(
+                              ignoring: _tour.isActive,
+                              child: AnimatedOpacity(
+                                duration: const Duration(milliseconds: 200),
+                                opacity: _tour.isActive ? 0.45 : 1.0,
+                                child: _buildRadiusChips(),
                               ),
                             ),
                           ),
+                          const SizedBox(width: 12),
+                          _tour.isActive
+                              ? GestureDetector(
+                                  onTap: _cancelTour,
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2)),
+                                      ],
+                                    ),
+                                    child: const Icon(Icons.close_rounded, size: 17, color: Color(0xFF92400E)),
+                                  ),
+                                )
+                              : GestureDetector(
+                                  onTap: () => Get.toNamed(AppRoutes.myPlots),
+                                  child: Container(
+                                    padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.12),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 20,
+                                          height: 20,
+                                          decoration: const BoxDecoration(
+                                              color: Color(0xFF92400E), shape: BoxShape.circle),
+                                          child: const Icon(Icons.add_rounded, size: 15, color: Colors.white),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const Text('Plot',
+                                            style: TextStyle(
+                                                fontFamily: 'Poppins',
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
+                                                color: Color(0xFF92400E))),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                         ]),
                       ]),
                     ),
@@ -931,19 +1144,47 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 ),
               ),
 
-              // ── Filter panel ────────────────────────────────────────────────
+              // ── Filter panel / tour card ────────────────────────────────────
               Positioned(
                 bottom: 20,
                 left: 20,
                 right: 20,
-                child: _buildFilterPanel(),
+                child: _tour.isActive
+                    ? NearMeTourCard(
+                        accentColor: const Color(0xFF92400E),
+                        thumbnailUrl: _tour.current.thumbnailUrl,
+                        thumbnailIcon: Icons.landscape_rounded,
+                        title: _tour.current.plotType,
+                        subtitle: _tour.current.areaDisplay,
+                        distanceKm: _tour.current.distanceKm,
+                        currentIndex: _tour.currentIndex,
+                        total: _tour.results.length,
+                        isFirstResult: _tour.isFirstResult,
+                        isLastResult: _tour.isLastResult,
+                        showHandoff: _tour.showHandoff,
+                        remainingCount: _tour.remainingCount,
+                        handoffTypeLabel: 'plots',
+                        onTapCard: _showTourDetail,
+                        onPrev: _tourPrev,
+                        onNext: _tourNext,
+                        onCancel: _cancelTour,
+                        onSeeAll: _goToViewAllFromTour,
+                      )
+                    : _buildFilterPanel(),
               ),
 
               // ── Location FAB ────────────────────────────────────────────────
               Positioned(
                 bottom: 145,
                 right: 20,
-                child: _buildLocationFab(),
+                child: IgnorePointer(
+                  ignoring: _tour.isActive,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: _tour.isActive ? 0.45 : 1.0,
+                    child: _buildLocationFab(),
+                  ),
+                ),
               ),
 
               const Positioned(

@@ -55,7 +55,12 @@ class ViewAllItem {
 class ViewAllController extends GetxController {
   /// Which type the screen opened on — the Rooms/Plots toggle can still
   /// flip `activeType` afterward within the same screen/controller.
-  ViewAllController(ViewAllListingType initialType) : activeType = initialType.obs;
+  /// [initialTypeId] seeds [selectedTypeId] — used by the "Find Near Me"
+  /// tour's hand-off so View All opens already filtered to the same type
+  /// the tour was scoped to, instead of always starting unfiltered.
+  ViewAllController(ViewAllListingType initialType, {String? initialTypeId})
+      : activeType = initialType.obs,
+        selectedTypeId = Rxn<String>(initialTypeId);
 
   final Rx<ViewAllListingType> activeType;
 
@@ -67,7 +72,7 @@ class ViewAllController extends GetxController {
   /// Room type id or plot type id — null means "all types". Type-specific,
   /// so it's always cleared when the toggle flips (a Rooms filter has no
   /// meaning once you're looking at Plots).
-  final selectedTypeId = Rxn<String>();
+  final Rxn<String> selectedTypeId;
   final sortBy = 'newest'.obs;
 
   /// Bumped by resetFilters() — FilterSortSheet watches this to detect an

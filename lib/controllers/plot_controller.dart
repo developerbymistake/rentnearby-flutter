@@ -29,6 +29,11 @@ class PlotController extends GetxController {
   final plotPlans = Rx<List<Map<String, dynamic>>>([]);
   int _myPlotsPage = 1;
 
+  // "Find Near Me" — district-wide, distance-sorted, capped at 5 by the server.
+  final nearMePlots = <NearMePlotModel>[].obs;
+  final nearMeTotalMatching = 0.obs;
+  final isLoadingNearMe = false.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -57,6 +62,29 @@ class PlotController extends GetxController {
       AppToast.error(_errorMessage(e, 'Could not load nearby plots.'));
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /// District-wide, distance-sorted, capped at 5 by the server — used by the
+  /// Explore Plots screen's "Find Near Me" recovery when the radius search is empty.
+  /// Returns true on success so the caller can decide whether to start a tour.
+  Future<bool> findNearMe(double lat, double lng, String districtId, {String? plotTypeId}) async {
+    try {
+      isLoadingNearMe.value = true;
+      final res = await ApiService.get('/plots/nearest', params: {
+        'latitude': lat,
+        'longitude': lng,
+        'districtId': districtId,
+        if (plotTypeId != null) 'plotTypeId': plotTypeId,
+      });
+      nearMePlots.value = (res['data']['items'] as List).map((e) => NearMePlotModel.fromJson(e)).toList();
+      nearMeTotalMatching.value = res['data']['totalMatching'] as int? ?? nearMePlots.length;
+      return true;
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not find plots near you.'));
+      return false;
+    } finally {
+      isLoadingNearMe.value = false;
     }
   }
 

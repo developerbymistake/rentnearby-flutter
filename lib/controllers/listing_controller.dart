@@ -28,6 +28,11 @@ class ListingController extends GetxController {
   final roomMembership = Rxn<Map<String, dynamic>>();
   final roomPlans = Rx<Map<String, Map<String, dynamic>>>({});
 
+  // "Find Near Me" — district-wide, distance-sorted, capped at 5 by the server.
+  final nearMeListings = <NearMeListingModel>[].obs;
+  final nearMeTotalMatching = 0.obs;
+  final isLoadingNearMe = false.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -55,6 +60,29 @@ class ListingController extends GetxController {
       AppToast.error(_errorMessage(e, 'Could not load nearby rooms.'));
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /// District-wide, distance-sorted, capped at 5 by the server — used by the
+  /// Explore screen's "Find Near Me" recovery when the radius search is empty.
+  /// Returns true on success so the caller can decide whether to start a tour.
+  Future<bool> findNearMe(double lat, double lng, String districtId, {String? roomTypeId}) async {
+    try {
+      isLoadingNearMe.value = true;
+      final res = await ApiService.get('/listings/nearest', params: {
+        'latitude': lat,
+        'longitude': lng,
+        'districtId': districtId,
+        if (roomTypeId != null) 'roomTypeId': roomTypeId,
+      });
+      nearMeListings.value = (res['data']['items'] as List).map((e) => NearMeListingModel.fromJson(e)).toList();
+      nearMeTotalMatching.value = res['data']['totalMatching'] as int? ?? nearMeListings.length;
+      return true;
+    } catch (e) {
+      AppToast.error(_errorMessage(e, 'Could not find rooms near you.'));
+      return false;
+    } finally {
+      isLoadingNearMe.value = false;
     }
   }
 

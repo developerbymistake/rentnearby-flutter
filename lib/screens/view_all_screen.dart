@@ -26,7 +26,11 @@ const _kPlotColor = Color(0xFF92400E);
 /// already returns to whichever tab was underneath, state intact.
 class ViewAllScreen extends StatefulWidget {
   final ViewAllListingType listingType;
-  const ViewAllScreen({super.key, required this.listingType});
+  // Set when pushed from the "Find Near Me" tour's hand-off card, so View
+  // All opens pre-filtered to whatever type the tour was scoped to instead
+  // of always starting unfiltered.
+  final String? initialTypeId;
+  const ViewAllScreen({super.key, required this.listingType, this.initialTypeId});
 
   @override
   State<ViewAllScreen> createState() => _ViewAllScreenState();
@@ -44,7 +48,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
     // binding) so a fresh instance is created every time this screen is
     // pushed, and torn down with it via Get.delete in dispose().
     _ctrlTag = UniqueKey().toString();
-    _ctrl = Get.put(ViewAllController(widget.listingType), tag: _ctrlTag);
+    _ctrl = Get.put(ViewAllController(widget.listingType, initialTypeId: widget.initialTypeId), tag: _ctrlTag);
     _scrollCtrl.addListener(_onScroll);
   }
 

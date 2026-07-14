@@ -92,6 +92,68 @@ class ListingModel {
   }
 }
 
+/// "Find Near Me" tour result — same shape as [NearbyListingModel] plus
+/// [roomTypeId], needed so a tour started under a type filter can hand off
+/// into View All pre-filtered to the same type.
+class NearMeListingModel {
+  final String id;
+  final int? priceMonthly;
+  final double latitude;
+  final double longitude;
+  final String roomTypeId;
+  final String? roomTypeName;
+  final String? ownerName;
+  final String? ownerPhone;
+  final String? thumbnailUrl;
+  final double distanceKm;
+  final bool isActive;
+  final String furnishedStatus;
+
+  NearMeListingModel({
+    required this.id,
+    this.priceMonthly,
+    required this.latitude,
+    required this.longitude,
+    required this.roomTypeId,
+    this.roomTypeName,
+    this.ownerName,
+    this.ownerPhone,
+    this.thumbnailUrl,
+    required this.distanceKm,
+    required this.isActive,
+    this.furnishedStatus = 'None',
+  });
+
+  factory NearMeListingModel.fromJson(Map<String, dynamic> json) => NearMeListingModel(
+        id: json['id'],
+        priceMonthly: json['priceMonthly'],
+        latitude: (json['latitude'] as num).toDouble(),
+        longitude: (json['longitude'] as num).toDouble(),
+        roomTypeId: json['roomTypeId'],
+        roomTypeName: json['roomTypeName'],
+        ownerName: json['ownerName'],
+        ownerPhone: json['ownerPhone'],
+        thumbnailUrl: json['thumbnailUrl'] == null
+            ? null
+            : json['thumbnailUrl'].toString().startsWith('http')
+                ? json['thumbnailUrl']
+                : '${AppConstants.serverUrl}${json['thumbnailUrl']}',
+        distanceKm: (json['distanceKm'] as num).toDouble(),
+        isActive: json['isActive'] ?? true,
+        furnishedStatus: json['furnishedStatus'] ?? 'None',
+      );
+
+  String get shortPrice =>
+      priceMonthly != null ? '₹${_formatPrice(priceMonthly!)}' : 'N/A';
+
+  String _formatPrice(int price) {
+    if (price >= 1000) {
+      return '${(price / 1000).toStringAsFixed(price % 1000 == 0 ? 0 : 1)}k';
+    }
+    return price.toString();
+  }
+}
+
 class NearbyListingModel {
   final String id;
   final int? priceMonthly;
