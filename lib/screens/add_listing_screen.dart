@@ -436,6 +436,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
         return;
       }
     }
+    if (_step == 3) {
+      if (_photos.isEmpty) {
+        AppToast.error('Please add at least 1 photo of your room to continue');
+        return;
+      }
+    }
     if (_step < 3) {
       setState(() => _step++);
       if (_step == 2 && _addressCtrl.text.trim().isEmpty && _selectedLocation != null) {
@@ -447,6 +453,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   Future<void> _submit() async {
+    if (_photos.isEmpty) {
+      AppToast.error('Please add at least 1 photo of your room'); return;
+    }
     if (_selectedRoomTypeId == null) {
       AppToast.error('Please select a room type'); return;
     }
@@ -563,7 +572,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
         AppToast.error('${failedIndices.length} photo${failedIndices.length > 1 ? 's' : ''} could not be uploaded.');
       }
     } else {
-      // Case 2: No photos selected (photo upload is optional)
+      // Unreachable — _submit() already returns early when _photos is empty.
     }
 
     if (mounted) setState(() => _isFinalizing = true);
@@ -1178,13 +1187,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
     padding: const EdgeInsets.all(16),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _sectionCard(
-        title: 'Room Photos',
+        title: 'Room Photos *',
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Text('${_photos.length}/5 photos added',
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
             const Spacer(),
-            const Text('Optional', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textHint)),
+            const Text('Required', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textHint)),
           ]),
           const SizedBox(height: 4),
           const Text('Good photos get 3x more enquiries',

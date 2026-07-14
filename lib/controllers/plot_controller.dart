@@ -18,6 +18,12 @@ class PlotController extends GetxController {
   final plotPostedTrigger = 0.obs;
   final exploreRefreshTrigger = 0.obs;
   final filterResetTrigger = 0.obs;
+  /// Bumped ONLY by toggleActive() after the server confirms an active-status
+  /// change — unlike exploreRefreshTrigger (also bumped on every Rooms/Plots
+  /// tab switch by main_screen.dart, for Explore's own unrelated needs), this
+  /// is the narrow signal HomeController listens to, so it never reloads on
+  /// bare navigation.
+  final listingStatusChangedTrigger = 0.obs;
   final isPlotMembershipLoading = false.obs;
   final plotMembership = Rxn<Map<String, dynamic>>();
   final plotPlans = Rx<List<Map<String, dynamic>>>([]);
@@ -218,6 +224,7 @@ class PlotController extends GetxController {
       AppToast.success(currentIsActive ? 'Plot hidden.' : 'Plot is now LIVE! 🎉');
       if (currentIsActive) nearbyPlots.removeWhere((p) => p.id == id);
       exploreRefreshTrigger.value++;
+      listingStatusChangedTrigger.value++;
       await loadMyPlots(reset: true);
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not update plot status.'));

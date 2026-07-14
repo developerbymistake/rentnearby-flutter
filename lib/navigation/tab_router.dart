@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../config/app_tabs.dart';
+import '../screens/home_screen.dart';
 import '../screens/explore_screen.dart';
 import '../screens/explore_plots_screen.dart';
 import '../screens/profile_screen.dart';
@@ -7,10 +9,11 @@ import 'tab_keys.dart';
 
 Widget _rootScreen(int tabId) {
   switch (tabId) {
-    case 0: return const ExploreScreen();
-    case 1: return const ExplorePlotsScreen();
-    case 2: return const ChatsListScreen();
-    case 3: return const ProfileScreen();
+    case AppTabs.home: return const HomeScreen();
+    case AppTabs.rooms: return const ExploreScreen();
+    case AppTabs.plots: return const ExplorePlotsScreen();
+    case AppTabs.chats: return const ChatsListScreen();
+    case AppTabs.profile: return const ProfileScreen();
     default: return const SizedBox.shrink();
   }
 }

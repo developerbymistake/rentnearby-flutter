@@ -4,7 +4,9 @@ import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/home_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
@@ -37,10 +39,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Worker? _digestTopicWorker;
 
   final _screens = const [
-    TabNavigator(tabId: 0),
-    TabNavigator(tabId: 1),
-    TabNavigator(tabId: 2),
-    TabNavigator(tabId: 3),
+    TabNavigator(tabId: AppTabs.home),
+    TabNavigator(tabId: AppTabs.rooms),
+    TabNavigator(tabId: AppTabs.plots),
+    TabNavigator(tabId: AppTabs.chats),
+    TabNavigator(tabId: AppTabs.profile),
   ];
 
   @override
@@ -54,6 +57,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     Get.put(PlotController());
     Get.put(ReportController());
     _locationCtrl = Get.put(LocationController());
+    // HomeController.onInit() looks up LocationController — must be put after it.
+    Get.put(HomeController());
     _bannerCtrl = Get.put(BannerController());
     Get.put(BannerHubService());
     _chatCtrl = Get.put(ChatController());
@@ -370,8 +375,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        if (_auth.tabIndex.value != 0) {
-          _auth.tabIndex.value = 0;
+        if (_auth.tabIndex.value != AppTabs.home) {
+          _auth.tabIndex.value = AppTabs.home;
         } else {
           _showExitConfirmation();
         }
@@ -481,10 +486,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + bottomInset),
         child: Row(
           children: [
-            _navItem(0, Iconsax.map, Iconsax.map5, 'Rooms'),
-            _navItem(1, Iconsax.location, Iconsax.location5, 'Plots'),
-            _navItem(2, Iconsax.message, Iconsax.message5, 'Chats', badgeCount: _chatCtrl.unreadCount.value),
-            _navItem(3, Iconsax.user, Iconsax.user5, 'Profile'),
+            _navItem(AppTabs.home, Iconsax.home, Iconsax.home5, 'Home'),
+            _navItem(AppTabs.rooms, Iconsax.map, Iconsax.map5, 'Rooms'),
+            _navItem(AppTabs.plots, Iconsax.location, Iconsax.location5, 'Plots'),
+            _navItem(AppTabs.chats, Iconsax.message, Iconsax.message5, 'Chats', badgeCount: _chatCtrl.unreadCount.value),
+            _navItem(AppTabs.profile, Iconsax.user, Iconsax.user5, 'Profile'),
           ],
         ),
       ),
@@ -496,14 +502,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          if (index == 0 && _auth.tabIndex.value != 0) {
+          if (index == AppTabs.rooms && _auth.tabIndex.value != AppTabs.rooms) {
             Get.find<ListingController>().exploreRefreshTrigger.value++;
           }
-          if (index == 1 && _auth.tabIndex.value != 1) {
+          if (index == AppTabs.plots && _auth.tabIndex.value != AppTabs.plots) {
             Get.find<PlotController>().exploreRefreshTrigger.value++;
           }
-          if (index == 2 && _auth.tabIndex.value != 2) _auth.chatsTabTrigger.value++;
-          if (index == 3 && _auth.tabIndex.value != 3) _auth.profileTabTrigger.value++;
+          if (index == AppTabs.chats && _auth.tabIndex.value != AppTabs.chats) _auth.chatsTabTrigger.value++;
+          if (index == AppTabs.profile && _auth.tabIndex.value != AppTabs.profile) _auth.profileTabTrigger.value++;
           Get.find<ListingController>().filterResetTrigger.value++;
           Get.find<PlotController>().filterResetTrigger.value++;
           _auth.tabIndex.value = index;

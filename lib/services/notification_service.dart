@@ -9,6 +9,7 @@ import 'package:get_storage/get_storage.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
+import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../models/conversation_model.dart';
@@ -151,10 +152,8 @@ class NotificationService extends GetxService {
   StreamSubscription? _foregroundMessageSub;
   final _localNotifications = FlutterLocalNotificationsPlugin();
 
-  // Tab index matching main_screen.dart tab order — Explore and Chats are resident
-  // tabs; My Rooms/My Plots are pushed routes, handled separately below.
-  static const int _tabExplore = 0;
-  static const int _tabChats = 2;
+  // Explore and Chats are resident tabs (see AppTabs); My Rooms/My Plots are
+  // pushed routes, handled separately below.
 
   @override
   Future<void> onInit() async {
@@ -293,7 +292,7 @@ class NotificationService extends GetxService {
           'title': message.data['listing_title'] ?? 'your listing',
         });
       } else if (membershipType == 'broadcast') {
-        Get.find<AuthController>().tabIndex.value = _tabExplore;
+        Get.find<AuthController>().tabIndex.value = AppTabs.rooms;
       } else {
         Get.toNamed(membershipType == 'plot' ? AppRoutes.myPlots : AppRoutes.myListings);
       }
@@ -350,7 +349,7 @@ class NotificationService extends GetxService {
   // on the Chats tab immediately as a safe fallback view, then open the specific
   // conversation once its data is available.
   Future<void> _openChatConversation(String conversationId) async {
-    Get.find<AuthController>().tabIndex.value = _tabChats;
+    Get.find<AuthController>().tabIndex.value = AppTabs.chats;
 
     if (!Get.isRegistered<ChatController>()) return;
     final chatCtrl = Get.find<ChatController>();

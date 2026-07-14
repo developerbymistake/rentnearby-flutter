@@ -9,6 +9,7 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
+import '../config/app_tabs.dart';
 import '../controllers/app_feature_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../config/app_map_state.dart';
@@ -96,7 +97,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     // Trigger data load whenever LocationController resolves the district.
     _locationWorker = ever(_locationCtrl.selectedDistrict, (_) {
       if (_locationCtrl.selectedDistrict.value != null) {
-        if (_auth.tabIndex.value == 0 && !mapShouldPause.value) {
+        if (_auth.tabIndex.value == AppTabs.rooms && !mapShouldPause.value) {
           _precomputeCircleCache();
           _loadNearby();
           if (_mapReady && !_isCameraMoving) _fitToRadius();
@@ -111,7 +112,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     // browsed one) and resetting back to the real location (browsingCity
     // becomes null again), mirroring _locationWorker above.
     _browsingWorker = ever(_locationCtrl.browsingCity, (_) {
-      if (_auth.tabIndex.value == 0 && !mapShouldPause.value) {
+      if (_auth.tabIndex.value == AppTabs.rooms && !mapShouldPause.value) {
         _precomputeCircleCache();
         _loadNearby();
         // Unconditional, unlike the _isCameraMoving-gated calls elsewhere:
@@ -174,12 +175,12 @@ class _ExploreScreenState extends State<ExploreScreen>
 
     _postedWorker = ever(_listingCtrl.listingPostedTrigger, (_) {
       _stale = true;
-      if (_auth.tabIndex.value == 0 && !mapShouldPause.value) _loadNearby();
+      if (_auth.tabIndex.value == AppTabs.rooms && !mapShouldPause.value) _loadNearby();
     });
     _refreshWorker = ever(_listingCtrl.exploreRefreshTrigger, (_) {
       _stale = true;
       if (_locationCtrl.effectiveDistrict != null &&
-          _auth.tabIndex.value == 0 && !mapShouldPause.value) {
+          _auth.tabIndex.value == AppTabs.rooms && !mapShouldPause.value) {
         _loadNearby();
       }
     });
@@ -213,12 +214,12 @@ class _ExploreScreenState extends State<ExploreScreen>
         });
       } else {
         setState(() => _mapActive = true);
-        if (_auth.tabIndex.value == 0 && _stale) _loadNearby();
+        if (_auth.tabIndex.value == AppTabs.rooms && _stale) _loadNearby();
       }
     });
 
     _tabWorker = ever(_auth.tabIndex, (index) {
-      if (index == 0) {
+      if (index == AppTabs.rooms) {
         if (_stale && !mapShouldPause.value) {
           _loadNearby();
           if (_mapReady && !_isCameraMoving) _fitToRadius();

@@ -15,6 +15,8 @@ import '../screens/chat_conversation_screen.dart';
 import '../screens/listing_reports_screen.dart';
 import '../screens/report_detail_screen.dart';
 import '../screens/my_filed_reports_screen.dart';
+import '../screens/view_all_screen.dart';
+import '../controllers/view_all_controller.dart' show ViewAllListingType;
 
 class AppRoutes {
   static const String splash = '/';
@@ -35,6 +37,8 @@ class AppRoutes {
   static const String listingReports = '/listing-reports';
   static const String reportDetail = '/report-detail';
   static const String myFiledReports = '/my-filed-reports';
+  static const String viewAllRooms = '/view-all-rooms';
+  static const String viewAllPlots = '/view-all-plots';
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
     GetPage(
@@ -100,6 +104,18 @@ class AppRoutes {
     GetPage(
       name: myPlots,
       page: () => const MyPlotsScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: viewAllRooms,
+      page: () => const ViewAllScreen(listingType: ViewAllListingType.rooms),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: viewAllPlots,
+      page: () => const ViewAllScreen(listingType: ViewAllListingType.plots),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

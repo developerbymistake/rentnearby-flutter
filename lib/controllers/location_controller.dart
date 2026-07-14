@@ -43,6 +43,13 @@ class LocationController extends GetxController {
   /// if the user is temporarily exploring elsewhere, otherwise the real one.
   DistrictModel? get effectiveDistrict => browsingDistrict.value ?? selectedDistrict.value;
 
+  /// The city paired with [effectiveDistrict] — browsed city if the user is
+  /// exploring elsewhere, otherwise the GPS-nearest city in the real district.
+  /// Callers should treat this as a soft ranking hint, never a hard filter —
+  /// District is the only real visibility boundary (see the district-gating
+  /// comments on GetNearbyAsync).
+  CityModel? get effectiveCity => browsingCity.value ?? autoCity.value;
+
   final _locationsRepo = LocationsRepository();
   List<DistrictModel> _allDistricts = [];
 
