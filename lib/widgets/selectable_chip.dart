@@ -11,6 +11,11 @@ import '../config/app_colors.dart';
 /// hero toggle) — when [gradient] is set, it replaces the flat [activeColor]
 /// fill and adds a matching shadow on selection; existing callers that don't
 /// pass either keep the original flat look untouched.
+///
+/// [padding] is also optional/backward-compatible — dense grids (room/plot
+/// type chips) keep the default compact padding, while a single-row context
+/// like a sort-option button can pass a taller value so it reads as a real
+/// button instead of a cramped label.
 class SelectableChip extends StatelessWidget {
   final String label;
   final bool selected;
@@ -18,6 +23,7 @@ class SelectableChip extends StatelessWidget {
   final Color activeColor;
   final IconData? icon;
   final Gradient? gradient;
+  final EdgeInsetsGeometry? padding;
 
   const SelectableChip({
     super.key,
@@ -27,6 +33,7 @@ class SelectableChip extends StatelessWidget {
     this.activeColor = AppColors.primary,
     this.icon,
     this.gradient,
+    this.padding,
   });
 
   @override
@@ -35,7 +42,7 @@ class SelectableChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
+        padding: padding ?? const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
         decoration: BoxDecoration(
           color: selected && gradient == null ? activeColor : (selected ? null : Colors.white),
           gradient: selected ? gradient : null,

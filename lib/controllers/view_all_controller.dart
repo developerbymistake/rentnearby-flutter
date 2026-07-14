@@ -92,7 +92,12 @@ class ViewAllController extends GetxController {
     super.onInit();
     final locationCtrl = Get.find<LocationController>();
     _locationWorker = everAll(
-      [locationCtrl.selectedDistrict, locationCtrl.browsingDistrict],
+      [
+        locationCtrl.selectedDistrict,
+        locationCtrl.browsingDistrict,
+        locationCtrl.browsingCity,
+        locationCtrl.autoCity,
+      ],
       (_) {
         resetFilters();
         loadPage(reset: true);
@@ -133,8 +138,10 @@ class ViewAllController extends GetxController {
   }
 
   Future<void> loadPage({bool reset = false}) async {
-    final districtId = Get.find<LocationController>().effectiveDistrict?.id;
+    final locationCtrl = Get.find<LocationController>();
+    final districtId = locationCtrl.effectiveDistrict?.id;
     if (districtId == null) return;
+    final cityId = locationCtrl.effectiveCity?.id;
 
     final isRooms = activeType.value == ViewAllListingType.rooms;
 
@@ -154,6 +161,7 @@ class ViewAllController extends GetxController {
 
       final res = await ApiService.get(path, params: {
         'districtId': districtId,
+        if (cityId != null) 'cityId': cityId,
         if (selectedTypeId.value != null) typeParamKey: selectedTypeId.value,
         'sortBy': sortBy.value,
         'page': requestedPage,

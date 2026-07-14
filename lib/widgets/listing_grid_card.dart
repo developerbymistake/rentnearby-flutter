@@ -136,13 +136,13 @@ class ListingGridCard extends StatelessWidget {
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 6),
-                    decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(9)),
+                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(9)),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
-                        Icon(Iconsax.message_text, size: 10, color: AppColors.primary),
+                        Icon(Iconsax.message_text, size: 10, color: Colors.white),
                         SizedBox(width: 4),
-                        Text('Chat', style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                        Text('Chat', style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
                       ],
                     ),
                   ),

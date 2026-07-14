@@ -14,6 +14,11 @@ const _kPlotGradient = LinearGradient(
 );
 const _kPlotColor = Color(0xFF92400E);
 
+// Sort options render one-per-row (full-width Newest, then a 2-up pair) so
+// they read as real buttons — taller than the dense room/plot type grid's
+// default chip padding, which stays untouched.
+const _kSortChipPadding = EdgeInsets.symmetric(vertical: 13, horizontal: 10);
+
 /// Modal sheet mirroring ReportListingSheet's structure (gradient header +
 /// drag handle, showModalBottomSheet with top-24 rounded corners) — type
 /// chips (3-per-row Rooms / 2-per-row Plots, matching the real counts) +
@@ -143,6 +148,7 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
                       label: _sortOptions[0].label,
                       selected: _sort == _sortOptions[0].value,
                       activeColor: _activeColor,
+                      padding: _kSortChipPadding,
                       onTap: () => setState(() => _sort = _sortOptions[0].value),
                     ),
                   ),
@@ -157,6 +163,7 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
                                   label: o.label,
                                   selected: _sort == o.value,
                                   activeColor: _activeColor,
+                                  padding: _kSortChipPadding,
                                   onTap: () => setState(() => _sort = o.value),
                                 ),
                               ),

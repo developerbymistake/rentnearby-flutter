@@ -151,9 +151,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(16),
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.28)),
+          left: BorderSide(color: Colors.white.withValues(alpha: 0.28)),
+          right: const BorderSide(color: Colors.white, width: 3),
+          bottom: const BorderSide(color: Colors.white, width: 3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,26 +412,24 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
+      child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider.withValues(alpha: 0.7)),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 14, offset: const Offset(0, 6)),
-          ],
-        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: color, size: 19),
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(color: color.withValues(alpha: 0.32), blurRadius: 16, offset: const Offset(4, 10)),
+                ],
+              ),
+              child: Icon(icon, color: color, size: 20),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 8),
             Text(
               label,
               textAlign: TextAlign.center,
