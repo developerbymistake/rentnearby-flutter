@@ -483,6 +483,12 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
         return;
       }
     }
+    if (_step == 3) {
+      if (_photos.isEmpty) {
+        AppToast.error('Please add at least 1 photo of your plot to continue');
+        return;
+      }
+    }
     if (_step < 3) {
       setState(() => _step++);
       if (_step == 2 && _addressCtrl.text.trim().isEmpty && _selectedLocation != null) {
@@ -494,6 +500,10 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   }
 
   Future<void> _submit() async {
+    if (_photos.isEmpty) {
+      AppToast.error('Please add at least 1 photo of your plot');
+      return;
+    }
     if (_selectedPlotType == null) {
       AppToast.error('Please select a plot type');
       return;
@@ -1343,7 +1353,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _sectionCard(
-            title: 'Plot Photos',
+            title: 'Plot Photos *',
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Text('${_photos.length}/5 photos added',
@@ -1352,7 +1362,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                         fontSize: 13,
                         color: AppColors.textLight)),
                 const Spacer(),
-                const Text('Optional',
+                const Text('Required',
                     style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 11,
