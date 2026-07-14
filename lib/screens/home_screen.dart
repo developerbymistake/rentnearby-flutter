@@ -382,7 +382,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: _quickAction(
               Iconsax.add_circle,
-              'Post',
+              'Add Room',
               AppColors.warning,
               AppColors.warning.withValues(alpha: 0.1),
               () => Get.toNamed(AppRoutes.addListing),
@@ -391,11 +391,11 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: _quickAction(
-              Iconsax.message,
-              'Chats',
-              AppColors.accent,
-              AppColors.accent.withValues(alpha: 0.1),
-              () => _auth.tabIndex.value = AppTabs.chats,
+              Icons.add_location_alt_rounded,
+              'Add Plot',
+              _kPlotColor,
+              _kPlotColor.withValues(alpha: 0.1),
+              () => Get.toNamed(AppRoutes.addPlot),
             ),
           ),
         ],
@@ -407,26 +407,40 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(13)),
-            child: Icon(icon, color: color, size: 19),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textMedium,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.divider.withValues(alpha: 0.7)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 14, offset: const Offset(0, 6)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, color: color, size: 19),
             ),
-          ),
-        ],
+            const SizedBox(height: 7),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
