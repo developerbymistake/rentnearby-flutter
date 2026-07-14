@@ -269,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 GestureDetector(
-                  onTap: () => _auth.tabIndex.value = isRooms ? AppTabs.rooms : AppTabs.plots,
+                  onTap: () => Get.toNamed(isRooms ? AppRoutes.viewAllRooms : AppRoutes.viewAllPlots),
                   child: const Text(
                     'View all',
                     style: TextStyle(

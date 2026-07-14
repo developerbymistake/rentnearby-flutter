@@ -14,6 +14,8 @@ const _pauseRoutes = {
   '/listing-reports',
   '/report-detail',
   '/my-filed-reports',
+  '/view-all-rooms',
+  '/view-all-plots',
 };
 
 class MapPauseObserver extends NavigatorObserver {
