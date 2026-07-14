@@ -381,21 +381,21 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: _quickAction(
-              Iconsax.add_circle,
-              'Add Room',
+              Icons.meeting_room_rounded,
+              'My Rooms',
               AppColors.warning,
               AppColors.warning.withValues(alpha: 0.1),
-              () => Get.toNamed(AppRoutes.addListing),
+              () => Get.toNamed(AppRoutes.myListings),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: _quickAction(
-              Icons.add_location_alt_rounded,
-              'Add Plot',
+              Icons.terrain_rounded,
+              'My Plots',
               _kPlotColor,
               _kPlotColor.withValues(alpha: 0.1),
-              () => Get.toNamed(AppRoutes.addPlot),
+              () => Get.toNamed(AppRoutes.myPlots),
             ),
           ),
         ],
