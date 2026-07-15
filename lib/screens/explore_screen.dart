@@ -18,8 +18,8 @@ import '../controllers/location_controller.dart';
 import '../models/listing_model.dart';
 import '../widgets/empty_radius_hint.dart';
 import '../widgets/listing_bottom_sheet.dart';
-import '../widgets/location_search_sheet.dart';
 import '../widgets/location_switch_sheet.dart';
+import 'explore_location_search_mixin.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -28,7 +28,7 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
+    with TickerProviderStateMixin, WidgetsBindingObserver, ExploreLocationSearchMixin<ExploreScreen> {
   // ── Map ──────────────────────────────────────────────────────────────────
   MapLibreMapController? _mapController;
   double _currentZoom = 13.0;
@@ -59,11 +59,6 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   List<_MapMarkerData> _markerData = [];
   double _radius = 1.0;
-  // Location-search feature (Photon) — deliberately screen-local, never
-  // written to LocationController. See _searchCenter below: takes top
-  // precedence over browsingCity, falls back to it (then GPS) when cleared.
-  LatLng? _searchOverride;
-  String? _searchOverrideLabel;
   double _lastClusterZoom = 0;
   bool _mapReady = false;
   bool _checkingPermission = false;
@@ -99,6 +94,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
 
     WidgetsBinding.instance.addObserver(this);
+    initExploreLocationSearch();
 
     // Trigger data load whenever LocationController resolves the district.
     _locationWorker = ever(_locationCtrl.selectedDistrict, (_) {
@@ -242,6 +238,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    disposeExploreLocationSearch();
     _locationWorker?.dispose();
     _browsingWorker?.dispose();
     _locationRefreshedWorker?.dispose();
@@ -270,12 +267,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       _locationCtrl.refreshOnResume();
       // Location search is temporary, same spirit as browsingCity (which
       // refreshOnResume() above already resets) — always discard on resume.
-      if (_searchOverride != null) {
-        setState(() {
-          _searchOverride = null;
-          _searchOverrideLabel = null;
-        });
-      }
+      discardSearchOnResume();
       Get.find<AppFeatureController>().refresh();
       if (!_listingCtrl.isLoading.value && _radarController.isAnimating) {
         _radarController.stop();
@@ -333,20 +325,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   // ── Search center + zoom ──────────────────────────────────────────────────
 
-  LatLng get _searchCenter {
-    if (_searchOverride != null) return _searchOverride!;
-    final browsingCity = _locationCtrl.browsingCity.value;
-    if (browsingCity?.latitude != null && browsingCity?.longitude != null) {
-      return LatLng(browsingCity!.latitude!, browsingCity.longitude!);
-    }
-    final loc = _locationCtrl.userLocation.value;
-    if (loc != null) return loc;
-    final city = _locationCtrl.autoCity.value;
-    if (city?.latitude != null && city?.longitude != null) {
-      return LatLng(city!.latitude!, city.longitude!);
-    }
-    return const LatLng(AppConstants.fallbackLat, AppConstants.fallbackLng);
-  }
+  LatLng get _searchCenter => searchCenter;
 
   void _fitToRadius() {
     if (!_mapReady || !mounted) return;
@@ -1034,10 +1013,10 @@ class _ExploreScreenState extends State<ExploreScreen>
       final cityName = _locationCtrl.browsingCity.value?.name ??
           _locationCtrl.autoCity.value?.name ??
           'Current';
-      final searching = _searchOverrideLabel != null;
+      final searching = searchOverrideLabel != null;
 
       final List<InlineSpan> spans = searching
-          ? [TextSpan(text: _searchOverrideLabel)]
+          ? [TextSpan(text: searchOverrideLabel)]
           : [
               TextSpan(text: district.name),
               WidgetSpan(
@@ -1097,27 +1076,8 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   Widget _buildSearchToggleButton() {
-    final active = _searchOverride != null;
     return GestureDetector(
-      onTap: () async {
-        if (active) {
-          setState(() {
-            _searchOverride = null;
-            _searchOverrideLabel = null;
-          });
-          _loadNearby();
-          if (_mapReady) _fitToRadius();
-          return;
-        }
-        final picked = await LocationSearchSheet.show(context, bias: _searchCenter);
-        if (picked == null || !mounted) return;
-        setState(() {
-          _searchOverride = picked.latLng;
-          _searchOverrideLabel = picked.name;
-        });
-        _loadNearby();
-        if (_mapReady) _fitToRadius();
-      },
+      onTap: searchResolving ? null : () => onSearchToggleTap(context),
       child: Container(
         width: 40,
         height: 40,
@@ -1132,11 +1092,17 @@ class _ExploreScreenState extends State<ExploreScreen>
             ),
           ],
         ),
-        child: Icon(
-          active ? Icons.close_rounded : Icons.search_rounded,
-          color: AppColors.primary,
-          size: 20,
-        ),
+        child: searchResolving
+            ? const Padding(
+                padding: EdgeInsets.all(11),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.primary),
+              )
+            : Icon(
+                isSearchActive ? Icons.close_rounded : Icons.search_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
       ),
     );
   }
@@ -1331,10 +1297,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         // location search — "recenter" and "return to my real location" are
         // the same action for both temporary overrides.
         _locationCtrl.resetBrowsing();
-        setState(() {
-          _searchOverride = null;
-          _searchOverrideLabel = null;
-        });
+        discardSearchForRecenter();
         _precomputeCircleCache();
         _loadNearby();
         if (_mapReady) _fitToRadius();

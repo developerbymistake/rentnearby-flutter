@@ -15,15 +15,37 @@ class PhotonService {
     headers: {'User-Agent': 'Bakhli/1.0 (support@bakhli.in)'},
   ));
 
-  // Road/footpath/terrain noise — not useful results for an area/locality
-  // search. Single choke point if more noise types show up later.
-  static const _excludedOsmKeys = {'highway', 'natural', 'waterway', 'railway'};
+  // Server-side filter: only real settlements/localities (OSM `place` key),
+  // minus place values that aren't a useful pinpoint-on-map result for a
+  // property search (administrative rollups, uninhabited/geographic values).
+  // Single choke point if the allow/deny list needs to change later.
+  static const _osmTagFilter = [
+    'place',
+    '!place:county',
+    '!place:state',
+    '!place:country',
+    '!place:region',
+    '!place:province',
+    '!place:island',
+    '!place:islet',
+    '!place:archipelago',
+    '!place:polder',
+    '!place:allotments',
+    '!place:farm',
+    '!place:isolated_dwelling',
+    '!place:house',
+    '!place:district',
+  ];
 
   static Future<List<PlaceResult>> search(String query, {LatLng? bias, int limit = 8}) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return [];
 
-    final params = <String, dynamic>{'q': trimmed, 'limit': limit};
+    final params = <String, dynamic>{
+      'q': trimmed,
+      'limit': limit,
+      'osm_tag': _osmTagFilter,
+    };
     if (bias != null) {
       params['lat'] = bias.latitude;
       params['lon'] = bias.longitude;
@@ -32,13 +54,6 @@ class PhotonService {
     final res = await _photonDio.get<Map<String, dynamic>>('/api', queryParameters: params);
     final features = (res.data?['features'] as List?) ?? [];
 
-    return features
-        .cast<Map<String, dynamic>>()
-        .where((f) {
-          final key = f['properties']?['osm_key'] as String?;
-          return key == null || !_excludedOsmKeys.contains(key);
-        })
-        .map(PlaceResult.fromFeature)
-        .toList();
+    return features.cast<Map<String, dynamic>>().map(PlaceResult.fromFeature).toList();
   }
 }

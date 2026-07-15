@@ -265,7 +265,11 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
     );
   }
 
-  String _capitalize(String s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+  String _capitalize(String s) {
+    if (s.isEmpty) return s;
+    final withSpaces = s.replaceAll('_', ' ');
+    return '${withSpaces[0].toUpperCase()}${withSpaces.substring(1)}';
+  }
 
   Widget _loadingIndicator() => const Padding(
         padding: EdgeInsets.symmetric(vertical: 48),

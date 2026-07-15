@@ -5,13 +5,17 @@ import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../models/city_model.dart';
+import '../models/location_context.dart';
 import '../repositories/locations_repository.dart';
 import '../services/api_service.dart';
 
-class _LocationContext {
+/// Result shape for the GPS-flow resolver ([LocationController._loadContext])
+/// — deliberately distinct from the public [LocationContext] (which also
+/// carries the full district's city list, irrelevant to GPS callers).
+class _LoadContextResult {
   final DistrictModel district;
   final CityModel? nearestCity;
-  const _LocationContext({required this.district, this.nearestCity});
+  const _LoadContextResult({required this.district, this.nearestCity});
 }
 
 class LocationController extends GetxController {
@@ -56,15 +60,24 @@ class LocationController extends GetxController {
   /// Sets both the browsed district and the specific city within it the user
   /// picked. Both are required together — there is no "current position"
   /// concept for a district the user isn't physically in.
+  ///
+  /// Uses `.trigger()`, not `.value =`, so `ever(browsingCity, ...)` listeners
+  /// (both explore screens' `_browsingWorker`, and location-search's own
+  /// stale-override worker) always fire on every call — including when the
+  /// newly-resolved district/city is logically the same as the one already
+  /// being browsed (e.g. two searches inside the same city in a row). Relying
+  /// on `DistrictModel`/`CityModel`'s default identity `==` to guarantee that
+  /// two calls with "the same" data always produced distinct instances was
+  /// fragile; `trigger()` makes the always-notify behavior explicit.
   void setBrowsing(DistrictModel district, CityModel city) {
-    browsingDistrict.value = district;
-    browsingCity.value = city;
+    browsingDistrict.trigger(district);
+    browsingCity.trigger(city);
   }
 
   /// Discards any in-progress manual browsing and returns to the real district.
   void resetBrowsing() {
-    browsingDistrict.value = null;
-    browsingCity.value = null;
+    browsingDistrict.trigger(null);
+    browsingCity.trigger(null);
   }
 
   /// All districts (active + inactive), for the "change district" list.
@@ -273,7 +286,11 @@ class LocationController extends GetxController {
 
   // ── Context API ────────────────────────────────────────────────────────────
 
-  Future<_LocationContext?> _loadContext(double lat, double lng) async {
+  /// Pure coordinate → district/city resolver: one network call, no side
+  /// effects on any controller state. Throws [DistrictNotFoundException] on a
+  /// confirmed 404 (point outside every active district's boundary);
+  /// rethrows anything else (network/parse failures) as-is.
+  Future<LocationContext> _fetchLocationContext(double lat, double lng) async {
     try {
       final res = await ApiService.get(
         '/listings/context',
@@ -282,22 +299,57 @@ class LocationController extends GetxController {
       final data = res['data'];
       final district =
           DistrictModel.fromJson(data['district'] as Map<String, dynamic>);
-      nearbyCities.value = (data['cities'] as List)
+      final cities = (data['cities'] as List)
           .map((e) => CityModel.fromJson(e as Map<String, dynamic>))
           .toList();
       final nearestCityId = data['nearestCityId'] as String?;
       final nearestCity = nearestCityId != null
-          ? nearbyCities.firstWhereOrNull((c) => c.id == nearestCityId)
-          : nearbyCities.firstOrNull;
+          ? cities.firstWhereOrNull((c) => c.id == nearestCityId)
+          : cities.firstOrNull;
+      return LocationContext(
+          district: district, nearestCity: nearestCity, citiesInDistrict: cities);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) throw const DistrictNotFoundException();
+      rethrow;
+    }
+  }
+
+  /// GPS-flow resolver: wraps [_fetchLocationContext] and additionally
+  /// updates [nearbyCities]/[districtUnavailable] — state that is
+  /// semantically tied to the user's REAL, GPS-resolved position (used by the
+  /// "nearby cities" rail and the district-unavailable banner). Used only by
+  /// the GPS-driven flows below (`_initLocation`, `_autoLoad`,
+  /// `_refreshLocation`, `refreshOnResume`).
+  Future<_LoadContextResult?> _loadContext(double lat, double lng) async {
+    try {
+      final ctx = await _fetchLocationContext(lat, lng);
+      nearbyCities.value = ctx.citiesInDistrict;
       districtUnavailable.value = false;
-      return _LocationContext(district: district, nearestCity: nearestCity);
-    } catch (e) {
-      if (e is DioException && e.response?.statusCode == 404) {
-        districtUnavailable.value = true;
-      }
+      return _LoadContextResult(district: ctx.district, nearestCity: ctx.nearestCity);
+    } on DistrictNotFoundException {
+      districtUnavailable.value = true;
+      return null;
+    } catch (_) {
       return null;
     }
   }
+
+  /// Side-effect-free coordinate → district/city resolver, for one-off point
+  /// lookups (currently: location search). Unlike [_loadContext] (GPS flows),
+  /// this deliberately does NOT touch [nearbyCities] or [districtUnavailable]:
+  /// those two are semantically tied to the user's REAL, GPS-resolved
+  /// position and district-service-area banner — they must never be
+  /// overwritten by a resolve for an arbitrary searched point that may be in
+  /// a completely different (and possibly unserviceable) district than the
+  /// user's real one.
+  ///
+  /// Throws [DistrictNotFoundException] on a confirmed 404 (point outside
+  /// every active district). Any other failure (network/timeout/parse)
+  /// propagates as-is — callers should catch broadly for a generic error and
+  /// catch [DistrictNotFoundException] specifically for a precise
+  /// "not serviceable here" message.
+  Future<LocationContext> resolveDistrictAt(double lat, double lng) =>
+      _fetchLocationContext(lat, lng);
 
   // ── Resume handler (called by both explore screens on app foreground) ───────
 
