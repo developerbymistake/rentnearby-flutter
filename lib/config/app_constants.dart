@@ -2,6 +2,7 @@ class AppConstants {
   static const String serverUrl = 'https://developerbymistake.tech';
   static const String baseUrl = '$serverUrl/api/v1';
   static const String nominatimUrl = 'https://nominatim.developerbymistake.tech';
+  static const String photonUrl = 'https://photon.developerbymistake.tech';
   // static const String baseUrl = 'http://192.168.1.33:5000/api/v1'; // Local dev
   // static const String baseUrl = 'http://10.0.2.2:5000/api/v1'; // Android emulator
 

@@ -19,6 +19,7 @@ import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../models/plot_model.dart';
 import '../widgets/empty_radius_hint.dart';
+import '../widgets/location_search_sheet.dart';
 import '../widgets/location_switch_sheet.dart';
 
 class ExplorePlotsScreen extends StatefulWidget {
@@ -58,6 +59,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   bool _stale = false;
   List<_MapMarkerData> _markerData = [];
   double _radius = 1.0;
+  // Location-search feature (Photon) — deliberately screen-local, never
+  // written to LocationController. See _searchCenter below: takes top
+  // precedence over browsingCity, falls back to it (then GPS) when cleared.
+  LatLng? _searchOverride;
+  String? _searchOverrideLabel;
   double _lastClusterZoom = 0;
   bool _mapReady = false;
   bool _checkingPermission = false;
@@ -260,6 +266,14 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     if (state == AppLifecycleState.resumed) {
       _checkPermissionOnResume();
       _locationCtrl.refreshOnResume();
+      // Location search is temporary, same spirit as browsingCity (which
+      // refreshOnResume() above already resets) — always discard on resume.
+      if (_searchOverride != null) {
+        setState(() {
+          _searchOverride = null;
+          _searchOverrideLabel = null;
+        });
+      }
       Get.find<AppFeatureController>().refresh();
       if (!_plotCtrl.isLoading.value && _radarController.isAnimating) {
         _radarController.stop();
@@ -312,6 +326,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   LatLng get _searchCenter {
+    if (_searchOverride != null) return _searchOverride!;
     final browsingCity = _locationCtrl.browsingCity.value;
     if (browsingCity?.latitude != null && browsingCity?.longitude != null) {
       return LatLng(browsingCity!.latitude!, browsingCity.longitude!);
@@ -883,7 +898,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                       child: Column(children: [
-                        _buildLocationPill(),
+                        Row(children: [
+                          Expanded(child: _buildLocationPill()),
+                          const SizedBox(width: 8),
+                          _buildSearchToggleButton(),
+                        ]),
                         const SizedBox(height: 10),
                         Row(children: [
                           Expanded(child: _buildRadiusChips()),
@@ -971,9 +990,28 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       final cityName = _locationCtrl.browsingCity.value?.name ??
           _locationCtrl.autoCity.value?.name ??
           'Current';
+      final searching = _searchOverrideLabel != null;
+
+      final List<InlineSpan> spans = searching
+          ? [TextSpan(text: _searchOverrideLabel)]
+          : [
+              TextSpan(text: district.name),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(Icons.chevron_right_rounded,
+                      size: 14, color: const Color(0xFF92400E).withValues(alpha: 0.6)),
+                ),
+              ),
+              TextSpan(text: cityName),
+            ];
 
       return GestureDetector(
-        onTap: () => LocationSwitchSheet.show(context),
+        // Disabled while a location search is active — user must cancel the
+        // search (via the toggle button) before switching city again, so
+        // the two temporary overrides are never open at once.
+        onTap: searching ? null : () => LocationSwitchSheet.show(context),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -993,18 +1031,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
             const SizedBox(width: 7),
             Expanded(
               child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(text: district.name),
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.middle,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(Icons.chevron_right_rounded,
-                          size: 14, color: const Color(0xFF92400E).withValues(alpha: 0.6)),
-                    ),
-                  ),
-                  TextSpan(text: cityName),
-                ]),
+                TextSpan(children: spans),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
                 style: const TextStyle(
@@ -1014,12 +1041,59 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                     color: Color(0xFF92400E)),
               ),
             ),
-            const SizedBox(width: 4),
-            const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF92400E), size: 16),
+            if (!searching) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF92400E), size: 16),
+            ],
           ]),
         ),
       );
     });
+  }
+
+  Widget _buildSearchToggleButton() {
+    final active = _searchOverride != null;
+    return GestureDetector(
+      onTap: () async {
+        if (active) {
+          setState(() {
+            _searchOverride = null;
+            _searchOverrideLabel = null;
+          });
+          _loadNearby();
+          if (_mapReady) _fitToRadius();
+          return;
+        }
+        final picked = await LocationSearchSheet.show(context, bias: _searchCenter);
+        if (picked == null || !mounted) return;
+        setState(() {
+          _searchOverride = picked.latLng;
+          _searchOverrideLabel = picked.name;
+        });
+        _loadNearby();
+        if (_mapReady) _fitToRadius();
+      },
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(
+          active ? Icons.close_rounded : Icons.search_rounded,
+          color: const Color(0xFF92400E),
+          size: 20,
+        ),
+      ),
+    );
   }
 
   Widget _buildRadiusChips() {
@@ -1193,9 +1267,14 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Widget _buildLocationFab() {
     return GestureDetector(
       onTap: () {
-        // Also ends any manual district/city browsing — "recenter" and
-        // "return to my real district" are the same action here.
+        // Also ends any manual district/city browsing and any active
+        // location search — "recenter" and "return to my real location" are
+        // the same action for both temporary overrides.
         _locationCtrl.resetBrowsing();
+        setState(() {
+          _searchOverride = null;
+          _searchOverrideLabel = null;
+        });
         _precomputeCircleCache();
         _loadNearby();
         if (_mapReady) _fitToRadius();
