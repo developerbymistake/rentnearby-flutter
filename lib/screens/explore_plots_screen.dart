@@ -93,7 +93,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     );
 
     WidgetsBinding.instance.addObserver(this);
-    initExploreLocationSearch();
 
     // Trigger data load whenever LocationController resolves the district.
     _locationWorker = ever(_locationCtrl.selectedDistrict, (_) {
@@ -236,7 +235,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    disposeExploreLocationSearch();
     _locationWorker?.dispose();
     _browsingWorker?.dispose();
     _locationRefreshedWorker?.dispose();
@@ -262,10 +260,9 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _checkPermissionOnResume();
+      // Search pin is temporary, same spirit as browsingCity — resetBrowsing()
+      // inside refreshOnResume() already clears both, no separate call needed.
       _locationCtrl.refreshOnResume();
-      // Location search is temporary, same spirit as browsingCity (which
-      // refreshOnResume() above already resets) — always discard on resume.
-      discardSearchOnResume();
       Get.find<AppFeatureController>().refresh();
       if (!_plotCtrl.isLoading.value && _radarController.isAnimating) {
         _radarController.stop();
@@ -1031,7 +1028,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   Widget _buildSearchToggleButton() {
-    return GestureDetector(
+    // Obx-wrapped: isSearchActive/searchResolving now read shared
+    // LocationController state, not a local field, so this must react on
+    // its own to a search started/resolved/cancelled from the OTHER tab.
+    return Obx(() => GestureDetector(
       onTap: searchResolving ? null : () => onSearchToggleTap(context),
       child: Container(
         width: 40,
@@ -1059,7 +1059,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 size: 20,
               ),
       ),
-    );
+    ));
   }
 
   Widget _buildRadiusChips() {
@@ -1233,11 +1233,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Widget _buildLocationFab() {
     return GestureDetector(
       onTap: () {
-        // Also ends any manual district/city browsing and any active
-        // location search — "recenter" and "return to my real location" are
-        // the same action for both temporary overrides.
+        // Ends any manual district/city browsing and any active location
+        // search in one call — "recenter" and "return to my real location"
+        // are the same action for both temporary overrides.
         _locationCtrl.resetBrowsing();
-        discardSearchForRecenter();
         _precomputeCircleCache();
         _loadNearby();
         if (_mapReady) _fitToRadius();

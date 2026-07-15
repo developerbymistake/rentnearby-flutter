@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import '../config/app_constants.dart';
 import '../models/city_model.dart';
 import '../models/location_context.dart';
 import '../repositories/locations_repository.dart';
@@ -43,6 +44,20 @@ class LocationController extends GetxController {
   final browsingDistrict = Rxn<DistrictModel>();
   final browsingCity     = Rxn<CityModel>();
 
+  // ── Location-search feature — precise pin, fully shared (like browsing
+  // above) so Room and Plot always show the exact same searched spot, not
+  // just the same district. See setBrowsing()/resetBrowsing() for why the
+  // pin's lifecycle is tied to theirs, and beginSearchOverride()/
+  // endSearchOverride() for the session API the search UI actually uses.
+  final searchPinOverride = Rxn<LatLng>();
+  final searchPinLabel    = Rxn<String>();
+  final searchResolving   = false.obs;
+
+  int _searchGeneration = 0;
+  DistrictModel? _preSearchSnapshotDistrict;
+  CityModel?     _preSearchSnapshotCity;
+  bool           _hasPreSearchSnapshot = false;
+
   /// The district whose listings should currently be shown: the browsed one
   /// if the user is temporarily exploring elsewhere, otherwise the real one.
   DistrictModel? get effectiveDistrict => browsingDistrict.value ?? selectedDistrict.value;
@@ -54,6 +69,27 @@ class LocationController extends GetxController {
   /// comments on GetNearbyAsync).
   CityModel? get effectiveCity => browsingCity.value ?? autoCity.value;
 
+  /// Map/radius center for the explore screens: precise search pin (if any)
+  /// > browsed city's stored coordinate > live GPS > GPS-nearest city >
+  /// hardcoded last-resort fallback. Shared across Rooms and Plots — moved
+  /// here (from being duplicated per-screen) so both screens always agree on
+  /// exactly the same point, not just the same district.
+  LatLng get effectiveSearchCenter {
+    final pin = searchPinOverride.value;
+    if (pin != null) return pin;
+    final city = browsingCity.value;
+    if (city?.latitude != null && city?.longitude != null) {
+      return LatLng(city!.latitude!, city.longitude!);
+    }
+    final loc = userLocation.value;
+    if (loc != null) return loc;
+    final auto = autoCity.value;
+    if (auto?.latitude != null && auto?.longitude != null) {
+      return LatLng(auto!.latitude!, auto.longitude!);
+    }
+    return const LatLng(AppConstants.fallbackLat, AppConstants.fallbackLng);
+  }
+
   final _locationsRepo = LocationsRepository();
   List<DistrictModel> _allDistricts = [];
 
@@ -62,22 +98,103 @@ class LocationController extends GetxController {
   /// concept for a district the user isn't physically in.
   ///
   /// Uses `.trigger()`, not `.value =`, so `ever(browsingCity, ...)` listeners
-  /// (both explore screens' `_browsingWorker`, and location-search's own
-  /// stale-override worker) always fire on every call — including when the
-  /// newly-resolved district/city is logically the same as the one already
-  /// being browsed (e.g. two searches inside the same city in a row). Relying
-  /// on `DistrictModel`/`CityModel`'s default identity `==` to guarantee that
-  /// two calls with "the same" data always produced distinct instances was
-  /// fragile; `trigger()` makes the always-notify behavior explicit.
+  /// (both explore screens' `_browsingWorker`) always fire on every call —
+  /// including when the newly-resolved district/city is logically the same
+  /// as the one already being browsed (e.g. two searches inside the same city
+  /// in a row). Relying on `DistrictModel`/`CityModel`'s default identity
+  /// `==` to guarantee that two calls with "the same" data always produced
+  /// distinct instances was fragile; `trigger()` makes the always-notify
+  /// behavior explicit.
+  ///
+  /// Also bumps the search generation and clears any precise search pin: a
+  /// manual city-switch (the only caller of this method directly —
+  /// `LocationSwitchSheet`) is a deliberate, coarse action that must
+  /// supersede/discard any leftover precise search pin, and must invalidate
+  /// any location-search resolve that might still be in flight (each bottom
+  /// tab is its own nested Navigator kept mounted by an IndexedStack, so a
+  /// city-switch on one tab can genuinely race a still-resolving search
+  /// started on the other — see `beginSearchResolve`/`isCurrentSearchGeneration`).
   void setBrowsing(DistrictModel district, CityModel city) {
+    _searchGeneration++;
+    searchResolving.value = false;
     browsingDistrict.trigger(district);
     browsingCity.trigger(city);
+    searchPinOverride.trigger(null);
+    searchPinLabel.trigger(null);
   }
 
   /// Discards any in-progress manual browsing and returns to the real district.
+  /// Same generation-bump/pin-clearing reasoning as [setBrowsing] above.
   void resetBrowsing() {
+    _searchGeneration++;
+    searchResolving.value = false;
     browsingDistrict.trigger(null);
     browsingCity.trigger(null);
+    searchPinOverride.trigger(null);
+    searchPinLabel.trigger(null);
+    _hasPreSearchSnapshot = false;
+    _preSearchSnapshotDistrict = null;
+    _preSearchSnapshotCity = null;
+  }
+
+  // ── Location-search session API ─────────────────────────────────────────
+  // Used by ExploreLocationSearchMixin (Rooms + Plots) — kept here so both
+  // screens share one session, one snapshot, and one generation counter,
+  // rather than each screen tracking its own (which would let cancelling
+  // from one screen fail to restore a manual browse made from the other).
+
+  /// Marks a search resolve in-flight and returns an opaque token. Callers
+  /// should check [isCurrentSearchGeneration] after their `await` before
+  /// applying anything — see [beginSearchOverride].
+  int beginSearchResolve() {
+    searchResolving.value = true;
+    return ++_searchGeneration;
+  }
+
+  /// True if [token] (from [beginSearchResolve]) is still the most recent
+  /// attempt — false if superseded by a newer search, a manual city-switch,
+  /// a recenter, or an app resume while this one was in flight.
+  bool isCurrentSearchGeneration(int token) => token == _searchGeneration;
+
+  /// Applies a successfully-resolved search pick. Captures the pre-search
+  /// snapshot only if one isn't already in progress — guards a rapid
+  /// re-search from re-capturing a mid-search state as if it were original
+  /// (structurally shouldn't happen given the toggle button gates a new
+  /// search behind cancelling the active one first, but kept defensive).
+  void beginSearchOverride(
+      DistrictModel district, CityModel city, LatLng pin, String label) {
+    if (!_hasPreSearchSnapshot) {
+      _preSearchSnapshotDistrict = browsingDistrict.value;
+      _preSearchSnapshotCity = browsingCity.value;
+      _hasPreSearchSnapshot = true;
+    }
+    setBrowsing(district, city); // also clears pin/label + bumps generation
+    searchPinOverride.trigger(pin);
+    searchPinLabel.trigger(label);
+  }
+
+  /// Cancels the active search, restoring whatever was truly active before
+  /// ANY tab's search began — controller-level, so cancelling from either
+  /// screen is correct even if the OTHER screen initiated the search.
+  void endSearchOverride() {
+    if (_hasPreSearchSnapshot) {
+      final d = _preSearchSnapshotDistrict;
+      final c = _preSearchSnapshotCity;
+      _hasPreSearchSnapshot = false;
+      _preSearchSnapshotDistrict = null;
+      _preSearchSnapshotCity = null;
+      if (d != null && c != null) {
+        setBrowsing(d, c);
+      } else {
+        resetBrowsing();
+      }
+    } else {
+      // Defensive only — the UI only allows cancel while isSearchActive.
+      _searchGeneration++;
+      searchResolving.value = false;
+      searchPinOverride.trigger(null);
+      searchPinLabel.trigger(null);
+    }
   }
 
   /// All districts (active + inactive), for the "change district" list.
