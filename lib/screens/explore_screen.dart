@@ -54,7 +54,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Worker? _refreshWorker;
   Worker? _tabWorker;
   Worker? _filterResetWorker;
-  Worker? _browsingWorker;
+  Worker? _locationSelectionWorker;
   bool _stale = false;
 
   List<_MapMarkerData> _markerData = [];
@@ -108,11 +108,15 @@ class _ExploreScreenState extends State<ExploreScreen>
       }
     });
 
-    // District-switch feature: reload + refit whenever the manually-browsed
-    // city changes — this covers both picking a city (own district or a
-    // browsed one) and resetting back to the real location (browsingCity
-    // becomes null again), mirroring _locationWorker above.
-    _browsingWorker = ever(_locationCtrl.browsingCity, (_) {
+    // District-switch AND location-search feature: reload + refit whenever
+    // the manually-browsed city OR a searched pin changes — this covers
+    // picking a city, resetting back to the real location, applying a search
+    // pick, and cancelling a search. Watches LocationController's combined
+    // pulse (fired only once every underlying field has settled) rather than
+    // browsingCity alone — reacting to browsingCity by itself can observe
+    // searchPinOverride still holding its PREVIOUS value mid-transition,
+    // since a search applies both fields in sequence.
+    _locationSelectionWorker = ever(_locationCtrl.locationSelectionChanged, (_) {
       if (_auth.tabIndex.value == AppTabs.rooms && !mapShouldPause.value) {
         _precomputeCircleCache();
         _loadNearby();
@@ -238,7 +242,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _locationWorker?.dispose();
-    _browsingWorker?.dispose();
+    _locationSelectionWorker?.dispose();
     _locationRefreshedWorker?.dispose();
     _userLocationWorker?.dispose();
     _postedWorker?.dispose();

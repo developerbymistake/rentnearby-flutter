@@ -58,6 +58,16 @@ class LocationController extends GetxController {
   CityModel?     _preSearchSnapshotCity;
   bool           _hasPreSearchSnapshot = false;
 
+  /// Fires once, AFTER every field above has settled to its final value, for
+  /// every browsing/search transition (setBrowsing/resetBrowsing/
+  /// beginSearchOverride/endSearchOverride). Listeners that need a fully
+  /// consistent read of effectiveDistrict/effectiveCity/effectiveSearchCenter
+  /// (e.g. moving a map camera) should watch this instead of any single field
+  /// above — reacting to e.g. browsingCity alone can observe searchPinOverride
+  /// still holding its PREVIOUS value mid-transition, since `.trigger()`
+  /// notifies synchronously and related fields update one at a time.
+  final locationSelectionChanged = 0.obs;
+
   /// The district whose listings should currently be shown: the browsed one
   /// if the user is temporarily exploring elsewhere, otherwise the real one.
   DistrictModel? get effectiveDistrict => browsingDistrict.value ?? selectedDistrict.value;
@@ -93,18 +103,26 @@ class LocationController extends GetxController {
   final _locationsRepo = LocationsRepository();
   List<DistrictModel> _allDistricts = [];
 
+  /// Applies browsingDistrict/browsingCity/searchPinOverride/searchPinLabel
+  /// together — the single place these four fields are ever triggered, so
+  /// every public method below produces the exact same field-by-field
+  /// sequence. Uses `.trigger()`, not `.value =`, so `ever(...)` listeners on
+  /// any individual field always fire on every call — including when the
+  /// newly-resolved data is logically the same as what's already set (e.g.
+  /// two searches inside the same city in a row). Relying on
+  /// `DistrictModel`/`CityModel`'s default identity `==` to guarantee that
+  /// two calls with "the same" data always produced distinct instances was
+  /// fragile; `trigger()` makes the always-notify behavior explicit.
+  void _applyBrowsingState({DistrictModel? district, CityModel? city, LatLng? pin, String? label}) {
+    browsingDistrict.trigger(district);
+    browsingCity.trigger(city);
+    searchPinOverride.trigger(pin);
+    searchPinLabel.trigger(label);
+  }
+
   /// Sets both the browsed district and the specific city within it the user
   /// picked. Both are required together — there is no "current position"
   /// concept for a district the user isn't physically in.
-  ///
-  /// Uses `.trigger()`, not `.value =`, so `ever(browsingCity, ...)` listeners
-  /// (both explore screens' `_browsingWorker`) always fire on every call —
-  /// including when the newly-resolved district/city is logically the same
-  /// as the one already being browsed (e.g. two searches inside the same city
-  /// in a row). Relying on `DistrictModel`/`CityModel`'s default identity
-  /// `==` to guarantee that two calls with "the same" data always produced
-  /// distinct instances was fragile; `trigger()` makes the always-notify
-  /// behavior explicit.
   ///
   /// Also bumps the search generation and clears any precise search pin: a
   /// manual city-switch (the only caller of this method directly —
@@ -117,10 +135,8 @@ class LocationController extends GetxController {
   void setBrowsing(DistrictModel district, CityModel city) {
     _searchGeneration++;
     searchResolving.value = false;
-    browsingDistrict.trigger(district);
-    browsingCity.trigger(city);
-    searchPinOverride.trigger(null);
-    searchPinLabel.trigger(null);
+    _applyBrowsingState(district: district, city: city);
+    locationSelectionChanged.value++;
   }
 
   /// Discards any in-progress manual browsing and returns to the real district.
@@ -128,13 +144,11 @@ class LocationController extends GetxController {
   void resetBrowsing() {
     _searchGeneration++;
     searchResolving.value = false;
-    browsingDistrict.trigger(null);
-    browsingCity.trigger(null);
-    searchPinOverride.trigger(null);
-    searchPinLabel.trigger(null);
+    _applyBrowsingState();
     _hasPreSearchSnapshot = false;
     _preSearchSnapshotDistrict = null;
     _preSearchSnapshotCity = null;
+    locationSelectionChanged.value++;
   }
 
   // ── Location-search session API ─────────────────────────────────────────
@@ -168,9 +182,14 @@ class LocationController extends GetxController {
       _preSearchSnapshotCity = browsingCity.value;
       _hasPreSearchSnapshot = true;
     }
-    setBrowsing(district, city); // also clears pin/label + bumps generation
-    searchPinOverride.trigger(pin);
-    searchPinLabel.trigger(label);
+    _searchGeneration++;
+    searchResolving.value = false;
+    // One call, straight to the final pin — searchPinOverride is never
+    // observably null mid-transition the way it would be if this went
+    // through setBrowsing() (which always clears the pin) and then set the
+    // real pin as a separate, later step.
+    _applyBrowsingState(district: district, city: city, pin: pin, label: label);
+    locationSelectionChanged.value++;
   }
 
   /// Cancels the active search, restoring whatever was truly active before
@@ -183,10 +202,12 @@ class LocationController extends GetxController {
       _hasPreSearchSnapshot = false;
       _preSearchSnapshotDistrict = null;
       _preSearchSnapshotCity = null;
+      _searchGeneration++;
+      searchResolving.value = false;
       if (d != null && c != null) {
-        setBrowsing(d, c);
+        _applyBrowsingState(district: d, city: c);
       } else {
-        resetBrowsing();
+        _applyBrowsingState();
       }
     } else {
       // Defensive only — the UI only allows cancel while isSearchActive.
@@ -195,6 +216,7 @@ class LocationController extends GetxController {
       searchPinOverride.trigger(null);
       searchPinLabel.trigger(null);
     }
+    locationSelectionChanged.value++;
   }
 
   /// All districts (active + inactive), for the "change district" list.
