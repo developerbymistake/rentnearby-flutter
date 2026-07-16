@@ -23,6 +23,7 @@ import '../services/notification_service.dart';
 import '../widgets/district_banner_overlay.dart';
 import '../widgets/gradient_button.dart';
 import '../navigation/tab_router.dart';
+import '../navigation/tab_keys.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -37,6 +38,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   late final ChatController _chatCtrl;
   Worker? _bannerDistrictWorker;
   Worker? _digestTopicWorker;
+  Worker? _tabLeaveWorker;
+  int _previousTabIndex = AppTabs.home;
 
   final _screens = const [
     TabNavigator(tabId: AppTabs.home),
@@ -82,6 +85,28 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (_locationCtrl.selectedDistrict.value != null) {
       NotificationService.to.updateDistrictTopic(_locationCtrl.selectedDistrict.value!.id.toString());
     }
+    _previousTabIndex = _auth.tabIndex.value;
+    // A tab's own screen never pushes further routes onto its local Navigator
+    // (all deep navigation goes through the global GetX navigator) — so any
+    // route still on a tab's stack when we leave it is a stray open bottom
+    // sheet (e.g. LocationSwitchSheet, a listing detail sheet). showDialog
+    // defaults to the root navigator, so dialogs aren't affected by (or a
+    // target of) this — only showModalBottomSheet-based UI is. IndexedStack
+    // never disposes inactive tabs, so without this the sheet silently
+    // reappears exactly as left when the user switches back. Reacting to
+    // tabIndex itself (rather than patching every call site that can change
+    // it — bottom nav taps, back-press, push notifications, Home screen CTAs)
+    // means this stays correct even if a new tab-switch entry point is added
+    // later.
+    _tabLeaveWorker = ever<int>(_auth.tabIndex, (newIndex) {
+      if (newIndex != _previousTabIndex) {
+        final navState = tabKeys[_previousTabIndex].currentState;
+        if (navState != null && navState.canPop()) {
+          navState.popUntil((route) => route.isFirst);
+        }
+      }
+      _previousTabIndex = newIndex;
+    });
     _auth.refreshProfile();
   }
 
@@ -90,6 +115,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _bannerDistrictWorker?.dispose();
     _digestTopicWorker?.dispose();
+    _tabLeaveWorker?.dispose();
     super.dispose();
   }
 
