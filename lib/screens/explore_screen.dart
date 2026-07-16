@@ -18,7 +18,7 @@ import '../controllers/location_controller.dart';
 import '../models/listing_model.dart';
 import '../widgets/empty_radius_hint.dart';
 import '../widgets/listing_bottom_sheet.dart';
-import '../widgets/location_switch_sheet.dart';
+import '../widgets/location_pill.dart';
 import 'explore_location_search_mixin.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -923,7 +923,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                   child: Column(children: [
                     Row(children: [
-                      Expanded(child: _buildLocationPill()),
+                      Expanded(child: LocationPill(accentColor: AppColors.primary)),
                       const SizedBox(width: 8),
                       _buildSearchToggleButton(),
                     ]),
@@ -1003,78 +1003,6 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   // ── UI widgets ────────────────────────────────────────────────────────────
-
-  /// Single entry point for the district-switch feature: shows the district
-  /// currently being viewed (real or manually browsed) + city, opens the
-  /// shared drill-down sheet on tap.
-  Widget _buildLocationPill() {
-    return Obx(() {
-      final district = _locationCtrl.effectiveDistrict;
-      if (district == null) return const SizedBox();
-      final cityName = _locationCtrl.browsingCity.value?.name ??
-          _locationCtrl.autoCity.value?.name ??
-          'Current';
-      final searching = searchOverrideLabel != null;
-
-      final List<InlineSpan> spans = searching
-          ? [TextSpan(text: searchOverrideLabel)]
-          : [
-              TextSpan(text: district.name),
-              WidgetSpan(
-                alignment: PlaceholderAlignment.middle,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Icon(Icons.chevron_right_rounded,
-                      size: 14, color: AppColors.primary.withValues(alpha: 0.6)),
-                ),
-              ),
-              TextSpan(text: cityName),
-            ];
-
-      return GestureDetector(
-        // Disabled while a location search is active — user must cancel the
-        // search (via the toggle button) before switching city again, so
-        // the two temporary overrides are never open at once.
-        onTap: searching ? null : () => LocationSwitchSheet.show(context),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(children: [
-            const Icon(Icons.public_rounded, color: AppColors.primary, size: 15),
-            const SizedBox(width: 7),
-            Expanded(
-              child: Text.rich(
-                TextSpan(children: spans),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary),
-              ),
-            ),
-            if (!searching) ...[
-              const SizedBox(width: 4),
-              const Icon(Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.primary, size: 16),
-            ],
-          ]),
-        ),
-      );
-    });
-  }
 
   Widget _buildSearchToggleButton() {
     // Obx-wrapped: isSearchActive/searchResolving now read shared

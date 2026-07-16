@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../config/app_colors.dart';
 import '../controllers/location_controller.dart';
 import 'location_switch_sheet.dart';
 
-/// Same widget as explore_screen.dart's private `_buildLocationPill()` —
-/// kept as a standalone shared widget rather than refactoring Explore to use
-/// it, so the already-shipped Explore screens stay untouched.
+/// Single shared implementation used identically by Explore Rooms, Explore
+/// Plots, and View All — previously each of the three maintained its own
+/// copy (Explore Rooms/Plots privately, in sync only by luck), which let
+/// View All's copy silently fall behind when search-awareness was added to
+/// the other two. [accentColor] is the only thing that legitimately differs
+/// per screen (blue for Rooms, brown for Plots).
 class LocationPill extends StatelessWidget {
-  const LocationPill({super.key});
+  final Color accentColor;
+  const LocationPill({super.key, required this.accentColor});
 
   @override
   Widget build(BuildContext context) {
@@ -19,9 +22,29 @@ class LocationPill extends StatelessWidget {
       final cityName = locationCtrl.browsingCity.value?.name ??
           locationCtrl.autoCity.value?.name ??
           'Current';
+      final searchLabel = locationCtrl.searchPinLabel.value;
+      final searching = searchLabel != null;
+
+      final List<InlineSpan> spans = searching
+          ? [TextSpan(text: searchLabel)]
+          : [
+              TextSpan(text: district.name),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(Icons.chevron_right_rounded,
+                      size: 14, color: accentColor.withValues(alpha: 0.6)),
+                ),
+              ),
+              TextSpan(text: cityName),
+            ];
 
       return GestureDetector(
-        onTap: () => LocationSwitchSheet.show(context),
+        // Disabled while a location search is active — user must cancel the
+        // search (via the toggle button) before switching city again, so
+        // the two temporary overrides are never open at once.
+        onTap: searching ? null : () => LocationSwitchSheet.show(context),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -37,34 +60,25 @@ class LocationPill extends StatelessWidget {
             ],
           ),
           child: Row(children: [
-            const Icon(Icons.public_rounded, color: AppColors.primary, size: 15),
+            Icon(Icons.public_rounded, color: accentColor, size: 15),
             const SizedBox(width: 7),
             Expanded(
               child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(text: district.name),
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.middle,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(Icons.chevron_right_rounded,
-                          size: 14, color: AppColors.primary.withValues(alpha: 0.6)),
-                    ),
-                  ),
-                  TextSpan(text: cityName),
-                ]),
+                TextSpan(children: spans),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
-                style: const TextStyle(
+                style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.primary),
+                    color: accentColor),
               ),
             ),
-            const SizedBox(width: 4),
-            const Icon(Icons.keyboard_arrow_down_rounded,
-                color: AppColors.primary, size: 16),
+            if (!searching) ...[
+              const SizedBox(width: 4),
+              Icon(Icons.keyboard_arrow_down_rounded,
+                  color: accentColor, size: 16),
+            ],
           ]),
         ),
       );

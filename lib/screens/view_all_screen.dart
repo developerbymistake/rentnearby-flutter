@@ -152,9 +152,9 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                         ],
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 0, 16, 14),
-                      child: LocationPill(),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                      child: LocationPill(accentColor: activeColor),
                     ),
                   ],
                 ),
