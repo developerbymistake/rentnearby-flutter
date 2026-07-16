@@ -33,6 +33,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   // ── Map ──────────────────────────────────────────────────────────────────
   MapLibreMapController? _mapController;
   double _currentZoom = 13.0;
+  // Real on-screen size, refreshed every build via LayoutBuilder below — lets
+  // _zoomForRadius frame the circle for the actual device width instead of a
+  // guessed constant, and keeps it correctly scaled on tablets for free.
+  Size _screenSize = Size.zero;
   Circle? _nativeUserDot;
   final _circleCache = <double, Map<String, dynamic>>{};
   bool _pinsVisible = true;
@@ -332,9 +336,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   double _zoomForRadius(double radiusKm, double lat) {
     const earthCircumference = 2 * pi * 6378137.0;
     const tileSize = 512.0;
-    const usablePx = 480.0;
+    // Real measured width — was a hardcoded 480px guess that most phones
+    // don't actually have, which is why the circle used to run off-screen.
+    // Falls back to 480 only if called before the first layout pass.
+    final usablePx = _screenSize.width > 0 ? _screenSize.width : 480.0;
     final metersPerPxAtZ0 = earthCircumference * cos(lat * pi / 180) / tileSize;
-    final targetMetersPerPx = (radiusKm * 1000 * 2) / (usablePx * 0.80);
+    final targetMetersPerPx = (radiusKm * 1000 * 2) / (usablePx * 0.90);
     final zoom = log(metersPerPxAtZ0 / targetMetersPerPx) / log(2);
     return zoom.clamp(10.0, 17.0);
   }
@@ -763,6 +770,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       resizeToAvoidBottomInset: false,
       body: LayoutBuilder(
         builder: (context, constraints) {
+          _screenSize = constraints.biggest;
           return Stack(
             children: [
               // ── Layer 1: Map — stays alive for the screen's lifetime.
