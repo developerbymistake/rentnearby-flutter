@@ -16,6 +16,8 @@ import '../config/app_constants.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/listing_controller.dart';
+import '../models/city_model.dart';
+import '../models/location_context.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/gradient_button.dart';
@@ -39,8 +41,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final _priceFocusNode = FocusNode();
   final _addressFocusNode = FocusNode();
 
-  String? _selectedDistrictId;
-  String? _selectedCityId;
+  DistrictModel? _resolvedDistrict;
+  CityModel? _resolvedCity;
+  String? get _selectedDistrictId => _resolvedDistrict?.id;
+  bool _isResolvingDistrict = false;
+  bool _pinManuallyPlaced = false;
+  int _districtResolveGeneration = 0;
+  Worker? _userLocationWorker;
   String? _selectedRoomTypeId;
   String _selectedFurnishedStatus = FurnishedStatus.none;
   LatLng? _selectedLocation;
@@ -57,7 +64,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final List<File> _photos = [];
   final _picker = ImagePicker();
   int _step = 0;
-  Timer? _nominatimTimer;
+  Timer? _pinResolveTimer;
 
   bool get _hasChanges =>
       _selectedRoomTypeId != null ||
@@ -74,8 +81,25 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _addressCtrl.addListener(_onAddressChanged);
     _userLocation = _locationCtrl.userLocation.value;
     _selectedLocation = _locationCtrl.userLocation.value;
-    _selectedDistrictId = _locationCtrl.selectedDistrict.value?.id;
-    _selectedCityId = _locationCtrl.autoCity.value?.id;
+    _userLocationWorker = ever<LatLng?>(_locationCtrl.userLocation, _onUserLocationChanged);
+    if (_userLocation != null) _onUserLocationChanged(_userLocation);
+  }
+
+  // Keeps district/city (and the pin/camera, until the user manually places
+  // one) tied to the CURRENT GPS fix — not a one-time snapshot. Starts firing
+  // from Step 1 (Details), before the map even exists, so resolution has the
+  // most possible lead time before the user reaches the district review step.
+  // Deliberately skips the address lookup (includeAddress: false) — only
+  // resolving the district here keeps `_hasChanges`/the discard-confirmation
+  // dialog from firing off background GPS activity the user never asked for;
+  // the address still auto-fills once the map is actually shown (see below).
+  void _onUserLocationChanged(LatLng? newLoc) {
+    if (!mounted || newLoc == null || _pinManuallyPlaced) return;
+    _userLocation = newLoc;
+    setState(() => _selectedLocation = newLoc);
+    _setNativePin(newLoc);
+    _animateTo(newLoc, _currentZoom);
+    _resolvePinDetails(newLoc, immediate: true, includeAddress: false);
   }
 
   void _onAddressChanged() {
@@ -106,7 +130,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       _animateTo(_userLocation!, 14.0);
     }
     if (_userLocation != null && _addressCtrl.text.trim().isEmpty) {
-      _reverseGeocode(_selectedLocation ?? _userLocation!);
+      _resolvePinDetails(_selectedLocation ?? _userLocation!);
     }
   }
 
@@ -223,7 +247,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   @override
   void dispose() {
-    _nominatimTimer?.cancel();
+    _pinResolveTimer?.cancel();
+    _userLocationWorker?.dispose();
     _descCtrl.dispose();
     _priceMonthlyCtrl.dispose();
     _addressCtrl.removeListener(_onAddressChanged);
@@ -233,25 +258,78 @@ class _AddListingScreenState extends State<AddListingScreen> {
     super.dispose();
   }
 
-  Future<void> _reverseGeocode(LatLng pos) async {
-    _nominatimTimer?.cancel();
-    _nominatimTimer = Timer(const Duration(milliseconds: 600), () async {
+  // Debounces address + district resolution together for a pin move, so
+  // dragging the map only fires one round of network calls per pause —
+  // `immediate: true` (GPS-driven updates, not a drag) skips the wait since
+  // those aren't rapid-fire like dragging is.
+  Future<void> _resolvePinDetails(LatLng pos, {bool immediate = false, bool includeAddress = true}) async {
+    if (!mounted) return;
+    _pinResolveTimer?.cancel();
+    final myGeneration = ++_districtResolveGeneration;
+    if (_resolvedDistrict != null || _resolvedCity != null) {
+      setState(() {
+        _resolvedDistrict = null;
+        _resolvedCity = null;
+      });
+    }
+    void fire() {
       if (!mounted) return;
-      setState(() => _isGeocoding = true);
-      try {
-        final res = await ApiService.reverseGeocode(pos.latitude, pos.longitude);
-        if (!mounted) return;
-        final displayName = res?['display_name'] as String? ?? '';
-        if (displayName.isNotEmpty) {
-          final parts = displayName.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
-          _addressCtrl.text = parts.take(3).join(', ');
-        }
-      } catch (_) {
-        // Ignore geocoding failures silently — user can type manually
-      } finally {
-        if (mounted) setState(() => _isGeocoding = false);
+      if (includeAddress) _reverseGeocodeAddress(pos, myGeneration);
+      _resolveDistrictForPin(pos, myGeneration);
+    }
+    if (immediate) {
+      fire();
+    } else {
+      _pinResolveTimer = Timer(const Duration(milliseconds: 600), fire);
+    }
+  }
+
+  // `generation`-guarded the same way as `_resolveDistrictForPin` — without
+  // it, an older in-flight lookup landing after a newer one could silently
+  // overwrite the address field (and thus the submitted address) with a
+  // stale value for a position the pin has already moved away from.
+  Future<void> _reverseGeocodeAddress(LatLng pos, int generation) async {
+    if (!mounted) return;
+    setState(() => _isGeocoding = true);
+    try {
+      final res = await ApiService.reverseGeocode(pos.latitude, pos.longitude);
+      if (!mounted || generation != _districtResolveGeneration) return;
+      final displayName = res?['display_name'] as String? ?? '';
+      if (displayName.isNotEmpty) {
+        final parts = displayName.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+        _addressCtrl.text = parts.take(3).join(', ');
       }
-    });
+    } catch (_) {
+      // Ignore geocoding failures silently — user can type manually
+    } finally {
+      if (mounted) setState(() => _isGeocoding = false);
+    }
+  }
+
+  // Side-effect-free coordinate -> district/city resolve for the exact pin
+  // position (same primitive the location-search flow uses) — this is what
+  // guarantees the submitted district always matches where the pin actually
+  // is, never a stale snapshot or the user's raw (possibly browsed) district.
+  Future<void> _resolveDistrictForPin(LatLng pos, int generation) async {
+    if (!mounted) return;
+    setState(() => _isResolvingDistrict = true);
+    try {
+      final ctx = await _locationCtrl.resolveDistrictAt(pos.latitude, pos.longitude);
+      if (!mounted || generation != _districtResolveGeneration) return;
+      setState(() {
+        _resolvedDistrict = ctx.district;
+        _resolvedCity = ctx.nearestCity;
+        _isResolvingDistrict = false;
+      });
+    } on DistrictNotFoundException {
+      if (!mounted || generation != _districtResolveGeneration) return;
+      setState(() => _isResolvingDistrict = false);
+      AppToast.error("This area isn't in a serviceable location yet.");
+    } catch (_) {
+      if (!mounted || generation != _districtResolveGeneration) return;
+      setState(() => _isResolvingDistrict = false);
+      AppToast.error('Could not verify the district for this location. Please try again.');
+    }
   }
 
   void _confirmDiscard() {
@@ -445,7 +523,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     if (_step < 3) {
       setState(() => _step++);
       if (_step == 2 && _addressCtrl.text.trim().isEmpty && _selectedLocation != null) {
-        _reverseGeocode(_selectedLocation!);
+        _resolvePinDetails(_selectedLocation!);
       }
     } else {
       _submit();
@@ -473,7 +551,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
       AppToast.error('Please pin your location on the map'); return;
     }
 
-    final cityId = _selectedCityId ?? _locationCtrl.autoCity.value?.id;
+    final cityId = _resolvedCity?.id;
     if (cityId == null) {
       AppToast.error('City not detected. Please enable GPS and try again.');
       return;
@@ -813,7 +891,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
               flex: 2,
               child: Obx(() {
                 final isButtonDisabled = _ctrl.isLoading.value || _isFinalizing ||
-                    (_step == 2 && (_isGeocoding || _selectedDistrictId == null || _addressCtrl.text.trim().isEmpty));
+                    (_step == 2 && (_isGeocoding || _isResolvingDistrict || _selectedDistrictId == null || _addressCtrl.text.trim().isEmpty));
                 return GradientButton(
                   onPressed: isButtonDisabled ? null : _handleNext,
                   isLoading: _ctrl.isLoading.value || _isFinalizing,
@@ -1072,9 +1150,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
                             return;
                           }
                         }
+                        _pinManuallyPlaced = true;
                         setState(() => _selectedLocation = latLng);
                         _setNativePin(latLng);
-                        _reverseGeocode(latLng);
+                        _resolvePinDetails(latLng);
                       },
                     ),
                     Positioned(
@@ -1128,14 +1207,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
           const SizedBox(height: 6),
           _readOnlyField(
             Iconsax.location,
-            _locationCtrl.selectedDistrict.value?.name ?? '—',
+            _resolvedDistrict?.name ?? (_isResolvingDistrict ? 'Detecting…' : '—'),
           ),
           const SizedBox(height: 16),
           const Text('City / Area (Optional)', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
           const SizedBox(height: 6),
           _readOnlyField(
             Iconsax.map,
-            _locationCtrl.autoCity.value?.name ?? '—',
+            _resolvedCity?.name ?? (_isResolvingDistrict ? 'Detecting…' : '—'),
           ),
         ]),
       ),
