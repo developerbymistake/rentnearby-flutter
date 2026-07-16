@@ -209,8 +209,8 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                     controller: _scrollCtrl,
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                     physics: const AlwaysScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 190,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
                       childAspectRatio: 0.72,
@@ -245,8 +245,8 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       physics: const AlwaysScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 190,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
         childAspectRatio: 0.72,

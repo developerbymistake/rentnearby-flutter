@@ -59,6 +59,12 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
   Worker? _externalResetWorker;
   bool _closing = false;
 
+  // Same frozen-baseline approach as LocationSearchSheet/LocationSwitchSheet
+  // — captured once before the keyboard/system UI can shrink MediaQuery's
+  // live size, so the sheet's height doesn't recompute mid-interaction.
+  double? _baseHeight;
+  double? _baseTopPadding;
+
   @override
   void initState() {
     super.initState();
@@ -67,6 +73,14 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
       _closing = true;
       Navigator.of(context).maybePop();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final media = MediaQuery.of(context);
+    _baseHeight ??= media.size.height;
+    _baseTopPadding ??= media.padding.top;
   }
 
   @override
@@ -93,8 +107,13 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final baseHeight = _baseHeight ?? media.size.height;
+    final baseTopPadding = _baseTopPadding ?? media.padding.top;
+    final maxHeight = (baseHeight - baseTopPadding) * 0.94;
+    final sheetHeight = (baseHeight * 0.75).clamp(0.0, maxHeight);
     return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.52,
+      height: sheetHeight,
       child: Column(
         children: [
           Container(
@@ -175,7 +194,7 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+            padding: EdgeInsets.fromLTRB(18, 10, 18, 18 + media.padding.bottom),
             child: Row(
               children: [
                 Expanded(
