@@ -26,13 +26,16 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
   PlotModel? _plot;
   bool _loading = true;
   int _currentPhoto = 0;
+  double? _distanceKm;
 
   bool get _isOwner => _plot != null && _auth.user.value?.id == _plot!.userId;
 
   @override
   void initState() {
     super.initState();
-    final id = Get.arguments as String;
+    final args = Get.arguments;
+    final id = args is Map ? args['id'] as String : args as String;
+    _distanceKm = args is Map ? (args['distanceKm'] as num?)?.toDouble() : null;
     _ctrl.getById(id).then((p) {
       if (mounted) setState(() { _plot = p; _loading = false; });
     }).catchError((_) {
@@ -301,6 +304,13 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                 const SizedBox(width: 4),
                 Text('Posted ${_timeAgo(p.createdAt)}',
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
+                const Spacer(),
+                if (_distanceKm != null) ...[
+                  const Icon(Iconsax.location, size: 13, color: AppColors.textHint),
+                  const SizedBox(width: 4),
+                  Text('${_distanceKm!.toStringAsFixed(1)} km away',
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                ],
               ]),
               const SizedBox(height: 20),
             ]),

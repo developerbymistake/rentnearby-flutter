@@ -1520,7 +1520,7 @@ class _PlotBottomSheet extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-                        Get.toNamed(AppRoutes.plotDetail, arguments: plot.id);
+                        Get.toNamed(AppRoutes.plotDetail, arguments: {'id': plot.id, 'distanceKm': plot.distanceKm});
                       },
                       icon: const Icon(Icons.arrow_forward_rounded, size: 18),
                       label: const Text(

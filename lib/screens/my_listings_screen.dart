@@ -32,7 +32,6 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   Future<void> _dataReady = Future.value();
   late final _permissionService = ListingPermissionService(
     _ctrl,
-    _auth,
     Get.find<LocationController>(),
   );
 

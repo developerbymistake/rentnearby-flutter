@@ -51,8 +51,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
       if (granted) break;
     }
 
-    final isSupported = await _checkDistrictSupport();
-    if (!mounted || !isSupported) return;
+    if (!mounted) return;
 
     if (StorageService.isLoggedIn) {
       Get.offAllNamed(AppRoutes.main);
@@ -126,8 +125,6 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
 
   bool _isGranted(LocationPermission p) =>
       p == LocationPermission.whileInUse || p == LocationPermission.always;
-
-  Future<bool> _checkDistrictSupport() async => true;
 
   @override
   Widget build(BuildContext context) {

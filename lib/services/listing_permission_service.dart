@@ -1,7 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:get/get.dart';
 import '../controllers/app_feature_controller.dart';
-import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 
@@ -21,10 +20,9 @@ class ListingShowUpgradeSheet extends ListingPermissionResult {}
 
 class ListingPermissionService {
   final ListingController _ctrl;
-  final AuthController _auth;
   final LocationController _location;
 
-  ListingPermissionService(this._ctrl, this._auth, this._location);
+  ListingPermissionService(this._ctrl, this._location);
 
   Future<ListingPermissionResult> check() async {
     if (_location.selectedDistrict.value == null) return ListingNeedsDistrict();
@@ -54,7 +52,6 @@ class ListingPermissionService {
             : ListingShowLimitDialog(maxRooms: maxRooms, hasPlan: true);
       }
     } else {
-      final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
       final freePlan = plans.values
           .firstWhereOrNull((p) => (p['originalPrice'] as num? ?? 0) == 0);
       final limit = (freePlan?['roomLimit'] as num?)?.toInt() ?? 1;

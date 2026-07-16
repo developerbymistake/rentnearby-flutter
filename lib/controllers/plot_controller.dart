@@ -175,11 +175,14 @@ class PlotController extends GetxController {
 
   Future<Map<String, dynamic>?> activatePlotPlan(String plotId, String planType) async {
     try {
+      isLoading.value = true;
       final res = await ApiService.post('/plots/$plotId/create-order?planType=$planType', {});
       return res['data'];
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not activate plot plan.'));
       return null;
+    } finally {
+      isLoading.value = false;
     }
   }
 
@@ -197,11 +200,14 @@ class PlotController extends GetxController {
 
   Future<Map<String, dynamic>?> createPlotUpgradeOrder(String planType) async {
     try {
+      isLoading.value = true;
       final res = await ApiService.post('/plots/upgrade-plan/create-order?planType=$planType', {});
       return res['data'];
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not create upgrade order.'));
       return null;
+    } finally {
+      isLoading.value = false;
     }
   }
 

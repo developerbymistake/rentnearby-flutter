@@ -1,6 +1,5 @@
 import 'package:get/get.dart';
 import '../controllers/app_feature_controller.dart';
-import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 
@@ -20,10 +19,9 @@ class PlotShowUpgradeSheet extends PlotPermissionResult {}
 
 class PlotPermissionService {
   final PlotController _ctrl;
-  final AuthController _auth;
   final LocationController _location;
 
-  PlotPermissionService(this._ctrl, this._auth, this._location);
+  PlotPermissionService(this._ctrl, this._location);
 
   Future<PlotPermissionResult> check() async {
     if (_location.selectedDistrict.value == null) return PlotNeedsDistrict();
@@ -57,7 +55,6 @@ class PlotPermissionService {
             : PlotShowLimitDialog(maxPlots: maxPlots, hasPlan: true);
       }
     } else {
-      final hasUsedFree = _auth.user.value?.hasUsedFreePlotPlan ?? false;
       final freePlan    = plans.firstWhereOrNull((p) => (p['originalPrice'] as num? ?? 0) == 0);
       final limit       = (freePlan?['plotLimit'] as num?)?.toInt() ?? 1;
       if (_ctrl.myPlots.length >= limit) {

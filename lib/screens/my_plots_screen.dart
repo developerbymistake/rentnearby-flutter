@@ -36,7 +36,6 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   Future<void> _dataReady = Future.value();
   late final _permissionService = PlotPermissionService(
     _ctrl,
-    _auth,
     Get.find<LocationController>(),
   );
 
