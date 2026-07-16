@@ -8,6 +8,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../models/conversation_model.dart';
 import '../services/chat_hub_service.dart';
+import '../utils/input_formatters.dart';
 
 class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({super.key});
@@ -234,6 +235,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
       child: TextField(
         controller: _searchCtrl,
+        inputFormatters: noEmojiInputFormatters,
         onChanged: (v) => setState(() => _query = v),
         style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5),
         decoration: InputDecoration(

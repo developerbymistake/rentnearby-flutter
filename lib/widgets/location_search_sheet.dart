@@ -5,6 +5,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import '../config/app_colors.dart';
 import '../models/place_result_model.dart';
 import '../services/photon_service.dart';
+import '../utils/input_formatters.dart';
 
 /// Location-search bottom sheet, backed by the self-hosted Photon service.
 /// Deliberately standalone — no LocationController, no Get.find, no shared
@@ -164,6 +165,7 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
       child: TextField(
         controller: _searchCtrl,
         autofocus: true,
+        inputFormatters: noEmojiInputFormatters,
         onChanged: _onChanged,
         style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
         decoration: InputDecoration(

@@ -18,6 +18,7 @@ import '../controllers/plot_controller.dart';
 import '../models/city_model.dart';
 import '../models/location_context.dart';
 import '../utils/app_toast.dart';
+import '../utils/input_formatters.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/gradient_button.dart';
 
@@ -1233,6 +1234,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
               controller: _descCtrl,
               maxLines: 3,
               maxLength: 300,
+              inputFormatters: noEmojiInputFormatters,
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
               decoration: _inputDec('Describe the plot, access road, nearby landmarks...'),
             ),
@@ -1388,6 +1390,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
         child: TextFormField(
           controller: _addressCtrl,
           focusNode: _addressFocusNode,
+          inputFormatters: noEmojiInputFormatters,
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
           decoration: _inputDec(
             'Street, landmark, nearby place...',

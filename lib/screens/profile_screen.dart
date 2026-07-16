@@ -8,6 +8,7 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../utils/app_toast.dart';
+import '../utils/input_formatters.dart';
 import '../widgets/gradient_button.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
@@ -414,6 +415,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       const SizedBox(height: 8),
       TextFormField(
         controller: ctrl,
+        inputFormatters: noEmojiInputFormatters,
         style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: AppColors.primaryLight, size: 20),

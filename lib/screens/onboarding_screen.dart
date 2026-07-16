@@ -5,6 +5,7 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../controllers/auth_controller.dart';
 import '../utils/app_toast.dart';
+import '../utils/input_formatters.dart';
 import '../widgets/gradient_button.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -122,6 +123,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               controller: _nameCtrl,
                               textCapitalization: TextCapitalization.words,
                               maxLength: 100,
+                              inputFormatters: noEmojiInputFormatters,
                               style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
                               decoration: const InputDecoration(
                                 prefixIcon: Icon(Iconsax.user, color: AppColors.primaryLight, size: 20),

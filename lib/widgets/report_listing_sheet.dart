@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../config/app_colors.dart';
 import '../controllers/report_controller.dart';
 import '../utils/app_toast.dart';
+import '../utils/input_formatters.dart';
 import 'gradient_button.dart';
 
 class ReportListingSheet extends StatefulWidget {
@@ -328,6 +329,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
                   controller: _detailsCtrl,
                   maxLines: 5,
                   maxLength: 500,
+                  inputFormatters: noEmojiInputFormatters,
                   onChanged: (_) => setState(() {}),
                   style: const TextStyle(
                     fontFamily: 'Poppins',

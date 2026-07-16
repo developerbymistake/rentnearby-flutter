@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../controllers/location_controller.dart';
 import '../models/city_model.dart';
+import '../utils/input_formatters.dart';
 
 /// Shared bottom sheet for the district-switch feature — used identically by
 /// Explore Rooms and Explore Plots. A 3-level drill-down: City (home) →
@@ -351,6 +352,7 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
       child: TextField(
         controller: _searchCtrl,
+        inputFormatters: noEmojiInputFormatters,
         onChanged: (v) => setState(() => _query = v),
         style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
         decoration: InputDecoration(
