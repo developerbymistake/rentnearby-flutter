@@ -19,8 +19,16 @@ class PhotonService {
   // minus place values that aren't a useful pinpoint-on-map result for a
   // property search (administrative rollups, uninhabited/geographic values).
   // Single choke point if the allow/deny list needs to change later.
+  //
+  // `landuse:residential` is a separate allow rule, independent of the
+  // `place:*` excludes above — some planned-city sectors (e.g. Noida/Greater
+  // Noida "Sector 135") are mapped as a named `landuse=residential` polygon
+  // instead of a `place=*` node, so they're invisible without this. It does
+  // not reopen individual houses/buildings: those use `building`/`amenity`
+  // keys, never `landuse`, so they stay excluded exactly as before.
   static const _osmTagFilter = [
     'place',
+    'landuse:residential',
     '!place:county',
     '!place:state',
     '!place:country',
