@@ -10,6 +10,7 @@ import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/location_controller.dart';
+import '../widgets/max_width_content.dart';
 import '../widgets/sliding_chip_toggle.dart';
 
 const _kPlotColor = Color(0xFF92400E);
@@ -41,20 +42,22 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(bottom: 24 + AppInsets.bottomViewPadding(context)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHero(context),
-              _buildToggle(),
-              const SizedBox(height: 2),
-              _buildListingsSection(),
-              const SizedBox(height: 15),
-              _buildQuickActions(),
-              const SizedBox(height: 15),
-              _buildPopularAreas(),
-              const SizedBox(height: 20),
-              _buildPromoBanner(),
-            ],
+          child: MaxWidthContent(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHero(context),
+                _buildToggle(),
+                const SizedBox(height: 2),
+                _buildListingsSection(),
+                const SizedBox(height: 15),
+                _buildQuickActions(),
+                const SizedBox(height: 15),
+                _buildPopularAreas(),
+                const SizedBox(height: 20),
+                _buildPromoBanner(),
+              ],
+            ),
           ),
         ),
       ),
