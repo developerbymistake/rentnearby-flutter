@@ -4,7 +4,6 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/chat_controller.dart';
-import '../controllers/location_controller.dart';
 import '../controllers/view_all_controller.dart';
 import '../widgets/filter_sort_sheet.dart';
 import '../widgets/listing_grid_card.dart';
@@ -113,13 +112,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                       child: Row(
                         children: [
                           IconButton(
-                            onPressed: () {
-                              // Only View All resets browsing-elsewhere back to the
-                              // current district on exit — Explore Rooms/Plots keep
-                              // their own persistent browsing state on purpose.
-                              Get.find<LocationController>().resetBrowsing();
-                              Get.back();
-                            },
+                            onPressed: () => Get.back(),
                             icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
                           ),
                           Expanded(
