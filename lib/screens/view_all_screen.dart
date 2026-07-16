@@ -9,6 +9,7 @@ import '../widgets/filter_sort_sheet.dart';
 import '../widgets/listing_grid_card.dart';
 import '../widgets/location_pill.dart';
 import '../widgets/sliding_chip_toggle.dart';
+import 'explore_location_search_mixin.dart';
 
 const _kPlotGradient = LinearGradient(
   begin: Alignment.topLeft,
@@ -31,7 +32,8 @@ class ViewAllScreen extends StatefulWidget {
   State<ViewAllScreen> createState() => _ViewAllScreenState();
 }
 
-class _ViewAllScreenState extends State<ViewAllScreen> {
+class _ViewAllScreenState extends State<ViewAllScreen>
+    with ExploreLocationSearchMixin<ViewAllScreen> {
   late final ViewAllController _ctrl;
   late final String _ctrlTag;
   final _scrollCtrl = ScrollController();
@@ -154,7 +156,11 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                      child: LocationPill(accentColor: activeColor),
+                      child: Row(children: [
+                        Expanded(child: LocationPill(accentColor: activeColor)),
+                        const SizedBox(width: 8),
+                        _buildSearchToggleButton(activeColor),
+                      ]),
                     ),
                   ],
                 ),
@@ -239,6 +245,41 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
         );
       }),
     );
+  }
+
+  // Mirrors explore_screen.dart's _buildSearchToggleButton() exactly — same
+  // ExploreLocationSearchMixin, same cancel behavior — just takes the
+  // screen's dynamic Rooms/Plots accentColor instead of a hardcoded one.
+  Widget _buildSearchToggleButton(Color accentColor) {
+    return Obx(() => GestureDetector(
+      onTap: searchResolving ? null : () => onSearchToggleTap(context),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: searchResolving
+            ? Padding(
+                padding: const EdgeInsets.all(11),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: accentColor),
+              )
+            : Icon(
+                isSearchActive ? Icons.close_rounded : Icons.search_rounded,
+                color: accentColor,
+                size: 20,
+              ),
+      ),
+    ));
   }
 
   Widget _buildGridShimmer() {

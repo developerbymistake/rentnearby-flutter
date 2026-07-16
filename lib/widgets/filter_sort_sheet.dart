@@ -111,7 +111,7 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
     final baseHeight = _baseHeight ?? media.size.height;
     final baseTopPadding = _baseTopPadding ?? media.padding.top;
     final maxHeight = (baseHeight - baseTopPadding) * 0.94;
-    final sheetHeight = (baseHeight * 0.75).clamp(0.0, maxHeight);
+    final sheetHeight = (baseHeight * 0.60).clamp(0.0, maxHeight);
     return SizedBox(
       height: sheetHeight,
       child: Column(
