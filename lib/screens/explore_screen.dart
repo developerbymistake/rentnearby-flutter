@@ -396,7 +396,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     final usablePx = _screenSize.width > 0 ? _screenSize.width : 480.0;
     final metersPerPxAtZ0 =
         earthCircumference * cos(lat * pi / 180) / tileSize;
-    final targetMetersPerPx = (radiusKm * 1000 * 2) / (usablePx * 0.90);
+    final targetMetersPerPx = (radiusKm * 1000 * 2) / (usablePx * 0.93);
     final zoom = log(metersPerPxAtZ0 / targetMetersPerPx) / log(2);
     return zoom.clamp(10.0, 17.0);
   }
