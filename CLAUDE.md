@@ -89,8 +89,8 @@ callers explicitly connect/disconnect around opening the Chats list or a convers
 polling if the hub connection fails.
 
 **Data flow / caching**: `lib/repositories/*` wrap `ApiService` calls with simple in-memory
-TTL-based caches (e.g. `ListingRepository` caches `/listings/plans` for 5 min and membership status
-for 60s) and expose `invalidate()`/`invalidateAll()` for controllers to bust the cache after a
+TTL-based caches (e.g. `ListingRepository` caches `/listings/plans` for 5 min) and expose
+`invalidate()`/`invalidateAll()` for controllers to bust the cache after a
 mutation. `lib/controllers/*` (all `GetxController`) hold UI-facing reactive state and orchestrate
 calls to repositories/`ApiService`; `AuthController` in particular is the hub for session state
 (`user`, `tabIndex`, granular profile Rx fields) and owns login/OTP/logout/account-deletion flows.
