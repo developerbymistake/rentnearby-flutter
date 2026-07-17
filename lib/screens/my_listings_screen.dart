@@ -1,19 +1,24 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
-import '../controllers/app_feature_controller.dart';
-import '../controllers/auth_controller.dart';
+import '../controllers/config_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
+import '../controllers/wallet_controller.dart';
+import '../models/go_live_result.dart';
+import '../models/listing_model.dart';
+import '../models/plan_selection_result.dart';
 import '../services/listing_permission_service.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
+import '../widgets/coin_balance_chip.dart';
+import '../widgets/go_live_success_dialog.dart';
+import '../widgets/insufficient_balance_sheet.dart';
 import '../widgets/listing_card.dart';
-import '../widgets/payment_success_dialog.dart';
 
 class MyListingsScreen extends StatefulWidget {
   const MyListingsScreen({super.key});
@@ -24,7 +29,6 @@ class MyListingsScreen extends StatefulWidget {
 class _MyListingsScreenState extends State<MyListingsScreen>
     with WidgetsBindingObserver {
   final _ctrl = Get.find<ListingController>();
-  final _auth = Get.find<AuthController>();
   final _scrollCtrl = ScrollController();
   int _page = 1;
   bool _isAddingRoom = false;
@@ -39,10 +43,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _dataReady = Future.wait([
-      _ctrl.loadMyListings(page: 1),
-      _ctrl.loadMembership(),
-    ]).then((_) {}).catchError((_) {});
+    _dataReady = _ctrl.loadMyListings(page: 1).catchError((_) {});
     _scrollCtrl.addListener(_onScroll);
   }
 
@@ -61,10 +62,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     // top" is itself the correct condition for a refresh.
     if (state == AppLifecycleState.resumed) {
       _page = 1;
-      _dataReady = Future.wait([
-        _ctrl.loadMyListings(page: 1),
-        _ctrl.loadMembership(),
-      ]).then((_) {}).catchError((_) {});
+      _dataReady = _ctrl.loadMyListings(page: 1).catchError((_) {});
     }
   }
 
@@ -86,12 +84,8 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Obx(() => AppLoadingOverlay(
-        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value || _ctrl.isMembershipLoading.value,
-        message: _ctrl.isMembershipLoading.value
-            ? 'Loading...'
-            : _ctrl.isTogglingActive.value
-                ? 'Updating...'
-                : 'Deleting...',
+        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value,
+        message: _ctrl.isTogglingActive.value ? 'Updating...' : 'Deleting...',
         child: Column(
         children: [
           Container(
@@ -117,6 +111,8 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                           style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
                     ]),
                     const Spacer(),
+                    const CoinBalanceChip(color: Colors.white),
+                    const SizedBox(width: 8),
                     GestureDetector(
                       onTap: _isAddingRoom ? null : _onAddRoom,
                       child: Container(
@@ -160,7 +156,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
             ),
           ),
 
-          Obx(() => _buildRoomPlanStrip()),
+          Obx(() => _buildRoomCapStrip()),
           Expanded(
             child: Obx(() {
               final isLoading = _ctrl.isLoading.value;
@@ -194,7 +190,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                         onToggleActive: () =>
                             _ctrl.toggleActive(listings[i].id, listings[i].isActive),
                         onDelete: () => _confirmDelete(listings[i].id),
-                        onGoLive: () => _showPaymentDialog(listings[i].id),
+                        onGoLive: () => _onGoLiveTap(listings[i]),
                         isGoLiveLoading: _goLiveLoadingId == listings[i].id,
                         onReportsTap: () => Get.toNamed(AppRoutes.listingReports, arguments: {
                           'listingId': listings[i].id,
@@ -226,19 +222,17 @@ class _MyListingsScreenState extends State<MyListingsScreen>
           Get.toNamed(AppRoutes.addListing);
         case ListingNeedsDistrict():
           AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
-        case ListingShowLimitDialog():
-          _showRoomLimitDialog(maxRooms: result.maxRooms, hasPlan: result.hasPlan);
-        case ListingShowUpgradeSheet():
-          _showPaidUpgradeSheet();
+        case ListingLimitReached():
+          _showRoomLimitDialog(cap: result.cap);
       }
     } catch (_) {
-      AppToast.error('Could not verify your plan. Please try again.');
+      AppToast.error('Could not verify your listing limit. Please try again.');
     } finally {
       if (mounted) setState(() => _isAddingRoom = false);
     }
   }
 
-  void _showRoomLimitDialog({required int maxRooms, required bool hasPlan}) {
+  void _showRoomLimitDialog({required int cap}) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -280,9 +274,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              hasPlan
-                  ? 'Your current plan allows up to $maxRooms room${maxRooms > 1 ? 's' : ''}. Delete an existing room to add a new one.'
-                  : 'Free plan allows 1 room. Delete your existing room to replace it, or go live with a Premium plan to add more.',
+              'You can list up to $cap room${cap > 1 ? 's' : ''}. Delete an existing room to add a new one.',
               style: const TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 13,
@@ -292,353 +284,108 @@ class _MyListingsScreenState extends State<MyListingsScreen>
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            if (!hasPlan) ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _showPaidUpgradeSheet();
-                  },
-                  icon: const Icon(Icons.flash_on_rounded, size: 16),
-                  label: const Text('Upgrade Plan',
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.list_alt_rounded, size: 16),
+                label: const Text('Manage Rooms',
+                    style: TextStyle(
+                        fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.list_alt_rounded, size: 16),
-                  label: const Text('Manage Rooms',
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textMedium,
-                    side: BorderSide(color: Colors.grey.shade300),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-            ] else
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.list_alt_rounded, size: 16),
-                  label: const Text('Manage Rooms',
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  void _showPaidUpgradeSheet({String listingId = '', bool allowRenewal = false}) async {
-    final plans = _ctrl.roomPlans.value;
-    final currentCount = _ctrl.myListings.length;
-
-    // Plans strictly above current room count (true upgrade)
-    final upgradePlans = (plans.values
-        .where((p) =>
-            (p['originalPrice'] as num? ?? 0) > 0 &&
-            (p['roomLimit'] as num? ?? 0) > currentCount)
-        .toList()
-      ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0)));
-
-    // Plans that match current room count (renewal — same level)
-    final renewalPlans = (plans.values
-        .where((p) =>
-            (p['originalPrice'] as num? ?? 0) > 0 &&
-            (p['roomLimit'] as num? ?? 0) >= currentCount)
-        .toList()
-      ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0)));
-
-    final displayPlans = allowRenewal
-        ? (upgradePlans.isNotEmpty ? upgradePlans : renewalPlans.isNotEmpty ? renewalPlans : plans.values.toList()..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0)))
-        : upgradePlans;
-
-    if (!mounted) return;
-
-    String? selectedType = displayPlans.isNotEmpty
-        ? (displayPlans.first['planType'] as String? ?? '')
-        : null;
-
-    const golden = Color(0xFFD4A017);
-    final screenH = MediaQuery.of(context).size.height;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) {
-          final selectedPlan = displayPlans.isNotEmpty
-              ? displayPlans.firstWhere((p) => p['planType'] == selectedType, orElse: () => displayPlans.first)
-              : null;
-          final selOrigPrice = (selectedPlan?['originalPrice'] as num?)?.toInt() ?? 0;
-          final btnLabel = selOrigPrice == 0 ? 'Activate FREE' : 'Continue  ₹$selOrigPrice';
-
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.topCenter,
-              children: [
-                // Dialog card
-                Container(
-                  margin: const EdgeInsets.only(top: 36),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: screenH * 0.78),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Title
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 52, 20, 4),
-                          child: Column(children: [
-                            const Text('Upgrade Your Plan',
-                                style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                            const SizedBox(height: 4),
-                            const Text('Choose a plan to add more rooms',
-                                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
-                                textAlign: TextAlign.center),
-                          ]),
-                        ),
-                        // Plan list
-                        Flexible(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                            child: displayPlans.isEmpty
-                                ? const Padding(
-                                    padding: EdgeInsets.all(24),
-                                    child: Text('No plans available.', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight), textAlign: TextAlign.center),
-                                  )
-                                : Column(
-                                    children: displayPlans.map((p) {
-                                      final normalPrice = (p['price'] as num?)?.toInt() ?? 0;
-                                      final origPrice = (p['originalPrice'] as num?)?.toInt() ?? 0;
-                                      final disc = (p['discountPercent'] as num?)?.toInt() ?? 0;
-                                      final hasDiscount = disc > 0 && normalPrice > 0;
-                                      final days = (p['days'] as num?)?.toInt() ?? 30;
-                                      final rooms = (p['roomLimit'] as num?)?.toInt() ?? 2;
-                                      final raw = (p['planType'] as String? ?? '');
-                                      final label = raw.isEmpty ? raw : raw[0].toUpperCase() + raw.substring(1).toLowerCase();
-                                      final isSelected = selectedType == raw;
-                                      final displayPrice = origPrice == 0 ? 'FREE' : '₹$origPrice';
-
-                                      return Padding(
-                                        padding: const EdgeInsets.only(bottom: 10),
-                                        child: GestureDetector(
-                                          onTap: () => setS(() => selectedType = raw),
-                                          child: AnimatedContainer(
-                                            duration: const Duration(milliseconds: 200),
-                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                            decoration: BoxDecoration(
-                                              color: isSelected ? golden.withValues(alpha: 0.04) : Colors.white,
-                                              borderRadius: BorderRadius.circular(14),
-                                              border: Border.all(
-                                                color: isSelected ? golden : AppColors.divider,
-                                                width: isSelected ? 2 : 1.5,
-                                              ),
-                                            ),
-                                            child: Row(children: [
-                                              // Radio
-                                              Container(
-                                                width: 22, height: 22,
-                                                decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(color: isSelected ? golden : AppColors.textLight, width: 2),
-                                                ),
-                                                child: isSelected
-                                                    ? Center(child: Container(width: 10, height: 10, decoration: const BoxDecoration(shape: BoxShape.circle, color: golden)))
-                                                    : null,
-                                              ),
-                                              const SizedBox(width: 12),
-                                              // Name + badge
-                                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                                Row(children: [
-                                                  Text('$label Plan',
-                                                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                                                  if (hasDiscount) ...[
-                                                    const SizedBox(width: 6),
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                      decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(4)),
-                                                      child: Text('$disc% Savings',
-                                                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
-                                                    ),
-                                                  ],
-                                                ]),
-                                                Text('Valid for $days days • $rooms rooms',
-                                                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                                              ])),
-                                              // Prices
-                                              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                                                if (hasDiscount)
-                                                  Text('₹$normalPrice',
-                                                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, decoration: TextDecoration.lineThrough)),
-                                                Text(displayPrice,
-                                                    style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700,
-                                                        color: origPrice == 0 ? AppColors.success : AppColors.primary)),
-                                              ]),
-                                            ]),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                          ),
-                        ),
-                        // Buttons
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                          child: Column(children: [
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: selectedPlan == null ? null : () {
-                                  Navigator.pop(ctx);
-                                  Get.toNamed(AppRoutes.paymentScreen, arguments: {'listingId': listingId, 'plan': selectedPlan});
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary, foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                  elevation: 0,
-                                ),
-                                child: Text(btnLabel, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15)),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Maybe Later', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight, fontSize: 13)),
-                            ),
-                          ]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 0,
-                  child: Container(
-                    width: 72, height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4))],
-                    ),
-                    child: ClipOval(child: Image.asset('assets/images/icon_logo.png', width: 72, height: 72, fit: BoxFit.cover)),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showPaymentDialog(String listingId) async {
-    setState(() => _goLiveLoadingId = listingId);
+  void _onGoLiveTap(ListingModel listing) async {
+    if (_goLiveLoadingId != null) return;
+    setState(() => _goLiveLoadingId = listing.id);
     try {
-    final paymentEnabled = Get.find<AppFeatureController>().isRoomPaymentEnabled.value;
-    if (!paymentEnabled) {
-      setState(() => _goLiveLoadingId = null);
-      _activateFreePlanDirect(listingId);
-      return;
-    }
+      final stillWithinValidity = listing.validUntil != null &&
+          listing.validUntil!.toUtc().isAfter(DateTime.now().toUtc());
 
-    final hasUsedFree = _auth.user.value?.hasUsedFreePlan ?? false;
-    if (mounted) setState(() => _goLiveLoadingId = null);
-    final membership = _ctrl.roomMembership.value;
-    final plans      = _ctrl.roomPlans.value;
-    final hasMembership = membership != null && (membership['hasMembership'] == true);
+      if (stillWithinValidity) {
+        // Free reactivation — owner turned it off, is turning it back on
+        // before the previously-paid window expired. No plan dialog needed.
+        final result = await _ctrl.goLive(listing.id);
+        if (mounted) await _handleGoLiveResult(result, spentCoins: 0);
+        return;
+      }
 
-    if (hasMembership) {
-      // Membership exists and days remain — activate directly.
-      // Room count limit is already enforced at Add Room time, no need to recheck here.
-      _activateFreePlanDirect(listingId);
-      return;
-    }
+      // Loop rather than a single pass: picking "Add Coins" on an
+      // unaffordable row (or hitting a 409 INSUFFICIENT_BALANCE despite the
+      // client-side check, e.g. balance changed elsewhere) routes to
+      // CoinPacksScreen and, on a successful purchase, comes back here to
+      // reopen the plan sheet against the refreshed balance — same loading
+      // state (`_goLiveLoadingId`) held the whole way through instead of a
+      // fragile recursive re-entry into this method.
+      while (true) {
+        final plans = await _ctrl.getPlans();
+        if (!mounted) return;
+        final selection = await _showPlanSelectionDialog(plans: plans);
+        if (selection == null) return; // "Maybe Later" / dismissed
 
-    if (hasUsedFree) {
-      if (mounted) _showPaidUpgradeSheet(listingId: listingId, allowRenewal: true);
-      return;
-    }
+        if (selection is PlanSelectionAddCoins) {
+          final toppedUp = await Get.toNamed(AppRoutes.coinPacks, arguments: {'returnToGoLive': true});
+          if (toppedUp == true && mounted) continue;
+          return;
+        }
 
-    if (!mounted) return;
-
-    final selectedPlan = await _showPlanSelectionDialog(
-      plans: plans,
-      hasUsedFreePlan: hasUsedFree,
-    );
-
-    if (selectedPlan == null) return;
-
-    final selectedPlanType = selectedPlan['planType'] as String? ?? '';
-    final isFree = (selectedPlan['originalPrice'] as num? ?? 0) == 0;
-
-    if (isFree) {
-      final success = await _ctrl.activatePlan(listingId, selectedPlanType);
-      if (!success) return;
-      if (!mounted) return;
-      Get.dialog(
-        PaymentSuccessDialog(
-          planType: selectedPlanType,
-          daysValid: (selectedPlan['days'] as num?)?.toInt() ?? 2,
-          maxRooms: (selectedPlan['roomLimit'] as num?)?.toInt() ?? 1,
-          originalPrice: (selectedPlan['originalPrice'] as num?)?.toInt() ?? 0,
-          onDismiss: () {
-            // Already on this screen when the dialog shows (triggered from the
-            // "Make it Live" flow here) — refresh so the newly-activated plan's
-            // status reflects immediately, instead of the old tab-reselect no-op.
-            _refresh();
-          },
-        ),
-        barrierDismissible: false,
-      );
-      return;
-    }
-
-    await Get.toNamed(AppRoutes.paymentScreen, arguments: {
-      'listingId': listingId,
-      'plan': selectedPlan,
-    });
-
-    _refresh();
+        final selectedPlan = (selection as PlanSelected).plan;
+        final planType = selectedPlan['planType'] as String? ?? '';
+        final price = (selectedPlan['originalPrice'] as num?)?.toInt() ?? 0;
+        final result = await _ctrl.goLive(listing.id, planType: planType, requiredCoins: price);
+        if (!mounted) return;
+        final retry = await _handleGoLiveResult(result, spentCoins: price);
+        if (retry && mounted) continue;
+        return;
+      }
     } finally {
       if (mounted) setState(() => _goLiveLoadingId = null);
     }
   }
 
-  void _activateFreePlanDirect(String listingId) async {
-    await _ctrl.toggleActive(listingId, false);
+  /// Returns true when the caller should loop back and re-show the plan
+  /// sheet (owner topped up from the insufficient-balance sheet and wants to
+  /// resume), false for every other outcome.
+  Future<bool> _handleGoLiveResult(GoLiveResult result, {required int spentCoins}) async {
+    switch (result) {
+      case GoLiveSuccess():
+        Get.dialog(
+          GoLiveSuccessDialog(
+            isPlot: false,
+            planType: result.planType,
+            coinsSpent: spentCoins,
+            validUntil: result.validUntil,
+            onDismiss: _refresh,
+          ),
+          barrierDismissible: false,
+        );
+        return false;
+      case GoLiveInsufficientBalance g:
+        if (!mounted) return false;
+        return InsufficientBalanceSheet.show(
+          context,
+          required: g.requiredCoins,
+          current: Get.find<WalletController>().balance.value,
+        );
+      case GoLiveConcurrentUpdate g:
+        AppToast.error(g.message);
+        return false;
+      case GoLiveFailure g:
+        AppToast.error(g.message);
+        return false;
+    }
   }
 
   Widget _buildEmpty() => Center(
@@ -680,16 +427,13 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         ),
       );
 
-  Widget _buildRoomPlanStrip() {
-    final m = _ctrl.roomMembership.value;
-    if (m == null || m['hasMembership'] != true) return const SizedBox.shrink();
-    final plan = ((m['planType'] as String?) ?? '').toUpperCase();
-    final max  = (m['maxRooms'] as num?)?.toInt() ?? 0;
+  /// Each listing already carries its own validUntil/isActive (see
+  /// ListingCard's own expiry label) — this strip just shows the flat
+  /// creation cap usage, sourced from ConfigController, with no separate
+  /// membership call needed.
+  Widget _buildRoomCapStrip() {
+    final cap = Get.find<ConfigController>().roomLimit.value;
     final used = _ctrl.myListings.length;
-    final validUntilStr = m['validUntil'] as String?;
-    final daysText = validUntilStr != null ? _daysLeft(validUntilStr) : '';
-    final expired  = validUntilStr != null &&
-        DateTime.parse(validUntilStr).toUtc().isBefore(DateTime.now().toUtc());
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -698,52 +442,14 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
-      child: IntrinsicHeight(
-        child: Row(children: [
-          Expanded(
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.bed_rounded, size: 13, color: AppColors.primary),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(plan,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                        color: AppColors.primary, fontWeight: FontWeight.w600)),
-              ),
-            ]),
-          ),
-          VerticalDivider(width: 1, thickness: 1, color: AppColors.primary.withValues(alpha: 0.2)),
-          Expanded(
-            child: Center(
-              child: Text('$used / $max rooms',
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                      color: AppColors.primary, fontWeight: FontWeight.w500)),
-            ),
-          ),
-          VerticalDivider(width: 1, thickness: 1, color: AppColors.primary.withValues(alpha: 0.2)),
-          Expanded(
-            child: Center(
-              child: Text(daysText,
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                      fontWeight: expired ? FontWeight.w700 : FontWeight.w500,
-                      color: expired ? AppColors.error : AppColors.primary)),
-            ),
-          ),
-        ]),
-      ),
+      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.bed_rounded, size: 13, color: AppColors.primary),
+        const SizedBox(width: 6),
+        Text('$used / $cap rooms used',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                color: AppColors.primary, fontWeight: FontWeight.w600)),
+      ]),
     );
-  }
-
-  String _daysLeft(String s) {
-    final days = DateTime.parse(s).toUtc().difference(DateTime.now().toUtc()).inDays;
-    if (days < 0) return 'Expired';
-    if (days == 0) return 'Expires today';
-    return '$days days left';
   }
 
   void _confirmDelete(String id) {
@@ -803,33 +509,51 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     );
   }
 
-  Future<Map<String, dynamic>?> _showPlanSelectionDialog({
+  Widget _coinPrice(int amount, {required Color color, double size = 16}) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.monetization_on_rounded, size: size, color: color),
+      const SizedBox(width: 4),
+      Text('$amount', style: TextStyle(fontFamily: 'Poppins', fontSize: size, fontWeight: FontWeight.w700, color: color)),
+    ]);
+  }
+
+  Future<PlanSelectionResult?> _showPlanSelectionDialog({
     required Map<String, Map<String, dynamic>> plans,
-    required bool hasUsedFreePlan,
   }) async {
     const golden = Color(0xFFD4A017);
     final screenH = MediaQuery.of(context).size.height;
 
-    final allPlans = plans.values.toList()
+    final visiblePlans = plans.values.toList()
       ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0));
-    final visiblePlans = hasUsedFreePlan
-        ? allPlans.where((p) => (p['originalPrice'] as num? ?? 0) > 0).toList()
-        : allPlans;
 
-    if (visiblePlans.isEmpty) return null;
+    if (visiblePlans.isEmpty) {
+      AppToast.error('No plans available right now. Please try again later.');
+      return null;
+    }
 
-    String? selectedType = visiblePlans.first['planType'] as String?;
+    // Affordability is computed client-side against the live wallet balance
+    // (read once — a fresh dialog is opened whenever the balance can have
+    // changed, e.g. after a coin top-up) so each row can render its own
+    // Select-vs-Add-Coins state instead of only discovering a shortfall
+    // reactively from a 409 INSUFFICIENT_BALANCE after the network call.
+    final walletBalance = Get.find<WalletController>().balance.value;
+    String? selectedType = visiblePlans
+        .firstWhere(
+          (p) => walletBalance >= ((p['originalPrice'] as num?)?.toInt() ?? 0),
+          orElse: () => const {},
+        )['planType'] as String?;
 
-    return showDialog<Map<String, dynamic>>(
+    return showDialog<PlanSelectionResult>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) {
-          final selectedPlan = visiblePlans.firstWhere(
-            (p) => p['planType'] == selectedType,
-            orElse: () => visiblePlans.first,
-          );
-          final selOrigPrice = (selectedPlan['originalPrice'] as num?)?.toInt() ?? 0;
-          final btnLabel = selOrigPrice == 0 ? 'Activate FREE' : 'Continue  ₹$selOrigPrice';
+          final selectedPlan = selectedType == null
+              ? null
+              : visiblePlans.firstWhere(
+                  (p) => p['planType'] == selectedType,
+                  orElse: () => visiblePlans.first,
+                );
+          final selOrigPrice = (selectedPlan?['originalPrice'] as num?)?.toInt() ?? 0;
 
           return Dialog(
             backgroundColor: Colors.transparent,
@@ -867,48 +591,71 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                                 final rooms = (p['roomLimit'] as num?)?.toInt() ?? 1;
                                 final raw = (p['planType'] as String? ?? '');
                                 final label = raw.isEmpty ? raw : raw[0].toUpperCase() + raw.substring(1).toLowerCase();
-                                final isSelected = selectedType == raw;
-                                final displayPrice = origPrice == 0 ? 'FREE' : '₹$origPrice';
+                                final afford = walletBalance >= origPrice;
+                                final isSelected = afford && selectedType == raw;
+                                final shortfall = afford ? 0 : origPrice - walletBalance;
 
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
-                                  child: GestureDetector(
-                                    onTap: () => setS(() => selectedType = raw),
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 200),
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                      decoration: BoxDecoration(
-                                        color: isSelected ? golden.withValues(alpha: 0.04) : Colors.white,
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(color: isSelected ? golden : AppColors.divider, width: isSelected ? 2 : 1.5),
-                                      ),
-                                      child: Row(children: [
-                                        Container(
-                                          width: 22, height: 22,
-                                          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isSelected ? golden : AppColors.textLight, width: 2)),
-                                          child: isSelected ? Center(child: Container(width: 10, height: 10, decoration: const BoxDecoration(shape: BoxShape.circle, color: golden))) : null,
+                                  child: Opacity(
+                                    opacity: afford ? 1 : 0.55,
+                                    child: GestureDetector(
+                                      onTap: afford ? () => setS(() => selectedType = raw) : null,
+                                      child: AnimatedContainer(
+                                        duration: const Duration(milliseconds: 200),
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? golden.withValues(alpha: 0.04) : Colors.white,
+                                          borderRadius: BorderRadius.circular(14),
+                                          border: Border.all(color: isSelected ? golden : AppColors.divider, width: isSelected ? 2 : 1.5),
                                         ),
-                                        const SizedBox(width: 12),
-                                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                          Row(children: [
-                                            Text('$label Plan', style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                                            if (hasDiscount) ...[
-                                              const SizedBox(width: 6),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(4)),
-                                                child: Text('$disc% Savings', style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
+                                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                          Container(
+                                            width: 22, height: 22,
+                                            margin: const EdgeInsets.only(top: 1),
+                                            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isSelected ? golden : AppColors.textLight, width: 2)),
+                                            child: isSelected ? Center(child: Container(width: 10, height: 10, decoration: const BoxDecoration(shape: BoxShape.circle, color: golden))) : null,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                            Row(children: [
+                                              Text('$label Plan', style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                              if (hasDiscount) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(4)),
+                                                  child: Text('$disc% Savings', style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
+                                                ),
+                                              ],
+                                            ]),
+                                            Text('Valid for $days days • $rooms room${rooms > 1 ? 's' : ''}', style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                                            if (!afford) ...[
+                                              const SizedBox(height: 4),
+                                              Text('Need $shortfall more coin${shortfall == 1 ? '' : 's'}',
+                                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.error)),
+                                            ],
+                                          ])),
+                                          const SizedBox(width: 8),
+                                          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                                            if (hasDiscount)
+                                              _coinPrice(normalPrice, color: AppColors.textLight, size: 12),
+                                            _coinPrice(origPrice, color: origPrice == 0 ? AppColors.success : AppColors.primary),
+                                            if (!afford) ...[
+                                              const SizedBox(height: 6),
+                                              GestureDetector(
+                                                onTap: () => Navigator.pop(ctx, PlanSelectionAddCoins()),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                  decoration: BoxDecoration(color: AppColors.warning, borderRadius: BorderRadius.circular(8)),
+                                                  child: const Text('Add Coins',
+                                                      style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                                                ),
                                               ),
                                             ],
                                           ]),
-                                          Text('Valid for $days days • $rooms room${rooms > 1 ? 's' : ''}', style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                                        ])),
-                                        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                                          if (hasDiscount)
-                                            Text('₹$normalPrice', style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, decoration: TextDecoration.lineThrough)),
-                                          Text(displayPrice, style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: origPrice == 0 ? AppColors.success : AppColors.primary)),
                                         ]),
-                                      ]),
+                                      ),
                                     ),
                                   ),
                                 );
@@ -922,14 +669,57 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: () => Navigator.pop(ctx, selectedPlan),
+                                onPressed: selectedPlan == null
+                                    ? null
+                                    : () async {
+                                        if (selOrigPrice == 0) {
+                                          Navigator.pop(ctx, PlanSelected(selectedPlan));
+                                          return;
+                                        }
+                                        // Distinct "Confirm Spend" moment — the network
+                                        // call (and the coin debit) must not fire until
+                                        // the owner explicitly confirms the exact spend.
+                                        final days = (selectedPlan['days'] as num?)?.toInt() ?? 30;
+                                        final confirmed = await showDialog<bool>(
+                                          context: ctx,
+                                          builder: (c) => AlertDialog(
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                            title: const Text('Confirm Spend',
+                                                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                                            content: Text(
+                                              'Spend $selOrigPrice coins to go live for $days days?',
+                                              style: const TextStyle(fontFamily: 'Poppins', color: AppColors.textMedium, height: 1.4),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(c, false),
+                                                child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.pop(c, true),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: AppColors.primary,
+                                                  foregroundColor: Colors.white,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                ),
+                                                child: const Text('Confirm', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirmed == true && ctx.mounted) Navigator.pop(ctx, PlanSelected(selectedPlan));
+                                      },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary, foregroundColor: Colors.white,
+                                  disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.35),
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                   elevation: 0,
                                 ),
-                                child: Text(btnLabel, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15)),
+                                child: Text(
+                                  selectedPlan == null ? 'Select an affordable plan' : (selOrigPrice == 0 ? 'Activate FREE' : 'Continue'),
+                                  style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15),
+                                ),
                               ),
                             ),
                             TextButton(
@@ -962,4 +752,3 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     );
   }
 }
-

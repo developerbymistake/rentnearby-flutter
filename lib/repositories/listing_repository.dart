@@ -4,11 +4,7 @@ class ListingRepository {
   Map<String, Map<String, dynamic>>? _plansCache;
   DateTime? _plansCacheTime;
 
-  Map<String, dynamic>? _membershipCache;
-  DateTime? _membershipCacheTime;
-
   static const _longTtl = Duration(minutes: 5);
-  static const _shortTtl = Duration(seconds: 60);
 
   bool _isValid(DateTime? time, Duration ttl) =>
       time != null && DateTime.now().difference(time) < ttl;
@@ -33,30 +29,8 @@ class ListingRepository {
     }
   }
 
-  Future<Map<String, dynamic>?> getMembershipStatus() async {
-    if (_membershipCache != null &&
-        _isValid(_membershipCacheTime, _shortTtl)) {
-      return _membershipCache;
-    }
-    try {
-      final res = await ApiService.get('/listings/payment/status');
-      _membershipCache = res['data'] as Map<String, dynamic>?;
-      _membershipCacheTime = DateTime.now();
-      return _membershipCache;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  void invalidateMembership() {
-    _membershipCache = null;
-    _membershipCacheTime = null;
-  }
-
   void invalidateAll() {
     _plansCache = null;
     _plansCacheTime = null;
-    _membershipCache = null;
-    _membershipCacheTime = null;
   }
 }

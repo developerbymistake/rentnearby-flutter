@@ -255,7 +255,9 @@ class NotificationService extends GetxService {
     AppRoutes.plotDetail,
     AppRoutes.addListing,
     AppRoutes.addPlot,
-    AppRoutes.paymentScreen,
+    AppRoutes.coinPacks,
+    AppRoutes.redeemCode,
+    AppRoutes.walletLedger,
     AppRoutes.listingReports,
     AppRoutes.reportDetail,
     AppRoutes.myFiledReports,
@@ -272,11 +274,11 @@ class NotificationService extends GetxService {
     // still add conversation_id as a custom data key for QA — that combined-payload message
     // WOULD flow through onMessageOpenedApp with data populated, hitting this exact branch.
     final isChatMessage = message.data['conversation_id'] != null;
-    final membershipType = message.data['membership_type'];
+    final notificationType = message.data['notification_type'];
     final reportListingId = message.data['listing_id'];
     final reportListingType = message.data['listing_type'];
     // Only report pushes carry listing_id — room/plot membership pushes never did,
-    // so this can't collide with the membershipType 'room'/'plot' branch below.
+    // so this can't collide with the notificationType 'room'/'plot' branch below.
     final isReportMessage = reportListingId != null;
     final currentRoute = Get.currentRoute;
 
@@ -291,10 +293,10 @@ class NotificationService extends GetxService {
           'listingType': reportListingType ?? 'Room',
           'title': message.data['listing_title'] ?? 'your listing',
         });
-      } else if (membershipType == 'broadcast') {
+      } else if (notificationType == 'broadcast') {
         Get.find<AuthController>().tabIndex.value = AppTabs.rooms;
       } else {
-        Get.toNamed(membershipType == 'plot' ? AppRoutes.myPlots : AppRoutes.myListings);
+        Get.toNamed(notificationType == 'plot' ? AppRoutes.myPlots : AppRoutes.myListings);
       }
     }
 

@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../models/city_model.dart';
+import '../models/go_live_result.dart';
 import '../models/listing_model.dart';
 import '../repositories/listing_repository.dart';
+import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
 
@@ -24,9 +26,6 @@ class ListingController extends GetxController {
   /// is the narrow signal HomeController listens to, so it never reloads on
   /// bare navigation.
   final listingStatusChangedTrigger = 0.obs;
-  final isMembershipLoading = false.obs;
-  final roomMembership = Rxn<Map<String, dynamic>>();
-  final roomPlans = Rx<Map<String, Map<String, dynamic>>>({});
 
   @override
   void onInit() {
@@ -164,12 +163,16 @@ class ListingController extends GetxController {
     }
   }
 
+  /// Deactivation only — turning a listing OFF is always free and never
+  /// touches ValidUntil, so a later go-live within the same paid window
+  /// reactivates for free too (server-enforced: PUT with isActive:true now
+  /// 400s, telling callers to use POST /go-live instead).
   Future<void> toggleActive(String id, bool isActive) async {
     try {
       isTogglingActive.value = true;
       await ApiService.put('/listings/$id', {'isActive': !isActive});
-      AppToast.success(isActive ? 'Listing hidden.' : 'Room is now LIVE! 🎉');
-      if (isActive) nearbyListings.removeWhere((l) => l.id == id);
+      AppToast.success('Listing hidden.');
+      nearbyListings.removeWhere((l) => l.id == id);
       exploreRefreshTrigger.value++;
       listingStatusChangedTrigger.value++;
       await loadMyListings();
@@ -194,187 +197,52 @@ class ListingController extends GetxController {
     }
   }
 
-  Future<bool> activatePlan(String listingId, String planType) async {
+  /// POST /listings/{id}/go-live. Pass [planType] null for a free
+  /// reactivation of a listing still within its previously-paid ValidUntil
+  /// window; pass it (and the coin cost of that plan, so an
+  /// INSUFFICIENT_BALANCE result can report it) when going live for the
+  /// first time or after expiry. On success, refreshes myListings and the
+  /// wallet balance (a spend just happened).
+  Future<GoLiveResult> goLive(String listingId, {String? planType, int requiredCoins = 0}) async {
     try {
       isLoading.value = true;
-      final res = await ApiService.post(
-        '/listings/$listingId/go-live',
-        {'planType': planType},
-      );
-
+      final res = await ApiService.post('/listings/$listingId/go-live', {'planType': planType});
       final data = res['data'];
       if (data == null || data is! Map<String, dynamic>) {
         throw Exception('Invalid response from server');
       }
-
-      Get.find<ListingRepository>().invalidateMembership();
-      loadMembership();
       listingPostedTrigger.value++;
       await loadMyListings();
-      return true;
-    } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not activate free plan.'));
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<Map<String, dynamic>?> createPaymentOrder(String listingId, String planType) async {
-    try {
-      isLoading.value = true;
-      final res = await ApiService.post(
-        '/listings/$listingId/create-order',
-        {'planType': planType},
+      Get.find<WalletController>().loadBalance();
+      return GoLiveSuccess(
+        validUntil: data['validUntil'] != null ? DateTime.tryParse(data['validUntil'] as String) : null,
+        planType: data['planType'] as String?,
+        balance: (data['balance'] as num?)?.toInt() ?? 0,
       );
-
-      final data = res['data'];
-      if (data == null || data is! Map<String, dynamic>) {
-        throw Exception('Invalid order response from server');
-      }
-
-      final orderId = _safeGetString(data, 'orderId');
-      final keyId = _safeGetString(data, 'keyId');
-      final amountRaw = data['amount'];
-
-      if (orderId == null || amountRaw == null) {
-        throw Exception('Missing order details from server');
-      }
-
-      final amount = _safeGetInt(amountRaw);
-      if (amount == null) {
-        throw Exception('Invalid amount format from server');
-      }
-
-      return {
-        'orderId': orderId,
-        'amount': amount,
-        'currency': _safeGetString(data, 'currency') ?? 'INR',
-        'keyId': keyId ?? '',
-      };
-    } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not create payment order.'));
-      return null;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> verifyPayment({
-    required String listingId,
-    required String razorpayOrderId,
-    required String razorpayPaymentId,
-    required String razorpaySignature,
-  }) async {
-    try {
-      isLoading.value = true;
-      final res = await ApiService.post(
-        '/listings/$listingId/verify-payment',
-        {
-          'razorpayOrderId': razorpayOrderId,
-          'razorpayPaymentId': razorpayPaymentId,
-          'razorpaySignature': razorpaySignature,
-        },
-      );
-
-      final data = res['data'];
-      if (data != null && data is Map<String, dynamic>) {
-        final success = data['success'] == true;
-        if (success) {
-          Get.find<ListingRepository>().invalidateMembership();
-          loadMembership(); // background refresh observable
-          listingPostedTrigger.value++;
-          await loadMyListings();
-        } else {
-          throw Exception(data['message'] ?? 'Payment verification failed');
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      final responseData = e.response?.data;
+      String? message;
+      String? type;
+      if (responseData is Map<String, dynamic>) {
+        final error = responseData['error'];
+        if (error is Map<String, dynamic>) {
+          message = error['message'] as String?;
+          type = error['type'] as String?;
         }
-      } else {
-        throw Exception('Invalid payment response');
+        message ??= responseData['message'] as String?;
       }
-    } catch (e) {
-      rethrow;
+      if (status == 409 && type == 'INSUFFICIENT_BALANCE') {
+        return GoLiveInsufficientBalance(message: message ?? 'Insufficient balance.', requiredCoins: requiredCoins);
+      }
+      if (status == 409 && type == 'CONCURRENT_UPDATE') {
+        return GoLiveConcurrentUpdate(message ?? 'This listing was just modified by another request. Please retry.');
+      }
+      return GoLiveFailure(_errorMessage(e, 'Could not go live. Please try again.'));
+    } catch (_) {
+      return GoLiveFailure('Could not go live. Please try again.');
     } finally {
       isLoading.value = false;
-    }
-  }
-
-  String? _safeGetString(Map<String, dynamic> data, String key) {
-    final value = data[key];
-    return value is String ? value : null;
-  }
-
-  int? _safeGetInt(dynamic value) {
-    if (value is int) return value;
-    if (value is String) {
-      try {
-        return int.parse(value);
-      } catch (_) {
-        return null;
-      }
-    }
-    if (value is double) return value.toInt();
-    return null;
-  }
-
-  Future<Map<String, dynamic>?> getMembershipStatus() =>
-      Get.find<ListingRepository>().getMembershipStatus();
-
-  Future<void> loadMembership() async {
-    isMembershipLoading.value = true;
-    try {
-      final repo = Get.find<ListingRepository>();
-      final results = await Future.wait([
-        repo.getMembershipStatus(),
-        repo.getPlans(),
-      ]);
-      roomMembership.value = results[0] as Map<String, dynamic>?;
-      roomPlans.value = results[1] as Map<String, Map<String, dynamic>>;
-    } finally {
-      isMembershipLoading.value = false;
-    }
-  }
-
-  Future<void> reloadMembership() async {
-    Get.find<ListingRepository>().invalidateMembership();
-    await loadMembership();
-  }
-
-  Future<Map<String, dynamic>?> createUpgradeOrder(String planType) async {
-    try {
-      isLoading.value = true;
-      final res = await ApiService.post('/listings/upgrade-plan/create-order', {'planType': planType});
-      final data = res['data'] as Map<String, dynamic>;
-      return {
-        'orderId': data['orderId'] as String,
-        'amount': (data['amount'] as num).toInt(),
-        'currency': data['currency'] as String? ?? 'INR',
-        'keyId': data['keyId'] as String? ?? '',
-      };
-    } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not create upgrade order.'));
-      return null;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> verifyUpgradePayment({
-    required String razorpayOrderId,
-    required String razorpayPaymentId,
-    required String razorpaySignature,
-  }) async {
-    try {
-      await ApiService.post('/listings/upgrade-plan/verify', {
-        'razorpayOrderId': razorpayOrderId,
-        'razorpayPaymentId': razorpayPaymentId,
-        'razorpaySignature': razorpaySignature,
-      });
-      Get.find<ListingRepository>().invalidateMembership();
-      loadMembership(); // background refresh observable
-      listingPostedTrigger.value++;
-      await loadMyListings();
-    } catch (e) {
-      rethrow;
     }
   }
 

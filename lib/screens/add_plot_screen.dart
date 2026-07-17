@@ -13,7 +13,6 @@ import '../services/api_service.dart';
 import 'dart:io';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
-import '../config/app_routes.dart';
 import '../controllers/plot_controller.dart';
 import '../models/city_model.dart';
 import '../models/location_context.dart';
@@ -712,30 +711,10 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
     if (mounted) setState(() => _isFinalizing = true);
     try {
+      // A newly created plot is always inactive (server-enforced) — Go Live
+      // (spending coins or a free reactivation) happens later from My Plots,
+      // never automatically here.
       await _ctrl.loadMyPlots(reset: true);
-
-      _ctrl.reloadPlotMembership(); // background refresh — no await, user doesn't wait
-      try {
-        final membership    = _ctrl.plotMembership.value;
-        final plans         = _ctrl.plotPlans.value;
-        final hasMembership = membership != null && (membership['hasMembership'] == true);
-        final planType      = membership?['planType'] as String? ?? '';
-        final maxPlots      = (membership?['maxPlotListings'] as num?)?.toInt() ?? 0;
-        final plansMap      = { for (final p in plans) p['planType'] as String: p };
-        final currentPlanIsFree = (plansMap[planType]?['originalPrice'] as num? ?? 0) == 0;
-        if (hasMembership && currentPlanIsFree && _ctrl.myPlots.length > maxPlots) {
-          final paidPlans = plans.where((p) => (p['originalPrice'] as num? ?? 0) > 0).toList();
-          if (paidPlans.isNotEmpty) {
-            Get.offNamed(AppRoutes.paymentScreen, arguments: {
-              'isPlot': true,
-              'plotId': plotId,
-              'plan': paidPlans.first,
-            });
-          }
-          return;
-        }
-      } catch (_) {}
-
       if (mounted) Get.back();
       Future.delayed(const Duration(milliseconds: 400), _ctrl.notifyPlotPosted);
       AppToast.success('Plot listed successfully!');

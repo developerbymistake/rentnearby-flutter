@@ -1,20 +1,23 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
-import '../controllers/app_feature_controller.dart';
-import '../controllers/auth_controller.dart';
+import '../controllers/config_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
-import '../repositories/plot_repository.dart';
-import '../services/plot_permission_service.dart';
+import '../controllers/wallet_controller.dart';
+import '../models/go_live_result.dart';
+import '../models/plan_selection_result.dart';
 import '../models/plot_model.dart';
+import '../services/plot_permission_service.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
-import '../widgets/payment_success_dialog.dart';
+import '../widgets/coin_balance_chip.dart';
+import '../widgets/go_live_success_dialog.dart';
+import '../widgets/insufficient_balance_sheet.dart';
 import '../widgets/pulse_once.dart';
 
 const _kBrown = Color(0xFF92400E);
@@ -29,7 +32,6 @@ class MyPlotsScreen extends StatefulWidget {
 class _MyPlotsScreenState extends State<MyPlotsScreen>
     with WidgetsBindingObserver {
   final _ctrl = Get.find<PlotController>();
-  final _auth = Get.find<AuthController>();
   final _scrollCtrl = ScrollController();
   bool _isAddingPlot = false;
   String? _goLiveLoadingId;
@@ -43,10 +45,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _dataReady = Future.wait([
-      _ctrl.loadMyPlots(reset: true),
-      _ctrl.loadPlotMembership(),
-    ]).then((_) {}).catchError((_) {});
+    _dataReady = _ctrl.loadMyPlots(reset: true).catchError((_) {});
     _scrollCtrl.addListener(_onScroll);
   }
 
@@ -64,10 +63,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     // resident IndexedStack tab), so "app resumed while this screen is on
     // top" is itself the correct condition for a refresh.
     if (state == AppLifecycleState.resumed) {
-      _dataReady = Future.wait([
-        _ctrl.loadMyPlots(reset: true),
-        _ctrl.loadPlotMembership(),
-      ]).then((_) {}).catchError((_) {});
+      _dataReady = _ctrl.loadMyPlots(reset: true).catchError((_) {});
     }
   }
 
@@ -91,270 +87,98 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
           Get.toNamed(AppRoutes.addPlot);
         case PlotNeedsDistrict():
           AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
-        case PlotShowLimitDialog():
-          _showPlotLimitDialog(maxPlots: result.maxPlots, hasPlan: result.hasPlan);
-        case PlotShowUpgradeSheet():
-          _showPaidUpgradePlotSheet();
+        case PlotLimitReached():
+          _showPlotLimitDialog(cap: result.cap);
       }
     } catch (_) {
-      AppToast.error('Could not verify your plan. Please try again.');
+      AppToast.error('Could not verify your listing limit. Please try again.');
     } finally {
       if (mounted) setState(() => _isAddingPlot = false);
     }
   }
 
-  void _showPaymentDialog(String plotId) async {
-    setState(() => _goLiveLoadingId = plotId);
+  void _onGoLiveTap(PlotModel plot) async {
+    if (_goLiveLoadingId != null) return;
+    setState(() => _goLiveLoadingId = plot.id);
     try {
-    final paymentEnabled = Get.find<AppFeatureController>().isPlotPaymentEnabled.value;
-    if (!paymentEnabled) {
-      setState(() => _goLiveLoadingId = null);
-      await _ctrl.toggleActive(plotId, false);
-      AppToast.success('Plot is now LIVE!');
-      return;
-    }
+      final stillWithinValidity = plot.validUntil != null &&
+          plot.validUntil!.toUtc().isAfter(DateTime.now().toUtc());
 
-    if (mounted) setState(() => _goLiveLoadingId = null);
-    final membership = _ctrl.plotMembership.value;
-    final plans      = _ctrl.plotPlans.value;
-    final hasMembership = membership != null && (membership['hasMembership'] == true);
+      if (stillWithinValidity) {
+        // Free reactivation — owner turned it off, is turning it back on
+        // before the previously-paid window expired. No plan dialog needed.
+        final result = await _ctrl.goLivePlot(plot.id);
+        if (mounted) await _handleGoLiveResult(result, spentCoins: 0);
+        return;
+      }
 
-    if (hasMembership) {
-      // Membership exists and days remain — activate directly.
-      // Plot count limit is already enforced at Add Plot time, no need to recheck here.
-      await _ctrl.toggleActive(plotId, false);
-      AppToast.success('Plot is now LIVE! 🎉');
-      return;
-    }
+      // Loop rather than a single pass: picking "Add Coins" on an
+      // unaffordable row (or hitting a 409 INSUFFICIENT_BALANCE despite the
+      // client-side check, e.g. balance changed elsewhere) routes to
+      // CoinPacksScreen and, on a successful purchase, comes back here to
+      // reopen the plan sheet against the refreshed balance — same loading
+      // state (`_goLiveLoadingId`) held the whole way through instead of a
+      // fragile recursive re-entry into this method.
+      while (true) {
+        final plans = await _ctrl.getPlotPlans();
+        if (!mounted) return;
+        final selection = await _showPlanSelectionDialog(plans: plans);
+        if (selection == null) return; // "Maybe Later" / dismissed
 
-    final hasUsedFreePlot = _auth.user.value?.hasUsedFreePlotPlan ?? false;
-    if (hasUsedFreePlot) {
-      if (mounted) _showPaidUpgradePlotSheet(plotId: plotId, allowRenewal: true);
-      return;
-    }
+        if (selection is PlanSelectionAddCoins) {
+          final toppedUp = await Get.toNamed(AppRoutes.coinPacks, arguments: {'returnToGoLive': true});
+          if (toppedUp == true && mounted) continue;
+          return;
+        }
 
-    if (!mounted) return;
-
-    final hasUsedFree = _auth.user.value?.hasUsedFreePlotPlan ?? false;
-    final selectedPlan = await _showPlanSelectionDialog(plans: plans, hasUsedFreePlotPlan: hasUsedFree);
-
-    if (selectedPlan == null) return;
-
-    final isFree = (selectedPlan['originalPrice'] as num? ?? 0) == 0;
-    if (isFree) {
-      await _activateFreePlotPlanDirect(plotId, selectedPlan);
-      return;
-    }
-
-    if (!mounted) return;
-    await Get.toNamed(AppRoutes.paymentScreen, arguments: {
-      'isPlot': true,
-      'plotId': plotId,
-      'plan': selectedPlan,
-    });
-    _ctrl.loadMyPlots(reset: true);
+        final selectedPlan = (selection as PlanSelected).plan;
+        final planType = selectedPlan['planType'] as String? ?? '';
+        final price = (selectedPlan['originalPrice'] as num?)?.toInt() ?? 0;
+        final result = await _ctrl.goLivePlot(plot.id, planType: planType, requiredCoins: price);
+        if (!mounted) return;
+        final retry = await _handleGoLiveResult(result, spentCoins: price);
+        if (retry && mounted) continue;
+        return;
+      }
     } finally {
       if (mounted) setState(() => _goLiveLoadingId = null);
     }
   }
 
-  void _showPaidUpgradePlotSheet({String plotId = '', bool allowRenewal = false}) async {
-    final plans = _ctrl.plotPlans.value;
-    final currentCount = _ctrl.myPlots.length;
-
-    final upgradePlans = (plans
-        .where((p) =>
-            (p['originalPrice'] as num? ?? 0) > 0 &&
-            (p['plotLimit'] as num? ?? 0) > currentCount)
-        .toList()
-      ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0)));
-
-    final renewalPlans = (plans
-        .where((p) =>
-            (p['originalPrice'] as num? ?? 0) > 0 &&
-            (p['plotLimit'] as num? ?? 0) >= currentCount)
-        .toList()
-      ..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0)));
-
-    final displayPlans = allowRenewal
-        ? (upgradePlans.isNotEmpty ? upgradePlans : renewalPlans.isNotEmpty ? renewalPlans : plans.toList()..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0)))
-        : upgradePlans;
-
-    if (!mounted) return;
-
-    String? selectedType = displayPlans.isNotEmpty ? (displayPlans.first['planType'] as String? ?? '') : null;
-
-    const golden = Color(0xFFD4A017);
-    final screenH = MediaQuery.of(context).size.height;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) {
-          final selectedPlan = displayPlans.isNotEmpty
-              ? displayPlans.firstWhere((p) => p['planType'] == selectedType, orElse: () => displayPlans.first)
-              : null;
-          final selOrigPrice = (selectedPlan?['originalPrice'] as num?)?.toInt() ?? 0;
-          final btnLabel = selOrigPrice == 0 ? 'Activate FREE' : 'Continue  ₹$selOrigPrice';
-
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.topCenter,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(top: 36),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: screenH * 0.78),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 52, 20, 4),
-                          child: Column(children: [
-                            const Text('Upgrade Your Plan',
-                                style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                            const SizedBox(height: 4),
-                            const Text('Choose a plan to add more plots',
-                                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
-                                textAlign: TextAlign.center),
-                          ]),
-                        ),
-                        Flexible(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                            child: displayPlans.isEmpty
-                                ? const Padding(
-                                    padding: EdgeInsets.all(24),
-                                    child: Text('No plans available.', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight), textAlign: TextAlign.center),
-                                  )
-                                : Column(
-                                    children: displayPlans.map((p) {
-                                      final normalPrice = (p['price'] as num?)?.toInt() ?? 0;
-                                      final origPrice = (p['originalPrice'] as num?)?.toInt() ?? 0;
-                                      final disc = (p['discountPercent'] as num?)?.toInt() ?? 0;
-                                      final hasDiscount = disc > 0 && normalPrice > 0;
-                                      final days = (p['days'] as num?)?.toInt() ?? 30;
-                                      final plots = (p['plotLimit'] as num?)?.toInt() ?? 2;
-                                      final raw = (p['planType'] as String? ?? '');
-                                      final label = raw.isEmpty ? raw : raw[0].toUpperCase() + raw.substring(1).toLowerCase();
-                                      final isSelected = selectedType == raw;
-                                      final displayPrice = origPrice == 0 ? 'FREE' : '₹$origPrice';
-
-                                      return Padding(
-                                        padding: const EdgeInsets.only(bottom: 10),
-                                        child: GestureDetector(
-                                          onTap: () => setS(() => selectedType = raw),
-                                          child: AnimatedContainer(
-                                            duration: const Duration(milliseconds: 200),
-                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                            decoration: BoxDecoration(
-                                              color: isSelected ? golden.withValues(alpha: 0.04) : Colors.white,
-                                              borderRadius: BorderRadius.circular(14),
-                                              border: Border.all(
-                                                color: isSelected ? golden : AppColors.divider,
-                                                width: isSelected ? 2 : 1.5,
-                                              ),
-                                            ),
-                                            child: Row(children: [
-                                              Container(
-                                                width: 22, height: 22,
-                                                decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(color: isSelected ? golden : AppColors.textLight, width: 2),
-                                                ),
-                                                child: isSelected
-                                                    ? Center(child: Container(width: 10, height: 10, decoration: const BoxDecoration(shape: BoxShape.circle, color: golden)))
-                                                    : null,
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                                Row(children: [
-                                                  Text('$label Plan',
-                                                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                                                  if (hasDiscount) ...[
-                                                    const SizedBox(width: 6),
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                      decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(4)),
-                                                      child: Text('$disc% Savings',
-                                                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
-                                                    ),
-                                                  ],
-                                                ]),
-                                                Text('Valid for $days days • $plots plot${plots > 1 ? 's' : ''}',
-                                                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                                              ])),
-                                              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                                                if (hasDiscount)
-                                                  Text('₹$normalPrice',
-                                                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, decoration: TextDecoration.lineThrough)),
-                                                Text(displayPrice,
-                                                    style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700,
-                                                        color: origPrice == 0 ? AppColors.success : _kBrown)),
-                                              ]),
-                                            ]),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                          child: Column(children: [
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: selectedPlan == null ? null : () {
-                                  Navigator.pop(ctx);
-                                  Get.toNamed(AppRoutes.paymentScreen, arguments: {'isPlot': true, 'plotId': plotId, 'plan': selectedPlan});
-                                  _ctrl.loadMyPlots(reset: true);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _kBrown, foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                  elevation: 0,
-                                ),
-                                child: Text(btnLabel, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15)),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Maybe Later', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight, fontSize: 13)),
-                            ),
-                          ]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 0,
-                  child: Container(
-                    width: 72, height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4))],
-                    ),
-                    child: ClipOval(child: Image.asset('assets/images/icon_logo.png', width: 72, height: 72, fit: BoxFit.cover)),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
+  /// Returns true when the caller should loop back and re-show the plan
+  /// sheet (owner topped up from the insufficient-balance sheet and wants to
+  /// resume), false for every other outcome.
+  Future<bool> _handleGoLiveResult(GoLiveResult result, {required int spentCoins}) async {
+    switch (result) {
+      case GoLiveSuccess():
+        Get.dialog(
+          GoLiveSuccessDialog(
+            isPlot: true,
+            planType: result.planType,
+            coinsSpent: spentCoins,
+            validUntil: result.validUntil,
+            onDismiss: _refresh,
+          ),
+          barrierDismissible: false,
+        );
+        return false;
+      case GoLiveInsufficientBalance g:
+        if (!mounted) return false;
+        return InsufficientBalanceSheet.show(
+          context,
+          required: g.requiredCoins,
+          current: Get.find<WalletController>().balance.value,
+        );
+      case GoLiveConcurrentUpdate g:
+        AppToast.error(g.message);
+        return false;
+      case GoLiveFailure g:
+        AppToast.error(g.message);
+        return false;
+    }
   }
 
-  void _showPlotLimitDialog({required int maxPlots, required bool hasPlan}) {
+  void _showPlotLimitDialog({required int cap}) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -385,101 +209,38 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              hasPlan
-                  ? 'Your current plan allows up to $maxPlots plot${maxPlots > 1 ? 's' : ''}. Delete an existing plot to add a new one.'
-                  : 'Free plan allows 1 plot. Delete your existing plot to replace it, or go live with a Premium plan to add more.',
+              'You can list up to $cap plot${cap > 1 ? 's' : ''}. Delete an existing plot to add a new one.',
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            if (!hasPlan) ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () { Navigator.pop(context); _showPaidUpgradePlotSheet(); },
-                  icon: const Icon(Icons.flash_on_rounded, size: 16),
-                  label: const Text('Upgrade Plan',
-                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _kBrown,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.list_alt_rounded, size: 16),
+                label: const Text('Manage Plots',
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _kBrown,
+                  side: const BorderSide(color: _kBrown),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.list_alt_rounded, size: 16),
-                  label: const Text('Manage Plots',
-                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textMedium,
-                    side: BorderSide(color: Colors.grey.shade300),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-            ] else
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.list_alt_rounded, size: 16),
-                  label: const Text('Manage Plots',
-                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _kBrown,
-                    side: const BorderSide(color: _kBrown),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _activateFreePlotPlanDirect(String plotId, Map<String, dynamic> plan) async {
-    final planType = plan['planType'] as String? ?? 'FREE';
-    final result = await _ctrl.activatePlotPlan(plotId, planType);
-    if (result == null) return; // controller already showed toast
-    Get.find<PlotRepository>().invalidateMembership();
-    _ctrl.loadPlotMembership();
-    await _ctrl.loadMyPlots(reset: true);
-    if (!mounted) return;
-    Get.dialog(
-      PaymentSuccessDialog(
-        planType: planType,
-        daysValid: (plan['days'] as num?)?.toInt() ?? 2,
-        maxRooms: 0,
-        maxPlots: (plan['plotLimit'] as num?)?.toInt() ?? 1,
-        isPlot: true,
-        originalPrice: (plan['originalPrice'] as num?)?.toInt() ?? 0,
-        // Data is already reloaded above (line 456) before this dialog even shows —
-        // the old tabIndex set was a no-op-turned-obsolete once tab 3 stopped existing.
-        onDismiss: () {},
-      ),
-      barrierDismissible: false,
-    );
-  }
-
-  Widget _buildPlanStrip() {
-    final m = _ctrl.plotMembership.value;
-    if (m == null || m['hasMembership'] != true) return const SizedBox.shrink();
-    final plan = ((m['planType'] as String?) ?? '').toUpperCase();
-    final max  = (m['maxPlotListings'] as num?)?.toInt() ?? 0;
+  /// Each plot already carries its own validUntil/isActive (see _PlotCard's
+  /// own expiry label) — this strip just shows the flat creation cap usage,
+  /// sourced from ConfigController, with no separate membership call needed.
+  Widget _buildPlotCapStrip() {
+    final cap = Get.find<ConfigController>().plotLimit.value;
     final used = _ctrl.myPlots.length;
-    final validUntilStr = m['validUntil'] as String?;
-    final daysText = validUntilStr != null ? _daysLeft(validUntilStr) : '';
-    final expired  = validUntilStr != null &&
-        DateTime.parse(validUntilStr).toUtc().isBefore(DateTime.now().toUtc());
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -488,52 +249,14 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _kBrown.withValues(alpha: 0.2)),
       ),
-      child: IntrinsicHeight(
-        child: Row(children: [
-          Expanded(
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Icon(Icons.terrain_rounded, size: 13, color: _kBrown),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(plan,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                        color: _kBrown, fontWeight: FontWeight.w600)),
-              ),
-            ]),
-          ),
-          VerticalDivider(width: 1, thickness: 1, color: _kBrown.withValues(alpha: 0.2)),
-          Expanded(
-            child: Center(
-              child: Text('$used / $max plots',
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                      color: _kBrown, fontWeight: FontWeight.w500)),
-            ),
-          ),
-          VerticalDivider(width: 1, thickness: 1, color: _kBrown.withValues(alpha: 0.2)),
-          Expanded(
-            child: Center(
-              child: Text(daysText,
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                      fontWeight: expired ? FontWeight.w700 : FontWeight.w500,
-                      color: expired ? AppColors.error : _kBrown)),
-            ),
-          ),
-        ]),
-      ),
+      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        const Icon(Icons.terrain_rounded, size: 13, color: _kBrown),
+        const SizedBox(width: 6),
+        Text('$used / $cap plots used',
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12,
+                color: _kBrown, fontWeight: FontWeight.w600)),
+      ]),
     );
-  }
-
-  String _daysLeft(String s) {
-    final days = DateTime.parse(s).toUtc().difference(DateTime.now().toUtc()).inDays;
-    if (days < 0) return 'Expired';
-    if (days == 0) return 'Expires today';
-    return '$days days left';
   }
 
   void _confirmDelete(String id) {
@@ -597,17 +320,13 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Obx(() => AppLoadingOverlay(
-        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value || _ctrl.isPlotMembershipLoading.value,
-        message: _ctrl.isPlotMembershipLoading.value
-            ? 'Loading...'
-            : _ctrl.isTogglingActive.value
-                ? 'Updating...'
-                : 'Deleting...',
+        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value,
+        message: _ctrl.isTogglingActive.value ? 'Updating...' : 'Deleting...',
         indicatorColor: _kBrown,
         child: Column(
         children: [
           _buildHeader(),
-          Obx(() => _buildPlanStrip()),
+          Obx(() => _buildPlotCapStrip()),
           Expanded(
             child: Obx(() {
               final loading = _ctrl.isLoading.value;
@@ -636,7 +355,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                       child: _PlotCard(
                         plot: plots[i],
                         onToggleActive: () => _ctrl.toggleActive(plots[i].id, plots[i].isActive),
-                        onGoLive: () => _showPaymentDialog(plots[i].id),
+                        onGoLive: () => _onGoLiveTap(plots[i]),
                         onDelete: () => _confirmDelete(plots[i].id),
                         isGoLiveLoading: _goLiveLoadingId == plots[i].id,
                         onReportsTap: () => Get.toNamed(AppRoutes.listingReports, arguments: {
@@ -683,6 +402,8 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                       style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
                 ]),
                 const Spacer(),
+                const CoinBalanceChip(color: Colors.white),
+                const SizedBox(width: 8),
                 GestureDetector(
                   onTap: _isAddingPlot ? null : _onAddPlot,
                   child: Container(
@@ -746,32 +467,50 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         ),
       );
 
-  Future<Map<String, dynamic>?> _showPlanSelectionDialog({
+  Widget _coinPrice(int amount, {required Color color, double size = 16}) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.monetization_on_rounded, size: size, color: color),
+      const SizedBox(width: 4),
+      Text('$amount', style: TextStyle(fontFamily: 'Poppins', fontSize: size, fontWeight: FontWeight.w700, color: color)),
+    ]);
+  }
+
+  Future<PlanSelectionResult?> _showPlanSelectionDialog({
     required List<Map<String, dynamic>> plans,
-    required bool hasUsedFreePlotPlan,
   }) async {
     const golden = Color(0xFFD4A017);
     final screenH = MediaQuery.of(context).size.height;
 
-    final sorted = [...plans]..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0));
-    final visiblePlans = hasUsedFreePlotPlan
-        ? sorted.where((p) => (p['originalPrice'] as num? ?? 0) > 0).toList()
-        : sorted;
+    final visiblePlans = [...plans]..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0));
 
-    if (visiblePlans.isEmpty) return null;
+    if (visiblePlans.isEmpty) {
+      AppToast.error('No plans available right now. Please try again later.');
+      return null;
+    }
 
-    String? selectedType = visiblePlans.first['planType'] as String?;
+    // Affordability is computed client-side against the live wallet balance
+    // (read once — a fresh dialog is opened whenever the balance can have
+    // changed, e.g. after a coin top-up) so each row can render its own
+    // Select-vs-Add-Coins state instead of only discovering a shortfall
+    // reactively from a 409 INSUFFICIENT_BALANCE after the network call.
+    final walletBalance = Get.find<WalletController>().balance.value;
+    String? selectedType = visiblePlans
+        .firstWhere(
+          (p) => walletBalance >= ((p['originalPrice'] as num?)?.toInt() ?? 0),
+          orElse: () => const {},
+        )['planType'] as String?;
 
-    return showDialog<Map<String, dynamic>>(
+    return showDialog<PlanSelectionResult>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) {
-          final selectedPlan = visiblePlans.firstWhere(
-            (p) => p['planType'] == selectedType,
-            orElse: () => visiblePlans.first,
-          );
-          final selOrigPrice = (selectedPlan['originalPrice'] as num?)?.toInt() ?? 0;
-          final btnLabel = selOrigPrice == 0 ? 'Activate FREE' : 'Continue  ₹$selOrigPrice';
+          final selectedPlan = selectedType == null
+              ? null
+              : visiblePlans.firstWhere(
+                  (p) => p['planType'] == selectedType,
+                  orElse: () => visiblePlans.first,
+                );
+          final selOrigPrice = (selectedPlan?['originalPrice'] as num?)?.toInt() ?? 0;
 
           return Dialog(
             backgroundColor: Colors.transparent,
@@ -809,48 +548,71 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                                 final plots = (p['plotLimit'] as num?)?.toInt() ?? 1;
                                 final raw = (p['planType'] as String? ?? '');
                                 final label = raw.isEmpty ? raw : raw[0].toUpperCase() + raw.substring(1).toLowerCase();
-                                final isSelected = selectedType == raw;
-                                final displayPrice = origPrice == 0 ? 'FREE' : '₹$origPrice';
+                                final afford = walletBalance >= origPrice;
+                                final isSelected = afford && selectedType == raw;
+                                final shortfall = afford ? 0 : origPrice - walletBalance;
 
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
-                                  child: GestureDetector(
-                                    onTap: () => setS(() => selectedType = raw),
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 200),
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                      decoration: BoxDecoration(
-                                        color: isSelected ? golden.withValues(alpha: 0.04) : Colors.white,
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(color: isSelected ? golden : AppColors.divider, width: isSelected ? 2 : 1.5),
-                                      ),
-                                      child: Row(children: [
-                                        Container(
-                                          width: 22, height: 22,
-                                          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isSelected ? golden : AppColors.textLight, width: 2)),
-                                          child: isSelected ? Center(child: Container(width: 10, height: 10, decoration: const BoxDecoration(shape: BoxShape.circle, color: golden))) : null,
+                                  child: Opacity(
+                                    opacity: afford ? 1 : 0.55,
+                                    child: GestureDetector(
+                                      onTap: afford ? () => setS(() => selectedType = raw) : null,
+                                      child: AnimatedContainer(
+                                        duration: const Duration(milliseconds: 200),
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? golden.withValues(alpha: 0.04) : Colors.white,
+                                          borderRadius: BorderRadius.circular(14),
+                                          border: Border.all(color: isSelected ? golden : AppColors.divider, width: isSelected ? 2 : 1.5),
                                         ),
-                                        const SizedBox(width: 12),
-                                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                          Row(children: [
-                                            Text('$label Plan', style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                                            if (hasDiscount) ...[
-                                              const SizedBox(width: 6),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(4)),
-                                                child: Text('$disc% Savings', style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
+                                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                          Container(
+                                            width: 22, height: 22,
+                                            margin: const EdgeInsets.only(top: 1),
+                                            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isSelected ? golden : AppColors.textLight, width: 2)),
+                                            child: isSelected ? Center(child: Container(width: 10, height: 10, decoration: const BoxDecoration(shape: BoxShape.circle, color: golden))) : null,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                            Row(children: [
+                                              Text('$label Plan', style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                                              if (hasDiscount) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(4)),
+                                                  child: Text('$disc% Savings', style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
+                                                ),
+                                              ],
+                                            ]),
+                                            Text('Valid for $days days • $plots plot${plots > 1 ? 's' : ''}', style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                                            if (!afford) ...[
+                                              const SizedBox(height: 4),
+                                              Text('Need $shortfall more coin${shortfall == 1 ? '' : 's'}',
+                                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.error)),
+                                            ],
+                                          ])),
+                                          const SizedBox(width: 8),
+                                          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                                            if (hasDiscount)
+                                              _coinPrice(normalPrice, color: AppColors.textLight, size: 12),
+                                            _coinPrice(origPrice, color: origPrice == 0 ? AppColors.success : _kBrown),
+                                            if (!afford) ...[
+                                              const SizedBox(height: 6),
+                                              GestureDetector(
+                                                onTap: () => Navigator.pop(ctx, PlanSelectionAddCoins()),
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                  decoration: BoxDecoration(color: AppColors.warning, borderRadius: BorderRadius.circular(8)),
+                                                  child: const Text('Add Coins',
+                                                      style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                                                ),
                                               ),
                                             ],
                                           ]),
-                                          Text('Valid for $days days • $plots plot${plots > 1 ? 's' : ''}', style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                                        ])),
-                                        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                                          if (hasDiscount)
-                                            Text('₹$normalPrice', style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, decoration: TextDecoration.lineThrough)),
-                                          Text(displayPrice, style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: origPrice == 0 ? AppColors.success : _kBrown)),
                                         ]),
-                                      ]),
+                                      ),
                                     ),
                                   ),
                                 );
@@ -864,14 +626,57 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: () => Navigator.pop(ctx, selectedPlan),
+                                onPressed: selectedPlan == null
+                                    ? null
+                                    : () async {
+                                        if (selOrigPrice == 0) {
+                                          Navigator.pop(ctx, PlanSelected(selectedPlan));
+                                          return;
+                                        }
+                                        // Distinct "Confirm Spend" moment — the network
+                                        // call (and the coin debit) must not fire until
+                                        // the owner explicitly confirms the exact spend.
+                                        final days = (selectedPlan['days'] as num?)?.toInt() ?? 30;
+                                        final confirmed = await showDialog<bool>(
+                                          context: ctx,
+                                          builder: (c) => AlertDialog(
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                            title: const Text('Confirm Spend',
+                                                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                                            content: Text(
+                                              'Spend $selOrigPrice coins to go live for $days days?',
+                                              style: const TextStyle(fontFamily: 'Poppins', color: AppColors.textMedium, height: 1.4),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(c, false),
+                                                child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.pop(c, true),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: _kBrown,
+                                                  foregroundColor: Colors.white,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                ),
+                                                child: const Text('Confirm', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirmed == true && ctx.mounted) Navigator.pop(ctx, PlanSelected(selectedPlan));
+                                      },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: _kBrown, foregroundColor: Colors.white,
+                                  disabledBackgroundColor: _kBrown.withValues(alpha: 0.35),
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                   elevation: 0,
                                 ),
-                                child: Text(btnLabel, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15)),
+                                child: Text(
+                                  selectedPlan == null ? 'Select an affordable plan' : (selOrigPrice == 0 ? 'Activate FREE' : 'Continue'),
+                                  style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15),
+                                ),
                               ),
                             ),
                             TextButton(
@@ -1224,4 +1029,3 @@ class _PlotCard extends StatelessWidget {
         child: const Center(child: Icon(Icons.terrain_rounded, size: 40, color: Colors.white54)),
       );
 }
-

@@ -7,6 +7,7 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/wallet_controller.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
 import '../widgets/gradient_button.dart';
@@ -155,9 +156,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
+            // Wallet
+            _buildWalletCard(),
+
             // Edit form
             Container(
-              margin: const EdgeInsets.all(20),
+              margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -223,6 +227,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _legalTile(icon: Iconsax.share, label: 'Share App', onTap: _shareApp),
                   Divider(height: 1, indent: 56, color: AppColors.divider),
                   _legalTile(icon: Iconsax.flag, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
+                  Divider(height: 1, indent: 56, color: AppColors.divider),
+                  _legalTile(icon: Icons.redeem_rounded, label: 'Redeem Code', onTap: () => Get.toNamed(AppRoutes.redeemCode)),
                 ]),
               ),
             ),
@@ -325,6 +331,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: initials.isNotEmpty
             ? Text(initials, style: const TextStyle(fontFamily: 'Poppins', fontSize: 30, fontWeight: FontWeight.w700, color: Colors.white))
             : const Icon(Iconsax.user5, size: 38, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildWalletCard() {
+    final wallet = Get.find<WalletController>();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14)),
+            child: const Icon(Icons.monetization_on_rounded, color: AppColors.primary, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('My Wallet', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                const SizedBox(height: 3),
+                Obx(() => Text('${wallet.balance.value} coins',
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark))),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () => Get.toNamed(AppRoutes.coinPacks),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.add_rounded, size: 15, color: Colors.white),
+                SizedBox(width: 3),
+                Text('Buy Coins', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -531,7 +584,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
                   ),
                   child: const Text(
-                    'This will permanently delete your account, all listings, plots, photos and memberships. This action cannot be undone.',
+                    'This will permanently delete your account, all listings, plots, photos, and wallet coin balance. This action cannot be undone.',
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.error, height: 1.55),
                   ),
                 ),

@@ -10,7 +10,6 @@ import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
-import '../controllers/app_feature_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../config/app_map_state.dart';
 import '../controllers/listing_controller.dart';
@@ -273,7 +272,6 @@ class _ExploreScreenState extends State<ExploreScreen>
       // Search pin is temporary, same spirit as browsingCity — resetBrowsing()
       // inside refreshOnResume() already clears both, no separate call needed.
       _locationCtrl.refreshOnResume();
-      Get.find<AppFeatureController>().refresh();
       if (!_listingCtrl.isLoading.value && _radarController.isAnimating) {
         _radarController.stop();
         _radarController.reset();

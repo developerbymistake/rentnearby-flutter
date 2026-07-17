@@ -9,13 +9,15 @@ import '../screens/add_listing_screen.dart';
 import '../screens/add_plot_screen.dart';
 import '../screens/my_listings_screen.dart';
 import '../screens/my_plots_screen.dart';
-import '../screens/payment_screen.dart';
 import '../screens/plot_detail_screen.dart';
 import '../screens/chat_conversation_screen.dart';
 import '../screens/listing_reports_screen.dart';
 import '../screens/report_detail_screen.dart';
 import '../screens/my_filed_reports_screen.dart';
 import '../screens/view_all_screen.dart';
+import '../screens/coin_packs_screen.dart';
+import '../screens/redeem_code_screen.dart';
+import '../screens/wallet_ledger_screen.dart';
 import '../controllers/view_all_controller.dart' show ViewAllListingType;
 
 class AppRoutes {
@@ -32,13 +34,15 @@ class AppRoutes {
   static const String addPlot = '/add-plot';
   static const String myListings = '/my-listings';
   static const String myPlots = '/my-plots';
-  static const String paymentScreen = '/payment-screen';
   static const String chatConversation = '/chat-conversation';
   static const String listingReports = '/listing-reports';
   static const String reportDetail = '/report-detail';
   static const String myFiledReports = '/my-filed-reports';
   static const String viewAllRooms = '/view-all-rooms';
   static const String viewAllPlots = '/view-all-plots';
+  static const String coinPacks = '/coin-packs';
+  static const String redeemCode = '/redeem-code';
+  static const String walletLedger = '/wallet-ledger';
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
     GetPage(
@@ -120,10 +124,22 @@ class AppRoutes {
       transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
-      name: paymentScreen,
-      page: () => const PaymentScreen(),
-      transition: Transition.upToDown,
-      transitionDuration: const Duration(milliseconds: 350),
+      name: coinPacks,
+      page: () => const CoinPacksScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: redeemCode,
+      page: () => const RedeemCodeScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: walletLedger,
+      page: () => const WalletLedgerScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
       name: chatConversation,

@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../models/city_model.dart';
+import '../models/go_live_result.dart';
 import '../models/plot_model.dart';
 import '../repositories/plot_repository.dart';
+import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
 
@@ -24,9 +26,6 @@ class PlotController extends GetxController {
   /// is the narrow signal HomeController listens to, so it never reloads on
   /// bare navigation.
   final listingStatusChangedTrigger = 0.obs;
-  final isPlotMembershipLoading = false.obs;
-  final plotMembership = Rxn<Map<String, dynamic>>();
-  final plotPlans = Rx<List<Map<String, dynamic>>>([]);
   int _myPlotsPage = 1;
 
   @override
@@ -150,85 +149,16 @@ class PlotController extends GetxController {
   Future<List<Map<String, dynamic>>> getPlotPlans() =>
       Get.find<PlotRepository>().getPlotPlans();
 
-  Future<Map<String, dynamic>?> getPlotMembershipStatus() =>
-      Get.find<PlotRepository>().getPlotMembershipStatus();
-
-  Future<void> loadPlotMembership() async {
-    isPlotMembershipLoading.value = true;
-    try {
-      final repo = Get.find<PlotRepository>();
-      final results = await Future.wait([
-        repo.getPlotMembershipStatus(),
-        repo.getPlotPlans(),
-      ]);
-      plotMembership.value = results[0] as Map<String, dynamic>?;
-      plotPlans.value = results[1] as List<Map<String, dynamic>>;
-    } finally {
-      isPlotMembershipLoading.value = false;
-    }
-  }
-
-  Future<void> reloadPlotMembership() async {
-    Get.find<PlotRepository>().invalidateMembership();
-    await loadPlotMembership();
-  }
-
-  Future<Map<String, dynamic>?> activatePlotPlan(String plotId, String planType) async {
-    try {
-      isLoading.value = true;
-      final res = await ApiService.post('/plots/$plotId/create-order?planType=$planType', {});
-      return res['data'];
-    } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not activate plot plan.'));
-      return null;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> verifyPlotPayment(Map<String, dynamic> body) async {
-    try {
-      await ApiService.post('/plots/${body['plotId']}/verify-payment', body);
-      Get.find<PlotRepository>().invalidateMembership();
-      loadPlotMembership(); // background refresh observable
-      plotPostedTrigger.value++;
-      await loadMyPlots(reset: true);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<Map<String, dynamic>?> createPlotUpgradeOrder(String planType) async {
-    try {
-      isLoading.value = true;
-      final res = await ApiService.post('/plots/upgrade-plan/create-order?planType=$planType', {});
-      return res['data'];
-    } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not create upgrade order.'));
-      return null;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> verifyPlotUpgradePayment(Map<String, dynamic> body) async {
-    try {
-      await ApiService.post('/plots/upgrade-plan/verify', body);
-      Get.find<PlotRepository>().invalidateMembership();
-      loadPlotMembership(); // background refresh observable
-      plotPostedTrigger.value++;
-      await loadMyPlots(reset: true);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
+  /// Deactivation only — turning a plot OFF is always free and never touches
+  /// ValidUntil, so a later go-live within the same paid window reactivates
+  /// for free too (server-enforced: PUT with isActive:true now 400s, telling
+  /// callers to use POST /go-live instead).
   Future<void> toggleActive(String id, bool currentIsActive) async {
     try {
       isTogglingActive.value = true;
       await ApiService.put('/plots/$id', {'isActive': !currentIsActive});
-      AppToast.success(currentIsActive ? 'Plot hidden.' : 'Plot is now LIVE! 🎉');
-      if (currentIsActive) nearbyPlots.removeWhere((p) => p.id == id);
+      AppToast.success('Plot hidden.');
+      nearbyPlots.removeWhere((p) => p.id == id);
       exploreRefreshTrigger.value++;
       listingStatusChangedTrigger.value++;
       await loadMyPlots(reset: true);
@@ -268,6 +198,50 @@ class PlotController extends GetxController {
         }
       }
       return null;
+    }
+  }
+
+  /// POST /plots/{id}/go-live — exact mirror of ListingController.goLive.
+  Future<GoLiveResult> goLivePlot(String plotId, {String? planType, int requiredCoins = 0}) async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.post('/plots/$plotId/go-live', {'planType': planType});
+      final data = res['data'];
+      if (data == null || data is! Map<String, dynamic>) {
+        throw Exception('Invalid response from server');
+      }
+      plotPostedTrigger.value++;
+      await loadMyPlots(reset: true);
+      Get.find<WalletController>().loadBalance();
+      return GoLiveSuccess(
+        validUntil: data['validUntil'] != null ? DateTime.tryParse(data['validUntil'] as String) : null,
+        planType: data['planType'] as String?,
+        balance: (data['balance'] as num?)?.toInt() ?? 0,
+      );
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      final responseData = e.response?.data;
+      String? message;
+      String? type;
+      if (responseData is Map<String, dynamic>) {
+        final error = responseData['error'];
+        if (error is Map<String, dynamic>) {
+          message = error['message'] as String?;
+          type = error['type'] as String?;
+        }
+        message ??= responseData['message'] as String?;
+      }
+      if (status == 409 && type == 'INSUFFICIENT_BALANCE') {
+        return GoLiveInsufficientBalance(message: message ?? 'Insufficient balance.', requiredCoins: requiredCoins);
+      }
+      if (status == 409 && type == 'CONCURRENT_UPDATE') {
+        return GoLiveConcurrentUpdate(message ?? 'This plot was just modified by another request. Please retry.');
+      }
+      return GoLiveFailure(_errorMessage(e, 'Could not go live. Please try again.'));
+    } catch (_) {
+      return GoLiveFailure('Could not go live. Please try again.');
+    } finally {
+      isLoading.value = false;
     }
   }
 

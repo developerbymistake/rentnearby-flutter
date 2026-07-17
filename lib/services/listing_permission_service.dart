@@ -1,6 +1,5 @@
-import 'package:collection/collection.dart';
 import 'package:get/get.dart';
-import '../controllers/app_feature_controller.dart';
+import '../controllers/config_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 
@@ -10,14 +9,18 @@ class ListingAllowed extends ListingPermissionResult {}
 
 class ListingNeedsDistrict extends ListingPermissionResult {}
 
-class ListingShowLimitDialog extends ListingPermissionResult {
-  final int maxRooms;
-  final bool hasPlan;
-  ListingShowLimitDialog({required this.maxRooms, required this.hasPlan});
+class ListingLimitReached extends ListingPermissionResult {
+  final int cap;
+  ListingLimitReached({required this.cap});
 }
 
-class ListingShowUpgradeSheet extends ListingPermissionResult {}
-
+/// The only question left at Add-Room time: has this user hit the flat,
+/// admin-configured listing-creation cap from GET /config/listing-limits.
+/// There is no more per-user free-vs-paid tier — everyone shares the same
+/// cap — and no "upgrade plan to raise your cap" concept, so this collapses
+/// to a 3-case result instead of the old 5-case one. Whether a listing is
+/// *live* (paid via coins) is a separate, later question — see
+/// ListingController.goLive.
 class ListingPermissionService {
   final ListingController _ctrl;
   final LocationController _location;
@@ -27,42 +30,12 @@ class ListingPermissionService {
   Future<ListingPermissionResult> check() async {
     if (_location.selectedDistrict.value == null) return ListingNeedsDistrict();
 
-    final features       = Get.find<AppFeatureController>();
-    final paymentEnabled = features.isRoomPaymentEnabled.value;
-    final freeLimit      = features.roomPaymentFreeLimit.value;
+    final config = Get.find<ConfigController>();
+    await config.ensureLoaded();
+    final cap = config.roomLimit.value;
 
-    if (!paymentEnabled) {
-      if (_ctrl.myListings.length >= freeLimit) {
-        return ListingShowLimitDialog(maxRooms: freeLimit, hasPlan: true);
-      }
-      return ListingAllowed();
-    }
-
-    final membership = _ctrl.roomMembership.value;
-    final plans      = _ctrl.roomPlans.value;
-
-    if (membership != null && membership['hasMembership'] == true) {
-      final maxRooms = (membership['maxRooms'] as num?)?.toInt() ?? 0;
-      if (_ctrl.myListings.length >= maxRooms) {
-        final hasHigherPlan = plans.values.any((p) =>
-            (p['originalPrice'] as num? ?? 0) > 0 &&
-            (p['roomLimit'] as num? ?? 0) > maxRooms);
-        return hasHigherPlan
-            ? ListingShowUpgradeSheet()
-            : ListingShowLimitDialog(maxRooms: maxRooms, hasPlan: true);
-      }
-    } else {
-      final freePlan = plans.values
-          .firstWhereOrNull((p) => (p['originalPrice'] as num? ?? 0) == 0);
-      final limit = (freePlan?['roomLimit'] as num?)?.toInt() ?? 1;
-      if (_ctrl.myListings.length >= limit) {
-        final hasHigherPlan = plans.values.any((p) =>
-            (p['originalPrice'] as num? ?? 0) > 0 &&
-            (p['roomLimit'] as num? ?? 0) > _ctrl.myListings.length);
-        return hasHigherPlan
-            ? ListingShowUpgradeSheet()
-            : ListingShowLimitDialog(maxRooms: _ctrl.myListings.length, hasPlan: true);
-      }
+    if (_ctrl.myListings.length >= cap) {
+      return ListingLimitReached(cap: cap);
     }
     return ListingAllowed();
   }

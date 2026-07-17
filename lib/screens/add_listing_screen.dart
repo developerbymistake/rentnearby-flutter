@@ -14,7 +14,6 @@ import 'dart:io';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_insets.dart';
-import '../config/app_routes.dart';
 import '../controllers/listing_controller.dart';
 import '../models/city_model.dart';
 import '../models/location_context.dart';
@@ -656,30 +655,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
     if (mounted) setState(() => _isFinalizing = true);
     try {
+      // A newly created listing is always inactive (server-enforced) — Go
+      // Live (spending coins or a free reactivation) happens later from My
+      // Rooms, never automatically here.
       await _ctrl.loadMyListings();
-
-      // If user is on a free (price=0) plan and at capacity, go straight to paid payment
-      _ctrl.reloadMembership(); // background refresh — no await, user doesn't wait
-      try {
-        final membership = _ctrl.roomMembership.value;
-        final plans      = _ctrl.roomPlans.value;
-        final hasMembership = membership != null && (membership['hasMembership'] == true);
-        final planType      = membership?['planType'] as String? ?? '';
-        final maxRooms      = (membership?['maxRooms'] as num?)?.toInt() ?? 0;
-        final currentPlanIsFree = (plans[planType]?['originalPrice'] as num? ?? 0) == 0;
-
-        if (hasMembership && currentPlanIsFree && _ctrl.myListings.length > maxRooms) {
-          final paidMatches = plans.values.where((p) => (p['originalPrice'] as num? ?? 0) > 0);
-          if (paidMatches.isNotEmpty) {
-            Get.offNamed(AppRoutes.paymentScreen, arguments: {
-              'listingId': listingId,
-              'plan': paidMatches.first,
-            });
-          }
-          return;
-        }
-      } catch (_) {}
-
       if (mounted) Get.back();
       Future.delayed(const Duration(milliseconds: 400), _ctrl.notifyListingPosted);
       AppToast.success('Room listed successfully!');

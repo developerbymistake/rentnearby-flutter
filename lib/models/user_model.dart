@@ -4,8 +4,6 @@ class UserModel {
   final bool isPhoneVerified;
   final bool hasUsedPhoneChange;
   final String? name;
-  final bool hasUsedFreePlan;
-  final bool hasUsedFreePlotPlan;
   final bool isContactVisible;
   final DateTime createdAt;
 
@@ -15,8 +13,6 @@ class UserModel {
     this.isPhoneVerified = false,
     this.hasUsedPhoneChange = false,
     this.name,
-    required this.hasUsedFreePlan,
-    this.hasUsedFreePlotPlan = false,
     this.isContactVisible = true,
     required this.createdAt,
   });
@@ -27,8 +23,6 @@ class UserModel {
         isPhoneVerified: json['isPhoneVerified'] ?? false,
         hasUsedPhoneChange: json['hasUsedPhoneChange'] ?? false,
         name: json['name'],
-        hasUsedFreePlan: json['hasUsedFreePlan'] ?? false,
-        hasUsedFreePlotPlan: json['hasUsedFreePlotPlan'] ?? false,
         isContactVisible: json['isContactVisible'] ?? true,
         createdAt: DateTime.parse(json['createdAt']),
       );
@@ -39,8 +33,6 @@ class UserModel {
         'isPhoneVerified': isPhoneVerified,
         'hasUsedPhoneChange': hasUsedPhoneChange,
         'name': name,
-        'hasUsedFreePlan': hasUsedFreePlan,
-        'hasUsedFreePlotPlan': hasUsedFreePlotPlan,
         'isContactVisible': isContactVisible,
         'createdAt': createdAt.toIso8601String(),
       };

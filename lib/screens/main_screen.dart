@@ -11,10 +11,13 @@ import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../controllers/report_controller.dart';
+import '../repositories/config_repository.dart';
 import '../repositories/listing_repository.dart';
 import '../repositories/plot_repository.dart';
 import '../repositories/user_repository.dart';
-import '../controllers/app_feature_controller.dart';
+import '../repositories/wallet_repository.dart';
+import '../controllers/config_controller.dart';
+import '../controllers/wallet_controller.dart';
 import '../controllers/banner_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../services/banner_hub_service.dart';
@@ -52,10 +55,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    Get.put(AppFeatureController());
+    Get.put(ConfigRepository());
+    Get.put(ConfigController());
     Get.put(ListingRepository());
     Get.put(PlotRepository());
     Get.put(UserRepository());
+    Get.put(WalletRepository());
+    Get.put(WalletController());
     Get.put(ListingController());
     Get.put(PlotController());
     Get.put(ReportController());

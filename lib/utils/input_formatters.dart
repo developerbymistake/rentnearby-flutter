@@ -14,3 +14,20 @@ final List<TextInputFormatter> noEmojiInputFormatters = [
     ),
   ),
 ];
+
+/// Redeem codes are uppercase alphanumeric with no spaces or symbols — used
+/// on the Redeem Code screen's single text field. Denies anything but
+/// letters/digits, then force-uppercases (Flutter has no built-in
+/// case-transforming formatter, so this is hand-rolled like the digit-only
+/// formatters used on phone/OTP fields).
+final List<TextInputFormatter> redeemCodeInputFormatters = [
+  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+  _UppercaseTextFormatter(),
+];
+
+class _UppercaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    return TextEditingValue(text: newValue.text.toUpperCase(), selection: newValue.selection);
+  }
+}
