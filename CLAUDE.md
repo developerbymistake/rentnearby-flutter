@@ -163,7 +163,9 @@ so callers can branch on `GoLiveInsufficientBalance` specifically to open the sh
   `WalletController.loadBalance()` (or let `goLive`/`goLivePlot`/`verifyPayment`/`redeemCode` do it for
   you — they already do) after anything that credits or debits coins so the balance stays live everywhere;
   nothing else should cache balance separately. `CoinBalanceChip` (`lib/widgets/coin_balance_chip.dart`) is
-  the reusable balance pill dropped into Profile, My Rooms, and My Plots.
+  the reusable balance pill dropped into My Rooms and My Plots. Profile has its own bespoke wallet card
+  (`ProfileScreen._buildWalletCard`) instead — balance + Buy Coins button + a "more ways to spend coins are
+  coming soon" note that doesn't fit the shared chip's shape.
 - **Screens**: `CoinPacksScreen` (buy coins + entry points to redeem/history), `RedeemCodeScreen`,
   `WalletLedgerScreen` — reachable via `AppRoutes.coinPacks`/`redeemCode`/`walletLedger`.
 - Both `Get.put(ConfigRepository())`/`Get.put(ConfigController())` and

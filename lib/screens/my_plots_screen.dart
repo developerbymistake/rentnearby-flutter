@@ -16,6 +16,7 @@ import '../services/plot_permission_service.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/coin_balance_chip.dart';
+import '../widgets/go_live_plan_sheet.dart';
 import '../widgets/go_live_success_dialog.dart';
 import '../widgets/insufficient_balance_sheet.dart';
 import '../widgets/pulse_once.dart';
@@ -64,6 +65,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     // top" is itself the correct condition for a refresh.
     if (state == AppLifecycleState.resumed) {
       _dataReady = _ctrl.loadMyPlots(reset: true).catchError((_) {});
+      Get.find<WalletController>().loadBalance();
     }
   }
 
@@ -73,7 +75,10 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     }
   }
 
-  Future<void> _refresh() => _ctrl.loadMyPlots(reset: true);
+  Future<void> _refresh() => Future.wait([
+        _ctrl.loadMyPlots(reset: true),
+        Get.find<WalletController>().loadBalance(),
+      ]);
 
   void _onAddPlot() async {
     if (_isAddingPlot) return;
@@ -122,7 +127,14 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
       while (true) {
         final plans = await _ctrl.getPlotPlans();
         if (!mounted) return;
-        final selection = await _showPlanSelectionDialog(plans: plans);
+        final selection = await GoLivePlanSheet.show(
+          context,
+          plans: plans,
+          unitLimitKey: 'plotLimit',
+          unitSingular: 'plot',
+          unitPlural: 'plots',
+          accentColor: _kBrown,
+        );
         if (selection == null) return; // "Maybe Later" / dismissed
 
         if (selection is PlanSelectionAddCoins) {
@@ -387,47 +399,55 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         child: SafeArea(
           bottom: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 20, 24),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(
-                  onPressed: () => Get.back(),
-                  icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-                ),
-                const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('My Plots',
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                  Text('Manage your listings',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
-                ]),
-                const Spacer(),
-                const CoinBalanceChip(color: Colors.white),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _isAddingPlot ? null : _onAddPlot,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2))],
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Get.back(),
+                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
                     ),
-                    child: _isAddingPlot
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: _kBrown),
-                          )
-                        : const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.add_rounded, size: 16, color: _kBrown),
-                              SizedBox(width: 4),
-                              Text('Add Plot',
-                                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _kBrown)),
-                            ],
-                          ),
+                    const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('My Plots',
+                          style: TextStyle(
+                              fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
+                      Text('Manage your listings',
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
+                    ]),
+                    const Spacer(),
+                    const CoinBalanceChip(color: Colors.white),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: _isAddingPlot ? null : _onAddPlot,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2))],
+                      ),
+                      child: _isAddingPlot
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: _kBrown),
+                            )
+                          : const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.add_rounded, size: 16, color: _kBrown),
+                                SizedBox(width: 4),
+                                Text('Add Plot',
+                                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _kBrown)),
+                              ],
+                            ),
+                    ),
                   ),
                 ),
               ],
@@ -466,248 +486,6 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
           ),
         ),
       );
-
-  Widget _coinPrice(int amount, {required Color color, double size = 16}) {
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.monetization_on_rounded, size: size, color: color),
-      const SizedBox(width: 4),
-      Text('$amount', style: TextStyle(fontFamily: 'Poppins', fontSize: size, fontWeight: FontWeight.w700, color: color)),
-    ]);
-  }
-
-  Future<PlanSelectionResult?> _showPlanSelectionDialog({
-    required List<Map<String, dynamic>> plans,
-  }) async {
-    const golden = Color(0xFFD4A017);
-    final screenH = MediaQuery.of(context).size.height;
-
-    final visiblePlans = [...plans]..sort((a, b) => (a['originalPrice'] as num? ?? 0).compareTo(b['originalPrice'] as num? ?? 0));
-
-    if (visiblePlans.isEmpty) {
-      AppToast.error('No plans available right now. Please try again later.');
-      return null;
-    }
-
-    // Affordability is computed client-side against the live wallet balance
-    // (read once — a fresh dialog is opened whenever the balance can have
-    // changed, e.g. after a coin top-up) so each row can render its own
-    // Select-vs-Add-Coins state instead of only discovering a shortfall
-    // reactively from a 409 INSUFFICIENT_BALANCE after the network call.
-    final walletBalance = Get.find<WalletController>().balance.value;
-    String? selectedType = visiblePlans
-        .firstWhere(
-          (p) => walletBalance >= ((p['originalPrice'] as num?)?.toInt() ?? 0),
-          orElse: () => const {},
-        )['planType'] as String?;
-
-    return showDialog<PlanSelectionResult>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) {
-          final selectedPlan = selectedType == null
-              ? null
-              : visiblePlans.firstWhere(
-                  (p) => p['planType'] == selectedType,
-                  orElse: () => visiblePlans.first,
-                );
-          final selOrigPrice = (selectedPlan?['originalPrice'] as num?)?.toInt() ?? 0;
-
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.topCenter,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(top: 36),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: screenH * 0.78),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 52, 20, 4),
-                          child: Column(children: [
-                            const Text('Make Plot Live', style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                            const SizedBox(height: 4),
-                            const Text('Choose a plan to activate your plot', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium), textAlign: TextAlign.center),
-                          ]),
-                        ),
-                        Flexible(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                            child: Column(
-                              children: visiblePlans.map((p) {
-                                final normalPrice = (p['price'] as num?)?.toInt() ?? 0;
-                                final origPrice = (p['originalPrice'] as num?)?.toInt() ?? 0;
-                                final disc = (p['discountPercent'] as num?)?.toInt() ?? 0;
-                                final hasDiscount = disc > 0 && normalPrice > 0;
-                                final days = (p['days'] as num?)?.toInt() ?? 30;
-                                final plots = (p['plotLimit'] as num?)?.toInt() ?? 1;
-                                final raw = (p['planType'] as String? ?? '');
-                                final label = raw.isEmpty ? raw : raw[0].toUpperCase() + raw.substring(1).toLowerCase();
-                                final afford = walletBalance >= origPrice;
-                                final isSelected = afford && selectedType == raw;
-                                final shortfall = afford ? 0 : origPrice - walletBalance;
-
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: Opacity(
-                                    opacity: afford ? 1 : 0.55,
-                                    child: GestureDetector(
-                                      onTap: afford ? () => setS(() => selectedType = raw) : null,
-                                      child: AnimatedContainer(
-                                        duration: const Duration(milliseconds: 200),
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                        decoration: BoxDecoration(
-                                          color: isSelected ? golden.withValues(alpha: 0.04) : Colors.white,
-                                          borderRadius: BorderRadius.circular(14),
-                                          border: Border.all(color: isSelected ? golden : AppColors.divider, width: isSelected ? 2 : 1.5),
-                                        ),
-                                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                          Container(
-                                            width: 22, height: 22,
-                                            margin: const EdgeInsets.only(top: 1),
-                                            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isSelected ? golden : AppColors.textLight, width: 2)),
-                                            child: isSelected ? Center(child: Container(width: 10, height: 10, decoration: const BoxDecoration(shape: BoxShape.circle, color: golden))) : null,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                            Row(children: [
-                                              Text('$label Plan', style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                                              if (hasDiscount) ...[
-                                                const SizedBox(width: 6),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                  decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(4)),
-                                                  child: Text('$disc% Savings', style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
-                                                ),
-                                              ],
-                                            ]),
-                                            Text('Valid for $days days • $plots plot${plots > 1 ? 's' : ''}', style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                                            if (!afford) ...[
-                                              const SizedBox(height: 4),
-                                              Text('Need $shortfall more coin${shortfall == 1 ? '' : 's'}',
-                                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.error)),
-                                            ],
-                                          ])),
-                                          const SizedBox(width: 8),
-                                          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                                            if (hasDiscount)
-                                              _coinPrice(normalPrice, color: AppColors.textLight, size: 12),
-                                            _coinPrice(origPrice, color: origPrice == 0 ? AppColors.success : _kBrown),
-                                            if (!afford) ...[
-                                              const SizedBox(height: 6),
-                                              GestureDetector(
-                                                onTap: () => Navigator.pop(ctx, PlanSelectionAddCoins()),
-                                                child: Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                                  decoration: BoxDecoration(color: AppColors.warning, borderRadius: BorderRadius.circular(8)),
-                                                  child: const Text('Add Coins',
-                                                      style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
-                                                ),
-                                              ),
-                                            ],
-                                          ]),
-                                        ]),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                          child: Column(children: [
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: selectedPlan == null
-                                    ? null
-                                    : () async {
-                                        if (selOrigPrice == 0) {
-                                          Navigator.pop(ctx, PlanSelected(selectedPlan));
-                                          return;
-                                        }
-                                        // Distinct "Confirm Spend" moment — the network
-                                        // call (and the coin debit) must not fire until
-                                        // the owner explicitly confirms the exact spend.
-                                        final days = (selectedPlan['days'] as num?)?.toInt() ?? 30;
-                                        final confirmed = await showDialog<bool>(
-                                          context: ctx,
-                                          builder: (c) => AlertDialog(
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                            title: const Text('Confirm Spend',
-                                                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                                            content: Text(
-                                              'Spend $selOrigPrice coins to go live for $days days?',
-                                              style: const TextStyle(fontFamily: 'Poppins', color: AppColors.textMedium, height: 1.4),
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(c, false),
-                                                child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-                                              ),
-                                              ElevatedButton(
-                                                onPressed: () => Navigator.pop(c, true),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: _kBrown,
-                                                  foregroundColor: Colors.white,
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                                ),
-                                                child: const Text('Confirm', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                        if (confirmed == true && ctx.mounted) Navigator.pop(ctx, PlanSelected(selectedPlan));
-                                      },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _kBrown, foregroundColor: Colors.white,
-                                  disabledBackgroundColor: _kBrown.withValues(alpha: 0.35),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                  elevation: 0,
-                                ),
-                                child: Text(
-                                  selectedPlan == null ? 'Select an affordable plan' : (selOrigPrice == 0 ? 'Activate FREE' : 'Continue'),
-                                  style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 15),
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Maybe Later', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight, fontSize: 13)),
-                            ),
-                          ]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 0,
-                  child: Container(
-                    width: 72, height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 12, offset: const Offset(0, 4))],
-                    ),
-                    child: ClipOval(child: Image.asset('assets/images/icon_logo.png', width: 72, height: 72, fit: BoxFit.cover)),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
 }
 
 class _PlotCard extends StatelessWidget {

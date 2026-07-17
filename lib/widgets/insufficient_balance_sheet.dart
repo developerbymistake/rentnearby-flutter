@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
+import 'coin_icon.dart';
 
 /// The one shared bottom sheet used identically by Room and Plot Go-Live
 /// whenever a spend attempt returns INSUFFICIENT_BALANCE — parameterized by
@@ -48,7 +49,7 @@ class InsufficientBalanceSheet extends StatelessWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(color: const Color(0xFFFFF7ED), borderRadius: BorderRadius.circular(16)),
-            child: const Icon(Icons.monetization_on_rounded, size: 30, color: Color(0xFFF59E0B)),
+            child: const CoinIcon(size: 30),
           ),
           const SizedBox(height: 16),
           const Text(

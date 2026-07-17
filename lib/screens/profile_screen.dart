@@ -10,6 +10,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/wallet_controller.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
+import '../widgets/coin_icon.dart';
 import '../widgets/gradient_button.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
@@ -338,44 +339,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildWalletCard() {
     final wallet = Get.find<WalletController>();
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14)),
+                child: const CoinIcon(size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('My Wallet', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                    const SizedBox(height: 3),
+                    Obx(() => Text('${wallet.balance.value} coins',
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark))),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => Get.toNamed(AppRoutes.coinPacks),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.add_rounded, size: 15, color: Colors.white),
+                    SizedBox(width: 3),
+                    Text('Buy Coins', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ]),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14)),
-            child: const Icon(Icons.monetization_on_rounded, color: AppColors.primary, size: 24),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('My Wallet', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                const SizedBox(height: 3),
-                Obx(() => Text('${wallet.balance.value} coins',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark))),
-              ],
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
             ),
-          ),
-          GestureDetector(
-            onTap: () => Get.toNamed(AppRoutes.coinPacks),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.add_rounded, size: 15, color: Colors.white),
-                SizedBox(width: 3),
-                Text('Buy Coins', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
-              ]),
-            ),
+            child: Row(children: [
+              Icon(Icons.info_outline_rounded, size: 14, color: AppColors.primaryLight),
+              const SizedBox(width: 7),
+              const Expanded(
+                child: Text(
+                  'More ways to spend coins are coming soon.',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textMedium),
+                ),
+              ),
+            ]),
           ),
         ],
       ),

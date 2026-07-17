@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import 'coin_icon.dart';
 
 /// Shown after a successful POST /{listings|plots}/{id}/go-live — the coin-
 /// economy replacement for the old razorpay PaymentSuccessDialog. Covers
@@ -113,7 +114,7 @@ class _GoLiveSuccessDialogState extends State<GoLiveSuccessDialog> with TickerPr
             const SizedBox(height: 18),
             Row(children: [
               _statBox(
-                icon: Icons.monetization_on_rounded,
+                icon: const CoinIcon(size: 16),
                 label: 'Coins Spent',
                 value: isFree ? 'FREE' : '${widget.coinsSpent}',
                 color: color,
@@ -121,7 +122,7 @@ class _GoLiveSuccessDialogState extends State<GoLiveSuccessDialog> with TickerPr
               ),
               const SizedBox(width: 10),
               _statBox(
-                icon: Icons.event_available_rounded,
+                icon: Icon(Icons.event_available_rounded, size: 16, color: color),
                 label: 'Valid For',
                 value: _daysLeft != null ? '$_daysLeft days' : '—',
                 color: color,
@@ -168,7 +169,7 @@ class _GoLiveSuccessDialogState extends State<GoLiveSuccessDialog> with TickerPr
   }
 
   Widget _statBox({
-    required IconData icon,
+    required Widget icon,
     required String label,
     required String value,
     required Color color,
@@ -181,7 +182,7 @@ class _GoLiveSuccessDialogState extends State<GoLiveSuccessDialog> with TickerPr
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 16, color: color),
+            icon,
             const SizedBox(height: 5),
             Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textLight, fontFamily: 'Poppins', fontWeight: FontWeight.w500)),
             const SizedBox(height: 2),

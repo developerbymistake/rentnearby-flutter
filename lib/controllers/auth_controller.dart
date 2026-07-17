@@ -10,7 +10,9 @@ import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../utils/app_toast.dart';
 import 'listing_controller.dart';
+import 'plot_controller.dart';
 import 'report_controller.dart';
+import 'wallet_controller.dart';
 import '../services/banner_hub_service.dart';
 
 class AuthController extends GetxController {
@@ -25,6 +27,12 @@ class AuthController extends GetxController {
   final profilePhone = ''.obs;
   final profilePhoneVerified = false.obs;
   final profilePhoneChangeLocked = false.obs;
+
+  // Set right after a brand-new account finishes onboarding, consumed exactly once by
+  // WalletController's first loadBalance() on MainScreen mount — that's what turns the
+  // silent server-side welcome-bonus credit into a one-time "100 coins added!" toast,
+  // without a dedicated backend endpoint for it. Never true for a returning login.
+  bool justSignedUp = false;
 
   void _syncProfileFields(UserModel? u) {
     profileName.value = u?.name ?? '';
@@ -87,6 +95,7 @@ class AuthController extends GetxController {
         'name': name,
       });
       await _saveSession(res['data'] as Map<String, dynamic>);
+      justSignedUp = true;
       Get.offAllNamed(AppRoutes.main);
     } catch (e) {
       AppToast.error(_onboardingError(e));
@@ -170,6 +179,8 @@ class AuthController extends GetxController {
     user.value = null;
     _syncProfileFields(null);
     Get.find<ListingController>().clearData();
+    Get.find<PlotController>().clearData();
+    Get.find<WalletController>().clearData();
     Get.find<ReportController>().reportedListingIds.clear();
     Get.offAllNamed(AppRoutes.login);
   }
@@ -190,6 +201,8 @@ class AuthController extends GetxController {
       user.value = null;
       _syncProfileFields(null);
       Get.find<ListingController>().clearData();
+      Get.find<PlotController>().clearData();
+      Get.find<WalletController>().clearData();
       Get.find<ReportController>().reportedListingIds.clear();
       Get.offAllNamed(AppRoutes.login);
     } catch (e) {

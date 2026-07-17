@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import 'coin_icon.dart';
 
 /// "N coins added to your wallet" — the coin-purchase/redeem-code equivalent
 /// of the old PaymentSuccessDialog, minus the plan-shaped fields (planType/
@@ -80,7 +81,7 @@ class _CoinCreditedDialogState extends State<CoinCreditedDialog> with TickerProv
                 width: 68,
                 height: 68,
                 decoration: const BoxDecoration(color: lightColor, shape: BoxShape.circle),
-                child: const Icon(Icons.monetization_on_rounded, size: 38, color: color),
+                child: const CoinIcon(size: 38),
               ),
             ),
             const SizedBox(height: 14),
@@ -110,7 +111,7 @@ class _CoinCreditedDialogState extends State<CoinCreditedDialog> with TickerProv
                 const Text('New Balance', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
                 const SizedBox(height: 4),
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Icon(Icons.monetization_on_rounded, size: 18, color: color),
+                  const CoinIcon(size: 18),
                   const SizedBox(width: 6),
                   Text(
                     '${widget.newBalance}',

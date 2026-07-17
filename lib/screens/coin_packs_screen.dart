@@ -11,6 +11,7 @@ import '../controllers/wallet_controller.dart';
 import '../models/coin_pack_model.dart';
 import '../utils/app_toast.dart';
 import '../widgets/coin_credited_dialog.dart';
+import '../widgets/coin_icon.dart';
 
 /// "Buy Coins" catalog — the wallet home screen. Shows the live balance up
 /// top, a grid of purchasable coin packs (tap to drive the Razorpay purchase
@@ -28,11 +29,11 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
 
   /// Set when this screen was reached from an insufficient-balance/Add-Coins
   /// prompt mid-Go-Live (`arguments: {'returnToGoLive': true}` — see
-  /// InsufficientBalanceSheet and my_listings_screen.dart/my_plots_screen.dart
-  /// `_showPlanSelectionDialog`). When true, a successful purchase pops this
-  /// screen with `result: true` instead of leaving the owner stranded here,
-  /// so the caller can reopen the plan-selection dialog with the fresh
-  /// balance rather than requiring a manual back-and-retry.
+  /// InsufficientBalanceSheet and the shared GoLivePlanSheet). When true, a
+  /// successful purchase pops this screen with `result: true` instead of
+  /// leaving the owner stranded here, so the caller can reopen the
+  /// plan-selection sheet with the fresh balance rather than requiring a
+  /// manual back-and-retry.
   bool _returnToGoLive = false;
 
   @override
@@ -215,7 +216,7 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(children: [
-                    const Icon(Icons.monetization_on_rounded, size: 22, color: Colors.white),
+                    const CoinIcon(size: 22),
                     const SizedBox(width: 10),
                     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       const Text('Your Balance', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: Colors.white70)),
@@ -250,7 +251,7 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
             width: 90,
             height: 90,
             decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
-            child: const Icon(Icons.monetization_on_rounded, size: 40, color: AppColors.primaryLight),
+            child: const CoinIcon(size: 40),
           ),
           const SizedBox(height: 20),
           const Text('No coin packs available',
@@ -314,7 +315,7 @@ class _PackCard extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.monetization_on_rounded, size: 38, color: featured ? AppColors.primary : AppColors.warning),
+                    const CoinIcon(size: 38),
                     const SizedBox(height: 10),
                     Text('${pack.totalCoins}',
                         style: const TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textDark)),

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/wallet_controller.dart';
+import 'coin_icon.dart';
 
 /// Small reusable pill showing the user's live coin balance — Obx-wrapped
 /// around WalletController.balance so it stays live across the app without
@@ -37,7 +38,7 @@ class CoinBalanceChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.monetization_on_rounded, size: 16, color: c),
+              const CoinIcon(size: 16),
               const SizedBox(width: 6),
               Text(
                 wallet.isLoadingBalance.value && wallet.balance.value == 0

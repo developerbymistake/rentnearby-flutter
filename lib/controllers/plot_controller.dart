@@ -232,6 +232,8 @@ class PlotController extends GetxController {
         message ??= responseData['message'] as String?;
       }
       if (status == 409 && type == 'INSUFFICIENT_BALANCE') {
+        // See ListingController.goLive's identical branch for why this must be awaited.
+        await Get.find<WalletController>().loadBalance();
         return GoLiveInsufficientBalance(message: message ?? 'Insufficient balance.', requiredCoins: requiredCoins);
       }
       if (status == 409 && type == 'CONCURRENT_UPDATE') {

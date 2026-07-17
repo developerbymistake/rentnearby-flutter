@@ -5,6 +5,7 @@ import '../models/coin_transaction_model.dart';
 import '../repositories/wallet_repository.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
+import 'auth_controller.dart';
 
 /// Single source of truth for "what's my balance right now" — nothing else
 /// in the app caches it separately. Also owns the coin-pack catalog, the
@@ -34,9 +35,23 @@ class WalletController extends GetxController {
     isLoadingBalance.value = true;
     try {
       balance.value = await Get.find<WalletRepository>().getBalance();
+      _announceWelcomeBonusIfJustSignedUp();
     } catch (_) {
     } finally {
       isLoadingBalance.value = false;
+    }
+  }
+
+  // The 100-coin welcome bonus is credited silently server-side on signup (best-effort, idempotent
+  // coupon redemption) — this is the one place that turns it into something the owner actually sees,
+  // on the very first balance load after a brand-new account finishes onboarding. Consumed exactly
+  // once via AuthController.justSignedUp; never fires for a returning login.
+  void _announceWelcomeBonusIfJustSignedUp() {
+    final auth = Get.isRegistered<AuthController>() ? Get.find<AuthController>() : null;
+    if (auth == null || !auth.justSignedUp) return;
+    auth.justSignedUp = false;
+    if (balance.value > 0) {
+      AppToast.success('🎉 ${balance.value} coins added — Welcome Bonus!');
     }
   }
 
@@ -78,6 +93,21 @@ class WalletController extends GetxController {
     if (!hasMoreTransactions.value || isLoadingTransactions.value) return;
     _transactionsPage++;
     await loadTransactions(reason: reason);
+  }
+
+  /// Called from AuthController.logout()/deleteAccount(), mirroring
+  /// ListingController.clearData(). This is a long-lived singleton (put once in
+  /// MainScreen.initState, never re-created on a fresh login without an app restart —
+  /// Get.put() on an already-registered controller is a no-op), so without this a second
+  /// user logging in on the same device would see the previous user's balance/ledger until
+  /// they happened to open a screen that reloads it. coinPacks is a global, not per-user,
+  /// catalog — left alone.
+  void clearData() {
+    balance.value = 0;
+    transactions.clear();
+    hasMoreTransactions.value = false;
+    _transactionsPage = 1;
+    Get.find<WalletRepository>().invalidateBalance();
   }
 
   // ---- Purchase / redeem flow — reusable across screens, screen-agnostic ----

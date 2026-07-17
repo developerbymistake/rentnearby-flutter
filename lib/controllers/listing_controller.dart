@@ -233,6 +233,12 @@ class ListingController extends GetxController {
         message ??= responseData['message'] as String?;
       }
       if (status == 409 && type == 'INSUFFICIENT_BALANCE') {
+        // Balance may have changed since this attempt started (spent elsewhere, admin
+        // debit, another device) — refresh before returning so the insufficient-balance
+        // sheet shows the real current shortfall, not the stale pre-attempt value. Must be
+        // awaited (unlike the fire-and-forget refresh on the success branch above) since the
+        // caller reads WalletController.balance.value synchronously right after this returns.
+        await Get.find<WalletController>().loadBalance();
         return GoLiveInsufficientBalance(message: message ?? 'Insufficient balance.', requiredCoins: requiredCoins);
       }
       if (status == 409 && type == 'CONCURRENT_UPDATE') {
