@@ -271,7 +271,13 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     );
   }
 
-  void _confirmDelete(String id) {
+  // Coins are only "at risk" while the paid ValidUntil window hasn't lapsed yet — reactivating
+  // within that window is free, so a paused (isActive: false) listing can still be sitting on
+  // unused paid days that a delete would forfeit. isActive alone would miss that case.
+  bool _hasUnusedPaidWindow(PlotModel plot) =>
+      plot.validUntil != null && plot.validUntil!.isAfter(DateTime.now());
+
+  void _confirmDelete(String id, bool hasUnusedPaidWindow) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -300,8 +306,43 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                       ),
                     ),
                   )
-                : const Text('Are you sure? This will also delete all photos.',
-                    style: TextStyle(fontFamily: 'Poppins')),
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Are you sure? This will also delete all photos.',
+                          style: TextStyle(fontFamily: 'Poppins')),
+                      if (hasUnusedPaidWindow) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+                          ),
+                          child: const Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.info_outline_rounded, size: 16, color: AppColors.error),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'You still have unused paid days on this listing. Deleting it '
+                                  'will not refund the coins you spent — they will be lost.',
+                                  style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 12.5,
+                                      color: AppColors.error,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
             actions: isDeleting ? null : [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
@@ -368,7 +409,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                         plot: plots[i],
                         onToggleActive: () => _ctrl.toggleActive(plots[i].id, plots[i].isActive),
                         onGoLive: () => _onGoLiveTap(plots[i]),
-                        onDelete: () => _confirmDelete(plots[i].id),
+                        onDelete: () => _confirmDelete(plots[i].id, _hasUnusedPaidWindow(plots[i])),
                         isGoLiveLoading: _goLiveLoadingId == plots[i].id,
                         onReportsTap: () => Get.toNamed(AppRoutes.listingReports, arguments: {
                           'listingId': plots[i].id,

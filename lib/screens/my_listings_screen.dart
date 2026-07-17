@@ -202,7 +202,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                         listing: listings[i],
                         onToggleActive: () =>
                             _ctrl.toggleActive(listings[i].id, listings[i].isActive),
-                        onDelete: () => _confirmDelete(listings[i].id),
+                        onDelete: () => _confirmDelete(listings[i].id, _hasUnusedPaidWindow(listings[i])),
                         onGoLive: () => _onGoLiveTap(listings[i]),
                         isGoLiveLoading: _goLiveLoadingId == listings[i].id,
                         onReportsTap: () => Get.toNamed(AppRoutes.listingReports, arguments: {
@@ -472,7 +472,13 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     );
   }
 
-  void _confirmDelete(String id) {
+  // Coins are only "at risk" while the paid ValidUntil window hasn't lapsed yet — reactivating
+  // within that window is free, so a paused (isActive: false) listing can still be sitting on
+  // unused paid days that a delete would forfeit. isActive alone would miss that case.
+  bool _hasUnusedPaidWindow(ListingModel listing) =>
+      listing.validUntil != null && listing.validUntil!.isAfter(DateTime.now());
+
+  void _confirmDelete(String id, bool hasUnusedPaidWindow) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -501,8 +507,43 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                       ),
                     ),
                   )
-                : const Text('Are you sure? This will also delete all photos.',
-                    style: TextStyle(fontFamily: 'Poppins')),
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Are you sure? This will also delete all photos.',
+                          style: TextStyle(fontFamily: 'Poppins')),
+                      if (hasUnusedPaidWindow) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
+                          ),
+                          child: const Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.info_outline_rounded, size: 16, color: AppColors.error),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'You still have unused paid days on this listing. Deleting it '
+                                  'will not refund the coins you spent — they will be lost.',
+                                  style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 12.5,
+                                      color: AppColors.error,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
             actions: isDeleting ? null : [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),

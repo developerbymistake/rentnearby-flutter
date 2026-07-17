@@ -324,6 +324,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       body: Column(
         children: [
           _buildHeader(context),
+          _buildSafetyStrip(),
           Expanded(
             child: SafeArea(
               top: false,
@@ -454,6 +455,35 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       child: child,
     ),
   );
+
+  // Fixed, non-dismissible, unconditional (both owner and renter) — always visible for the
+  // whole life of the screen, not gated on any state or event. Sits outside the scrollable
+  // list so it never scrolls away. This is a UI-only safety nudge; the platform takes no
+  // responsibility for off-app transactions (see terms_of_service_screen.dart) and doesn't
+  // police them — this strip just makes sure that's actually seen, not just legally on record.
+  Widget _buildSafetyStrip() {
+    return Container(
+      width: double.infinity,
+      color: AppColors.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline_rounded, size: 14, color: AppColors.primaryLight),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Bakhli never collects rent or advance. Always meet and visit before paying.',
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                color: AppColors.textMedium,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildHeader(BuildContext context) {
     // SafeArea lives INSIDE the gradient Container (not wrapping it) — same pattern

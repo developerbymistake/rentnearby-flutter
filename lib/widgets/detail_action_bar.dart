@@ -80,6 +80,39 @@ class DetailActionBar extends StatelessWidget {
     );
   }
 
+  // Fixed, unconditional, non-dismissible — same copy and reasoning as the strip in
+  // chat_conversation_screen.dart. Contact isn't chat-only here: Call/WhatsApp let a user
+  // reach the owner directly from this screen without ever opening chat, so the warning has
+  // to live where the actual contact buttons are, not just inside the chat screen.
+  Widget _safetyStrip() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.primaryLight.withValues(alpha: 0.12))),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.info_outline_rounded, size: 13, color: AppColors.primaryLight),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              'Bakhli never collects rent or advance. Always meet and visit before paying.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 10.5,
+                color: AppColors.textMedium,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _reportButton() {
     final reported = onReport == null;
     return OutlinedButton.icon(
@@ -109,7 +142,6 @@ class DetailActionBar extends StatelessWidget {
     final hasPhone = ownerPhone != null;
     final showReport = !isOwner;
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + AppInsets.bottomViewPadding(context)),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -119,66 +151,81 @@ class DetailActionBar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Row 1: Chat + Directions — always paired when onChat is available,
-          // regardless of whether the owner's phone is visible (Chat is the sole
-          // contact method in that case, or sits alongside Call/WhatsApp below —
-          // either way, same layout, same outlined style).
-          if (onChat != null)
-            Row(
+          // Flush top band, outside the buttons' own padding below — reads as a label for
+          // the whole bar rather than an interruption between button rows. Scaffold always
+          // gives bottomNavigationBar its full intrinsic height (no extendBody here), so this
+          // can never get clipped — it just makes the bar a little taller and the scrollable
+          // body above it a little shorter, same as Call/WhatsApp/Report already do
+          // conditionally.
+          _safetyStrip(),
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + AppInsets.bottomViewPadding(context)),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(child: _chatButton()),
-                const SizedBox(width: 10),
-                Expanded(child: _directionsButton()),
-              ],
-            )
-          else
-            SizedBox(width: double.infinity, child: _directionsButton()),
-          if (hasPhone) ...[
-            const SizedBox(height: 10),
-            // Row 3: Call Owner + WhatsApp side by side
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _call,
-                    icon: const Icon(Icons.call_rounded, size: 20),
-                    label: const Text('Call Owner',
-                        style: TextStyle(
-                            fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF59E0B),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(0, 48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                    ),
+                // Row 1: Chat + Directions — always paired when onChat is available,
+                // regardless of whether the owner's phone is visible (Chat is the sole
+                // contact method in that case, or sits alongside Call/WhatsApp below —
+                // either way, same layout, same outlined style).
+                if (onChat != null)
+                  Row(
+                    children: [
+                      Expanded(child: _chatButton()),
+                      const SizedBox(width: 10),
+                      Expanded(child: _directionsButton()),
+                    ],
+                  )
+                else
+                  SizedBox(width: double.infinity, child: _directionsButton()),
+                if (hasPhone) ...[
+                  const SizedBox(height: 10),
+                  // Row 3: Call Owner + WhatsApp side by side
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _call,
+                          icon: const Icon(Icons.call_rounded, size: 20),
+                          label: const Text('Call Owner',
+                              style: TextStyle(
+                                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF59E0B),
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(0, 48),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _whatsapp,
+                          icon: const Icon(Icons.chat_rounded, size: 20),
+                          label: const Text('WhatsApp',
+                              style: TextStyle(
+                                  fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF25D366),
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(0, 48),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 0,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _whatsapp,
-                    icon: const Icon(Icons.chat_rounded, size: 20),
-                    label: const Text('WhatsApp',
-                        style: TextStyle(
-                            fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF25D366),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(0, 48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                    ),
-                  ),
-                ),
+                ],
+                if (showReport) ...[
+                  const SizedBox(height: 10),
+                  // Row 4: Report this listing — full width
+                  SizedBox(width: double.infinity, child: _reportButton()),
+                ],
               ],
             ),
-          ],
-          if (showReport) ...[
-            const SizedBox(height: 10),
-            // Row 4: Report this listing — full width
-            SizedBox(width: double.infinity, child: _reportButton()),
-          ],
+          ),
         ],
       ),
     );
