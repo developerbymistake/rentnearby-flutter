@@ -5,6 +5,7 @@ import '../controllers/wallet_controller.dart';
 import '../models/plan_selection_result.dart';
 import '../utils/app_toast.dart';
 import 'coin_icon.dart';
+import 'pulse_once.dart';
 
 /// The one shared Go-Live plan picker — used identically by Room and Plot
 /// (`my_listings_screen.dart`/`my_plots_screen.dart`), parameterized by the
@@ -287,13 +288,19 @@ class _PlanListView extends StatelessWidget {
                           _coinAmount(origPrice, color: origPrice == 0 ? AppColors.success : accentColor),
                           if (!afford) ...[
                             const SizedBox(height: 6),
-                            GestureDetector(
-                              onTap: onAddCoins,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(color: AppColors.warning, borderRadius: BorderRadius.circular(8)),
-                                child: const Text('Add Coins',
-                                    style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                            // Same zoom-in/zoom-out pulse as the "Make it Live" button
+                            // (listing_card.dart) — plenty of owners were stuck not
+                            // realizing this is the way forward when a plan's greyed out,
+                            // so draw the eye to it the same way.
+                            PulseOnce(
+                              child: GestureDetector(
+                                onTap: onAddCoins,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(color: AppColors.warning, borderRadius: BorderRadius.circular(8)),
+                                  child: const Text('Add Coins',
+                                      style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                                ),
                               ),
                             ),
                           ],

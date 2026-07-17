@@ -25,7 +25,12 @@ class CoinPacksScreen extends StatefulWidget {
 
 class _CoinPacksScreenState extends State<CoinPacksScreen> {
   final _wallet = Get.find<WalletController>();
-  String? _purchasingId;
+  // Disjoint on purpose: _selectedPackId survives a failed/cancelled attempt (so Pay
+  // Now can just be tapped again without re-picking), _isPurchasing is transient and
+  // guards the one network call — collapsing these back into one field would either
+  // wipe the selection on failure or leave stale in-flight state around.
+  String? _selectedPackId;
+  bool _isPurchasing = false;
 
   /// Set when this screen was reached from an insufficient-balance/Add-Coins
   /// prompt mid-Go-Live (`arguments: {'returnToGoLive': true}` — see
@@ -53,12 +58,12 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
   }
 
   Future<void> _purchase(CoinPackModel pack) async {
-    if (_purchasingId != null) return;
-    setState(() => _purchasingId = pack.id);
+    if (_isPurchasing) return;
+    setState(() => _isPurchasing = true);
 
     final order = await _wallet.createOrder(pack.id);
     if (order == null) {
-      if (mounted) setState(() => _purchasingId = null);
+      if (mounted) setState(() => _isPurchasing = false);
       return; // controller already toasted the reason
     }
 
@@ -123,13 +128,14 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
       await completer.future;
     } finally {
       razorpay.clear();
-      if (mounted) setState(() => _purchasingId = null);
+      if (mounted) setState(() => _isPurchasing = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: _buildPayNowBar(),
       body: Column(
         children: [
           _buildHeader(),
@@ -155,9 +161,9 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (_, i) => _PackCard(
                     pack: packs[i],
-                    isLoading: _purchasingId == packs[i].id,
-                    disabled: _purchasingId != null,
-                    onTap: () => _purchase(packs[i]),
+                    isSelected: _selectedPackId == packs[i].id,
+                    disabled: _isPurchasing,
+                    onTap: () => setState(() => _selectedPackId = packs[i].id),
                   ),
                 ),
               );
@@ -243,6 +249,46 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
     );
   }
 
+  // Tapping a pack card only selects it (see _PackCard.onTap in build()) — this bar's
+  // button is the single, sole trigger for _purchase(), which owns the real
+  // guard (_isPurchasing, checked synchronously before any await, same shape as
+  // _goLiveLoadingId in my_listings_screen.dart). Selecting a different pack, or
+  // retapping after a failed/cancelled attempt, is always safe — the guard is what
+  // actually prevents a duplicate order, not this button's enabled state.
+  Widget _buildPayNowBar() {
+    return Obx(() {
+      final selectedPack = _wallet.coinPacks.firstWhereOrNull((p) => p.id == _selectedPackId);
+      final canPay = selectedPack != null && !_isPurchasing;
+      return Container(
+        padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + AppInsets.bottomViewPadding(context)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 16, offset: const Offset(0, -4))],
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: canPay ? () => _purchase(selectedPack) : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.35),
+              minimumSize: const Size(0, 52),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 0,
+            ),
+            child: _isPurchasing
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : Text(
+                    selectedPack == null ? 'Select a pack to continue' : 'Pay Now ₹${selectedPack.priceInr}',
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+          ),
+        ),
+      );
+    });
+  }
+
   Widget _buildEmpty() => Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Container(
@@ -277,11 +323,11 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
 
 class _PackCard extends StatelessWidget {
   final CoinPackModel pack;
-  final bool isLoading;
+  final bool isSelected;
   final bool disabled;
   final VoidCallback onTap;
 
-  const _PackCard({required this.pack, required this.isLoading, required this.disabled, required this.onTap});
+  const _PackCard({required this.pack, required this.isSelected, required this.disabled, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -293,16 +339,22 @@ class _PackCard extends StatelessWidget {
       child: GestureDetector(
         onTap: disabled ? null : onTap,
         child: AnimatedOpacity(
-          opacity: disabled && !isLoading ? 0.5 : 1,
+          opacity: disabled && !isSelected ? 0.5 : 1,
           duration: const Duration(milliseconds: 150),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  // Selection is layered on top of (never replaces) the featured/non-featured
+                  // baseline border color, so featured-only, selected-only, and featured+selected
+                  // all read as distinct states rather than selected looking identical to featured.
+                  color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: featured ? AppColors.primary : AppColors.divider, width: 1.5),
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : (featured ? AppColors.primary : AppColors.divider),
+                    width: isSelected ? 2 : 1.5,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: featured ? AppColors.primary.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.05),
@@ -313,7 +365,27 @@ class _PackCard extends StatelessWidget {
                 ),
                 padding: const EdgeInsets.all(15),
                 child: Row(children: [
-                  const CoinIcon(size: 40),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const CoinIcon(size: 40),
+                      if (isSelected)
+                        Positioned(
+                          bottom: -2,
+                          right: -2,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 1.5),
+                            ),
+                            child: const Icon(Icons.check_rounded, size: 11, color: Colors.white),
+                          ),
+                        ),
+                    ],
+                  ),
                   const SizedBox(width: 13),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -327,14 +399,12 @@ class _PackCard extends StatelessWidget {
                       ),
                     ]),
                   ),
-                  isLoading
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
-                      : Text('₹${pack.priceInr}',
-                          style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary)),
+                  Text('₹${pack.priceInr}',
+                      style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary)),
                 ]),
               ),
               if (featured)
