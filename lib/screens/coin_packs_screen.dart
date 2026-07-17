@@ -146,15 +146,13 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
                   _wallet.loadBalance();
                   await _wallet.loadCoinPacks();
                 },
-                child: GridView.builder(
+                child: ListView.separated(
+                  // Single-column full-width rows (icon left, coins+bonus middle, price right,
+                  // "Best Value" as a corner tag) — matches the approved mockup exactly; a 2-column
+                  // grid of centered cards was never what was designed.
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + AppInsets.bottomViewPadding(context)),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 14,
-                    childAspectRatio: 0.92,
-                  ),
                   itemCount: packs.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (_, i) => _PackCard(
                     pack: packs[i],
                     isLoading: _purchasingId == packs[i].id,
@@ -262,19 +260,17 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
         ]),
       );
 
-  Widget _buildShimmer() => GridView.builder(
+  Widget _buildShimmer() => ListView.separated(
         padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 14,
-          crossAxisSpacing: 14,
-          childAspectRatio: 0.92,
-        ),
-        itemCount: 6,
+        itemCount: 3,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (_, __) => Shimmer.fromColors(
           baseColor: AppColors.shimmerBase,
           highlightColor: AppColors.shimmerHighlight,
-          child: Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
+          child: Container(
+            height: 78,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          ),
         ),
       );
 }
@@ -290,76 +286,69 @@ class _PackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final featured = pack.isFeatured;
-    return GestureDetector(
-      onTap: disabled ? null : onTap,
-      child: AnimatedOpacity(
-        opacity: disabled && !isLoading ? 0.5 : 1,
-        duration: const Duration(milliseconds: 150),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: featured ? AppColors.primary : AppColors.divider, width: featured ? 2 : 1),
-            boxShadow: [
-              BoxShadow(
-                color: featured ? AppColors.primary.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.05),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+    // Mockup's .best-tag sits at top:-9px, pulling above the card's own border — reserve room for
+    // it here rather than clipping, so it isn't cut off by the list's scroll viewport.
+    return Padding(
+      padding: EdgeInsets.only(top: featured ? 9 : 0),
+      child: GestureDetector(
+        onTap: disabled ? null : onTap,
+        child: AnimatedOpacity(
+          opacity: disabled && !isLoading ? 0.5 : 1,
+          duration: const Duration(milliseconds: 150),
           child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const CoinIcon(size: 38),
-                    const SizedBox(height: 10),
-                    Text('${pack.totalCoins}',
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textDark)),
-                    const Text('coins', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                    if (pack.bonusCoins > 0) ...[
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-                        child: Text('+${pack.bonusCoins} bonus',
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.success)),
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    isLoading
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
-                        : Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: featured ? AppColors.primary : AppColors.surface,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text('₹${pack.priceInr}',
-                                style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: featured ? Colors.white : AppColors.primary)),
-                          ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: featured ? AppColors.primary : AppColors.divider, width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: featured ? AppColors.primary.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
+                padding: const EdgeInsets.all(15),
+                child: Row(children: [
+                  const CoinIcon(size: 40),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('${pack.totalCoins} coins',
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 15.5, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                      const SizedBox(height: 1),
+                      Opacity(
+                        opacity: pack.bonusCoins > 0 ? 1 : 0,
+                        child: Text('+${pack.bonusCoins} bonus coins',
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.success)),
+                      ),
+                    ]),
+                  ),
+                  isLoading
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                      : Text('₹${pack.priceInr}',
+                          style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary)),
+                ]),
               ),
               if (featured)
                 Positioned(
-                  top: 0,
-                  right: 0,
+                  top: -9,
+                  right: 14,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.only(topRight: Radius.circular(14), bottomLeft: Radius.circular(14)),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [AppColors.warning, Color(0xFFFBBF24)]),
+                      borderRadius: BorderRadius.circular(999),
                     ),
-                    child: const Text('BEST VALUE',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.3)),
+                    child: const Text('Best Value',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 0.2)),
                   ),
                 ),
             ],

@@ -122,14 +122,14 @@ class WalletController extends GetxController {
       final orderId = data['orderId'] as String?;
       final keyId = data['keyId'] as String?;
       final amountRaw = data['amount'];
-      if (orderId == null || orderId.isEmpty || amountRaw == null) {
+      if (orderId == null || orderId.isEmpty || keyId == null || keyId.isEmpty || amountRaw == null) {
         throw Exception('Missing order details from server');
       }
       return {
         'orderId': orderId,
         'amount': (amountRaw as num).toInt(),
         'currency': data['currency'] as String? ?? 'INR',
-        'keyId': keyId ?? '',
+        'keyId': keyId,
       };
     } catch (e) {
       AppToast.error(_errorMessage(e, 'Could not start purchase. Please try again.'));
