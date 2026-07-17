@@ -14,6 +14,7 @@ import 'plot_controller.dart';
 import 'report_controller.dart';
 import 'wallet_controller.dart';
 import '../services/banner_hub_service.dart';
+import '../services/chat_hub_service.dart';
 
 class AuthController extends GetxController {
   final isLoading = false.obs;
@@ -175,6 +176,9 @@ class AuthController extends GetxController {
     try {
       await Get.find<BannerHubService>().disconnect();
     } catch (_) {}
+    try {
+      await Get.find<ChatHubService>().disconnect();
+    } catch (_) {}
     await StorageService.clearAll();
     user.value = null;
     _syncProfileFields(null);
@@ -196,6 +200,9 @@ class AuthController extends GetxController {
       } catch (_) {}
       try {
         await Get.find<BannerHubService>().disconnect();
+      } catch (_) {}
+      try {
+        await Get.find<ChatHubService>().disconnect();
       } catch (_) {}
       await StorageService.clearAll();
       user.value = null;

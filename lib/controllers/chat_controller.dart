@@ -24,8 +24,13 @@ class ChatController extends GetxController {
   // screen listens to these via its own ever() worker, filtering by
   // conversationId, without needing a direct dependency on the hub service.
   final incomingMessage = Rxn<MessageModel>();
+  final messageUpdated = Rxn<MessageModel>();
   final readEvent = Rxn<Map<String, dynamic>>();
   final conversationStatusChanged = Rxn<Map<String, dynamic>>();
+  // Bumped (to the current instant, always a fresh value so ever() reliably refires) every
+  // time ChatHubService's connection comes back from a drop — a currently-open conversation
+  // screen uses this to fetch anything it missed while offline via getMessages(after: ...).
+  final hubReconnected = Rxn<DateTime>();
 
   Future<void> loadConversations({bool forceRefresh = false}) async {
     if (conversationsLoading.value) return;
@@ -163,6 +168,15 @@ class ChatController extends GetxController {
 
   void applyMessagesRead(Map<String, dynamic> data) => readEvent.value = data;
 
+  // Called by ChatHubService on a live "MessageUpdated" event — an EXISTING message's state
+  // changed (e.g. a schedule proposal marked "superseded" by a counter-offer), not a new
+  // unread item, so this never touches the conversation list's preview/unread count —
+  // only broadcasts for whichever conversation screen (if any) is currently open to swap
+  // the matching message in place.
+  void applyMessageUpdated(Map<String, dynamic> data) => messageUpdated.value = MessageModel.fromJson(data);
+
+  void notifyHubReconnected() => hubReconnected.value = DateTime.now();
+
   // Called by ChatHubService on a live "ConversationStatusChanged" event (block/unblock by
   // either party) — updates the Chats-list row's status immediately (drives the dimmed
   // avatar/block badge in chats_list_screen.dart) and broadcasts for whichever conversation
@@ -185,11 +199,17 @@ class ChatController extends GetxController {
 
   // ── Message history + sending ───────────────────────────────────────────
 
-  Future<({List<MessageModel> items, String? status})> getMessages(String conversationId, {DateTime? before}) async {
+  // Pass exactly one of before/after — before is normal backward history-scrolling, after is
+  // the reconnect catch-up path ("everything since the last message I already have").
+  Future<({List<MessageModel> items, String? status})> getMessages(String conversationId, {DateTime? before, DateTime? after}) async {
+    assert(before == null || after == null, 'Pass either before or after, not both');
     try {
+      final params = <String, dynamic>{};
+      if (before != null) params['before'] = before.toIso8601String();
+      if (after != null) params['after'] = after.toIso8601String();
       final res = await ApiService.get(
         '/chat/conversations/$conversationId/messages',
-        params: before != null ? {'before': before.toIso8601String()} : null,
+        params: params.isEmpty ? null : params,
       );
       final items = (res['data']['items'] as List)
           .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))

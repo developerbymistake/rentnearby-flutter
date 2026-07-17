@@ -7,7 +7,6 @@ import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../models/conversation_model.dart';
-import '../services/chat_hub_service.dart';
 import '../utils/input_formatters.dart';
 
 class ChatsListScreen extends StatefulWidget {
@@ -30,7 +29,6 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    ChatHubService.to.connect();
     _ctrl.loadConversations();
     // Fires near the bottom of whatever's currently loaded — searches over the
     // already-loaded list too, so scrolling to load more naturally widens what a
@@ -60,7 +58,6 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      ChatHubService.to.connect();
       _ctrl.loadConversations();
     }
   }
@@ -71,7 +68,8 @@ class _ChatsListScreenState extends State<ChatsListScreen>
     _chatsTabWorker?.dispose();
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
-    ChatHubService.to.disconnect();
+    // No ChatHubService.disconnect() here anymore — MainScreen owns this connection's
+    // lifecycle for the whole session now (see main_screen.dart), not this screen.
     super.dispose();
   }
 

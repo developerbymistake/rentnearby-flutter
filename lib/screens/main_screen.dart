@@ -72,6 +72,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     Get.put(BannerHubService());
     _chatCtrl = Get.put(ChatController());
     Get.put(ChatHubService());
+    // Persistent for the whole session (like BannerHubService below) — not scoped to any one
+    // conversation screen. This is what makes ChatHub's own "always joins user_{id}" comment
+    // actually true: without this, nothing joins that group until a chat screen has been
+    // opened at least once, so the unread badge/new-message live updates were aspirational.
+    ChatHubService.to.connect();
     _chatCtrl.loadConversations();
     WidgetsBinding.instance.addObserver(this);
     _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
@@ -132,6 +137,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       if (district != null) {
         BannerHubService.to.connectForDistrict(district.id.toString());
       }
+      ChatHubService.to.connect();
     }
   }
 

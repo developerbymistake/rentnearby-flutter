@@ -386,6 +386,20 @@ class NotificationService extends GetxService {
     // or a plain manual tap from chats_list_screen.dart's own conversation list), so it's the
     // one place that reliably fires every time the conversation is actually opened.
 
+    // Already looking at this exact conversation — nothing to do (mirrors the identical
+    // check the foreground-message listener does above for the in-app notification banner).
+    if (Get.currentRoute == AppRoutes.chatConversation &&
+        (Get.arguments as Map?)?['conversationId'] == conv.id) {
+      return;
+    }
+    // A DIFFERENT conversation screen is already open — GetX's default preventDuplicates
+    // compares by route name only (every conversation uses the same route name), so pushing
+    // on top of it would otherwise be silently dropped. Replace it instead of stacking an
+    // unbounded number of chat screens from repeated notification taps.
+    if (Get.currentRoute == AppRoutes.chatConversation) {
+      Get.back();
+    }
+
     Get.toNamed(AppRoutes.chatConversation, arguments: {
       'conversationId': conv.id,
       'listingType': conv.listingType,

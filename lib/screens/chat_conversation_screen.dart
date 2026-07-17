@@ -44,6 +44,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   Worker? _incomingWorker;
   Worker? _readWorker;
   Worker? _statusWorker;
+  Worker? _messageUpdatedWorker;
+  Worker? _reconnectWorker;
 
   @override
   void initState() {
@@ -62,7 +64,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
 
     WidgetsBinding.instance.addObserver(this);
     _loadHistory();
-    ChatHubService.to.connect(conversationId: _conversationId);
+    ChatHubService.to.joinConversation(_conversationId);
     _chatCtrl.markRead(_conversationId);
     _chatCtrl.loadQuestionTemplates();
     // Runs regardless of how this screen was reached (notification tap or a plain manual
@@ -106,12 +108,35 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       if (data['conversationId'] != _conversationId) return;
       _status.value = data['status'] as String;
     });
+
+    // Live "MessageUpdated" — an EXISTING message's state changed (e.g. a schedule proposal
+    // marked "superseded" by a counter-offer) rather than a new one arriving. Without this,
+    // the superseded card stayed looking pending/actionable until the screen was reopened.
+    _messageUpdatedWorker = ever<MessageModel?>(_chatCtrl.messageUpdated, (m) {
+      if (m == null || m.conversationId != _conversationId || !mounted) return;
+      final idx = _messages.indexWhere((x) => x.id == m.id);
+      if (idx != -1) _messages[idx] = m;
+    });
+
+    // SignalR's automatic-reconnect gets a brand-new connection id, so anything sent by the
+    // other party during the drop was missed entirely by this screen (not just delayed) —
+    // catch up on exactly what was missed instead of waiting for a manual reopen.
+    _reconnectWorker = ever<DateTime?>(_chatCtrl.hubReconnected, (_) => _catchUpAfterReconnect());
+  }
+
+  Future<void> _catchUpAfterReconnect() async {
+    if (!mounted || _messages.isEmpty) return;
+    final result = await _chatCtrl.getMessages(_conversationId, after: _messages.last.createdAt);
+    if (!mounted) return;
+    for (final m in result.items.reversed) {
+      _insertIfNew(m);
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      ChatHubService.to.connect(conversationId: _conversationId);
+      ChatHubService.to.joinConversation(_conversationId);
     }
   }
 
@@ -121,8 +146,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     _incomingWorker?.dispose();
     _readWorker?.dispose();
     _statusWorker?.dispose();
+    _messageUpdatedWorker?.dispose();
+    _reconnectWorker?.dispose();
     _scrollCtrl.dispose();
-    ChatHubService.to.disconnect();
+    ChatHubService.to.leaveConversation(_conversationId);
     super.dispose();
   }
 
@@ -137,7 +164,15 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     // Backend returns newest-first (OrderByDescending(CreatedAt)) — the thread now
     // renders as a normal (non-reversed) top-to-bottom list, oldest at top, so this
     // needs reversing to chronological order before display.
-    _messages.value = result.items.reversed.toList();
+    //
+    // Merged, not overwritten: a real-time message can arrive via _incomingWorker in the
+    // gap between this call starting and resolving (e.g. right after joinConversation on
+    // screen open) — a blind overwrite here would silently drop it if the fetched snapshot
+    // was taken a moment before that push landed server-side.
+    final fetched = result.items.reversed.toList();
+    final fetchedIds = fetched.map((m) => m.id).toSet();
+    final preserved = _messages.where((m) => !fetchedIds.contains(m.id));
+    _messages.value = [...fetched, ...preserved]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     if (result.status != null) _status.value = result.status!;
     if (isFirstLoad) {
       _loading.value = false;
@@ -723,10 +758,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
           ? (answerKey, answerText) =>
                 _answerQuestion(m.id, answerKey, answerText)
           : null,
-      onApproveContact: (isContactRequest && !m.isMine && _isOwner && !contactAlreadyResponded)
+      // No owner/renter restriction — either side can send a contact request and whoever
+      // receives it can respond, same shape as the schedule gating below.
+      onApproveContact: (isContactRequest && !m.isMine && !contactAlreadyResponded)
           ? () => _respondContact(m.id, true)
           : null,
-      onDeclineContact: (isContactRequest && !m.isMine && _isOwner && !contactAlreadyResponded)
+      onDeclineContact: (isContactRequest && !m.isMine && !contactAlreadyResponded)
           ? () => _respondContact(m.id, false)
           : null,
       onAcceptSlot: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded
