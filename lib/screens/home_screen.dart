@@ -10,6 +10,7 @@ import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/location_controller.dart';
+import '../widgets/coin_balance_chip.dart';
 import '../widgets/max_width_content.dart';
 import '../widgets/sliding_chip_toggle.dart';
 
@@ -113,6 +114,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }),
               ),
+              const CoinBalanceChip(color: Colors.white),
+              const SizedBox(width: 8),
               Container(
                 width: 36,
                 height: 36,
