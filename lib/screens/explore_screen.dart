@@ -8,6 +8,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
+import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
@@ -18,6 +19,7 @@ import '../models/listing_model.dart';
 import '../widgets/empty_radius_hint.dart';
 import '../widgets/listing_bottom_sheet.dart';
 import '../widgets/location_pill.dart';
+import '../widgets/nearby_item_row.dart';
 import 'explore_location_search_mixin.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -993,6 +995,13 @@ class _ExploreScreenState extends State<ExploreScreen>
             child: _buildLocationFab(),
           ),
 
+          if (_filteredListings.isNotEmpty)
+            Positioned(
+              bottom: 145,
+              right: 78,
+              child: _buildViewListButton(),
+            ),
+
           const Positioned(
             bottom: 4,
             left: 8,
@@ -1254,6 +1263,132 @@ class _ExploreScreenState extends State<ExploreScreen>
         ),
         child: const Icon(Icons.my_location_rounded,
             color: AppColors.primary, size: 22),
+      ),
+    );
+  }
+
+  // ── "View List" — lets the user browse every pinned room as a list ─────────
+  // instead of tapping pins one at a time. Purely additive: doesn't touch
+  // _showDetail, _buildMarkers, or the native radius-circle layer.
+
+  Widget _buildViewListButton() {
+    final count = _filteredListings.length;
+    return GestureDetector(
+      onTap: _showListSheet,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.primary, width: 1.4),
+          boxShadow: [
+            BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.format_list_bulleted_rounded, color: AppColors.primary, size: 16),
+            const SizedBox(width: 6),
+            const Text('View List',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primary)),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(10)),
+              child: Text('$count',
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Deliberately does NOT pop anything before Get.toNamed inside the sheet's
+  // row onTap — this sheet is opened via showModalBottomSheet(context: ...)
+  // with the default useRootNavigator:false, so it lives on THIS tab's own
+  // local Navigator, while listingDetail pushes onto the global navigator on
+  // top of everything (per this repo's own navigation architecture). Leaving
+  // the sheet unpopped means it's simply covered by the detail page and is
+  // still there, exactly as left, when the user backs out — no manual
+  // "reopen the sheet" state needed. MainScreen's existing _tabLeaveWorker
+  // already pops any stray route (including this sheet) if the user
+  // switches tabs while it's open, so no extra tab-switch handling is
+  // needed here either.
+  void _showListSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (sheetContext, scrollController) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 12, bottom: 12),
+                  decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Obx(() {
+                        final count = _filteredListings.length;
+                        return Text('$count Room${count == 1 ? '' : 's'} Nearby',
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark));
+                      }),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(sheetContext),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
+                          child: const Icon(Icons.close_rounded, size: 16, color: AppColors.textMedium),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Obx(() {
+                    final items = _filteredListings;
+                    return ListView.builder(
+                      controller: scrollController,
+                      padding: EdgeInsets.only(bottom: 16 + AppInsets.bottomViewPadding(context)),
+                      itemCount: items.length,
+                      itemBuilder: (_, i) {
+                        final l = items[i];
+                        return NearbyItemRow(
+                          thumbnailUrl: l.thumbnailUrl,
+                          title: l.roomTypeName ?? 'Room',
+                          subtitle: '${l.furnishedStatus} · ${l.distanceKm.toStringAsFixed(1)} km away',
+                          trailingText: l.shortPrice,
+                          trailingColor: AppColors.primary,
+                          placeholderIcon: Icons.home_rounded,
+                          onTap: () => Get.toNamed(AppRoutes.listingDetail, arguments: {'id': l.id, 'distanceKm': l.distanceKm}),
+                        );
+                      },
+                    );
+                  }),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

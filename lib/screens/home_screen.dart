@@ -573,7 +573,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
                   ),
                   Text(
-                    'Reach renters nearby — free',
+                    'Reach renters nearby',
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 10, color: AppColors.textLight),
                   ),
                 ],

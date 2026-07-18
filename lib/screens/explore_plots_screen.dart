@@ -19,6 +19,7 @@ import '../controllers/plot_controller.dart';
 import '../models/plot_model.dart';
 import '../widgets/empty_radius_hint.dart';
 import '../widgets/location_pill.dart';
+import '../widgets/nearby_item_row.dart';
 import 'explore_location_search_mixin.dart';
 
 class ExplorePlotsScreen extends StatefulWidget {
@@ -951,6 +952,13 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 child: _buildLocationFab(),
               ),
 
+              if (_filteredPlots.isNotEmpty)
+                Positioned(
+                  bottom: 145,
+                  right: 78,
+                  child: _buildViewListButton(),
+                ),
+
               const Positioned(
                 bottom: 4,
                 left: 8,
@@ -1191,6 +1199,125 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           ],
         ),
         child: const Icon(Icons.my_location_rounded, color: Color(0xFF92400E), size: 22),
+      ),
+    );
+  }
+
+  // ── "View List" — lets the user browse every pinned plot as a list ─────────
+  // instead of tapping pins one at a time. Purely additive: doesn't touch
+  // _showDetail, _buildMarkers, or the native radius-circle layer.
+
+  Widget _buildViewListButton() {
+    final count = _filteredPlots.length;
+    return GestureDetector(
+      onTap: _showListSheet,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF92400E), width: 1.4),
+          boxShadow: [
+            BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.format_list_bulleted_rounded, color: Color(0xFF92400E), size: 16),
+            const SizedBox(width: 6),
+            const Text('View List',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF92400E))),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(color: const Color(0xFF92400E), borderRadius: BorderRadius.circular(10)),
+              child: Text('$count',
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Deliberately does NOT pop anything before Get.toNamed inside the sheet's
+  // row onTap — see the identical comment in explore_screen.dart's
+  // _showListSheet for the full reasoning (global-navigator-covers-tab
+  // architecture + MainScreen's existing _tabLeaveWorker).
+  void _showListSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (sheetContext, scrollController) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 12, bottom: 12),
+                  decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Obx(() {
+                        final count = _filteredPlots.length;
+                        return Text('$count Plot${count == 1 ? '' : 's'} Nearby',
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark));
+                      }),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(sheetContext),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
+                          child: const Icon(Icons.close_rounded, size: 16, color: AppColors.textMedium),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Obx(() {
+                    final items = _filteredPlots;
+                    return ListView.builder(
+                      controller: scrollController,
+                      padding: EdgeInsets.only(bottom: 16 + AppInsets.bottomViewPadding(context)),
+                      itemCount: items.length,
+                      itemBuilder: (_, i) {
+                        final p = items[i];
+                        return NearbyItemRow(
+                          thumbnailUrl: p.thumbnailUrl,
+                          title: p.plotType,
+                          subtitle: '${p.distanceKm.toStringAsFixed(1)} km away',
+                          trailingText: p.areaDisplay,
+                          trailingColor: const Color(0xFF92400E),
+                          placeholderIcon: Icons.landscape_rounded,
+                          onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id, 'distanceKm': p.distanceKm}),
+                        );
+                      },
+                    );
+                  }),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
