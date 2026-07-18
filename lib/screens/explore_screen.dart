@@ -989,18 +989,25 @@ class _ExploreScreenState extends State<ExploreScreen>
             child: _buildFilterPanel(),
           ),
 
+          // View List + current-location FAB share one row spanning the exact
+          // same left:20/right:20 bounds as the filter panel below — this is
+          // what keeps the FAB pixel-identical to its old standalone
+          // Positioned(bottom:145, right:20) (spaceBetween still pushes the
+          // last child to the row's right edge even when the first slot is
+          // an empty SizedBox.shrink()), while giving View List real
+          // breathing room instead of a hand-computed right offset.
           Positioned(
             bottom: 145,
+            left: 20,
             right: 20,
-            child: _buildLocationFab(),
-          ),
-
-          if (_filteredListings.isNotEmpty)
-            Positioned(
-              bottom: 145,
-              right: 78,
-              child: _buildViewListButton(),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _filteredListings.isNotEmpty ? _buildViewListButton() : const SizedBox.shrink(),
+                _buildLocationFab(),
+              ],
             ),
+          ),
 
           const Positioned(
             bottom: 4,
@@ -1335,28 +1342,38 @@ class _ExploreScreenState extends State<ExploreScreen>
             child: Column(
               children: [
                 Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(top: 12, bottom: 12),
-                  decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: Column(
                     children: [
-                      Obx(() {
-                        final count = _filteredListings.length;
-                        return Text('$count Room${count == 1 ? '' : 's'} Nearby',
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark));
-                      }),
-                      GestureDetector(
-                        onTap: () => Navigator.pop(sheetContext),
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
-                          child: const Icon(Icons.close_rounded, size: 16, color: AppColors.textMedium),
+                      Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(top: 12, bottom: 12),
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(2)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Obx(() {
+                              final count = _filteredListings.length;
+                              return Text('$count Room${count == 1 ? '' : 's'} Nearby',
+                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white));
+                            }),
+                            GestureDetector(
+                              onTap: () => Navigator.pop(sheetContext),
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), shape: BoxShape.circle),
+                                child: const Icon(Icons.close_rounded, size: 16, color: Colors.white),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

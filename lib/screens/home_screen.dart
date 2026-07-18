@@ -24,6 +24,43 @@ const _kPlotGradient = LinearGradient(
   colors: [Color(0xFF92400E), Color(0xFF78350F)],
 );
 
+// Service-catalog rail zones (Explore Uttarakhand / Expert Consultations
+// only — Rooms/Plots, Quick Actions and the promo banner are untouched by
+// this). Adjacent rails deliberately stay separated by the scaffold's own
+// white/near-white background (the SizedBox gap in _buildServiceSections)
+// rather than touching zone-to-zone.
+class _SectionZone {
+  final Color background;
+  final Color cardBg;
+  final Color imgBg;
+  final Color accent;
+  const _SectionZone({
+    required this.background,
+    required this.cardBg,
+    required this.imgBg,
+    required this.accent,
+  });
+}
+
+const _kExploreZone = _SectionZone(
+  background: Color(0xFFECFDF5),
+  cardBg: Colors.white,
+  imgBg: Color(0xFFD1FAE5),
+  accent: Color(0xFF059669),
+);
+
+const _kExpertZone = _SectionZone(
+  background: Color(0xFFF3E4CE),
+  cardBg: Color(0xFFFFFDF8),
+  imgBg: Color(0xFFEAD9BE),
+  accent: Color(0xFFC2410C),
+);
+
+const _expertConsultationsSectionName = 'Expert Consultations';
+
+_SectionZone _zoneForSection(ServiceSectionModel section) =>
+    section.name == _expertConsultationsSectionName ? _kExpertZone : _kExploreZone;
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -466,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           for (final section in sections) ...[
             _buildServiceSectionRail(section),
-            const SizedBox(height: 18),
+            const SizedBox(height: 28),
           ],
         ],
       );
@@ -474,52 +511,63 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildServiceSectionRail(ServiceSectionModel section) {
-    final items = _serviceCatalog.previewServicesForSection(section.id);
+    final items = _serviceCatalog.sectionPreviews[section.id] ?? const [];
     if (items.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(serviceIconFor(section.iconName), size: 16, color: AppColors.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    section.name,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                  ),
-                ],
-              ),
-              GestureDetector(
-                onTap: () => Get.toNamed(AppRoutes.serviceCategoryList, arguments: {
-                  'mode': 'categories',
-                  'parentId': section.id,
-                  'title': section.name,
-                }),
-                child: const Text(
-                  'View all',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.accent),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 168,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
+    final zone = _zoneForSection(section);
+    return Container(
+      width: double.infinity,
+      color: zone.background,
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (_, i) => _ServiceRailCard(service: items[i]),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(serviceIconFor(section.iconName), size: 16, color: zone.accent),
+                    const SizedBox(width: 6),
+                    Text(
+                      section.name,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                    ),
+                  ],
+                ),
+                GestureDetector(
+                  onTap: () => Get.toNamed(AppRoutes.serviceCategoryList, arguments: {
+                    'mode': 'categories',
+                    'parentId': section.id,
+                    'title': section.name,
+                  }),
+                  child: Text(
+                    'View all',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: zone.accent),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 168,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (_, i) => _ServiceRailCard(
+                service: items[i],
+                cardBg: zone.cardBg,
+                imgBg: zone.imgBg,
+                iconColor: zone.accent,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -713,7 +761,16 @@ class _HomeListingCard extends StatelessWidget {
 /// _HomeListingCard going straight to listing/plot detail.
 class _ServiceRailCard extends StatelessWidget {
   final ServiceListItemModel service;
-  const _ServiceRailCard({required this.service});
+  final Color cardBg;
+  final Color imgBg;
+  final Color iconColor;
+
+  const _ServiceRailCard({
+    required this.service,
+    this.cardBg = Colors.white,
+    this.imgBg = AppColors.surface,
+    this.iconColor = AppColors.primaryLight,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -722,7 +779,7 @@ class _ServiceRailCard extends StatelessWidget {
       child: Container(
         width: 150,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.divider.withValues(alpha: 0.6)),
           boxShadow: [
@@ -744,7 +801,7 @@ class _ServiceRailCard extends StatelessWidget {
                         : CachedNetworkImage(
                             imageUrl: service.coverPhotoUrl,
                             fit: BoxFit.cover,
-                            placeholder: (_, __) => Container(color: AppColors.surface),
+                            placeholder: (_, __) => Container(color: imgBg),
                             errorWidget: (_, __, ___) => _placeholder(),
                           ),
                   ),
@@ -771,7 +828,7 @@ class _ServiceRailCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(serviceIconFor(service.iconName), size: 12, color: AppColors.primaryLight),
+                      Icon(serviceIconFor(service.iconName), size: 12, color: iconColor),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -799,8 +856,8 @@ class _ServiceRailCard extends StatelessWidget {
     );
   }
 
-  static Widget _placeholder() => Container(
-        color: AppColors.surface,
-        child: const Center(child: Icon(Icons.travel_explore_rounded, size: 26, color: AppColors.primaryLight)),
+  Widget _placeholder() => Container(
+        color: imgBg,
+        child: Center(child: Icon(Icons.travel_explore_rounded, size: 26, color: iconColor)),
       );
 }

@@ -77,6 +77,22 @@ class ServiceCatalogRepository {
     return list;
   }
 
+  /// Home-rail preview for one Section — pre-sorted (featured first, then
+  /// SortOrder) and capped server-side (see GetServicesPreview/
+  /// GetPreviewByServiceSectionIdAsync on the backend). Deliberately
+  /// uncached and parameterized (mirrors getPackages' style, not the
+  /// whole-catalog-then-filter style above) since it's inherently a
+  /// server-computed slice, not something worth replicating client-side.
+  Future<List<ServiceListItemModel>> getServicesPreview(String sectionId, {int limit = 6}) async {
+    final res = await ApiService.get('/services/preview', params: {
+      'serviceSectionId': sectionId,
+      'limit': '$limit',
+    });
+    return (res['data'] as List? ?? [])
+        .map((e) => ServiceListItemModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<List<InclusionModel>> getInclusions({bool forceRefresh = false}) async {
     if (!forceRefresh && _inclusionsCache != null && _isValid(_inclusionsCacheTime)) {
       return _inclusionsCache!;

@@ -19,6 +19,12 @@ class ServiceCatalogController extends GetxController {
   final sections = <ServiceSectionModel>[].obs;
   final categories = <ServiceCategoryModel>[].obs;
   final services = <ServiceListItemModel>[].obs;
+  // Home-rail preview per Section — backend-computed (sorted + capped via
+  // GET /services/preview), keyed by ServiceSectionModel.id. Kept separate
+  // from `services` (the full catalog, still used by servicesForCategory
+  // for the category drill-down screen) since this is server logic, not a
+  // client-side slice of the full list.
+  final sectionPreviews = <String, List<ServiceListItemModel>>{}.obs;
   final catalogLoading = false.obs;
   bool _loadedOnce = false;
 
@@ -43,12 +49,21 @@ class ServiceCatalogController extends GetxController {
       categories.value = results[1] as List<ServiceCategoryModel>;
       services.value = results[2] as List<ServiceListItemModel>;
       _loadedOnce = true;
+      await Future.wait(activeSections.map(_loadSectionPreview));
     } catch (_) {
       // Swallow — Home/list screens fall back to empty-state rendering
       // (an empty rail/list) rather than surfacing a toast on first load,
       // matching HomeController's rooms/plots summary loaders.
     } finally {
       catalogLoading.value = false;
+    }
+  }
+
+  Future<void> _loadSectionPreview(ServiceSectionModel section) async {
+    try {
+      sectionPreviews[section.id] = await _repo.getServicesPreview(section.id);
+    } catch (_) {
+      sectionPreviews[section.id] = const [];
     }
   }
 
@@ -69,22 +84,6 @@ class ServiceCatalogController extends GetxController {
   List<ServiceListItemModel> servicesForCategory(String categoryId) {
     final list = services.where((s) => s.isActive && s.serviceCategoryId == categoryId).toList();
     list.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    return list;
-  }
-
-  /// The Home-rail preview list for one Section — every active Service that
-  /// belongs to one of the Section's active Categories, featured ones
-  /// first, then by SortOrder. Used instead of a dedicated
-  /// "services by section" endpoint (none exists — flat routes only filter
-  /// by direct parent), traversing Section -> Categories -> Services
-  /// entirely client-side against the already-loaded catalog.
-  List<ServiceListItemModel> previewServicesForSection(String sectionId) {
-    final categoryIds = categoriesForSection(sectionId).map((c) => c.id).toSet();
-    final list = services.where((s) => s.isActive && categoryIds.contains(s.serviceCategoryId)).toList();
-    list.sort((a, b) {
-      if (a.isFeatured != b.isFeatured) return a.isFeatured ? -1 : 1;
-      return a.sortOrder.compareTo(b.sortOrder);
-    });
     return list;
   }
 
