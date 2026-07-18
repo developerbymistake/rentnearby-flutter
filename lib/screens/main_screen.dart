@@ -12,16 +12,21 @@ import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../controllers/report_controller.dart';
 import '../repositories/config_repository.dart';
+import '../repositories/inquiry_repository.dart';
 import '../repositories/listing_repository.dart';
 import '../repositories/plot_repository.dart';
+import '../repositories/service_catalog_repository.dart';
 import '../repositories/user_repository.dart';
 import '../repositories/wallet_repository.dart';
 import '../controllers/config_controller.dart';
+import '../controllers/inquiry_controller.dart';
+import '../controllers/service_catalog_controller.dart';
 import '../controllers/wallet_controller.dart';
 import '../controllers/banner_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../services/banner_hub_service.dart';
 import '../services/chat_hub_service.dart';
+import '../services/inquiry_hub_service.dart';
 import '../services/notification_service.dart';
 import '../services/wallet_hub_service.dart';
 import '../widgets/district_banner_overlay.dart';
@@ -64,6 +69,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     Get.put(WalletRepository());
     Get.put(WalletController());
     Get.put(WalletHubService());
+    Get.put(ServiceCatalogRepository());
+    Get.put(ServiceCatalogController());
+    Get.put(InquiryRepository());
+    Get.put(InquiryController());
+    Get.put(InquiryHubService());
     Get.put(ListingController());
     Get.put(PlotController());
     Get.put(ReportController());
@@ -84,6 +94,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // a Razorpay webhook fallback credit); locally-initiated spends already update instantly via
     // their own REST response regardless of this connection's state.
     WalletHubService.to.connect();
+    // Same session-wide-connected shape as wallet — unconditional. Delivers live status/agent
+    // pushes for admin-side inquiry changes; the FCM half of the dual push pattern
+    // (InquiryStatusPushWorkerService) covers a backgrounded/killed app independently.
+    InquiryHubService.to.connect();
     _chatCtrl.loadConversations();
     WidgetsBinding.instance.addObserver(this);
     _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
@@ -146,6 +160,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       ChatHubService.to.connect();
       WalletHubService.to.connect();
+      InquiryHubService.to.connect();
     }
   }
 

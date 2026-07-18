@@ -9,7 +9,10 @@ import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
-import '../controllers/location_controller.dart';
+import '../controllers/service_catalog_controller.dart';
+import '../models/service_list_item_model.dart';
+import '../models/service_section_model.dart';
+import '../utils/service_icons.dart';
 import '../widgets/coin_balance_chip.dart';
 import '../widgets/max_width_content.dart';
 import '../widgets/sliding_chip_toggle.dart';
@@ -31,7 +34,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _home = Get.find<HomeController>();
   final _auth = Get.find<AuthController>();
-  final _location = Get.find<LocationController>();
+  final _serviceCatalog = Get.find<ServiceCatalogController>();
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 15),
                 _buildQuickActions(),
                 const SizedBox(height: 15),
-                _buildPopularAreas(),
+                _buildServiceSections(),
                 const SizedBox(height: 20),
                 _buildPromoBanner(),
               ],
@@ -446,64 +449,98 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Popular Areas — the district's cities, already loaded by LocationController ─
+  // ── Service Catalog rails — one per active ServiceSection the API ──────
+  // returns (Explore Uttarakhand, Expert Consultations, and any future
+  // vertical an admin adds) — never hardcoded to two named rails, so a new
+  // Section needs zero app code to show up here.
 
-  Widget _buildPopularAreas() {
+  Widget _buildServiceSections() {
     return Obx(() {
-      final cities = _location.nearbyCities;
-      if (cities.isEmpty) return const SizedBox.shrink();
+      if (_serviceCatalog.catalogLoading.value && _serviceCatalog.sections.isEmpty) {
+        return _buildServiceSectionShimmer();
+      }
+      final sections = _serviceCatalog.activeSections;
+      if (sections.isEmpty) return const SizedBox.shrink();
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Popular Areas',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 74,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: cities.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 14),
-              itemBuilder: (_, i) {
-                final c = cities[i];
-                return SizedBox(
-                  width: 60,
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: const BoxDecoration(gradient: AppColors.cardGradient, shape: BoxShape.circle),
-                        child: const Icon(Iconsax.location, color: Colors.white, size: 20),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        c.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textMedium,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
+          for (final section in sections) ...[
+            _buildServiceSectionRail(section),
+            const SizedBox(height: 18),
+          ],
         ],
       );
     });
+  }
+
+  Widget _buildServiceSectionRail(ServiceSectionModel section) {
+    final items = _serviceCatalog.previewServicesForSection(section.id);
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(serviceIconFor(section.iconName), size: 16, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    section.name,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: () => Get.toNamed(AppRoutes.serviceCategoryList, arguments: {
+                  'mode': 'categories',
+                  'parentId': section.id,
+                  'title': section.name,
+                }),
+                child: const Text(
+                  'View all',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.accent),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 168,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (_, i) => _ServiceRailCard(service: items[i]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildServiceSectionShimmer() {
+    return SizedBox(
+      height: 168,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: 3,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (_, __) => Shimmer.fromColors(
+          baseColor: AppColors.shimmerBase,
+          highlightColor: AppColors.shimmerHighlight,
+          child: Container(
+            width: 150,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          ),
+        ),
+      ),
+    );
   }
 
   // ── Promo banner ─────────────────────────────────────────────────────────
@@ -668,5 +705,102 @@ class _HomeListingCard extends StatelessWidget {
   static Widget _placeholder() => Container(
         color: AppColors.surface,
         child: const Center(child: Icon(Icons.home_rounded, size: 28, color: AppColors.primaryLight)),
+      );
+}
+
+/// Home-rail card for one Service preview — tapping goes straight to
+/// Service Detail (skipping the Category-list step), same shortcut shape as
+/// _HomeListingCard going straight to listing/plot detail.
+class _ServiceRailCard extends StatelessWidget {
+  final ServiceListItemModel service;
+  const _ServiceRailCard({required this.service});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Get.toNamed(AppRoutes.serviceDetail, arguments: {'id': service.id}),
+      child: Container(
+        width: 150,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.divider.withValues(alpha: 0.6)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 6)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Stack(
+                children: [
+                  SizedBox(
+                    height: 90,
+                    width: double.infinity,
+                    child: service.coverPhotoUrl.isEmpty
+                        ? _placeholder()
+                        : CachedNetworkImage(
+                            imageUrl: service.coverPhotoUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Container(color: AppColors.surface),
+                            errorWidget: (_, __, ___) => _placeholder(),
+                          ),
+                  ),
+                  if (service.isFeatured)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.93), borderRadius: BorderRadius.circular(20)),
+                        child: const Text(
+                          'Featured',
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 8.5, fontWeight: FontWeight.w800, color: AppColors.primary),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(serviceIconFor(service.iconName), size: 12, color: AppColors.primaryLight),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          service.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    service.shortDescription,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 9.5, color: AppColors.textLight, fontWeight: FontWeight.w500, height: 1.3),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _placeholder() => Container(
+        color: AppColors.surface,
+        child: const Center(child: Icon(Icons.travel_explore_rounded, size: 26, color: AppColors.primaryLight)),
       );
 }

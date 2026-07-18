@@ -18,6 +18,13 @@ import '../screens/view_all_screen.dart';
 import '../screens/coin_packs_screen.dart';
 import '../screens/redeem_code_screen.dart';
 import '../screens/wallet_ledger_screen.dart';
+import '../screens/service_catalog_list_screen.dart';
+import '../screens/service_detail_screen.dart';
+import '../screens/service_package_list_screen.dart';
+import '../screens/inquiry_form_screen.dart';
+import '../screens/inquiry_confirmation_screen.dart';
+import '../screens/my_inquiries_screen.dart';
+import '../screens/inquiry_detail_screen.dart';
 import '../controllers/view_all_controller.dart' show ViewAllListingType;
 
 class AppRoutes {
@@ -43,6 +50,18 @@ class AppRoutes {
   static const String coinPacks = '/coin-packs';
   static const String redeemCode = '/redeem-code';
   static const String walletLedger = '/wallet-ledger';
+
+  // Local Services Marketplace / Expert Consultations — Consumer catalog +
+  // Inquiry submission flow. All 8 route names from the confirmed design.
+  static const String serviceCategoryList = '/service-category-list';
+  static const String serviceList = '/service-list';
+  static const String serviceDetail = '/service-detail';
+  static const String servicePackageList = '/service-package-list';
+  static const String inquiryForm = '/inquiry-form';
+  static const String inquiryConfirmation = '/inquiry-confirmation';
+  static const String myInquiries = '/my-inquiries';
+  static const String inquiryDetail = '/inquiry-detail';
+
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
     GetPage(
@@ -162,6 +181,54 @@ class AppRoutes {
     GetPage(
       name: myFiledReports,
       page: () => const MyFiledReportsScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: serviceCategoryList,
+      page: () => const ServiceCatalogListScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: serviceList,
+      page: () => const ServiceCatalogListScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: serviceDetail,
+      page: () => const ServiceDetailScreen(),
+      transition: Transition.downToUp,
+      transitionDuration: const Duration(milliseconds: 350),
+    ),
+    GetPage(
+      name: servicePackageList,
+      page: () => const ServicePackageListScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: inquiryForm,
+      page: () => const InquiryFormScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: inquiryConfirmation,
+      page: () => const InquiryConfirmationScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: myInquiries,
+      page: () => const MyInquiriesScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: inquiryDetail,
+      page: () => const InquiryDetailScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

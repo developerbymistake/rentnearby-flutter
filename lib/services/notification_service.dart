@@ -261,6 +261,7 @@ class NotificationService extends GetxService {
     AppRoutes.listingReports,
     AppRoutes.reportDetail,
     AppRoutes.myFiledReports,
+    AppRoutes.inquiryDetail,
   };
 
   void _handleNotificationTap(RemoteMessage message) {
@@ -293,6 +294,11 @@ class NotificationService extends GetxService {
           'listingType': reportListingType ?? 'Room',
           'title': message.data['listing_title'] ?? 'your listing',
         });
+      } else if (notificationType == 'inquiry_status') {
+        // Normal FCM notification block (see InquiryStatusPushWorkerService/FcmService.SendAsync)
+        // — unlike chat, no data-only custom rendering needed here. 'id' matches the argument key
+        // InquiryDetailScreen itself reads (see my_inquiries_screen.dart's own Get.toNamed call).
+        Get.toNamed(AppRoutes.inquiryDetail, arguments: {'id': message.data['inquiry_id']});
       } else if (notificationType == 'broadcast') {
         Get.find<AuthController>().tabIndex.value = AppTabs.rooms;
       } else {
