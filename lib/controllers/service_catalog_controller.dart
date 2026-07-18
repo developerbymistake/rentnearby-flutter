@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import '../models/inclusion_model.dart';
 import '../models/service_category_model.dart';
@@ -27,6 +28,13 @@ class ServiceCatalogController extends GetxController {
   final sectionPreviews = <String, List<ServiceListItemModel>>{}.obs;
   final catalogLoading = false.obs;
   bool _loadedOnce = false;
+  // Bumped on every loadCatalog() call; each fire-and-forget preview fetch
+  // captures the generation it was started under and discards its result if
+  // a newer loadCatalog() call has started by the time it resolves. Without
+  // this, two overlapping loadCatalog() calls (e.g. a user pulling to refresh
+  // twice quickly) could race on sectionPreviews writes with no guarantee the
+  // newer call's data wins.
+  int _catalogGeneration = 0;
 
   ServiceCatalogRepository get _repo => Get.find<ServiceCatalogRepository>();
 
@@ -36,8 +44,17 @@ class ServiceCatalogController extends GetxController {
     loadCatalog();
   }
 
+  // Split into two phases rather than one combined await: Phase A (core
+  // catalog, 3 requests) clears catalogLoading as soon as it resolves instead
+  // of waiting on the preview calls too; Phase B (per-section previews) fires
+  // right after, fire-and-forget, so at most 3 requests are ever in flight at
+  // once instead of 5 — this matters because loadCatalog() runs synchronously
+  // inside MainScreen.initState(), sharing the app's single Dio/host with
+  // whatever else the user does right after launch (e.g. Add Room/Add Plot's
+  // address-fill and photo-upload calls).
   Future<void> loadCatalog({bool forceRefresh = false}) async {
     if (_loadedOnce && !forceRefresh) return;
+    final generation = ++_catalogGeneration;
     catalogLoading.value = true;
     try {
       final results = await Future.wait([
@@ -49,7 +66,6 @@ class ServiceCatalogController extends GetxController {
       categories.value = results[1] as List<ServiceCategoryModel>;
       services.value = results[2] as List<ServiceListItemModel>;
       _loadedOnce = true;
-      await Future.wait(activeSections.map(_loadSectionPreview));
     } catch (_) {
       // Swallow — Home/list screens fall back to empty-state rendering
       // (an empty rail/list) rather than surfacing a toast on first load,
@@ -57,12 +73,20 @@ class ServiceCatalogController extends GetxController {
     } finally {
       catalogLoading.value = false;
     }
+    if (_loadedOnce) {
+      // Not awaited by loadCatalog() itself — sectionPreviews is an RxMap, so
+      // Home's Obx picks up each section's preview as it resolves regardless.
+      unawaited(Future.wait(activeSections.map((s) => _loadSectionPreview(s, generation))));
+    }
   }
 
-  Future<void> _loadSectionPreview(ServiceSectionModel section) async {
+  Future<void> _loadSectionPreview(ServiceSectionModel section, int generation) async {
     try {
-      sectionPreviews[section.id] = await _repo.getServicesPreview(section.id);
+      final result = await _repo.getServicesPreview(section.id);
+      if (generation != _catalogGeneration) return; // superseded by a newer loadCatalog() call
+      sectionPreviews[section.id] = result;
     } catch (_) {
+      if (generation != _catalogGeneration) return;
       sectionPreviews[section.id] = const [];
     }
   }

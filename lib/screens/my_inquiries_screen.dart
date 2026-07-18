@@ -6,6 +6,7 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/inquiry_controller.dart';
 import '../models/inquiry_model.dart';
+import '../services/inquiry_hub_service.dart';
 import '../utils/inquiry_status.dart';
 import '../widgets/max_width_content.dart';
 
@@ -28,13 +29,32 @@ class MyInquiriesScreen extends StatefulWidget {
   State<MyInquiriesScreen> createState() => _MyInquiriesScreenState();
 }
 
-class _MyInquiriesScreenState extends State<MyInquiriesScreen> {
+class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindingObserver {
   final _ctrl = Get.find<InquiryController>();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ctrl.loadMyInquiries();
+    // Connected lazily here rather than app-wide (see main_screen.dart) — a
+    // no-op if already connected from a prior visit this session.
+    InquiryHubService.to.connect();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Mobile OSes can silently suspend a socket while backgrounded without a
+    // clean close event — reconnect on resume while this screen is open,
+    // same as MainScreen already does for Chat/Wallet. connect() no-ops if
+    // the connection is still alive.
+    if (state == AppLifecycleState.resumed) InquiryHubService.to.connect();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   String _formatDate(DateTime dt) {

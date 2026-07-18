@@ -511,8 +511,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildServiceSectionRail(ServiceSectionModel section) {
+    // containsKey, not just an empty list, distinguishes "this section's preview
+    // hasn't come back from the backend yet" (show a shimmer) from "it came back
+    // and there's genuinely nothing to show" (render nothing) — sectionPreviews
+    // is populated per-section after the core catalog load, so there's a real
+    // window right after launch where a Section is known but its preview isn't.
+    final hasPreview = _serviceCatalog.sectionPreviews.containsKey(section.id);
     final items = _serviceCatalog.sectionPreviews[section.id] ?? const [];
-    if (items.isEmpty) return const SizedBox.shrink();
+    if (hasPreview && items.isEmpty) return const SizedBox.shrink();
     final zone = _zoneForSection(section);
     return Container(
       width: double.infinity,
@@ -551,21 +557,24 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            height: 168,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (_, i) => _ServiceRailCard(
-                service: items[i],
-                cardBg: zone.cardBg,
-                imgBg: zone.imgBg,
-                iconColor: zone.accent,
+          if (!hasPreview)
+            _buildServiceSectionShimmer()
+          else
+            SizedBox(
+              height: 168,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (_, i) => _ServiceRailCard(
+                  service: items[i],
+                  cardBg: zone.cardBg,
+                  imgBg: zone.imgBg,
+                  iconColor: zone.accent,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

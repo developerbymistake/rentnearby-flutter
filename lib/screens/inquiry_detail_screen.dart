@@ -10,6 +10,7 @@ import '../controllers/inquiry_controller.dart';
 import '../models/agent_model.dart';
 import '../models/inquiry_detail_model.dart';
 import '../models/inquiry_status_history_model.dart';
+import '../services/inquiry_hub_service.dart';
 import '../utils/inquiry_status.dart';
 import '../widgets/max_width_content.dart';
 
@@ -34,16 +35,37 @@ class InquiryDetailScreen extends StatefulWidget {
   State<InquiryDetailScreen> createState() => _InquiryDetailScreenState();
 }
 
-class _InquiryDetailScreenState extends State<InquiryDetailScreen> {
+class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsBindingObserver {
   final _ctrl = Get.find<InquiryController>();
   late final String _inquiryId;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final args = (Get.arguments as Map?) ?? const {};
     _inquiryId = args['id'] as String? ?? '';
     if (_inquiryId.isNotEmpty) _ctrl.loadInquiryDetail(_inquiryId);
+    // Connected lazily here rather than app-wide (see main_screen.dart) — this
+    // screen can be reached directly from a push notification tap, not only
+    // via My Inquiries, so it needs its own connect() too; a no-op if already
+    // connected.
+    InquiryHubService.to.connect();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Mobile OSes can silently suspend a socket while backgrounded without a
+    // clean close event — reconnect on resume while this screen is open,
+    // same as MainScreen already does for Chat/Wallet. connect() no-ops if
+    // the connection is still alive.
+    if (state == AppLifecycleState.resumed) InquiryHubService.to.connect();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   String _formatDate(DateTime dt) {

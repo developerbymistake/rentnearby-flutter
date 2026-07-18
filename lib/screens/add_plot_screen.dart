@@ -17,6 +17,7 @@ import '../controllers/plot_controller.dart';
 import '../models/city_model.dart';
 import '../models/location_context.dart';
 import '../utils/app_toast.dart';
+import '../utils/concurrency.dart';
 import '../utils/input_formatters.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/gradient_button.dart';
@@ -640,8 +641,9 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       final progresses = List<double>.filled(_photos.length, 0.0);
       final uploadResults = List<bool>.filled(_photos.length, false);
 
-      // Upload all photos in parallel
-      await Future.wait(List.generate(_photos.length, (i) async {
+      // Upload photos with bounded concurrency (at most 2 at once) rather than
+      // all-at-once, to avoid piling up connection/bandwidth contention.
+      await runIndexedWithLimit(_photos.length, (i) async {
         final ok = await _ctrl.uploadPhoto(plotId, _photos[i].path,
           onProgress: (sent, total) {
             if (!mounted) return;
@@ -651,7 +653,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
           });
         uploadResults[i] = ok;
         if (ok && mounted) setState(() => _uploadDone.add(i));
-      }));
+      });
 
       var failedIndices = [for (var i = 0; i < uploadResults.length; i++) if (!uploadResults[i]) i];
 
@@ -687,7 +689,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
         );
         if (retry == true && mounted) {
           final retryResults = List<bool>.filled(failedIndices.length, false);
-          await Future.wait(List.generate(failedIndices.length, (j) async {
+          await runIndexedWithLimit(failedIndices.length, (j) async {
             final i = failedIndices[j];
             final ok = await _ctrl.uploadPhoto(plotId, _photos[i].path,
               onProgress: (sent, total) {
@@ -698,7 +700,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
               });
             retryResults[j] = ok;
             if (ok && mounted) setState(() => _uploadDone.add(i));
-          }));
+          });
           failedIndices = [for (var j = 0; j < failedIndices.length; j++) if (!retryResults[j]) failedIndices[j]];
         }
       }

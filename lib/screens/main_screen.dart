@@ -94,10 +94,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // a Razorpay webhook fallback credit); locally-initiated spends already update instantly via
     // their own REST response regardless of this connection's state.
     WalletHubService.to.connect();
-    // Same session-wide-connected shape as wallet — unconditional. Delivers live status/agent
-    // pushes for admin-side inquiry changes; the FCM half of the dual push pattern
-    // (InquiryStatusPushWorkerService) covers a backgrounded/killed app independently.
-    InquiryHubService.to.connect();
+    // Deliberately NOT connected here, unlike Chat/Wallet above — Inquiry is a niche,
+    // occasionally-visited feature (unlike chat/wallet, nothing outside the Inquiry
+    // screens themselves reads from it), and the FCM half of the dual push pattern
+    // (InquiryStatusPushWorkerService) already covers a backgrounded/killed app. Being
+    // app-wide-connected meant every resume — including returning from the camera while
+    // adding Room/Plot photos — triggered a 3rd concurrent hub reconnect for no benefit
+    // most sessions never need. Connected lazily instead, from my_inquiries_screen.dart /
+    // inquiry_detail_screen.dart's initState() the moment either is actually opened.
     _chatCtrl.loadConversations();
     WidgetsBinding.instance.addObserver(this);
     _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
@@ -160,7 +164,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       ChatHubService.to.connect();
       WalletHubService.to.connect();
-      InquiryHubService.to.connect();
+      // Inquiry is intentionally not reconnected here — see the comment at its
+      // Get.put()/initial-connect site above. It connects lazily instead, and
+      // my_inquiries_screen.dart/inquiry_detail_screen.dart each implement their
+      // own WidgetsBindingObserver + didChangeAppLifecycleState resume-reconnect
+      // while they're the active screen, so this is covered without MainScreen
+      // needing to know about Inquiry at all when neither screen is open.
     }
   }
 
