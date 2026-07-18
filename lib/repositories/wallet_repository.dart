@@ -20,8 +20,11 @@ class WalletRepository {
   bool _isValid(DateTime? time, Duration ttl) =>
       time != null && DateTime.now().difference(time) < ttl;
 
-  Future<int> getBalance() async {
-    if (_balanceCache != null && _isValid(_balanceCacheTime, _shortTtl)) {
+  /// [forceRefresh] skips the cache check entirely — for explicit user-initiated refresh actions
+  /// (pull-to-refresh, hub reconnect resync) where serving a stale cached value would be wrong even
+  /// if it's still within TTL.
+  Future<int> getBalance({bool forceRefresh = false}) async {
+    if (!forceRefresh && _balanceCache != null && _isValid(_balanceCacheTime, _shortTtl)) {
       return _balanceCache!;
     }
     final res = await ApiService.get('/wallet/balance');
@@ -37,6 +40,14 @@ class WalletRepository {
   void invalidateBalance() {
     _balanceCache = null;
     _balanceCacheTime = null;
+  }
+
+  /// Deterministically sets the cache to an already-known-correct value — from a mutation response
+  /// or a WalletHub push — instead of invalidating and forcing a redundant network round-trip.
+  /// Race-free: the caller already has the authoritative post-mutation balance in hand.
+  void primeBalance(int value) {
+    _balanceCache = value;
+    _balanceCacheTime = DateTime.now();
   }
 
   Future<List<CoinPackModel>> getCoinPacks() async {

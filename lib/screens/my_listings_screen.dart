@@ -81,7 +81,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     _page = 1;
     await Future.wait([
       _ctrl.loadMyListings(page: 1),
-      Get.find<WalletController>().loadBalance(),
+      Get.find<WalletController>().loadBalance(forceRefresh: true),
     ]);
   }
 

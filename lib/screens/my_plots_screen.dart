@@ -77,7 +77,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
 
   Future<void> _refresh() => Future.wait([
         _ctrl.loadMyPlots(reset: true),
-        Get.find<WalletController>().loadBalance(),
+        Get.find<WalletController>().loadBalance(forceRefresh: true),
       ]);
 
   void _onAddPlot() async {

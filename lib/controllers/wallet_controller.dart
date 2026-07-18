@@ -31,15 +31,26 @@ class WalletController extends GetxController {
     loadCoinPacks();
   }
 
-  Future<void> loadBalance() async {
+  Future<void> loadBalance({bool forceRefresh = false}) async {
     isLoadingBalance.value = true;
     try {
-      balance.value = await Get.find<WalletRepository>().getBalance();
+      balance.value = await Get.find<WalletRepository>().getBalance(forceRefresh: forceRefresh);
       _announceWelcomeBonusIfJustSignedUp();
     } catch (_) {
     } finally {
       isLoadingBalance.value = false;
     }
+  }
+
+  /// The single funnel for every balance-changing event in the app — both locally-triggered
+  /// (a Go-Live/purchase/redeem response already carries the true post-mutation balance, so no
+  /// extra network round-trip is needed) and remotely-pushed (WalletHubService, for changes this
+  /// device didn't itself initiate — admin credit/debit, a Razorpay webhook fallback credit).
+  /// Deliberately bypasses WalletRepository's TTL cache via primeBalance() instead of invalidate+
+  /// refetch — the caller already has an authoritative value, so there's nothing to refetch.
+  void applyBalanceUpdate(int newBalance, {String? reason}) {
+    balance.value = newBalance;
+    Get.find<WalletRepository>().primeBalance(newBalance);
   }
 
   // The 100-coin welcome bonus is credited silently server-side on signup (best-effort, idempotent

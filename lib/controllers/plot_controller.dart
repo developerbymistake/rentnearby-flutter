@@ -4,6 +4,7 @@ import '../models/city_model.dart';
 import '../models/go_live_result.dart';
 import '../models/plot_model.dart';
 import '../repositories/plot_repository.dart';
+import '../repositories/wallet_repository.dart';
 import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
@@ -212,11 +213,14 @@ class PlotController extends GetxController {
       }
       plotPostedTrigger.value++;
       await loadMyPlots(reset: true);
-      Get.find<WalletController>().loadBalance();
+      // The response already carries the authoritative post-spend balance — apply it directly
+      // instead of triggering a separate (cache-prone, previously-buggy) refresh call.
+      final newBalance = (data['balance'] as num?)?.toInt() ?? 0;
+      Get.find<WalletController>().applyBalanceUpdate(newBalance, reason: 'golive');
       return GoLiveSuccess(
         validUntil: data['validUntil'] != null ? DateTime.tryParse(data['validUntil'] as String) : null,
         planType: data['planType'] as String?,
-        balance: (data['balance'] as num?)?.toInt() ?? 0,
+        balance: newBalance,
       );
     } on DioException catch (e) {
       final status = e.response?.statusCode;
@@ -232,7 +236,9 @@ class PlotController extends GetxController {
         message ??= responseData['message'] as String?;
       }
       if (status == 409 && type == 'INSUFFICIENT_BALANCE') {
-        // See ListingController.goLive's identical branch for why this must be awaited.
+        // See ListingController.goLive's identical branch for why this invalidates first and
+        // must be awaited.
+        Get.find<WalletRepository>().invalidateBalance();
         await Get.find<WalletController>().loadBalance();
         return GoLiveInsufficientBalance(message: message ?? 'Insufficient balance.', requiredCoins: requiredCoins);
       }

@@ -23,6 +23,7 @@ import '../controllers/chat_controller.dart';
 import '../services/banner_hub_service.dart';
 import '../services/chat_hub_service.dart';
 import '../services/notification_service.dart';
+import '../services/wallet_hub_service.dart';
 import '../widgets/district_banner_overlay.dart';
 import '../widgets/gradient_button.dart';
 import '../navigation/tab_router.dart';
@@ -62,6 +63,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     Get.put(UserRepository());
     Get.put(WalletRepository());
     Get.put(WalletController());
+    Get.put(WalletHubService());
     Get.put(ListingController());
     Get.put(PlotController());
     Get.put(ReportController());
@@ -77,6 +79,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // actually true: without this, nothing joins that group until a chat screen has been
     // opened at least once, so the unread badge/new-message live updates were aspirational.
     ChatHubService.to.connect();
+    // Same session-wide-connected shape as chat — unconditional, not district-gated. Delivers
+    // live balance pushes for changes this device didn't itself initiate (admin credit/debit,
+    // a Razorpay webhook fallback credit); locally-initiated spends already update instantly via
+    // their own REST response regardless of this connection's state.
+    WalletHubService.to.connect();
     _chatCtrl.loadConversations();
     WidgetsBinding.instance.addObserver(this);
     _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
@@ -138,6 +145,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         BannerHubService.to.connectForDistrict(district.id.toString());
       }
       ChatHubService.to.connect();
+      WalletHubService.to.connect();
     }
   }
 

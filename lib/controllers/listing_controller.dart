@@ -4,6 +4,7 @@ import '../models/city_model.dart';
 import '../models/go_live_result.dart';
 import '../models/listing_model.dart';
 import '../repositories/listing_repository.dart';
+import '../repositories/wallet_repository.dart';
 import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
@@ -213,11 +214,14 @@ class ListingController extends GetxController {
       }
       listingPostedTrigger.value++;
       await loadMyListings();
-      Get.find<WalletController>().loadBalance();
+      // The response already carries the authoritative post-spend balance — apply it directly
+      // instead of triggering a separate (cache-prone, previously-buggy) refresh call.
+      final newBalance = (data['balance'] as num?)?.toInt() ?? 0;
+      Get.find<WalletController>().applyBalanceUpdate(newBalance, reason: 'golive');
       return GoLiveSuccess(
         validUntil: data['validUntil'] != null ? DateTime.tryParse(data['validUntil'] as String) : null,
         planType: data['planType'] as String?,
-        balance: (data['balance'] as num?)?.toInt() ?? 0,
+        balance: newBalance,
       );
     } on DioException catch (e) {
       final status = e.response?.statusCode;
@@ -234,10 +238,11 @@ class ListingController extends GetxController {
       }
       if (status == 409 && type == 'INSUFFICIENT_BALANCE') {
         // Balance may have changed since this attempt started (spent elsewhere, admin
-        // debit, another device) — refresh before returning so the insufficient-balance
-        // sheet shows the real current shortfall, not the stale pre-attempt value. Must be
-        // awaited (unlike the fire-and-forget refresh on the success branch above) since the
-        // caller reads WalletController.balance.value synchronously right after this returns.
+        // debit, another device) — invalidate the cache and refresh before returning so the
+        // insufficient-balance sheet shows the real current shortfall, not a stale cached value.
+        // Must be awaited (unlike the response-driven update on the success branch above) since
+        // the caller reads WalletController.balance.value synchronously right after this returns.
+        Get.find<WalletRepository>().invalidateBalance();
         await Get.find<WalletController>().loadBalance();
         return GoLiveInsufficientBalance(message: message ?? 'Insufficient balance.', requiredCoins: requiredCoins);
       }

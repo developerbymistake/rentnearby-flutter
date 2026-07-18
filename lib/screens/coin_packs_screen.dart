@@ -149,7 +149,7 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
               return RefreshIndicator(
                 color: AppColors.primary,
                 onRefresh: () async {
-                  _wallet.loadBalance();
+                  _wallet.loadBalance(forceRefresh: true);
                   await _wallet.loadCoinPacks();
                 },
                 child: ListView.separated(
