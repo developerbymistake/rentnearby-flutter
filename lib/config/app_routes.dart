@@ -20,7 +20,6 @@ import '../screens/redeem_code_screen.dart';
 import '../screens/wallet_ledger_screen.dart';
 import '../screens/service_catalog_list_screen.dart';
 import '../screens/service_detail_screen.dart';
-import '../screens/service_package_list_screen.dart';
 import '../screens/inquiry_form_screen.dart';
 import '../screens/inquiry_confirmation_screen.dart';
 import '../screens/my_inquiries_screen.dart';
@@ -52,11 +51,11 @@ class AppRoutes {
   static const String walletLedger = '/wallet-ledger';
 
   // Local Services Marketplace / Expert Consultations — Consumer catalog +
-  // Inquiry submission flow. All 8 route names from the confirmed design.
+  // Inquiry submission flow. Service Detail renders every package/plan
+  // inline (no separate Package List route).
   static const String serviceCategoryList = '/service-category-list';
   static const String serviceList = '/service-list';
   static const String serviceDetail = '/service-detail';
-  static const String servicePackageList = '/service-package-list';
   static const String inquiryForm = '/inquiry-form';
   static const String inquiryConfirmation = '/inquiry-confirmation';
   static const String myInquiries = '/my-inquiries';
@@ -201,12 +200,6 @@ class AppRoutes {
       page: () => const ServiceDetailScreen(),
       transition: Transition.downToUp,
       transitionDuration: const Duration(milliseconds: 350),
-    ),
-    GetPage(
-      name: servicePackageList,
-      page: () => const ServicePackageListScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
       name: inquiryForm,

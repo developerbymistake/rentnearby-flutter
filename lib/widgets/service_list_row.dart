@@ -7,10 +7,16 @@ import '../config/app_colors.dart';
 /// Category-list step (no description; ServiceCategory has no descriptive
 /// field) and the Service-list step (description = Service.shortDescription).
 /// Confirmed NOT a grid.
+///
+/// A fixed minimum height (matching the 74px shimmer skeleton in
+/// ServiceCatalogListScreen) keeps rows the same footprint whether or not a
+/// description is present, so the Category-list and Service-list steps don't
+/// render at visibly different row heights.
 class ServiceListRow extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? description;
+  final bool isFeatured;
   final VoidCallback onTap;
 
   const ServiceListRow({
@@ -19,6 +25,7 @@ class ServiceListRow extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.description,
+    this.isFeatured = false,
   });
 
   @override
@@ -27,6 +34,7 @@ class ServiceListRow extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
+        constraints: const BoxConstraints(minHeight: 74),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -53,16 +61,30 @@ class ServiceListRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ),
+                      if (isFeatured) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(4)),
+                          child: const Text('POPULAR', style: TextStyle(fontFamily: 'Poppins', fontSize: 8.5, fontWeight: FontWeight.w700, color: Colors.white)),
+                        ),
+                      ],
+                    ],
                   ),
                   if (description != null && description!.trim().isNotEmpty) ...[
                     const SizedBox(height: 3),

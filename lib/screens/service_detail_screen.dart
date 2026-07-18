@@ -8,16 +8,22 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/service_catalog_controller.dart';
 import '../models/service_detail_model.dart';
-import '../models/service_package_preview_model.dart';
+import '../models/service_package_model.dart';
 import '../utils/service_icons.dart';
 import '../widgets/max_width_content.dart';
-import '../widgets/service_package_price.dart';
+import '../widgets/service_package_card.dart';
 
 /// Service Detail — the one screen in this feature whose hero cover photo
 /// is deliberately edge-to-edge (NOT wrapped in MaxWidthContent), per the
 /// confirmed responsiveness rule. The back button overlaying it uses
 /// AppInsets.topViewPadding(context), not a SafeArea wrapper, because the
 /// photo itself must still paint behind the status bar.
+///
+/// Every available package/plan for this service is rendered inline here
+/// (no separate "View All Packages" screen) — see [ServicePackageCard].
+/// "Package" vs "Plan" wording switches per Section (Expert Consultations
+/// says "Plan"; every other Section, including any future one, says
+/// "Package" by default).
 class ServiceDetailScreen extends StatefulWidget {
   const ServiceDetailScreen({super.key});
 
@@ -26,32 +32,48 @@ class ServiceDetailScreen extends StatefulWidget {
 }
 
 class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
+  static const _expertConsultationsSectionName = 'Expert Consultations';
+
   final _ctrl = Get.find<ServiceCatalogController>();
   ServiceDetailModel? _service;
+  List<ServicePackageModel> _packages = [];
   bool _loading = true;
   bool _notFound = false;
+
+  bool get _isPlansVertical => (_service?.serviceSectionName ?? '') == _expertConsultationsSectionName;
+  String get _packagesNoun => _isPlansVertical ? 'Plan' : 'Package';
 
   @override
   void initState() {
     super.initState();
     final args = Get.arguments;
     final id = args is Map ? args['id'] as String : args as String;
-    _ctrl.loadServiceDetail(id).then((s) {
+    Future.wait([
+      _ctrl.loadServiceDetail(id),
+      _ctrl.loadPackages(id).catchError((_) => <ServicePackageModel>[]),
+    ]).then((results) {
       if (!mounted) return;
+      final service = results[0] as ServiceDetailModel?;
+      final packages = (results[1] as List<ServicePackageModel>).where((p) => p.isActive).toList()
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
       setState(() {
-        _service = s;
+        _service = service;
+        _packages = packages;
         _loading = false;
-        _notFound = s == null;
+        _notFound = service == null;
       });
     }).catchError((_) {
       if (mounted) setState(() { _loading = false; _notFound = true; });
     });
   }
 
-  void _viewAllPackages() {
+  void _enquire(ServicePackageModel package) {
     final s = _service;
     if (s == null) return;
-    Get.toNamed(AppRoutes.servicePackageList, arguments: {'serviceId': s.id, 'title': s.name});
+    Get.toNamed(
+      AppRoutes.inquiryForm,
+      arguments: {'serviceId': s.id, 'serviceName': s.name, 'package': package},
+    );
   }
 
   @override
@@ -134,19 +156,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   }
 
   Widget _buildContent(ServiceDetailModel s) {
-    // NOTE: unlike the full Package List screen (which filters
-    // ServicePackageModel.isActive), this preview list can't filter on
-    // active state — ServicePackagePreviewDto (the lightweight shape
-    // embedded in ServiceDetailDto) has no IsActive field, and the backend's
-    // GetByIdWithDetailsAsync doesn't filter its Packages include either.
-    // A deactivated package will disappear from the full list but keep
-    // appearing here — a known, backend-side limitation, not fixable from
-    // this screen without either widening the preview DTO or an extra
-    // round-trip that would defeat the point of having a lightweight
-    // preview in the first place. Every seeded package is IsActive=true.
-    final servicePackages = s.packages.toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    final previewPackages = servicePackages.take(3).toList();
-
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(bottom: 24 + AppInsets.bottomViewPadding(context)),
@@ -169,37 +178,27 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     s.fullDescription.isEmpty ? s.shortDescription : s.fullDescription,
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.6),
                   ),
-                  if (previewPackages.isNotEmpty) ...[
+                  if (_packages.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Packages',
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                        Text(
+                          '${_packagesNoun}s',
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
                         ),
                         Text(
-                          '${servicePackages.length} available',
+                          '${_packages.length} $_packagesNoun${_packages.length == 1 ? '' : 's'} available',
                           style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
                     const SizedBox(height: 10),
-                    ...previewPackages.map((p) => _PackagePreviewCard(package: p)),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: _viewAllPackages,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: AppColors.primary, width: 1.4),
-                          padding: const EdgeInsets.symmetric(vertical: 13),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-                        ),
-                        child: const Text('View All Packages', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13.5)),
-                      ),
-                    ),
+                    ..._packages.map((p) => ServicePackageCard(
+                          package: p,
+                          onEnquire: () => _enquire(p),
+                          placeholderIcon: serviceIconFor(s.iconName),
+                        )),
                   ] else ...[
                     const SizedBox(height: 24),
                     Container(
@@ -210,9 +209,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: AppColors.divider),
                       ),
-                      child: const Text(
-                        'No packages listed yet — check back soon.',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textLight),
+                      child: Text(
+                        'No ${_packagesNoun.toLowerCase()}s listed yet — check back soon.',
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textLight),
                       ),
                     ),
                   ],
@@ -276,76 +275,4 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
         color: AppColors.primaryLight.withValues(alpha: 0.15),
         child: Center(child: Icon(serviceIconFor(s.iconName), size: 56, color: AppColors.primaryLight)),
       );
-}
-
-class _PackagePreviewCard extends StatelessWidget {
-  final ServicePackagePreviewModel package;
-  const _PackagePreviewCard({required this.package});
-
-  @override
-  Widget build(BuildContext context) {
-    String? duration;
-    if (package.durationDays != null) {
-      duration = (package.durationNights != null)
-          ? '${package.durationDays}D/${package.durationNights}N'
-          : '${package.durationDays} day${package.durationDays == 1 ? '' : 's'}';
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: SizedBox(
-              width: 56,
-              height: 56,
-              child: package.thumbnailUrl.isEmpty
-                  ? Container(color: AppColors.surface, child: const Icon(Icons.card_travel_rounded, color: AppColors.primaryLight, size: 22))
-                  : CachedNetworkImage(
-                      imageUrl: package.thumbnailUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: AppColors.surface),
-                      errorWidget: (_, __, ___) => Container(color: AppColors.surface, child: const Icon(Icons.card_travel_rounded, color: AppColors.primaryLight, size: 22)),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  package.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                ),
-                if (duration != null) ...[
-                  const SizedBox(height: 2),
-                  Text(duration, style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, color: AppColors.textLight, fontWeight: FontWeight.w500)),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          ServicePackagePrice(
-            price: package.price,
-            originalPrice: package.originalPrice,
-            discountPercent: package.discountPercent,
-            isStartingAtPrice: package.isStartingAtPrice,
-            priceUnit: package.priceUnit,
-            priceFontSize: 14,
-            priceColor: AppColors.primary,
-          ),
-        ],
-      ),
-    );
-  }
 }

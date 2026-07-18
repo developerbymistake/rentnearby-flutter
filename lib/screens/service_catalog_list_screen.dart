@@ -149,6 +149,7 @@ class _ServiceCatalogListScreenState extends State<ServiceCatalogListScreen> {
               icon: serviceIconFor(s.iconName),
               title: s.name,
               description: s.shortDescription,
+              isFeatured: s.isFeatured,
               onTap: () => _openService(s),
             );
           },
