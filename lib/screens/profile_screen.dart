@@ -213,6 +213,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Mobile Number Card
             _buildMobileNumberCard(),
 
+            // My Activity — every screen that shows "things the user has done/can act on"
+            // (inquiries, reports, leads if they're an agent, redeem code), grouped together and
+            // separate from the pure app-meta Support section below.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
+                ),
+                child: Column(children: [
+                  _legalTile(icon: Iconsax.receipt_text, label: 'My Inquiries', onTap: () => Get.toNamed(AppRoutes.myInquiries)),
+                  Divider(height: 1, indent: 56, color: AppColors.divider),
+                  _legalTile(icon: Iconsax.flag, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
+                  Obx(() => _agentCtrl.isAgent.value
+                      ? Column(children: [
+                          Divider(height: 1, indent: 56, color: AppColors.divider),
+                          _leadsTile(),
+                        ])
+                      : const SizedBox.shrink()),
+                  Divider(height: 1, indent: 56, color: AppColors.divider),
+                  _legalTile(icon: Icons.redeem_rounded, label: 'Redeem Code', onTap: () => Get.toNamed(AppRoutes.redeemCode)),
+                ]),
+              ),
+            ),
+
             // Support
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -228,16 +255,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _legalTile(icon: Iconsax.star, label: 'Rate App', onTap: _rateApp),
                   Divider(height: 1, indent: 56, color: AppColors.divider),
                   _legalTile(icon: Iconsax.share, label: 'Share App', onTap: _shareApp),
-                  Divider(height: 1, indent: 56, color: AppColors.divider),
-                  _legalTile(icon: Iconsax.flag, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
-                  Obx(() => _agentCtrl.isAgent.value
-                      ? Column(children: [
-                          Divider(height: 1, indent: 56, color: AppColors.divider),
-                          _leadsTile(),
-                        ])
-                      : const SizedBox.shrink()),
-                  Divider(height: 1, indent: 56, color: AppColors.divider),
-                  _legalTile(icon: Icons.redeem_rounded, label: 'Redeem Code', onTap: () => Get.toNamed(AppRoutes.redeemCode)),
                 ]),
               ),
             ),

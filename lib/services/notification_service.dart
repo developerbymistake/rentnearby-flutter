@@ -19,6 +19,8 @@ import '../services/storage_service.dart';
 
 const String _chatChannelId = 'chat_messages';
 const String _chatChannelName = 'Chat messages';
+const String _generalChannelId = 'general_notifications';
+const String _generalChannelName = 'General notifications';
 const int _maxStackedLines = 8;
 
 @pragma('vm:entry-point')
@@ -176,16 +178,27 @@ class NotificationService extends GetxService {
     // exact conversation.
     _foregroundMessageSub = FirebaseMessaging.onMessage.listen((message) async {
       final conversationId = message.data['conversation_id'] as String?;
-      if (conversationId == null) return;
-      if (Get.currentRoute == AppRoutes.chatConversation &&
-          (Get.arguments as Map?)?['conversationId'] == conversationId) {
+      if (conversationId != null) {
+        if (Get.currentRoute == AppRoutes.chatConversation &&
+            (Get.arguments as Map?)?['conversationId'] == conversationId) {
+          return;
+        }
+        await _showChatNotification(
+          conversationId,
+          message.data['title'] as String? ?? 'New message',
+          message.data['body'] as String? ?? '',
+        );
         return;
       }
-      await _showChatNotification(
-        conversationId,
-        message.data['title'] as String? ?? 'New message',
-        message.data['body'] as String? ?? '',
-      );
+
+      // Every other push (inquiry status, Agent lead-assignment/admin broadcast, report-filed)
+      // is a combined Notification+data payload — the OS auto-renders it while
+      // backgrounded/killed, but NOT while foregrounded, and onMessage is the only delivery
+      // path in that state. Without this branch the user gets zero signal at all.
+      final title = message.notification?.title ?? message.data['title'] as String?;
+      if (title == null) return;
+      final body = message.notification?.body ?? message.data['body'] as String? ?? '';
+      await _showGenericForegroundNotification(title, body, message.data);
     });
 
     await _initLocalNotifications();
@@ -224,14 +237,20 @@ class NotificationService extends GetxService {
       onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationTap,
     );
 
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(const AndroidNotificationChannel(
-          _chatChannelId,
-          _chatChannelName,
-          description: 'Notifications for new chat messages',
-          importance: Importance.high,
-        ));
+    final androidPlugin = _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
+      _chatChannelId,
+      _chatChannelName,
+      description: 'Notifications for new chat messages',
+      importance: Importance.high,
+    ));
+    await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
+      _generalChannelId,
+      _generalChannelName,
+      description: 'Status updates, leads, and other alerts',
+      importance: Importance.high,
+    ));
 
     // Cold start: app was killed and launched by tapping our own local notification — a
     // DIFFERENT signal from FirebaseMessaging.getInitialMessage() above, which only detects
@@ -242,14 +261,59 @@ class NotificationService extends GetxService {
     if (launchDetails?.didNotificationLaunchApp == true &&
         payload != null &&
         StorageService.isLoggedIn) {
-      _navigateToChatConversation(payload);
+      final decoded = _tryDecodeNotificationPayload(payload);
+      if (decoded != null) {
+        _dispatchNotificationRoute(decoded);
+      } else {
+        _navigateToChatConversation(payload);
+      }
+    }
+  }
+
+  // Every push besides chat that arrives while foregrounded needs its own local rendering — see
+  // the onMessage listener above. Deliberately simple (no stacking/avatar) since these are
+  // one-off alerts, not a running conversation like chat.
+  Future<void> _showGenericForegroundNotification(String title, String body, Map<String, dynamic> data) async {
+    await _localNotifications.show(
+      id: jsonEncode(data).hashCode,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _generalChannelId,
+          _generalChannelName,
+          importance: Importance.high,
+          priority: Priority.high,
+          autoCancel: true,
+        ),
+      ),
+      payload: jsonEncode(data),
+    );
+  }
+
+  // Chat's local-notification payload is a bare conversationId string (see _showChatNotification's
+  // `payload: conversationId`), while the new generic notification's payload is JSON-encoded data
+  // — try decoding first and fall back to the raw string as a conversationId on failure, so the
+  // chat path stays byte-for-byte unchanged.
+  Map<String, dynamic>? _tryDecodeNotificationPayload(String payload) {
+    try {
+      final decoded = jsonDecode(payload);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
     }
   }
 
   void _onLocalNotificationTap(NotificationResponse response) {
     if (!StorageService.isLoggedIn) return;
-    final conversationId = response.payload;
-    if (conversationId != null) _navigateToChatConversation(conversationId);
+    final payload = response.payload;
+    if (payload == null) return;
+    final decoded = _tryDecodeNotificationPayload(payload);
+    if (decoded != null) {
+      _dispatchNotificationRoute(decoded);
+    } else {
+      _navigateToChatConversation(payload);
+    }
   }
 
   // Screens pushed ON TOP of main screen — main is underneath in the stack
@@ -280,66 +344,24 @@ class NotificationService extends GetxService {
     // Firebase Console test push always includes a Notification block, and a tester could
     // still add conversation_id as a custom data key for QA — that combined-payload message
     // WOULD flow through onMessageOpenedApp with data populated, hitting this exact branch.
-    final isChatMessage = message.data['conversation_id'] != null;
-    final notificationType = message.data['notification_type'];
-    final reportListingId = message.data['listing_id'];
-    final reportListingType = message.data['listing_type'];
-    // Only report pushes carry listing_id — room/plot membership pushes never did,
-    // so this can't collide with the notificationType 'room'/'plot' branch below.
-    final isReportMessage = reportListingId != null;
+    _dispatchNotificationRoute(message.data);
+  }
+
+  // Shared by both trigger sources: FCM's own tap tracking (_handleNotificationTap, backgrounded/
+  // killed taps on an OS-auto-rendered notification) and our own local-notification tap tracking
+  // (_onLocalNotificationTap / cold-start getNotificationAppLaunchDetails, for a notification we
+  // rendered ourselves — chat, or the new generic foreground one). One routing decision, one place.
+  void _dispatchNotificationRoute(Map<String, dynamic> data) {
     final currentRoute = Get.currentRoute;
-
-    // Broadcast still lands on the resident Explore tab; Room/Plot membership
-    // notifications now push the My Rooms/My Plots route (no longer tabs).
-    void goToDestination() {
-      // Generic redirect for any push produced via the backend's NotificationEvent system (see
-      // NotificationPushWorkerService) — the payload already carries exactly where to navigate
-      // and what Get.arguments to pass, so no per-type branch is needed here or ever again for a
-      // future notification category built on that system. Checked first; falls through to the
-      // legacy per-type branches below only for pushes that predate this system (chat, reports,
-      // inquiry_status, broadcast, room/plot membership).
-      final actionRoute = message.data['action_route'];
-      if (actionRoute != null) {
-        Map<String, dynamic>? actionArguments;
-        final argsJson = message.data['action_args_json'];
-        if (argsJson != null) {
-          try {
-            actionArguments = jsonDecode(argsJson) as Map<String, dynamic>;
-          } catch (_) {}
-        }
-        Get.toNamed(actionRoute, arguments: actionArguments);
-        return;
-      }
-
-      if (isChatMessage) {
-        _navigateToChatConversation(message.data['conversation_id'] as String);
-      } else if (isReportMessage) {
-        Get.toNamed(AppRoutes.listingReports, arguments: {
-          'listingId': reportListingId,
-          'listingType': reportListingType ?? 'Room',
-          'title': message.data['listing_title'] ?? 'your listing',
-        });
-      } else if (notificationType == 'inquiry_status') {
-        // Normal FCM notification block (see InquiryStatusPushWorkerService/FcmService.SendAsync)
-        // — unlike chat, no data-only custom rendering needed here. 'id' matches the argument key
-        // InquiryDetailScreen itself reads (see my_inquiries_screen.dart's own Get.toNamed call).
-        Get.toNamed(AppRoutes.inquiryDetail, arguments: {'id': message.data['inquiry_id']});
-      } else if (notificationType == 'broadcast') {
-        Get.find<AuthController>().tabIndex.value = AppTabs.rooms;
-      } else {
-        Get.toNamed(notificationType == 'plot' ? AppRoutes.myPlots : AppRoutes.myListings);
-      }
-    }
-
     if (currentRoute == AppRoutes.main) {
       // Already on main screen — no rebuild needed for the tab case; the
       // pushed-route case just navigates on top.
-      goToDestination();
+      _routeForNotificationData(data);
     } else if (_routesOnTopOfMain.contains(currentRoute)) {
       // Detail/add screens are on top of main — main screen is alive underneath
       // Pop back to main WITHOUT recreating it (IndexedStack state preserved)
       Get.until((route) => route.settings.name == AppRoutes.main);
-      goToDestination();
+      _routeForNotificationData(data);
     } else {
       // Main screen is NOT in stack: terminated app, login, splash, onboarding
       // Navigate fresh — double postFrameCallback waits for MainScreen.initState()
@@ -347,10 +369,60 @@ class NotificationService extends GetxService {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (Get.isRegistered<AuthController>()) {
-            goToDestination();
+            _routeForNotificationData(data);
           }
         });
       });
+    }
+  }
+
+  // Broadcast still lands on the resident Explore tab; Room/Plot membership
+  // notifications now push the My Rooms/My Plots route (no longer tabs).
+  void _routeForNotificationData(Map<String, dynamic> data) {
+    final isChatMessage = data['conversation_id'] != null;
+    final notificationType = data['notification_type'];
+    final reportListingId = data['listing_id'];
+    final reportListingType = data['listing_type'];
+    // Only report pushes carry listing_id — room/plot membership pushes never did,
+    // so this can't collide with the notificationType 'room'/'plot' branch below.
+    final isReportMessage = reportListingId != null;
+
+    // Generic redirect for any push produced via the backend's NotificationEvent system (see
+    // NotificationPushWorkerService) — the payload already carries exactly where to navigate
+    // and what Get.arguments to pass, so no per-type branch is needed here or ever again for a
+    // future notification category built on that system. Checked first; falls through to the
+    // legacy per-type branches below only for pushes that predate this system (chat, reports,
+    // inquiry_status, broadcast, room/plot membership).
+    final actionRoute = data['action_route'];
+    if (actionRoute != null) {
+      Map<String, dynamic>? actionArguments;
+      final argsJson = data['action_args_json'];
+      if (argsJson != null) {
+        try {
+          actionArguments = jsonDecode(argsJson) as Map<String, dynamic>;
+        } catch (_) {}
+      }
+      Get.toNamed(actionRoute, arguments: actionArguments);
+      return;
+    }
+
+    if (isChatMessage) {
+      _navigateToChatConversation(data['conversation_id'] as String);
+    } else if (isReportMessage) {
+      Get.toNamed(AppRoutes.listingReports, arguments: {
+        'listingId': reportListingId,
+        'listingType': reportListingType ?? 'Room',
+        'title': data['listing_title'] ?? 'your listing',
+      });
+    } else if (notificationType == 'inquiry_status') {
+      // Normal FCM notification block (see InquiryStatusPushWorkerService/FcmService.SendAsync)
+      // — unlike chat, no data-only custom rendering needed here. 'id' matches the argument key
+      // InquiryDetailScreen itself reads (see my_inquiries_screen.dart's own Get.toNamed call).
+      Get.toNamed(AppRoutes.inquiryDetail, arguments: {'id': data['inquiry_id']});
+    } else if (notificationType == 'broadcast') {
+      Get.find<AuthController>().tabIndex.value = AppTabs.rooms;
+    } else {
+      Get.toNamed(notificationType == 'plot' ? AppRoutes.myPlots : AppRoutes.myListings);
     }
   }
 
