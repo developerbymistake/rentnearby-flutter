@@ -360,6 +360,7 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
       'listingTitle': conv.listingTitle,
       'isOwner': conv.isOwner,
       'status': conv.status,
+      'isBlockedByMe': conv.isBlockedByMe,
     });
   }
 

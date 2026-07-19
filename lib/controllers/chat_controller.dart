@@ -115,7 +115,27 @@ class ChatController extends GetxController {
     return questionTemplates;
   }
 
-  Future<ConversationModel?> createOrGetConversation(String listingType, String listingId) async {
+  // Keyed by "listingType:listingId" — a second call for the same listing while one is
+  // already in flight (e.g. a double-tap on "Chat" before the first request resolves) awaits
+  // the same Future instead of firing a duplicate POST and, more importantly, a duplicate
+  // Get.toNamed push from the caller. The backend's own unique-index race handling already
+  // guarantees both requests would resolve to the same conversation anyway — this just stops
+  // the screen from being pushed twice.
+  final _pendingConversationRequests = <String, Future<ConversationModel?>>{};
+
+  Future<ConversationModel?> createOrGetConversation(String listingType, String listingId) {
+    final key = '$listingType:$listingId';
+    final pending = _pendingConversationRequests[key];
+    if (pending != null) return pending;
+
+    final future = _createOrGetConversation(listingType, listingId).whenComplete(() {
+      _pendingConversationRequests.remove(key);
+    });
+    _pendingConversationRequests[key] = future;
+    return future;
+  }
+
+  Future<ConversationModel?> _createOrGetConversation(String listingType, String listingId) async {
     try {
       final res = await ApiService.post('/chat/conversations', {
         'listingType': listingType,
@@ -146,7 +166,7 @@ class ChatController extends GetxController {
         listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
         roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
         otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
-        isOwner: c.isOwner, status: c.status, lastMessageAt: c.lastMessageAt,
+        isOwner: c.isOwner, status: c.status, isBlockedByMe: c.isBlockedByMe, lastMessageAt: c.lastMessageAt,
         lastMessagePreview: c.lastMessagePreview, unreadCount: 0,
       );
       _recomputeUnreadCount();
@@ -177,7 +197,7 @@ class ChatController extends GetxController {
         listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
         roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
         otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
-        isOwner: c.isOwner, status: c.status, lastMessageAt: DateTime.now(),
+        isOwner: c.isOwner, status: c.status, isBlockedByMe: c.isBlockedByMe, lastMessageAt: DateTime.now(),
         lastMessagePreview: c.lastMessagePreview, unreadCount: newUnreadCount,
       );
       conversations.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
@@ -200,7 +220,7 @@ class ChatController extends GetxController {
         listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
         roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
         otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
-        isOwner: c.isOwner, status: c.status, lastMessageAt: message.createdAt,
+        isOwner: c.isOwner, status: c.status, isBlockedByMe: c.isBlockedByMe, lastMessageAt: message.createdAt,
         // Falls back to the previous preview for message types without a plain 'text'
         // payload field (contact/schedule cards) — still correct, just not live-updating
         // for those specific types until the next full list reload.
@@ -229,7 +249,10 @@ class ChatController extends GetxController {
   // either party) — updates the Chats-list row's status immediately (drives the dimmed
   // avatar/block badge in chats_list_screen.dart) and broadcasts for whichever conversation
   // screen (if any) is currently open, same two-surface shape as applyIncomingMessage.
-  void applyConversationStatusChanged(String conversationId, String status) {
+  // isBlockedByMe is pre-computed by ChatHubService (which already compares the push's
+  // blockedByUserId against the logged-in user's own id, the same place isMine is derived
+  // for incoming messages) — only meaningful when status == 'Blocked'.
+  void applyConversationStatusChanged(String conversationId, String status, {bool isBlockedByMe = false}) {
     final index = conversations.indexWhere((c) => c.id == conversationId);
     if (index != -1) {
       final c = conversations[index];
@@ -238,11 +261,11 @@ class ChatController extends GetxController {
         listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
         roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
         otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
-        isOwner: c.isOwner, status: status, lastMessageAt: c.lastMessageAt,
+        isOwner: c.isOwner, status: status, isBlockedByMe: isBlockedByMe, lastMessageAt: c.lastMessageAt,
         lastMessagePreview: c.lastMessagePreview, unreadCount: c.unreadCount,
       );
     }
-    conversationStatusChanged.value = {'conversationId': conversationId, 'status': status};
+    conversationStatusChanged.value = {'conversationId': conversationId, 'status': status, 'isBlockedByMe': isBlockedByMe};
   }
 
   // ── Message history + sending ───────────────────────────────────────────
@@ -306,8 +329,8 @@ class ChatController extends GetxController {
   Future<MessageModel?> respondSchedule(String messageId, String action, {List<DateTime>? proposedAts, DateTime? acceptedAt}) async {
     try {
       final body = <String, dynamic>{'action': action};
-      if (proposedAts != null) body['proposedAts'] = proposedAts.map((d) => d.toIso8601String()).toList();
-      if (acceptedAt != null) body['acceptedAt'] = acceptedAt.toIso8601String();
+      if (proposedAts != null) body['proposedAts'] = proposedAts.map((d) => d.toUtc().toIso8601String()).toList();
+      if (acceptedAt != null) body['acceptedAt'] = acceptedAt.toUtc().toIso8601String();
       final res = await ApiService.post('/chat/messages/$messageId/schedule-response', body);
       return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
     } catch (e) {

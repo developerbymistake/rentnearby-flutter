@@ -34,6 +34,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   late final String? _area;
   late final bool _isOwner;
   final _status = ''.obs;
+  // Only meaningful when _status.value == 'Blocked' — true if the CURRENT user did the
+  // blocking. Never inferred from _isOwner (either party can block the other regardless of
+  // listing ownership) — comes from the backend (UserBlocks source of truth) at load time,
+  // and is kept live via _statusWorker below when a ConversationStatusChanged push arrives.
+  final _isBlockedByMe = false.obs;
 
   final _messages = <MessageModel>[].obs;
   final _loading = true.obs;
@@ -84,6 +89,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     _area = args['area'] as String?;
     _isOwner = args['isOwner'] as bool? ?? false;
     _status.value = args['status'] as String? ?? 'Active';
+    _isBlockedByMe.value = args['isBlockedByMe'] as bool? ?? false;
 
     WidgetsBinding.instance.addObserver(this);
     _scrollCtrl.addListener(_onScroll);
@@ -131,6 +137,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       if (data == null || !mounted) return;
       if (data['conversationId'] != _conversationId) return;
       _status.value = data['status'] as String;
+      _isBlockedByMe.value = data['isBlockedByMe'] as bool? ?? false;
     });
 
     // Live "MessageUpdated" — an EXISTING message's state changed (e.g. a schedule proposal
@@ -415,7 +422,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     final picked = await ChatSchedulePickerSheet.show(context);
     if (picked == null || picked.isEmpty) return;
     await _send('schedule_proposal', {
-      'proposedAts': picked.map((d) => d.toIso8601String()).toList(),
+      'proposedAts': picked.map((d) => d.toUtc().toIso8601String()).toList(),
       'status': 'pending',
     });
   }
@@ -750,9 +757,15 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                   ],
                 ),
               ),
-              if (_isOwner)
-                Obx(() {
-                  final isBlocked = _status.value == 'Blocked';
+              // Either party can block the other (the backend has no owner/renter
+              // restriction on BlockUser) — no _isOwner gate here.
+              Obx(() {
+                  // Keyed off whether THIS user did the blocking, not the generic Blocked
+                  // status — if the other party blocked me, offering me a "Block this user"
+                  // action (an independent, still-meaningful choice) is correct; offering
+                  // "Unblock" would be wrong (and a no-op server-side, since UnblockUser
+                  // only ever undoes a block the caller themselves placed).
+                  final isBlocked = _isBlockedByMe.value;
                   return PopupMenuButton<String>(
                     icon: const Icon(
                       Icons.more_vert_rounded,
@@ -866,7 +879,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         ),
       ),
     );
-    if (confirmed == true && mounted) _status.value = 'Blocked';
+    if (confirmed == true && mounted) {
+      _status.value = 'Blocked';
+      _isBlockedByMe.value = true; // this device is the one that just did the blocking
+    }
   }
 
   Future<void> _confirmUnblockUser() async {
@@ -938,7 +954,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         ),
       ),
     );
-    if (confirmed == true && mounted) _status.value = 'Active';
+    if (confirmed == true && mounted) {
+      _status.value = 'Active';
+      _isBlockedByMe.value = false;
+    }
   }
 
   // Only reachable once the conversation is no longer Active (an Active conversation always
@@ -980,8 +999,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     // `disabled = onTap == null` pattern in _actionBtn/_ScheduleProposalCard already dims)
     // instead of leaving them tappable for a full network round-trip.
     final pending = _pendingActionMessageIds.contains(m.id);
+    // A blocked/inactive conversation must disable every response action, not just show a
+    // notice below the list — the backend now rejects these calls too (see RespondContact/
+    // RespondSchedule's Status check), so a stale-rendered button must never stay tappable.
+    final conversationActive = _status.value == 'Active';
     final canAnswer =
-        !answered && !pending && m.type == 'quick_reply' && (_isOwner || !m.isMine);
+        !answered && !pending && conversationActive && m.type == 'quick_reply' && (_isOwner || !m.isMine);
     // A schedule_proposal or contact_request that's already been answered must never
     // show its action buttons again. The backend links every response back to the
     // original message via respondsToMessageId (same FK column quick_reply answers
@@ -1001,19 +1024,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
           : null,
       // No owner/renter restriction — either side can send a contact request and whoever
       // receives it can respond, same shape as the schedule gating below.
-      onApproveContact: (isContactRequest && !m.isMine && !contactAlreadyResponded && !pending)
+      onApproveContact: (isContactRequest && !m.isMine && !contactAlreadyResponded && !pending && conversationActive)
           ? () => _respondContact(m.id, true)
           : null,
-      onDeclineContact: (isContactRequest && !m.isMine && !contactAlreadyResponded && !pending)
+      onDeclineContact: (isContactRequest && !m.isMine && !contactAlreadyResponded && !pending && conversationActive)
           ? () => _respondContact(m.id, false)
           : null,
-      onAcceptSlot: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending
+      onAcceptSlot: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending && conversationActive
           ? (dt) => _acceptScheduleSlot(m.id, dt)
           : null,
-      onDeclineSchedule: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending
+      onDeclineSchedule: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending && conversationActive
           ? () => _declineSchedule(m.id)
           : null,
-      onCounterSchedule: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending
+      onCounterSchedule: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending && conversationActive
           ? () => _counterSchedule(m.id)
           : null,
       onCall: () {
@@ -1024,7 +1047,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   }
 
   Widget _buildInactiveNotice() {
-    final isBlockedByMe = _status.value == 'Blocked' && _isOwner;
+    final isBlockedByMe = _isBlockedByMe.value;
     final text = switch (_status.value) {
       'ListingRemoved' =>
         'This listing has been removed — you can no longer send messages here.',

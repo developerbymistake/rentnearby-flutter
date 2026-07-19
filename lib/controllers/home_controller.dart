@@ -6,6 +6,7 @@ import 'plot_controller.dart';
 
 class HomeRoomModel {
   final String id;
+  final String userId; // the listing owner — used to hide "Chat" on a user's own listing
   final int priceMonthly;
   final String? roomTypeName;
   final String? thumbnailUrl;
@@ -15,6 +16,7 @@ class HomeRoomModel {
 
   HomeRoomModel({
     required this.id,
+    required this.userId,
     required this.priceMonthly,
     this.roomTypeName,
     this.thumbnailUrl,
@@ -25,6 +27,7 @@ class HomeRoomModel {
 
   factory HomeRoomModel.fromJson(Map<String, dynamic> json) => HomeRoomModel(
         id: json['id'] as String,
+        userId: json['userId'] as String? ?? '',
         priceMonthly: (json['priceMonthly'] as num?)?.toInt() ?? 0,
         roomTypeName: json['roomTypeName'] as String?,
         thumbnailUrl: json['thumbnailUrl'] as String?,
@@ -36,6 +39,7 @@ class HomeRoomModel {
 
 class HomePlotModel {
   final String id;
+  final String userId; // the listing owner — used to hide "Chat" on a user's own listing
   final double areaValue;
   final String areaUnit;
   final String? plotTypeName;
@@ -45,6 +49,7 @@ class HomePlotModel {
 
   HomePlotModel({
     required this.id,
+    required this.userId,
     required this.areaValue,
     required this.areaUnit,
     this.plotTypeName,
@@ -55,6 +60,7 @@ class HomePlotModel {
 
   factory HomePlotModel.fromJson(Map<String, dynamic> json) => HomePlotModel(
         id: json['id'] as String,
+        userId: json['userId'] as String? ?? '',
         areaValue: (json['areaValue'] as num?)?.toDouble() ?? 0,
         areaUnit: json['areaUnit'] as String? ?? '',
         plotTypeName: json['plotTypeName'] as String?,

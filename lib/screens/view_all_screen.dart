@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/view_all_controller.dart';
 import '../widgets/filter_sort_sheet.dart';
@@ -90,6 +91,7 @@ class _ViewAllScreenState extends State<ViewAllScreen>
       'listingTitle': conv.listingTitle,
       'isOwner': conv.isOwner,
       'status': conv.status,
+      'isBlockedByMe': conv.isBlockedByMe,
     });
   }
 
@@ -227,6 +229,7 @@ class _ViewAllScreenState extends State<ViewAllScreen>
                         return const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2)));
                       }
                       final item = items[i];
+                      final isOwnListing = item.userId == Get.find<AuthController>().user.value?.id;
                       return ListingGridCard(
                         thumbnailUrl: item.thumbnailUrl,
                         badgeLabel: item.badgeLabel,
@@ -234,7 +237,7 @@ class _ViewAllScreenState extends State<ViewAllScreen>
                         title: item.title,
                         locationLabel: item.locationLabel,
                         onViewDetails: () => _viewDetails(item),
-                        onChat: () => _chat(item),
+                        onChat: isOwnListing ? null : () => _chat(item),
                       );
                     },
                   );

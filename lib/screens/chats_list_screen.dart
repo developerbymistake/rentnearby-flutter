@@ -115,6 +115,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
         'area': c.area,
         'isOwner': c.isOwner,
         'status': c.status,
+        'isBlockedByMe': c.isBlockedByMe,
       },
     );
   }

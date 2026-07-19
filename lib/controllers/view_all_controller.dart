@@ -9,6 +9,7 @@ enum ViewAllListingType { rooms, plots }
 /// grid doesn't need to branch on listing type.
 class ViewAllItem {
   final String id;
+  final String userId;
   final String? thumbnailUrl;
   final String badgeLabel;
   final String priceLabel;
@@ -17,6 +18,7 @@ class ViewAllItem {
 
   ViewAllItem({
     required this.id,
+    required this.userId,
     required this.thumbnailUrl,
     required this.badgeLabel,
     required this.priceLabel,
@@ -26,6 +28,7 @@ class ViewAllItem {
 
   factory ViewAllItem.fromRoom(HomeRoomModel r) => ViewAllItem(
         id: r.id,
+        userId: r.userId,
         thumbnailUrl: r.thumbnailUrl,
         badgeLabel: r.roomTypeName ?? 'Room',
         priceLabel: '₹${r.priceMonthly}/mo',
@@ -35,6 +38,7 @@ class ViewAllItem {
 
   factory ViewAllItem.fromPlot(HomePlotModel p) => ViewAllItem(
         id: p.id,
+        userId: p.userId,
         thumbnailUrl: p.thumbnailUrl,
         badgeLabel: p.plotTypeName ?? 'Plot',
         priceLabel: '${p.areaValue.toStringAsFixed(p.areaValue.truncateToDouble() == p.areaValue ? 0 : 1)} ${p.areaUnit}',

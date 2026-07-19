@@ -173,6 +173,7 @@ class AuthController extends GetxController {
       await NotificationService.to.clearDistrictTopic();
     } catch (_) {}
     await disconnectAllHubs();
+    await NotificationService.to.cancelAllChatNotifications();
     await StorageService.clearAll();
     user.value = null;
     _syncProfileFields(null);
@@ -193,6 +194,7 @@ class AuthController extends GetxController {
         await NotificationService.to.clearDistrictTopic();
       } catch (_) {}
       await disconnectAllHubs();
+      await NotificationService.to.cancelAllChatNotifications();
       await StorageService.clearAll();
       user.value = null;
       _syncProfileFields(null);

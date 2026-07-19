@@ -44,6 +44,7 @@ class StorageService {
     await clearToken();
     clearUser();
     clearFcmToken();
+    clearAllChatStackedLines();
   }
 
   static Future<void> saveFcmToken(String token) async =>
@@ -133,4 +134,16 @@ class StorageService {
 
   static void clearChatStackedLines(String conversationId) =>
       _box.remove('${AppConstants.chatStackedLinesKeyPrefix}$conversationId');
+
+  /// Removes every per-conversation stacked-lines buffer, not just one — called on logout so
+  /// these don't accumulate indefinitely across the account's lifetime (they're otherwise only
+  /// ever pruned by actually opening that specific conversation) and so a stale buffer can't
+  /// leak into a notification shown after a different account logs in on the same device.
+  static void clearAllChatStackedLines() {
+    final keys = _box.getKeys().where(
+        (k) => k is String && k.startsWith(AppConstants.chatStackedLinesKeyPrefix));
+    for (final key in keys.toList()) {
+      _box.remove(key as String);
+    }
+  }
 }

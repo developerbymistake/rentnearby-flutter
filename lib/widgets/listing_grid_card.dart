@@ -14,7 +14,7 @@ class ListingGridCard extends StatelessWidget {
   final String title;
   final String locationLabel;
   final VoidCallback onViewDetails;
-  final VoidCallback onChat;
+  final VoidCallback? onChat; // null hides the Chat action — e.g. the viewer's own listing
 
   const ListingGridCard({
     super.key,
@@ -130,23 +130,25 @@ class ListingGridCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 7),
-                GestureDetector(
-                  onTap: onChat,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(9)),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Iconsax.message_text, size: 10, color: Colors.white),
-                        SizedBox(width: 4),
-                        Text('Chat', style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
-                      ],
+                if (onChat != null) ...[
+                  const SizedBox(height: 7),
+                  GestureDetector(
+                    onTap: onChat,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(9)),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Iconsax.message_text, size: 10, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text('Chat', style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

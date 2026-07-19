@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import '../utils/app_toast.dart';
 
 /// The date/time picker behind "Schedule a visit" — used identically whether
 /// the renter is proposing first or the owner is countering with a different
@@ -42,6 +43,27 @@ class _ChatSchedulePickerSheetState extends State<ChatSchedulePickerSheet> {
   bool _isPast(DateTime date, TimeOfDay slot) {
     final dt = DateTime(date.year, date.month, date.day, slot.hour, slot.minute);
     return dt.isBefore(DateTime.now());
+  }
+
+  // Re-checks "already past" right at submit time rather than trusting the disabled-chip state
+  // computed at build time — the sheet can sit open long enough for a slot that was valid when
+  // tapped to genuinely become past by the time Send is pressed. Also sorts chronologically:
+  // _selectedSlots is a Set, so without this, slots render in tap order (e.g. 5 PM, then 11 AM,
+  // then 2 PM) instead of a sensible time-of-day order.
+  void _onSend(DateTime selectedDate) {
+    final times = _selectedSlots
+        .where((slot) => !_isPast(selectedDate, slot))
+        .map((slot) => DateTime(selectedDate.year, selectedDate.month, selectedDate.day, slot.hour, slot.minute))
+        .toList()
+      ..sort();
+
+    if (times.isEmpty) {
+      AppToast.error('Those times have passed — please pick a new time');
+      setState(() {}); // refreshes the chips so the now-past slot shows disabled
+      return;
+    }
+
+    Navigator.pop(context, times);
   }
 
   @override
@@ -126,14 +148,7 @@ class _ChatSchedulePickerSheetState extends State<ChatSchedulePickerSheet> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _selectedSlots.isEmpty
-                  ? null
-                  : () => Navigator.pop(
-                        context,
-                        _selectedSlots
-                            .map((slot) => DateTime(selectedDate.year, selectedDate.month, selectedDate.day, slot.hour, slot.minute))
-                            .toList(),
-                      ),
+              onPressed: _selectedSlots.isEmpty ? null : () => _onSend(selectedDate),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary, foregroundColor: Colors.white,
                 disabledBackgroundColor: AppColors.divider,

@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide Response, FormData, MultipartFile;
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../utils/app_toast.dart';
 import 'hub_session_manager.dart';
+import 'notification_service.dart';
 import 'storage_service.dart';
 
 class ApiService {
@@ -35,6 +37,9 @@ class ApiService {
           // chat's connection in particular (whose retry policy deliberately never gives up)
           // keeps retrying forever in the background with a now-invalid token.
           await disconnectAllHubs();
+          if (Get.isRegistered<NotificationService>()) {
+            unawaited(NotificationService.to.cancelAllChatNotifications());
+          }
           await StorageService.clearAll();
           AppToast.info('Session expired. Please log in again.');
           Get.offAllNamed(AppRoutes.login);

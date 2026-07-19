@@ -13,6 +13,11 @@ class ConversationModel {
   final String otherPartyName;
   final bool isOwner;
   final String status; // "Active" | "Blocked" | "ListingRemoved" | "ListingInactive"
+  // Only meaningful when status == 'Blocked' — true if the CURRENT user did the blocking,
+  // false if they're the one who got blocked. Backend-derived from UserBlocks(BlockerId,
+  // BlockedId); never infer this from isOwner/status alone — either party can block the
+  // other regardless of listing ownership.
+  final bool isBlockedByMe;
   final DateTime lastMessageAt;
   final String? lastMessagePreview;
   final int unreadCount;
@@ -30,6 +35,7 @@ class ConversationModel {
     required this.otherPartyName,
     required this.isOwner,
     required this.status,
+    this.isBlockedByMe = false,
     required this.lastMessageAt,
     this.lastMessagePreview,
     required this.unreadCount,
@@ -50,6 +56,7 @@ class ConversationModel {
         otherPartyName: json['otherPartyName'] as String? ?? 'User',
         isOwner: json['isOwner'] as bool? ?? false,
         status: json['status'] as String? ?? 'Active',
+        isBlockedByMe: json['isBlockedByMe'] as bool? ?? false,
         lastMessageAt: DateTime.parse(json['lastMessageAt'] as String),
         lastMessagePreview: json['lastMessagePreview'] as String?,
         unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,

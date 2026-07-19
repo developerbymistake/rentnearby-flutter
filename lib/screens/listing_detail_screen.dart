@@ -397,6 +397,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       'listingTitle': conv.listingTitle,
       'isOwner': conv.isOwner,
       'status': conv.status,
+      'isBlockedByMe': conv.isBlockedByMe,
     });
   }
 

@@ -412,12 +412,18 @@ List<AnswerOption> _parseAnswerOptions(dynamic raw) {
   }
 }
 
+// Converts to the viewer's own device timezone before formatting — proposedAts/acceptedAt
+// now always round-trip as genuine UTC instants (see chat_conversation_screen.dart /
+// chat_controller.dart, which call .toUtc() before sending), so this makes two users in
+// different timezones each see the same real instant expressed correctly in their own local
+// time, instead of identical (and wrong, for at least one of them) digits.
 String _formatDateTime(DateTime dt) {
+  final local = dt.toLocal();
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-  final ampm = dt.hour >= 12 ? 'PM' : 'AM';
-  final minute = dt.minute.toString().padLeft(2, '0');
-  return '${days[dt.weekday - 1]} ${dt.day}, $hour:$minute $ampm';
+  final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+  final ampm = local.hour >= 12 ? 'PM' : 'AM';
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '${days[local.weekday - 1]} ${local.day}, $hour:$minute $ampm';
 }
 
 // ── schedule_proposal's slot picker — stateful because the recipient now picks a

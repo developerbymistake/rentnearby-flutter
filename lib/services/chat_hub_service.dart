@@ -107,7 +107,17 @@ class ChatHubService extends GetxService {
       if (args == null || args.isEmpty) return;
       try {
         final data = Map<String, dynamic>.from(args[0] as Map);
-        chatCtrl.applyConversationStatusChanged(data['conversationId'] as String, data['status'] as String);
+        // Same "compare against my own logged-in id" pattern MessageReceived already uses for
+        // isMine — the push only carries WHO did the blocking; each recipient derives their
+        // own direction from it, since Status alone is a symmetric string.
+        final myId = Get.find<AuthController>().user.value?.id;
+        final blockedByUserId = data['blockedByUserId'] as String?;
+        final isBlockedByMe = myId != null && blockedByUserId == myId;
+        chatCtrl.applyConversationStatusChanged(
+          data['conversationId'] as String,
+          data['status'] as String,
+          isBlockedByMe: isBlockedByMe,
+        );
       } catch (_) {}
     });
 

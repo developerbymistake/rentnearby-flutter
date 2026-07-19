@@ -238,7 +238,9 @@ class NotificationService extends GetxService {
     // at all, since chat pushes are data-only).
     final launchDetails = await _localNotifications.getNotificationAppLaunchDetails();
     final payload = launchDetails?.notificationResponse?.payload;
-    if (launchDetails?.didNotificationLaunchApp == true && payload != null) {
+    if (launchDetails?.didNotificationLaunchApp == true &&
+        payload != null &&
+        StorageService.isLoggedIn) {
       _navigateToChatConversation(payload);
     }
   }
@@ -418,6 +420,7 @@ class NotificationService extends GetxService {
       'area': conv.area,
       'isOwner': conv.isOwner,
       'status': conv.status,
+      'isBlockedByMe': conv.isBlockedByMe,
     });
   }
 
@@ -428,6 +431,17 @@ class NotificationService extends GetxService {
   void dismissChatNotification(String conversationId) {
     StorageService.clearChatStackedLines(conversationId);
     unawaited(_localNotifications.cancel(id: conversationId.hashCode));
+  }
+
+  /// Cancels every currently-shown local notification (all are chat notifications — this is
+  /// the only kind this app renders via flutter_local_notifications). Call this on session end
+  /// (logout, account deletion, forced 401) so a message preview never sits in the OS tray for
+  /// an account that's no longer logged in — a real concern on a shared device, where the next
+  /// person to log in would otherwise see it.
+  Future<void> cancelAllChatNotifications() async {
+    try {
+      await _localNotifications.cancelAll();
+    } catch (_) {}
   }
 
   Future<void> _registerToken(String token) async {
