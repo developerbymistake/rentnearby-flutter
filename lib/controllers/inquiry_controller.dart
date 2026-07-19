@@ -29,6 +29,11 @@ class InquiryController extends GetxController {
   final isSubmitting = false.obs;
   final isSubmittingEscalation = false.obs;
 
+  // Bumped on every loadInquiryDetail() call — lets a late, out-of-order response for an inquiry
+  // the user has since navigated away from be detected and dropped, instead of clobbering
+  // currentDetail with stale data for whichever inquiry screen is now actually open.
+  int _detailRequestId = 0;
+
   InquiryRepository get _repo => Get.find<InquiryRepository>();
 
   Future<void> loadMyInquiries() async {
@@ -43,14 +48,19 @@ class InquiryController extends GetxController {
   }
 
   Future<void> loadInquiryDetail(String inquiryId) async {
+    final requestId = ++_detailRequestId;
     isLoadingDetail.value = true;
     try {
       final detail = await _repo.getInquiryDetail(inquiryId);
+      // A newer loadInquiryDetail() call superseded this one while it was in flight — the user
+      // has since opened a different inquiry, so this response is stale and must be discarded
+      // rather than clobbering currentDetail out from under whichever screen is now open.
+      if (requestId != _detailRequestId) return;
       if (detail != null) applyStatusUpdate(detail: detail);
     } catch (_) {
-      AppToast.error('Could not load inquiry details.');
+      if (requestId == _detailRequestId) AppToast.error('Could not load inquiry details.');
     } finally {
-      isLoadingDetail.value = false;
+      if (requestId == _detailRequestId) isLoadingDetail.value = false;
     }
   }
 

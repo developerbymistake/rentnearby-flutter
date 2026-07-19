@@ -6,10 +6,13 @@ import '../services/api_service.dart';
 /// only FCM/local-notification plumbing (device-token register/unregister, tap routing) — this
 /// class owns the persisted inbox itself.
 class NotificationRepository {
-  Future<List<NotificationModel>> getNotifications({int page = 1, int pageSize = 20}) async {
+  Future<({List<NotificationModel> items, bool hasMore})> getNotifications({int page = 1, int pageSize = 20}) async {
     final res = await ApiService.get('/notifications', params: {'page': page, 'pageSize': pageSize});
-    final items = (res['data']?['items'] as List?) ?? [];
-    return items.map((e) => NotificationModel.fromJson(e as Map<String, dynamic>)).toList();
+    final data = res['data'] as Map<String, dynamic>? ?? {};
+    final items = (data['items'] as List? ?? [])
+        .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return (items: items, hasMore: data['hasMore'] == true);
   }
 
   Future<int> getUnreadCount() async {

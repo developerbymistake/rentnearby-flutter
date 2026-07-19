@@ -65,6 +65,11 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // Prevents a late-arriving loadInquiryDetail() response for THIS inquiry from silently
+    // clobbering currentDetail after the user has already navigated to a different inquiry's
+    // detail screen (out-of-order network responses) — currentDetail must never point at an
+    // inquiry no screen is actually showing.
+    _ctrl.clearCurrentDetail();
     super.dispose();
   }
 

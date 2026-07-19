@@ -10,6 +10,14 @@ class NotificationController extends GetxController {
   final unreadCount = 0.obs;
   final notifications = <NotificationModel>[].obs;
   final isLoading = false.obs;
+  final isLoadingMore = false.obs;
+  final hasMoreNotifications = false.obs;
+  int _notificationsPage = 1;
+  // Bumped on every loadNotifications() call — a pull-to-refresh racing an in-flight
+  // loadMoreNotifications() (or vice versa) would otherwise let whichever response lands second
+  // silently corrupt the list (e.g. a late page-N append landing after a fresh reset). Only the
+  // response matching the latest request id is applied.
+  int _requestId = 0;
 
   NotificationRepository get _repo => Get.find<NotificationRepository>();
 
@@ -27,15 +35,39 @@ class NotificationController extends GetxController {
     }
   }
 
-  Future<void> loadNotifications() async {
-    isLoading.value = true;
+  Future<void> loadNotifications({bool reset = true}) async {
+    final requestId = ++_requestId;
+    if (reset) {
+      _notificationsPage = 1;
+      isLoading.value = true;
+    } else {
+      isLoadingMore.value = true;
+    }
     try {
-      notifications.value = await _repo.getNotifications();
+      final result = await _repo.getNotifications(page: _notificationsPage);
+      // A newer loadNotifications() call (refresh or load-more) superseded this one — discard
+      // this response rather than letting it corrupt whatever the newer call already applied.
+      if (requestId != _requestId) return;
+      if (reset) {
+        notifications.value = result.items;
+      } else {
+        notifications.addAll(result.items);
+      }
+      hasMoreNotifications.value = result.hasMore;
     } catch (_) {
       // Silent — the screen's own empty/error state handles this via isLoading + an empty list.
     } finally {
-      isLoading.value = false;
+      if (requestId == _requestId) {
+        isLoading.value = false;
+        isLoadingMore.value = false;
+      }
     }
+  }
+
+  Future<void> loadMoreNotifications() async {
+    if (!hasMoreNotifications.value || isLoadingMore.value) return;
+    _notificationsPage++;
+    await loadNotifications(reset: false);
   }
 
   Future<void> markRead(String id) async {
