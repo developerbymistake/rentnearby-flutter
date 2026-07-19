@@ -10,10 +10,12 @@ import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
+import '../controllers/notification_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../controllers/report_controller.dart';
 import '../repositories/agent_repository.dart';
 import '../repositories/config_repository.dart';
+import '../repositories/notification_repository.dart';
 import '../repositories/inquiry_repository.dart';
 import '../repositories/listing_repository.dart';
 import '../repositories/plot_repository.dart';
@@ -81,6 +83,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // comment. Put after InquiryRepository/InquiryController since AgentRepository reuses their
     // same InquiryModel/InquiryDetailModel shapes (no hard dependency, just logical grouping).
     Get.put(AgentController());
+    Get.put(NotificationRepository());
+    // Fetches the Home bell's unread count once per session in its own onInit() (mirrors
+    // AgentController.checkAgentStatus) — refreshed on resume below, not via a live push.
+    Get.put(NotificationController());
     Get.put(ListingController());
     Get.put(PlotController());
     Get.put(ReportController());
@@ -171,6 +177,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       ChatHubService.to.connect();
       WalletHubService.to.connect();
+      Get.find<NotificationController>().loadUnreadCount();
       // Inquiry is intentionally not reconnected here — see the comment at its
       // Get.put()/initial-connect site above. It connects lazily instead, and
       // my_inquiries_screen.dart/inquiry_detail_screen.dart each implement their

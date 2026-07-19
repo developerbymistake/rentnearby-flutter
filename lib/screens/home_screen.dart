@@ -9,6 +9,7 @@ import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
+import '../controllers/notification_controller.dart';
 import '../controllers/service_catalog_controller.dart';
 import '../models/service_list_item_model.dart';
 import '../models/service_section_model.dart';
@@ -171,15 +172,43 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const CoinBalanceChip(color: Colors.white),
               const SizedBox(width: 8),
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                  shape: BoxShape.circle,
+              GestureDetector(
+                onTap: () => Get.toNamed(AppRoutes.notifications),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Iconsax.notification, color: Colors.white, size: 17),
+                    ),
+                    // Same red-pill badge styling as profile_screen.dart's _leadsTile /
+                    // main_screen.dart's _navItem — reused, not reinvented.
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Obx(() {
+                        final count = Get.find<NotificationController>().unreadCount.value;
+                        if (count <= 0) return const SizedBox.shrink();
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          constraints: const BoxConstraints(minWidth: 16),
+                          decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
+                          child: Text(
+                            count > 99 ? '99+' : '$count',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
                 ),
-                child: const Icon(Iconsax.notification, color: Colors.white, size: 17),
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -264,6 +265,9 @@ class NotificationService extends GetxService {
     AppRoutes.reportDetail,
     AppRoutes.myFiledReports,
     AppRoutes.inquiryDetail,
+    AppRoutes.myLeads,
+    AppRoutes.leadDetail,
+    AppRoutes.notifications,
   };
 
   void _handleNotificationTap(RemoteMessage message) {
@@ -288,6 +292,25 @@ class NotificationService extends GetxService {
     // Broadcast still lands on the resident Explore tab; Room/Plot membership
     // notifications now push the My Rooms/My Plots route (no longer tabs).
     void goToDestination() {
+      // Generic redirect for any push produced via the backend's NotificationEvent system (see
+      // NotificationPushWorkerService) — the payload already carries exactly where to navigate
+      // and what Get.arguments to pass, so no per-type branch is needed here or ever again for a
+      // future notification category built on that system. Checked first; falls through to the
+      // legacy per-type branches below only for pushes that predate this system (chat, reports,
+      // inquiry_status, broadcast, room/plot membership).
+      final actionRoute = message.data['action_route'];
+      if (actionRoute != null) {
+        Map<String, dynamic>? actionArguments;
+        final argsJson = message.data['action_args_json'];
+        if (argsJson != null) {
+          try {
+            actionArguments = jsonDecode(argsJson) as Map<String, dynamic>;
+          } catch (_) {}
+        }
+        Get.toNamed(actionRoute, arguments: actionArguments);
+        return;
+      }
+
       if (isChatMessage) {
         _navigateToChatConversation(message.data['conversation_id'] as String);
       } else if (isReportMessage) {

@@ -4,10 +4,11 @@ import 'inquiry_status_history_model.dart';
 /// Full Inquiry Detail shape — GET /inquiries/{id}, and the response body of
 /// POST /inquiries (create). Mirrors
 /// RentNearBy.Core.DTOs.Responses.InquiryDetailDto field-for-field, including
-/// the embedded AssignedAgent (for the two-button Call/WhatsApp Agent card)
-/// and the full append-only StatusHistory ledger (for the vertical status
-/// stepper — Submitted -> Contacted -> Confirmed, with Cancelled/Rejected as
-/// terminal red states).
+/// the embedded AssignedAgents (identity-only cards — an Inquiry can have
+/// multiple simultaneous Agents, see AgentModel's own doc comment for why
+/// there's no Call/WhatsApp here) and the full append-only StatusHistory
+/// ledger (for the vertical status stepper — Submitted -> Contacted ->
+/// Confirmed, with Cancelled/Rejected as terminal red states).
 class InquiryDetailModel {
   final String id;
   final String userId;
@@ -24,8 +25,9 @@ class InquiryDetailModel {
   final int? numberOfPeople;
   final String? message;
   final String status;
-  final String? assignedAgentId;
-  final AgentModel? assignedAgent;
+  // Every Agent currently assigned — never null, empty when unassigned. An Inquiry can have
+  // multiple simultaneous Agents.
+  final List<AgentModel> assignedAgents;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<InquiryStatusHistoryModel> statusHistory;
@@ -46,8 +48,7 @@ class InquiryDetailModel {
     required this.numberOfPeople,
     required this.message,
     required this.status,
-    required this.assignedAgentId,
-    required this.assignedAgent,
+    required this.assignedAgents,
     required this.createdAt,
     required this.updatedAt,
     required this.statusHistory,
@@ -73,8 +74,7 @@ class InquiryDetailModel {
         numberOfPeople: numberOfPeople,
         message: message,
         status: status ?? this.status,
-        assignedAgentId: assignedAgentId,
-        assignedAgent: assignedAgent,
+        assignedAgents: assignedAgents,
         createdAt: createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         statusHistory: statusHistory,
@@ -98,10 +98,9 @@ class InquiryDetailModel {
         numberOfPeople: (json['numberOfPeople'] as num?)?.toInt(),
         message: json['message'] as String?,
         status: json['status'] as String? ?? '',
-        assignedAgentId: json['assignedAgentId'] as String?,
-        assignedAgent: json['assignedAgent'] == null
-            ? null
-            : AgentModel.fromJson(json['assignedAgent'] as Map<String, dynamic>),
+        assignedAgents: (json['assignedAgents'] as List? ?? [])
+            .map((e) => AgentModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
         statusHistory: (json['statusHistory'] as List? ?? [])

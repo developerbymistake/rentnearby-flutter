@@ -26,6 +26,7 @@ import '../screens/my_inquiries_screen.dart';
 import '../screens/inquiry_detail_screen.dart';
 import '../screens/my_leads_screen.dart';
 import '../screens/lead_detail_screen.dart';
+import '../screens/notifications_screen.dart';
 import '../controllers/view_all_controller.dart' show ViewAllListingType;
 
 class AppRoutes {
@@ -67,6 +68,9 @@ class AppRoutes {
   // the logged-in account is linked to an Agent.
   static const String myLeads = '/my-leads';
   static const String leadDetail = '/lead-detail';
+
+  // Notification inbox — backs the Home-screen bell icon.
+  static const String notifications = '/notifications';
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
@@ -241,6 +245,12 @@ class AppRoutes {
     GetPage(
       name: leadDetail,
       page: () => const LeadDetailScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: notifications,
+      page: () => const NotificationsScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

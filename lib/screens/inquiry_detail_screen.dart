@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../controllers/inquiry_controller.dart';
@@ -81,16 +80,6 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
     return '${local.day} ${_months[local.month - 1]} ${local.year}';
   }
 
-  Future<void> _call(String phone) async {
-    final url = Uri.parse('tel:+91$phone');
-    if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
-  }
-
-  Future<void> _whatsapp(String phone) async {
-    final url = Uri.parse('https://wa.me/91$phone');
-    if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -124,9 +113,15 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
                         const SizedBox(height: 10),
                         _buildDetailsCard(detail),
                         const SizedBox(height: 20),
-                        _buildSectionTitle('Assigned Agent'),
+                        _buildSectionTitle(detail.assignedAgents.length > 1 ? 'Assigned Agents' : 'Assigned Agent'),
                         const SizedBox(height: 10),
-                        detail.assignedAgent != null ? _buildAgentCard(detail.assignedAgent!) : _buildNoAgentCard(),
+                        if (detail.assignedAgents.isEmpty)
+                          _buildNoAgentCard()
+                        else
+                          for (final agent in detail.assignedAgents) ...[
+                            _buildAgentCard(agent),
+                            if (agent != detail.assignedAgents.last) const SizedBox(height: 10),
+                          ],
                       ],
                     ),
                   ),
@@ -354,40 +349,18 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          // Two genuinely separate buttons — Call (agent.phone) and WhatsApp
-          // (agent.whatsAppNumber) are confirmed-separate fields, never one
-          // combined "contact" action. Same visual treatment as
-          // DetailActionBar's Call Owner/WhatsApp pair.
-          Row(
+          const SizedBox(height: 12),
+          // Deliberately no Call/WhatsApp buttons here — contact is one-directional, the agent
+          // reaches out to the customer (using the customer's own submitted mobile), never the
+          // other way around, so the agent's own number is never surfaced to the consumer.
+          const Row(
             children: [
+              Icon(Iconsax.message_notif, size: 15, color: AppColors.textLight),
+              SizedBox(width: 8),
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _call(agent.phone),
-                  icon: const Icon(Icons.call_rounded, size: 20),
-                  label: const Text('Call', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF59E0B),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(0, 48),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _whatsapp(agent.whatsAppNumber),
-                  icon: const Icon(Icons.chat_rounded, size: 20),
-                  label: const Text('WhatsApp', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF25D366),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(0, 48),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
+                child: Text(
+                  "They'll reach out to you shortly regarding your inquiry.",
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
                 ),
               ),
             ],

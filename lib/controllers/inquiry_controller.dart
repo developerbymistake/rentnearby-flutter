@@ -115,8 +115,7 @@ class InquiryController extends GetxController {
     if (idx != -1) {
       myInquiries[idx] = myInquiries[idx].copyWith(
         status: newStatus,
-        assignedAgentId: detail?.assignedAgentId,
-        assignedAgentName: detail?.assignedAgent?.name,
+        assignedAgentCount: detail?.assignedAgents.length,
         updatedAt: ts,
       );
     }

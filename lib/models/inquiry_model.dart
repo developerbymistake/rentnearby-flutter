@@ -16,8 +16,9 @@ class InquiryModel {
   final String fullName;
   final String mobile;
   final String status;
-  final String? assignedAgentId;
-  final String? assignedAgentName;
+  // Multiple Agents can be assigned simultaneously — 0 means unassigned. Full names only live on
+  // the Detail shape (InquiryDetailModel.assignedAgents).
+  final int assignedAgentCount;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -32,8 +33,7 @@ class InquiryModel {
     required this.fullName,
     required this.mobile,
     required this.status,
-    required this.assignedAgentId,
-    required this.assignedAgentName,
+    required this.assignedAgentCount,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -42,8 +42,7 @@ class InquiryModel {
   /// already-loaded row in place — never constructed directly by a screen.
   InquiryModel copyWith({
     String? status,
-    String? assignedAgentId,
-    String? assignedAgentName,
+    int? assignedAgentCount,
     DateTime? updatedAt,
   }) =>
       InquiryModel(
@@ -57,8 +56,7 @@ class InquiryModel {
         fullName: fullName,
         mobile: mobile,
         status: status ?? this.status,
-        assignedAgentId: assignedAgentId ?? this.assignedAgentId,
-        assignedAgentName: assignedAgentName ?? this.assignedAgentName,
+        assignedAgentCount: assignedAgentCount ?? this.assignedAgentCount,
         createdAt: createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -74,8 +72,7 @@ class InquiryModel {
         fullName: json['fullName'] as String? ?? '',
         mobile: json['mobile'] as String? ?? '',
         status: json['status'] as String? ?? '',
-        assignedAgentId: json['assignedAgentId'] as String?,
-        assignedAgentName: json['assignedAgentName'] as String?,
+        assignedAgentCount: (json['assignedAgentCount'] as num?)?.toInt() ?? 0,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
       );
