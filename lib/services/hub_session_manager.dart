@@ -12,14 +12,20 @@ import 'wallet_hub_service.dart';
 /// in the background with an empty token, even sitting on the login screen. A future 5th hub
 /// only needs wiring here once instead of being added to every call site individually.
 Future<void> disconnectAllHubs() async {
-  for (final disconnect in [
-    () => Get.find<BannerHubService>().disconnect(),
-    () => Get.find<ChatHubService>().disconnect(),
-    () => Get.find<WalletHubService>().disconnect(),
-    () => Get.find<InquiryHubService>().disconnect(),
-  ]) {
-    try {
-      await disconnect();
-    } catch (_) {}
-  }
+  // Concurrent, not sequential — a `for` + `await` loop here would make the whole call take
+  // the SUM of all 4 WebSocket-close latencies instead of the max, visibly delaying the
+  // "session expired" redirect on a forced 401. Each disconnect is still independently
+  // try-caught so one hub failing to close cleanly never blocks the others.
+  await Future.wait([
+    _safeDisconnect(() => Get.find<BannerHubService>().disconnect()),
+    _safeDisconnect(() => Get.find<ChatHubService>().disconnect()),
+    _safeDisconnect(() => Get.find<WalletHubService>().disconnect()),
+    _safeDisconnect(() => Get.find<InquiryHubService>().disconnect()),
+  ]);
+}
+
+Future<void> _safeDisconnect(Future<void> Function() disconnect) async {
+  try {
+    await disconnect();
+  } catch (_) {}
 }

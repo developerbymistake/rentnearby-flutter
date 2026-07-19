@@ -183,6 +183,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     }
   }
 
+  // If the newly-loaded content still doesn't fill/exceed the viewport, no scroll event will
+  // ever fire to trigger _onScroll — a long conversation made entirely of short bubbles would
+  // otherwise leave _hasMoreOlder stuck true forever with no way to reach the rest of its
+  // history. Called after the first load and again after every successful older-history load
+  // (see _loadOlderHistory), so it keeps pulling pages until the viewport is genuinely
+  // scrollable or the server says there's no more — self-terminating via _hasMoreOlder.
+  void _maybeFillViewportWithOlder() {
+    if (!mounted || !_scrollCtrl.hasClients) return;
+    if (_hasMoreOlder.value && _scrollCtrl.position.maxScrollExtent <= 150) {
+      _loadOlderHistory();
+    }
+  }
+
   // Prepends older history without a visible scroll jump — the standard technique for a
   // plain (non-reversed) ListView: capture the scroll extent before the list grows, then in
   // a post-frame callback (after the new items have actually been laid out) jump by exactly
@@ -191,6 +204,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   Future<void> _loadOlderHistory() async {
     if (_loadingOlder.value || !_hasMoreOlder.value || _messages.isEmpty) return;
     _loadingOlder.value = true;
+    // Set right before scheduling the postFrameCallback below — tells the `finally` not to
+    // clear _loadingOlder immediately, since the callback itself is now responsible for that.
+    var deferred = false;
     try {
       final oldExtent = _scrollCtrl.hasClients ? _scrollCtrl.position.maxScrollExtent : 0.0;
       final result = await _chatCtrl.getMessages(_conversationId, before: _messages.first.createdAt);
@@ -201,13 +217,22 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       final older = result.items.reversed.where((m) => !existingIds.contains(m.id)).toList();
       if (older.isEmpty) return;
       _messages.value = [...older, ..._messages];
+      deferred = true;
+      // _loadingOlder must stay true for the entire frame in which the list visually grows —
+      // clearing it any earlier (e.g. synchronously right after just SCHEDULING this callback,
+      // not after it actually runs) left a window where the growing maxScrollExtent could fire
+      // _onScroll mid-layout, before the jump below had corrected position, re-triggering
+      // another fetch on top of this one still in flight.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_scrollCtrl.hasClients) return;
-        final delta = _scrollCtrl.position.maxScrollExtent - oldExtent;
-        _scrollCtrl.jumpTo(_scrollCtrl.position.pixels + delta);
+        if (mounted && _scrollCtrl.hasClients) {
+          final delta = _scrollCtrl.position.maxScrollExtent - oldExtent;
+          _scrollCtrl.jumpTo(_scrollCtrl.position.pixels + delta);
+        }
+        if (mounted) _loadingOlder.value = false;
+        _maybeFillViewportWithOlder();
       });
     } finally {
-      if (mounted) _loadingOlder.value = false;
+      if (!deferred && mounted) _loadingOlder.value = false;
     }
   }
 
@@ -272,6 +297,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       // Jump (not animate) straight to the bottom on cold open — same as the reference
       // demo's behavior, and there's nothing to animate from on first paint.
       _scrollToBottom(animate: false);
+      // Scheduled after _scrollToBottom's own postFrameCallback (registered first, same
+      // frame) so this reads settled scroll metrics — see _maybeFillViewportWithOlder's own
+      // comment for why this check exists at all.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeFillViewportWithOlder());
     }
   }
 
@@ -361,6 +390,14 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   }
 
   Future<void> _send(String type, Map<String, dynamic> payload) async {
+    // The "single-flight" claim on _sending's own field comment only held because every
+    // CALLER happened to gate its own trigger (ChatNextSlotBubble's sending-disabled tap, the
+    // plus-menu sheet dismissing before firing) — a fast double-tap on the same still-open
+    // sheet item before it's actually removed from the hit-test tree could invoke this twice
+    // concurrently, each minting its own clientMessageId, so the server-side idempotency key
+    // couldn't collapse them into one message. This guard makes the method actually enforce
+    // the invariant instead of trusting every caller to.
+    if (_sending.value) return;
     _sending.value = true;
     try {
       // One id per compose-attempt, generated here (not inside ChatController) so a caller
