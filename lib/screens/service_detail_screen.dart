@@ -72,7 +72,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     if (s == null) return;
     Get.toNamed(
       AppRoutes.inquiryForm,
-      arguments: {'serviceId': s.id, 'serviceName': s.name, 'package': package},
+      arguments: {'serviceId': s.id, 'serviceName': s.name, 'package': package, 'formType': s.serviceCategoryFormType},
     );
   }
 

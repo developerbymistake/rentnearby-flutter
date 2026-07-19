@@ -7,7 +7,7 @@ import 'inclusion_model.dart';
 /// Pricing semantics (confirmed, copied field-for-field from the entity's
 /// own doc comment — NOT the same role assignment as CoinPlan/
 /// go_live_plan_sheet.dart, where the naming is reversed):
-///   - price == null            -> "Get Custom Quote" (Insurance/Financial
+///   - price == null            -> "Get Custom Quote" (Diet Plans/Financial
 ///     Planning packages never render a rupee amount).
 ///   - price set                -> the actual/current amount, rendered as
 ///     "Starting at ₹X" when isStartingAtPrice is true, otherwise a bare

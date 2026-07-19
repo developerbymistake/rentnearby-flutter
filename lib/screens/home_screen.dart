@@ -56,10 +56,25 @@ const _kExpertZone = _SectionZone(
   accent: Color(0xFFC2410C),
 );
 
-const _expertConsultationsSectionName = 'Expert Consultations';
+const _kCelebrationsZone = _SectionZone(
+  background: Color(0xFFFDF2F8),
+  cardBg: Colors.white,
+  imgBg: Color(0xFFFBCFE8),
+  accent: Color(0xFFBE185D),
+);
 
-_SectionZone _zoneForSection(ServiceSectionModel section) =>
-    section.name == _expertConsultationsSectionName ? _kExpertZone : _kExploreZone;
+const _expertConsultationsSectionName = 'Expert Consultations';
+const _celebrationsEventsSectionName = 'Celebrations & Events';
+
+// Explicit per-section branches, not a fallback-swallows-everything default — a section's color
+// zone is a deliberate design pick each new section needs, so an unrecognized new section falling
+// silently into Explore's green (as this used to do before Celebrations & Events existed) is exactly
+// the bug to avoid here.
+_SectionZone _zoneForSection(ServiceSectionModel section) {
+  if (section.name == _expertConsultationsSectionName) return _kExpertZone;
+  if (section.name == _celebrationsEventsSectionName) return _kCelebrationsZone;
+  return _kExploreZone;
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

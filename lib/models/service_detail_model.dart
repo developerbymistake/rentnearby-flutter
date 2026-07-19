@@ -7,6 +7,8 @@ import 'service_package_preview_model.dart';
 class ServiceDetailModel {
   final String id;
   final String serviceCategoryId;
+  // RentNearBy.Core.Models.ServiceCategoryFormTypes.* — decides which Inquiry Form fields to show.
+  final String serviceCategoryFormType;
   final String serviceSectionId;
   final String serviceSectionName;
   final String name;
@@ -22,6 +24,7 @@ class ServiceDetailModel {
   ServiceDetailModel({
     required this.id,
     required this.serviceCategoryId,
+    required this.serviceCategoryFormType,
     required this.serviceSectionId,
     required this.serviceSectionName,
     required this.name,
@@ -38,6 +41,7 @@ class ServiceDetailModel {
   factory ServiceDetailModel.fromJson(Map<String, dynamic> json) => ServiceDetailModel(
         id: json['id'] as String,
         serviceCategoryId: json['serviceCategoryId'] as String? ?? '',
+        serviceCategoryFormType: json['serviceCategoryFormType'] as String? ?? '',
         serviceSectionId: json['serviceSectionId'] as String? ?? '',
         serviceSectionName: json['serviceSectionName'] as String? ?? '',
         name: json['name'] as String? ?? '',

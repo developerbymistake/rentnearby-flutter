@@ -10,8 +10,10 @@ import '../controllers/auth_controller.dart';
 import '../controllers/inquiry_controller.dart';
 import '../models/service_package_model.dart';
 import '../utils/app_toast.dart';
+import '../utils/inquiry_form_fields.dart';
 import '../utils/input_formatters.dart';
 import '../widgets/gradient_button.dart';
+import '../widgets/inquiry_contact_sheet.dart';
 import '../widgets/max_width_content.dart';
 import '../widgets/service_package_price.dart';
 
@@ -35,15 +37,22 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
   String _serviceId = '';
   String _serviceName = '';
   ServicePackageModel? _package;
+  // Which of Preferred-Date/Number-of-People to show and how to label them — driven by the
+  // category's FormType (see inquiry_form_fields.dart). Falls back to Travel's shape if missing.
+  InquiryFormFieldConfig _fieldConfig = inquiryFormFieldConfigFor(null);
 
-  final _nameCtrl = TextEditingController();
-  final _mobileCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
+  // Full Name/Mobile are no longer typed — they come from the account by default, or from this
+  // override once the user taps "Not you?" and saves an alternate contact for this one inquiry.
+  InquiryContact? _contactOverride;
+
   final _peopleCtrl = TextEditingController();
   final _messageCtrl = TextEditingController();
   final _dateDisplayCtrl = TextEditingController();
   DateTime? _preferredDate;
   bool _agreedToTerms = false;
+
+  String get _effectiveName => _contactOverride?.name ?? _auth.user.value?.name?.trim() ?? '';
+  String get _effectiveMobile => _contactOverride?.mobile ?? (_auth.user.value?.phoneNumber ?? '').trim();
 
   @override
   void initState() {
@@ -51,21 +60,26 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
     final args = (Get.arguments as Map?) ?? const {};
     _serviceId = args['serviceId'] as String? ?? '';
     _serviceName = args['serviceName'] as String? ?? '';
+    _fieldConfig = inquiryFormFieldConfigFor(args['formType'] as String?);
     final package = args['package'];
     if (package is ServicePackageModel) _package = package;
-    _nameCtrl.text = _auth.user.value?.name ?? '';
-    _mobileCtrl.text = _auth.user.value?.phoneNumber ?? '';
   }
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
-    _mobileCtrl.dispose();
-    _emailCtrl.dispose();
     _peopleCtrl.dispose();
     _messageCtrl.dispose();
     _dateDisplayCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _openContactSheet() async {
+    final result = await InquiryContactSheet.show(
+      context,
+      initialName: _effectiveName,
+      initialMobile: _effectiveMobile,
+    );
+    if (result != null) setState(() => _contactOverride = result);
   }
 
   Future<void> _pickDate() async {
@@ -79,7 +93,12 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
     );
     if (picked != null) {
       setState(() {
-        _preferredDate = picked;
+        // UTC-tagged, not converted: this is a pure calendar date with no meaningful
+        // time-of-day. A real .toUtc() conversion would roll the date back a day for any
+        // positive-UTC-offset user (e.g. India, UTC+5:30) once local midnight crosses to the
+        // previous UTC day. Tagging the same y/m/d as UTC satisfies the backend's
+        // `timestamp with time zone` column without shifting which date was actually picked.
+        _preferredDate = DateTime.utc(picked.year, picked.month, picked.day);
         _dateDisplayCtrl.text = _formatDate(picked);
       });
     }
@@ -89,6 +108,11 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
     FocusManager.instance.primaryFocus?.unfocus();
     final package = _package;
     if (package == null || _serviceId.isEmpty) return;
+    if (_effectiveName.isEmpty || _effectiveMobile.length != 10) {
+      AppToast.error('Please add your name and mobile number to continue.');
+      await _openContactSheet();
+      return;
+    }
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (!_agreedToTerms) {
       AppToast.error('Please agree to be contacted to continue.');
@@ -100,9 +124,8 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
     final detail = await _inquiryCtrl.submitInquiry(
       serviceId: _serviceId,
       servicePackageId: package.id,
-      fullName: _nameCtrl.text.trim(),
-      mobile: _mobileCtrl.text.trim(),
-      email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
+      fullName: _effectiveName,
+      mobile: _effectiveMobile,
       preferredDateOrTripStart: _preferredDate,
       numberOfPeople: numberOfPeople,
       message: _messageCtrl.text.trim().isEmpty ? null : _messageCtrl.text.trim(),
@@ -162,83 +185,49 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildPackageSummary(_package!),
-                        const SizedBox(height: 18),
-                        _fieldLabel('Full Name *'),
-                        TextFormField(
-                          controller: _nameCtrl,
-                          inputFormatters: noEmojiInputFormatters,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-                          decoration: _inputDec('Your full name', prefixIcon: const Icon(Iconsax.user, size: 18, color: AppColors.textLight)),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-                        ),
-                        const SizedBox(height: 16),
-                        _fieldLabel('Mobile Number *'),
-                        TextFormField(
-                          controller: _mobileCtrl,
-                          keyboardType: TextInputType.phone,
-                          maxLength: 10,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-                          decoration: _inputDec('10-digit mobile number', prefixIcon: const Icon(Iconsax.call, size: 18, color: AppColors.textLight)).copyWith(counterText: ''),
-                          validator: (v) {
-                            final t = v?.trim() ?? '';
-                            if (t.isEmpty) return 'Mobile number is required';
-                            if (t.length != 10) return 'Enter a valid 10-digit number';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        _fieldLabel('Email (Optional)'),
-                        TextFormField(
-                          controller: _emailCtrl,
-                          keyboardType: TextInputType.emailAddress,
-                          inputFormatters: noEmojiInputFormatters,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-                          decoration: _inputDec('you@example.com', prefixIcon: const Icon(Iconsax.sms, size: 18, color: AppColors.textLight)),
-                          validator: (v) {
-                            final t = v?.trim() ?? '';
-                            if (t.isEmpty) return null;
-                            if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(t)) return 'Enter a valid email';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        _fieldLabel('Preferred Date / Trip Start (Optional)'),
-                        TextFormField(
-                          controller: _dateDisplayCtrl,
-                          readOnly: true,
-                          onTap: _pickDate,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-                          decoration: _inputDec(
-                            'Select a date',
-                            prefixIcon: const Icon(Iconsax.calendar_1, size: 18, color: AppColors.textLight),
-                            suffixIcon: _preferredDate != null
-                                ? IconButton(
-                                    icon: const Icon(Iconsax.close_circle, size: 18, color: AppColors.textLight),
-                                    onPressed: () => setState(() {
-                                      _preferredDate = null;
-                                      _dateDisplayCtrl.clear();
-                                    }),
-                                  )
-                                : null,
+                        const SizedBox(height: 14),
+                        _buildIdentityStrip(),
+                        if (_fieldConfig.dateLabel != null) ...[
+                          const SizedBox(height: 16),
+                          _fieldLabel('${_fieldConfig.dateLabel} (Optional)'),
+                          TextFormField(
+                            controller: _dateDisplayCtrl,
+                            readOnly: true,
+                            onTap: _pickDate,
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+                            decoration: _inputDec(
+                              'Select a date',
+                              prefixIcon: const Icon(Iconsax.calendar_1, size: 18, color: AppColors.textLight),
+                              suffixIcon: _preferredDate != null
+                                  ? IconButton(
+                                      icon: const Icon(Iconsax.close_circle, size: 18, color: AppColors.textLight),
+                                      onPressed: () => setState(() {
+                                        _preferredDate = null;
+                                        _dateDisplayCtrl.clear();
+                                      }),
+                                    )
+                                  : null,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        _fieldLabel('Number of People (Optional)'),
-                        TextFormField(
-                          controller: _peopleCtrl,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(3)],
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-                          decoration: _inputDec('e.g. 4', prefixIcon: const Icon(Iconsax.profile_2user, size: 18, color: AppColors.textLight)),
-                          validator: (v) {
-                            final t = v?.trim() ?? '';
-                            if (t.isEmpty) return null;
-                            final n = int.tryParse(t);
-                            if (n == null || n <= 0) return 'Enter a valid number';
-                            return null;
-                          },
-                        ),
+                        ],
+                        if (_fieldConfig.peopleLabel != null) ...[
+                          const SizedBox(height: 16),
+                          _fieldLabel('${_fieldConfig.peopleLabel} (Optional)'),
+                          TextFormField(
+                            controller: _peopleCtrl,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(3)],
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+                            decoration: _inputDec('e.g. 4', prefixIcon: const Icon(Iconsax.profile_2user, size: 18, color: AppColors.textLight)),
+                            validator: (v) {
+                              final t = v?.trim() ?? '';
+                              if (t.isEmpty) return null;
+                              final n = int.tryParse(t);
+                              if (n == null || n <= 0) return 'Enter a valid number';
+                              return null;
+                            },
+                          ),
+                        ],
                         const SizedBox(height: 16),
                         _fieldLabel('Message (Optional)'),
                         TextFormField(
@@ -354,6 +343,99 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
             priceUnit: package.priceUnit,
             priceFontSize: 14,
             priceColor: AppColors.primary,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIdentityStrip() {
+    final accountName = _auth.user.value?.name?.trim() ?? '';
+    final accountMobile = (_auth.user.value?.phoneNumber ?? '').trim();
+    final override = _contactOverride;
+
+    // Account has no name yet (phone-only OTP login, never set a display name) and no override
+    // has been saved — nothing trustworthy to show, so prompt instead of a blank/broken row.
+    if (override == null && accountName.isEmpty) {
+      return GestureDetector(
+        onTap: _openContactSheet,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.error.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Iconsax.user, size: 18, color: AppColors.error),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text('Add your name & mobile number to continue',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.error)),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.error),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final name = override?.name ?? accountName;
+    final mobile = override?.mobile ?? accountMobile;
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: AppColors.primary,
+            child: Text(initial, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                    ),
+                    if (override != null) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20)),
+                        child: const Text('For someone else',
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 8.5, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text("We'll contact ${override != null ? 'them' : 'you'} on $mobile",
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: override != null ? () => setState(() => _contactOverride = null) : _openContactSheet,
+            child: Text(
+              override != null ? 'Use my account' : 'Not you?',
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primary, decoration: TextDecoration.underline),
+            ),
           ),
         ],
       ),
