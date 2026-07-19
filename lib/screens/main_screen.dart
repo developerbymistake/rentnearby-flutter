@@ -5,12 +5,14 @@ import 'package:geolocator/geolocator.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_tabs.dart';
+import '../controllers/agent_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../controllers/report_controller.dart';
+import '../repositories/agent_repository.dart';
 import '../repositories/config_repository.dart';
 import '../repositories/inquiry_repository.dart';
 import '../repositories/listing_repository.dart';
@@ -74,6 +76,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     Get.put(InquiryRepository());
     Get.put(InquiryController());
     Get.put(InquiryHubService());
+    Get.put(AgentRepository());
+    // Checks "am I an agent" once per session in its own onInit() — see AgentController's doc
+    // comment. Put after InquiryRepository/InquiryController since AgentRepository reuses their
+    // same InquiryModel/InquiryDetailModel shapes (no hard dependency, just logical grouping).
+    Get.put(AgentController());
     Get.put(ListingController());
     Get.put(PlotController());
     Get.put(ReportController());

@@ -24,6 +24,8 @@ import '../screens/inquiry_form_screen.dart';
 import '../screens/inquiry_confirmation_screen.dart';
 import '../screens/my_inquiries_screen.dart';
 import '../screens/inquiry_detail_screen.dart';
+import '../screens/my_leads_screen.dart';
+import '../screens/lead_detail_screen.dart';
 import '../controllers/view_all_controller.dart' show ViewAllListingType;
 
 class AppRoutes {
@@ -60,6 +62,11 @@ class AppRoutes {
   static const String inquiryConfirmation = '/inquiry-confirmation';
   static const String myInquiries = '/my-inquiries';
   static const String inquiryDetail = '/inquiry-detail';
+
+  // Agent-as-User — conditional "My Leads" section in Profile, only visible when
+  // the logged-in account is linked to an Agent.
+  static const String myLeads = '/my-leads';
+  static const String leadDetail = '/lead-detail';
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
@@ -222,6 +229,18 @@ class AppRoutes {
     GetPage(
       name: inquiryDetail,
       page: () => const InquiryDetailScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: myLeads,
+      page: () => const MyLeadsScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: leadDetail,
+      page: () => const LeadDetailScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
