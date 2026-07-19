@@ -49,22 +49,30 @@ class ChatMessageBubble extends StatelessWidget {
         // unrecognized type) today. Kept so an unrecognized future type renders as a plain
         // status pill instead of crashing the switch (message.type is a raw wire string, not
         // an enum, so exhaustiveness can't be checked at compile time).
-        return _system(message.payload['text'] as String? ?? '');
+        return _system(message.payload.safeString('text') ?? '');
     }
   }
 
   // ── quick_reply ──────────────────────────────────────────────────────────
 
   Widget _quickReply(BuildContext context) {
-    final text = message.payload['text'] as String? ?? '…';
-    final key = message.payload['key'] as String?;
-    QuestionTemplateModel? template;
-    if (key != null) {
+    final text = message.payload.safeString('text') ?? '…';
+    final key = message.payload.safeString('key');
+
+    // Prefer the snapshot embedded at send time (ChatHandlers.SendMessage) — self-contained
+    // and historically accurate regardless of later admin edits to the template. Only
+    // messages sent before this existed lack 'answerOptions'; those fall back to the live
+    // catalog lookup exactly as before (may render with no options if the template's since
+    // been deactivated — same as the old behavior for those old rows).
+    var answerOptions = _parseAnswerOptions(message.payload['answerOptions']);
+    if (answerOptions.isEmpty && key != null) {
+      QuestionTemplateModel? template;
       try {
         template = templates.firstWhere((t) => t.key == key);
       } catch (_) {
         template = null;
       }
+      answerOptions = template?.answerOptions ?? const [];
     }
 
     final bubble = _bubbleRow(text, mine: message.isMine);
@@ -73,14 +81,14 @@ class ChatMessageBubble extends StatelessWidget {
     // Rendered as a vertical, right-aligned stack of "ghost" bubbles — each one previews
     // what the eventual sent message would look like, so it reads as picking a reply to
     // send rather than filling in a form field.
-    if (!message.isMine && template != null && template.answerOptions.isNotEmpty && onAnswerQuestion != null) {
+    if (!message.isMine && answerOptions.isNotEmpty && onAnswerQuestion != null) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         bubble,
         Padding(
           padding: const EdgeInsets.only(top: 4, bottom: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: template.answerOptions.asMap().entries.map((entry) {
+            children: answerOptions.asMap().entries.map((entry) {
               final i = entry.key;
               final opt = entry.value;
               final negative = opt.sentiment == 'negative';
@@ -151,7 +159,7 @@ class ChatMessageBubble extends StatelessWidget {
     final approved = message.payload['approved'] == true;
     if (!approved) return _system('Contact request declined');
 
-    final phone = message.payload['phone'] as String?;
+    final phone = message.payload.safeString('phone');
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _system('Contact shared'),
       if (phone != null)
@@ -181,8 +189,8 @@ class ChatMessageBubble extends StatelessWidget {
   // ── schedule_proposal / schedule_response ───────────────────────────────
 
   Widget _scheduleProposal(BuildContext context) {
-    final status = message.payload['status'] as String? ?? 'pending';
-    final rawList = message.payload['proposedAts'] as List<dynamic>? ?? const [];
+    final status = message.payload.safeString('status') ?? 'pending';
+    final rawList = message.payload.safeList('proposedAts');
     final proposedAts = rawList
         .map((e) => DateTime.tryParse(e is String ? e : ''))
         .whereType<DateTime>()
@@ -204,9 +212,9 @@ class ChatMessageBubble extends StatelessWidget {
   }
 
   Widget _scheduleResponse(BuildContext context) {
-    final status = message.payload['status'] as String? ?? 'declined';
+    final status = message.payload.safeString('status') ?? 'declined';
     if (status == 'declined') return _system('Visit request declined');
-    final confirmedAtRaw = message.payload['confirmedAt'] as String?;
+    final confirmedAtRaw = message.payload.safeString('confirmedAt');
     final confirmedAt = confirmedAtRaw != null ? DateTime.tryParse(confirmedAtRaw) : null;
     return _card(
       icon: Icons.check_circle_outline_rounded,
@@ -264,6 +272,25 @@ class ChatMessageBubble extends StatelessWidget {
 
 // ── shared building blocks — top-level so both ChatMessageBubble and
 // _ScheduleProposalCard (below) can use them ──────────────────────────────
+
+// A message's payload is server-stored JSON — a backend bug (or a genuinely malformed
+// client send from a stale app version) can leave one specific field in an unexpected
+// shape for one specific message. An unguarded `as` cast on that field throws (Dart's `as`
+// only tolerates an actual null, not a wrong type), which takes down that whole bubble's
+// build() and renders as Flutter's release-mode grey ErrorWidget. These read helpers
+// degrade to a safe default instead — mirrors the precedent MessageModel.fromJson already
+// set for createdAt (DateTime.tryParse instead of DateTime.parse, for the same reason).
+extension _SafePayload on Map<String, dynamic> {
+  String? safeString(String key) {
+    final v = this[key];
+    return v is String ? v : null;
+  }
+
+  List<dynamic> safeList(String key) {
+    final v = this[key];
+    return v is List ? v : const [];
+  }
+}
 
 // onDark: true for _bubbleRow's navy "mine" background, false for _card's always-white
 // background — the "sent" (not-yet-read) tick color needs to stay visible on either.
@@ -369,6 +396,20 @@ Widget _actionBtn(String label, {required bool primary, bool negative = false, V
             child: Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
           ),
   );
+}
+
+// Reuses AnswerOption.fromJson (question_template_model.dart) — same parsing logic the
+// live catalog already uses for a template's answerOptionsJson, not duplicated here. Wrapped
+// in one try/catch around the whole list (not per-entry) — a partially-malformed snapshot is
+// treated as absent so _quickReply falls back to the live-template lookup, rather than
+// rendering a partial/inconsistent set of reply options.
+List<AnswerOption> _parseAnswerOptions(dynamic raw) {
+  if (raw is! List) return const [];
+  try {
+    return raw.whereType<Map<String, dynamic>>().map(AnswerOption.fromJson).toList();
+  } catch (_) {
+    return const [];
+  }
 }
 
 String _formatDateTime(DateTime dt) {

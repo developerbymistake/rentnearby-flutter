@@ -112,22 +112,25 @@ class ChatHubService extends GetxService {
     });
 
     _connection!.onreconnected(({String? connectionId}) async {
-      chatCtrl.loadConversations();
+      // Preserves however many pages the Chats list had already scrolled through instead of
+      // silently snapping it back to a fresh 20-item page 1 on every brief network blip.
+      chatCtrl.reloadPreservingPages();
       // SignalR's automatic-reconnect gets a brand-new server-side ConnectionId — every
       // group membership from before (including any joined conversation) is gone and must
       // be explicitly redone, or the open conversation screen goes silently live-mute after
       // any brief network blip with no visible error.
-      final active = _activeConversationId;
-      if (active != null) {
-        try {
-          await _connection!.invoke('JoinConversation', args: [active]);
-        } catch (_) {}
-      }
+      await _reconcileGroupMembership();
       chatCtrl.notifyHubReconnected();
     });
 
     try {
       await _connection!.start();
+      // Covers the very-first-connect / cold-start case: if a conversation screen called
+      // joinConversation() while this connection was still being established, the desired
+      // state (_activeConversationId) was already recorded — this is what turns it into an
+      // actual server-side join now that we're Connected, without waiting for some future
+      // reconnect event.
+      await _reconcileGroupMembership();
     } catch (_) {
       // Connection failed — conversation screens still work via plain REST
       // (GetMessages on open), so there's nothing further to fall back to here.
@@ -135,16 +138,37 @@ class ChatHubService extends GetxService {
     }
   }
 
-  /// Pass when opening a specific conversation screen — joins its live-broadcast group on
-  /// the existing connection (connecting first if this is the very first chat interaction
-  /// this session). Never rebuilds/reconnects.
-  Future<void> joinConversation(String conversationId) async {
-    await connect();
+  /// The single place that ever invokes the server-side JoinConversation. Reads
+  /// _activeConversationId ("desired state" — which conversation the user wants to be
+  /// in, set synchronously by joinConversation() below regardless of connection state) and,
+  /// if set and the connection is actually Connected right now, tells the server. Safe to
+  /// call redundantly/repeatedly — ChatHub.JoinConversation's Groups.AddToGroupAsync on an
+  /// already-joined group is a no-op. Called from every point this connection reaches
+  /// Connected (right after the initial start(), on every onreconnected, and opportunistically
+  /// from joinConversation() itself) so "desired" and "actual" state can never drift apart
+  /// for longer than it takes the connection to come back up.
+  Future<void> _reconcileGroupMembership() async {
+    final active = _activeConversationId;
+    if (active == null) return;
     if (_connection?.state != HubConnectionState.Connected) return;
     try {
-      await _connection!.invoke('JoinConversation', args: [conversationId]);
-      _activeConversationId = conversationId;
+      await _connection!.invoke('JoinConversation', args: [active]);
     } catch (_) {}
+  }
+
+  /// Pass when opening a specific conversation screen. Records the desired state
+  /// immediately and unconditionally — BEFORE touching the connection at all — then
+  /// reconciles against whatever the actual connection state happens to be. If already
+  /// Connected (the common case) this joins the server group right away; if the connection
+  /// is mid-connect/reconnecting at this exact moment, this call's own reconcile is a no-op,
+  /// but _activeConversationId is now correctly set so the next `start()`-succeeded or
+  /// onreconnected reconcile picks it up instead of having nothing to act on — this is what
+  /// closes the old race where a connection blip at exactly the wrong moment left the
+  /// conversation's group membership never (re)established for the rest of the screen visit.
+  Future<void> joinConversation(String conversationId) async {
+    _activeConversationId = conversationId;
+    await connect();
+    await _reconcileGroupMembership();
   }
 
   Future<void> leaveConversation(String conversationId) async {

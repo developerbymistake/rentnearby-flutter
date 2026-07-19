@@ -2,6 +2,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:uuid/uuid.dart';
 import '../config/app_colors.dart';
 import '../controllers/chat_controller.dart';
 import '../models/message_model.dart';
@@ -36,10 +37,32 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
 
   final _messages = <MessageModel>[].obs;
   final _loading = true.obs;
-  // Dims the inline "next slot" bubble and disables its tap while a send is in flight. A
-  // single shared flag is enough — every send path below is awaited sequentially from this
-  // screen's own UI thread, so only one send can ever be in flight at a time.
+  // Older-history paging (scroll-to-top). _hasMoreOlder starts true (optimistic — we don't
+  // know yet) and is only ever authoritatively set from _loadHistory's FIRST load; a later
+  // pull-to-refresh only re-fetches page 1 and must not clobber what's already been
+  // established about whether older history exists beyond it.
+  final _loadingOlder = false.obs;
+  final _hasMoreOlder = true.obs;
+  // Dims the inline "next slot" bubble and disables its tap while a plus-menu send (question/
+  // contact-request/schedule-proposal) is in flight — this one IS single-flight, since _send()
+  // is the only caller and it's always awaited sequentially. Responding to an EXISTING message
+  // (answer/approve/decline/accept/counter) is a separate action space with its own per-message
+  // guard below (_pendingActionMessageIds) — those can legitimately overlap with a plus-menu
+  // send or with each other on different messages, so one shared flag isn't enough for them.
   final _sending = false.obs;
+  // Guards _openPlusMenu's async gap (the retry fetch below) against a rapid double-tap
+  // opening ChatPlusMenuSheet twice — ChatPlusMenuSheet.show has no built-in re-entrancy
+  // guard of its own (plain showModalBottomSheet), and unlike _sending this isn't tied to
+  // a send actually being in flight, so it needs its own flag.
+  bool _openingPlusMenu = false;
+  // Keyed by the ORIGINAL message being responded to (the question/contact-request/schedule-
+  // proposal id), not the not-yet-created response — this is exactly the id _buildBubble()
+  // already keys its per-message callback wiring off. A message id present here means an
+  // answer/response to it is currently in flight; every action method below adds its target's
+  // id on entry and removes it in a finally, so a double-tap on the same message's button is a
+  // no-op instead of firing a second request or (for quick_reply answers specifically) losing
+  // the "paired under its question" render slot to an orphan duplicate.
+  final _pendingActionMessageIds = <String>{}.obs;
   final _scrollCtrl = ScrollController();
   Worker? _incomingWorker;
   Worker? _readWorker;
@@ -63,6 +86,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     _status.value = args['status'] as String? ?? 'Active';
 
     WidgetsBinding.instance.addObserver(this);
+    _scrollCtrl.addListener(_onScroll);
     _loadHistory();
     ChatHubService.to.joinConversation(_conversationId);
     _chatCtrl.markRead(_conversationId);
@@ -126,10 +150,64 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
 
   Future<void> _catchUpAfterReconnect() async {
     if (!mounted || _messages.isEmpty) return;
-    final result = await _chatCtrl.getMessages(_conversationId, after: _messages.last.createdAt);
+    final anchor = _messages.last.createdAt;
+    var result = await _chatCtrl.getMessages(_conversationId, after: anchor);
     if (!mounted) return;
     for (final m in result.items.reversed) {
       _insertIfNew(m);
+    }
+    // The 'after' page only returns the NEWEST slice of what was missed (see
+    // MessageRepository.GetPagedForConversationAsync's own doc comment) — if it was a full
+    // page, there's likely an older portion of the gap still missing, closer to `anchor`.
+    // Walk backward with `before` from this batch's oldest item until either the server says
+    // there's no more (hasMore false) or we've reached back to already-known territory (the
+    // cursor drops to/before anchor), bounded by a safety cap so a pathological gap can't
+    // loop forever. Without this loop, a disconnect spanning more than one page permanently
+    // stranded the older portion of the gap — the exact bug this fix closes.
+    var guard = 0;
+    while (result.hasMore && result.items.isNotEmpty && guard++ < 50) {
+      final cursor = result.items.last.createdAt; // oldest item of the batch just fetched
+      if (!cursor.isAfter(anchor)) break; // already back to known territory
+      result = await _chatCtrl.getMessages(_conversationId, before: cursor);
+      if (!mounted) return;
+      for (final m in result.items.reversed) {
+        _insertIfNew(m);
+      }
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    if (_scrollCtrl.position.pixels <= 150 && !_loadingOlder.value && _hasMoreOlder.value) {
+      _loadOlderHistory();
+    }
+  }
+
+  // Prepends older history without a visible scroll jump — the standard technique for a
+  // plain (non-reversed) ListView: capture the scroll extent before the list grows, then in
+  // a post-frame callback (after the new items have actually been laid out) jump by exactly
+  // how much the extent changed, landing the viewport on the same content the user was
+  // looking at rather than at the new top.
+  Future<void> _loadOlderHistory() async {
+    if (_loadingOlder.value || !_hasMoreOlder.value || _messages.isEmpty) return;
+    _loadingOlder.value = true;
+    try {
+      final oldExtent = _scrollCtrl.hasClients ? _scrollCtrl.position.maxScrollExtent : 0.0;
+      final result = await _chatCtrl.getMessages(_conversationId, before: _messages.first.createdAt);
+      if (!mounted) return;
+      _hasMoreOlder.value = result.hasMore;
+      if (result.items.isEmpty) return;
+      final existingIds = _messages.map((m) => m.id).toSet();
+      final older = result.items.reversed.where((m) => !existingIds.contains(m.id)).toList();
+      if (older.isEmpty) return;
+      _messages.value = [...older, ..._messages];
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollCtrl.hasClients) return;
+        final delta = _scrollCtrl.position.maxScrollExtent - oldExtent;
+        _scrollCtrl.jumpTo(_scrollCtrl.position.pixels + delta);
+      });
+    } finally {
+      if (mounted) _loadingOlder.value = false;
     }
   }
 
@@ -148,6 +226,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     _statusWorker?.dispose();
     _messageUpdatedWorker?.dispose();
     _reconnectWorker?.dispose();
+    _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
     ChatHubService.to.leaveConversation(_conversationId);
     super.dispose();
@@ -169,12 +248,26 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     // gap between this call starting and resolving (e.g. right after joinConversation on
     // screen open) — a blind overwrite here would silently drop it if the fetched snapshot
     // was taken a moment before that push landed server-side.
-    final fetched = result.items.reversed.toList();
+    //
+    // For an id present in BOTH, take whichever side's readAt is more "advanced" rather than
+    // letting fetched blindly win — a live read-receipt update from _readWorker can otherwise
+    // be transiently reverted (tick flips back from read to unread) by a marginally-stale
+    // refresh response that was already in flight when the receipt arrived.
+    final localById = {for (final m in _messages) m.id: m};
+    final fetched = result.items.reversed.map((m) {
+      final advanced = m.readAt ?? localById[m.id]?.readAt;
+      return advanced == m.readAt ? m : m.copyWith(readAt: advanced);
+    }).toList();
     final fetchedIds = fetched.map((m) => m.id).toSet();
     final preserved = _messages.where((m) => !fetchedIds.contains(m.id));
     _messages.value = [...fetched, ...preserved]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     if (result.status != null) _status.value = result.status!;
     if (isFirstLoad) {
+      // Only the very first load establishes whether older history exists beyond this page —
+      // a later pull-to-refresh only re-fetches page 1 (this same call) and must not
+      // clobber that, or a conversation with real older history would have it silently
+      // hidden again after every refresh.
+      _hasMoreOlder.value = result.hasMore;
       _loading.value = false;
       // Jump (not animate) straight to the bottom on cold open — same as the reference
       // demo's behavior, and there's nothing to animate from on first paint.
@@ -201,8 +294,18 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     return pos.maxScrollExtent - pos.pixels < 80;
   }
 
+  // Re-entrancy guard: a burst of inserts (e.g. several messages arriving in one reconnect
+  // catch-up) previously queued one overlapping animateTo per insert, each retargeting mid-
+  // flight and visibly stuttering. Only one scroll is ever scheduled at a time now; it always
+  // reads maxScrollExtent fresh when it actually runs, so it still lands correctly regardless
+  // of how many inserts happened before the frame it fires in.
+  bool _scrollScheduled = false;
+
   void _scrollToBottom({bool animate = true}) {
+    if (_scrollScheduled) return;
+    _scrollScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollScheduled = false;
       if (!mounted || !_scrollCtrl.hasClients) return;
       final target = _scrollCtrl.position.maxScrollExtent;
       if (animate) {
@@ -217,35 +320,54 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     });
   }
 
-  void _openPlusMenu() {
-    // Catalog questions ("Is it available?" etc.) are things a renter asks an owner —
-    // an owner has no reason to ask that about their own listing, so their "+" menu
-    // only offers Contact + Visit.
-    final questions = _isOwner
-        ? const <QuestionTemplateModel>[]
-        : _chatCtrl.questionTemplates
-              .where(
-                (t) => t.appliesTo(
-                  _listingType,
-                  targetRoomTypeId: _roomTypeId,
-                  targetPlotTypeId: _plotTypeId,
-                ),
-              )
-              .toList();
-    ChatPlusMenuSheet.show(
-      context,
-      questions: questions,
-      onAskQuestion: (q) =>
-          _send('quick_reply', {'key': q.key, 'text': q.questionText}),
-      onRequestContact: () => _send('contact_request', {}),
-      onScheduleVisit: _pickAndProposeSchedule,
-    );
+  void _openPlusMenu() async {
+    // A rapid double-tap could otherwise both reach the await below before either resolves,
+    // stacking two ChatPlusMenuSheets — the old synchronous version made this structurally
+    // impossible, so this guard is what restores that guarantee now that there's an async gap.
+    if (_openingPlusMenu) return;
+    _openingPlusMenu = true;
+    try {
+      // Retries the catalog fetch if the initState() load failed (e.g. network contention
+      // with the several other calls firing at screen-open) — loadQuestionTemplates()'s own
+      // _templatesLoaded guard makes this a cheap no-op (no network call) once the catalog
+      // has already loaded successfully, so this is safe to call on every "+" tap.
+      await _chatCtrl.loadQuestionTemplates();
+      if (!mounted) return;
+      // Catalog questions ("Is it available?" etc.) are things a renter asks an owner —
+      // an owner has no reason to ask that about their own listing, so their "+" menu
+      // only offers Contact + Visit.
+      final questions = _isOwner
+          ? const <QuestionTemplateModel>[]
+          : _chatCtrl.questionTemplates
+                .where(
+                  (t) => t.appliesTo(
+                    _listingType,
+                    targetRoomTypeId: _roomTypeId,
+                    targetPlotTypeId: _plotTypeId,
+                  ),
+                )
+                .toList();
+      ChatPlusMenuSheet.show(
+        context,
+        questions: questions,
+        onAskQuestion: (q) =>
+            _send('quick_reply', {'key': q.key, 'text': q.questionText}),
+        onRequestContact: () => _send('contact_request', {}),
+        onScheduleVisit: _pickAndProposeSchedule,
+      );
+    } finally {
+      _openingPlusMenu = false;
+    }
   }
 
   Future<void> _send(String type, Map<String, dynamic> payload) async {
     _sending.value = true;
     try {
-      final msg = await _chatCtrl.sendMessage(_conversationId, type, payload);
+      // One id per compose-attempt, generated here (not inside ChatController) so a caller
+      // that retries the exact same _send() invocation reuses it — this is the "one attempt"
+      // boundary the server-side idempotency key is meant to dedup against.
+      final clientMessageId = const Uuid().v4();
+      final msg = await _chatCtrl.sendMessage(_conversationId, type, payload, clientMessageId: clientMessageId);
       if (msg != null && mounted) _insertIfNew(msg);
     } finally {
       if (mounted) _sending.value = false;
@@ -266,44 +388,72 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     String answerKey,
     String answerText,
   ) async {
-    final msg = await _chatCtrl.sendMessage(_conversationId, 'quick_reply', {
-      'key': answerKey,
-      'text': answerText,
-    }, respondsToMessageId: questionMessageId);
-    if (msg != null && mounted) _insertIfNew(msg);
+    if (!_pendingActionMessageIds.add(questionMessageId)) return;
+    try {
+      final msg = await _chatCtrl.sendMessage(_conversationId, 'quick_reply', {
+        'key': answerKey,
+        'text': answerText,
+      }, respondsToMessageId: questionMessageId);
+      if (msg != null && mounted) _insertIfNew(msg);
+    } finally {
+      _pendingActionMessageIds.remove(questionMessageId);
+    }
   }
 
   Future<void> _respondContact(String messageId, bool approve) async {
-    final msg = await _chatCtrl.respondContact(messageId, approve);
-    if (msg != null && mounted) _insertIfNew(msg);
+    if (!_pendingActionMessageIds.add(messageId)) return;
+    try {
+      final msg = await _chatCtrl.respondContact(messageId, approve);
+      if (msg != null && mounted) _insertIfNew(msg);
+    } finally {
+      _pendingActionMessageIds.remove(messageId);
+    }
   }
 
   Future<void> _acceptScheduleSlot(String messageId, DateTime chosen) async {
-    final msg = await _chatCtrl.respondSchedule(
-      messageId,
-      'accept',
-      acceptedAt: chosen,
-    );
-    if (msg != null && mounted) _insertIfNew(msg);
+    if (!_pendingActionMessageIds.add(messageId)) return;
+    try {
+      final msg = await _chatCtrl.respondSchedule(
+        messageId,
+        'accept',
+        acceptedAt: chosen,
+      );
+      if (msg != null && mounted) _insertIfNew(msg);
+    } finally {
+      _pendingActionMessageIds.remove(messageId);
+    }
   }
 
   Future<void> _declineSchedule(String messageId) async {
-    final msg = await _chatCtrl.respondSchedule(messageId, 'decline');
-    if (msg != null && mounted) _insertIfNew(msg);
+    if (!_pendingActionMessageIds.add(messageId)) return;
+    try {
+      final msg = await _chatCtrl.respondSchedule(messageId, 'decline');
+      if (msg != null && mounted) _insertIfNew(msg);
+    } finally {
+      _pendingActionMessageIds.remove(messageId);
+    }
   }
 
   Future<void> _counterSchedule(String messageId) async {
-    final picked = await ChatSchedulePickerSheet.show(
-      context,
-      title: 'Propose a different time',
-    );
-    if (picked == null || picked.isEmpty) return;
-    final msg = await _chatCtrl.respondSchedule(
-      messageId,
-      'counter',
-      proposedAts: picked,
-    );
-    if (msg != null && mounted) _insertIfNew(msg);
+    // Guarded from entry (before the picker sheet even opens), not just around the send —
+    // otherwise a double-tap on "Counter" could stack two schedule-picker sheets the same way
+    // a double-tapped "+" used to stack two ChatPlusMenuSheets.
+    if (!_pendingActionMessageIds.add(messageId)) return;
+    try {
+      final picked = await ChatSchedulePickerSheet.show(
+        context,
+        title: 'Propose a different time',
+      );
+      if (picked == null || picked.isEmpty) return;
+      final msg = await _chatCtrl.respondSchedule(
+        messageId,
+        'counter',
+        proposedAts: picked,
+      );
+      if (msg != null && mounted) _insertIfNew(msg);
+    } finally {
+      _pendingActionMessageIds.remove(messageId);
+    }
   }
 
   Future<void> _call(String phone) async {
@@ -412,6 +562,23 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     // after — so the question still renders above its own answer, positioned at the
     // question's own chronological slot rather than wherever the answer actually arrived.
     final items = <Widget>[];
+    // Reading _loadingOlder here (inside the top-level Obx this whole build runs in) makes
+    // it reactive automatically. Same visual shape as chats_list_screen.dart's own
+    // load-more spinner, just at the top of this list instead of the bottom.
+    if (_loadingOlder.value) {
+      items.add(
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+            ),
+          ),
+        ),
+      );
+    }
     for (final m in _messages) {
       if (answerMessageIds.contains(m.id))
         continue; // rendered attached to its question below
@@ -769,8 +936,15 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   Widget _buildBubble(MessageModel m, {bool answered = false}) {
     final isContactRequest = m.type == 'contact_request';
     final isScheduleProposal = m.type == 'schedule_proposal';
+    // Reading _pendingActionMessageIds here (inside the top-level Obx this is always called
+    // from) makes it a reactive dependency automatically — no extra Obx wrapper needed. Every
+    // callback below is gated by this too, so a response already in flight for this exact
+    // message immediately disables its buttons (passing null, which the existing
+    // `disabled = onTap == null` pattern in _actionBtn/_ScheduleProposalCard already dims)
+    // instead of leaving them tappable for a full network round-trip.
+    final pending = _pendingActionMessageIds.contains(m.id);
     final canAnswer =
-        !answered && m.type == 'quick_reply' && (_isOwner || !m.isMine);
+        !answered && !pending && m.type == 'quick_reply' && (_isOwner || !m.isMine);
     // A schedule_proposal or contact_request that's already been answered must never
     // show its action buttons again. The backend links every response back to the
     // original message via respondsToMessageId (same FK column quick_reply answers
@@ -790,19 +964,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
           : null,
       // No owner/renter restriction — either side can send a contact request and whoever
       // receives it can respond, same shape as the schedule gating below.
-      onApproveContact: (isContactRequest && !m.isMine && !contactAlreadyResponded)
+      onApproveContact: (isContactRequest && !m.isMine && !contactAlreadyResponded && !pending)
           ? () => _respondContact(m.id, true)
           : null,
-      onDeclineContact: (isContactRequest && !m.isMine && !contactAlreadyResponded)
+      onDeclineContact: (isContactRequest && !m.isMine && !contactAlreadyResponded && !pending)
           ? () => _respondContact(m.id, false)
           : null,
-      onAcceptSlot: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded
+      onAcceptSlot: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending
           ? (dt) => _acceptScheduleSlot(m.id, dt)
           : null,
-      onDeclineSchedule: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded
+      onDeclineSchedule: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending
           ? () => _declineSchedule(m.id)
           : null,
-      onCounterSchedule: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded
+      onCounterSchedule: isScheduleProposal && !m.isMine && !scheduleAlreadyResponded && !pending
           ? () => _counterSchedule(m.id)
           : null,
       onCall: () {

@@ -3,6 +3,7 @@ import 'package:get/get.dart' hide Response, FormData, MultipartFile;
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../utils/app_toast.dart';
+import 'hub_session_manager.dart';
 import 'storage_service.dart';
 
 class ApiService {
@@ -29,6 +30,11 @@ class ApiService {
       onError: (error, handler) async {
         if (error.response?.statusCode == 401 && !_isHandlingUnauthorized) {
           _isHandlingUnauthorized = true;
+          // A session can be revoked out from under the app (not just an explicit logout the
+          // user initiated here) — every persistent hub connection needs tearing down too, or
+          // chat's connection in particular (whose retry policy deliberately never gives up)
+          // keeps retrying forever in the background with a now-invalid token.
+          await disconnectAllHubs();
           await StorageService.clearAll();
           AppToast.info('Session expired. Please log in again.');
           Get.offAllNamed(AppRoutes.login);

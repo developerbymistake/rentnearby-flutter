@@ -13,10 +13,7 @@ import 'listing_controller.dart';
 import 'plot_controller.dart';
 import 'report_controller.dart';
 import 'wallet_controller.dart';
-import '../services/banner_hub_service.dart';
-import '../services/chat_hub_service.dart';
-import '../services/inquiry_hub_service.dart';
-import '../services/wallet_hub_service.dart';
+import '../services/hub_session_manager.dart';
 
 class AuthController extends GetxController {
   final isLoading = false.obs;
@@ -175,18 +172,7 @@ class AuthController extends GetxController {
     try {
       await NotificationService.to.clearDistrictTopic();
     } catch (_) {}
-    try {
-      await Get.find<BannerHubService>().disconnect();
-    } catch (_) {}
-    try {
-      await Get.find<ChatHubService>().disconnect();
-    } catch (_) {}
-    try {
-      await Get.find<WalletHubService>().disconnect();
-    } catch (_) {}
-    try {
-      await Get.find<InquiryHubService>().disconnect();
-    } catch (_) {}
+    await disconnectAllHubs();
     await StorageService.clearAll();
     user.value = null;
     _syncProfileFields(null);
@@ -206,18 +192,7 @@ class AuthController extends GetxController {
       try {
         await NotificationService.to.clearDistrictTopic();
       } catch (_) {}
-      try {
-        await Get.find<BannerHubService>().disconnect();
-      } catch (_) {}
-      try {
-        await Get.find<ChatHubService>().disconnect();
-      } catch (_) {}
-      try {
-        await Get.find<WalletHubService>().disconnect();
-      } catch (_) {}
-      try {
-        await Get.find<InquiryHubService>().disconnect();
-      } catch (_) {}
+      await disconnectAllHubs();
       await StorageService.clearAll();
       user.value = null;
       _syncProfileFields(null);

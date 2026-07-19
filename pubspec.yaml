@@ -78,6 +78,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   signalr_netcore: ^1.4.4
 
+  # Client-generated message idempotency keys
+  uuid: ^4.5.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

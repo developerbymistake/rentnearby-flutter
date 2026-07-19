@@ -24,6 +24,13 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   String _query = '';
   bool _searchOpen = false;
   Worker? _chatsTabWorker;
+  Worker? _searchAutoFetchWorker;
+  // Bounded auto-fetch counter for the search-stalls-on-few-results gap below — reset
+  // whenever the query changes or search closes, so a fresh search always gets its own
+  // budget of pages to look through.
+  int _autoFetchCount = 0;
+  static const _minFilteredForNoAutoFetch = 8;
+  static const _maxAutoFetchPages = 5;
 
   @override
   void initState() {
@@ -44,6 +51,22 @@ class _ChatsListScreenState extends State<ChatsListScreen>
     // when leaving and returning to the Chats tab. Same reset-on-revisit pattern
     // profile_screen.dart already uses via profileTabTrigger.
     _chatsTabWorker = ever(_auth.chatsTabTrigger, (_) => _closeSearch());
+    // A narrow search query can filter the currently-loaded list down to a handful of rows
+    // that don't even fill the viewport — the scroll listener above then structurally never
+    // fires (there's nothing to scroll), so loadMoreConversations() would never run even
+    // though more matching conversations may exist in unfetched pages. This re-checks every
+    // time a new page actually lands (not just on each keystroke), continuing the fetch
+    // chain started by _maybeFetchMoreForSearch below.
+    _searchAutoFetchWorker = ever<List<ConversationModel>>(_ctrl.conversations, (_) => _maybeFetchMoreForSearch());
+  }
+
+  void _maybeFetchMoreForSearch() {
+    if (!mounted || _query.trim().isEmpty) return;
+    if (_autoFetchCount >= _maxAutoFetchPages) return;
+    if (!_ctrl.hasMoreConversations.value || _ctrl.loadingMoreConversations.value) return;
+    if (_filtered(_ctrl.conversations).length >= _minFilteredForNoAutoFetch) return;
+    _autoFetchCount++;
+    _ctrl.loadMoreConversations();
   }
 
   void _closeSearch() {
@@ -53,6 +76,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
       _query = '';
     });
     _searchCtrl.clear();
+    _autoFetchCount = 0;
   }
 
   @override
@@ -66,6 +90,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _chatsTabWorker?.dispose();
+    _searchAutoFetchWorker?.dispose();
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
     // No ChatHubService.disconnect() here anymore — MainScreen owns this connection's
@@ -234,7 +259,11 @@ class _ChatsListScreenState extends State<ChatsListScreen>
       child: TextField(
         controller: _searchCtrl,
         inputFormatters: noEmojiInputFormatters,
-        onChanged: (v) => setState(() => _query = v),
+        onChanged: (v) {
+          setState(() => _query = v);
+          _autoFetchCount = 0;
+          _maybeFetchMoreForSearch();
+        },
         style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5),
         decoration: InputDecoration(
           hintText: 'Search by name or address',

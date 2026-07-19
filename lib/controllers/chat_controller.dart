@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
@@ -43,6 +44,36 @@ class ChatController extends GetxController {
           .toList();
       conversations.value = items;
       hasMoreConversations.value = items.length >= _conversationsPageSize;
+      _recomputeUnreadCount();
+    } catch (_) {
+    } finally {
+      conversationsLoading.value = false;
+    }
+  }
+
+  // Re-fetches page 1 through however many conversations were already loaded, in one call
+  // (server already supports an arbitrary limit up to 100), instead of always resetting to a
+  // single fresh 20-item page 1 like loadConversations() does. Used specifically for a
+  // SignalR reconnect — the old behavior silently snapped a scrolled-down Chats list back to
+  // the top on every brief network blip, discarding everything past page 1.
+  Future<void> reloadPreservingPages() async {
+    if (conversationsLoading.value) return;
+    // Clamped to 100 to match the server's own Math.Clamp(limit, 1, 100) — beyond that,
+    // comparing items.length >= targetCount below would never be true even when there
+    // genuinely is more, since the server silently caps its response regardless of what
+    // limit was requested.
+    final targetCount = conversations.length < _conversationsPageSize
+        ? _conversationsPageSize
+        : conversations.length.clamp(_conversationsPageSize, 100);
+    conversationsLoading.value = true;
+    try {
+      final res = await ApiService.get('/chat/conversations',
+          params: {'offset': 0, 'limit': targetCount});
+      final items = (res['data']['items'] as List)
+          .map((e) => ConversationModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      conversations.value = items;
+      hasMoreConversations.value = items.length >= targetCount;
       _recomputeUnreadCount();
     } catch (_) {
     } finally {
@@ -104,17 +135,34 @@ class ChatController extends GetxController {
   Future<void> markRead(String conversationId) async {
     final index = conversations.indexWhere((c) => c.id == conversationId);
     if (index != -1 && conversations[index].unreadCount > 0) {
-      // Optimistic — the badge should drop the moment the user opens the thread,
-      // not wait on a round-trip.
-      _recomputeUnreadCount(excludingConversationId: conversationId);
+      // Optimistic — the badge should drop the moment the user opens the thread, not wait on
+      // a round-trip. Previously this only recomputed the aggregate tab-badge count, leaving
+      // this specific row's own badge/bold-name stale until loadConversations() resolved —
+      // zeroing the row itself here (same immutable-reconstruction shape
+      // applyUnreadCountChanged already uses) is what actually makes it optimistic.
+      final c = conversations[index];
+      conversations[index] = ConversationModel(
+        id: c.id, listingType: c.listingType, listingId: c.listingId,
+        listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
+        roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
+        otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
+        isOwner: c.isOwner, status: c.status, lastMessageAt: c.lastMessageAt,
+        lastMessagePreview: c.lastMessagePreview, unreadCount: 0,
+      );
+      _recomputeUnreadCount();
     }
     try {
       await ApiService.post('/chat/conversations/$conversationId/read', {});
       await loadConversations();
     } catch (_) {
-      // Silent — marking read is a passive side-effect of opening a thread,
-      // not a user-initiated action expecting feedback; the next successful
-      // sync will catch it up.
+      // The optimistic zero above already reflects what SHOULD be true — if the POST
+      // actually failed to even reach the server, retry once in the background rather than
+      // silently leaving the row wrong until some unrelated future sync happens to correct
+      // it. If the POST actually succeeded server-side and only this response was lost, the
+      // backend's own MarkRead now also pushes a live UnreadCountChanged event (reaching
+      // this exact conversation's row via applyUnreadCountChanged), so this reconciles
+      // either way.
+      unawaited(loadConversations());
     }
   }
 
@@ -200,8 +248,11 @@ class ChatController extends GetxController {
   // ── Message history + sending ───────────────────────────────────────────
 
   // Pass exactly one of before/after — before is normal backward history-scrolling, after is
-  // the reconnect catch-up path ("everything since the last message I already have").
-  Future<({List<MessageModel> items, String? status})> getMessages(String conversationId, {DateTime? before, DateTime? after}) async {
+  // the reconnect catch-up path ("everything since the last message I already have"). hasMore
+  // is true when this page was full-length (server-side heuristic, same one the conversations-
+  // list pagination already uses) — drives both load-older-on-scroll-to-top and looping the
+  // reconnect catch-up until it's genuinely caught up, not just fetched one page of the gap.
+  Future<({List<MessageModel> items, String? status, bool hasMore})> getMessages(String conversationId, {DateTime? before, DateTime? after}) async {
     assert(before == null || after == null, 'Pass either before or after, not both');
     try {
       final params = <String, dynamic>{};
@@ -215,18 +266,25 @@ class ChatController extends GetxController {
           .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
           .toList();
       final status = res['data']['conversationStatus'] as String?;
-      return (items: items, status: status);
+      final hasMore = res['data']['hasMore'] as bool? ?? false;
+      return (items: items, status: status, hasMore: hasMore);
     } catch (_) {
-      return (items: <MessageModel>[], status: null);
+      return (items: <MessageModel>[], status: null, hasMore: false);
     }
   }
 
-  Future<MessageModel?> sendMessage(String conversationId, String type, Map<String, dynamic> payload, {String? respondsToMessageId}) async {
+  // clientMessageId: pass for a fresh send only (never alongside respondsToMessageId, which
+  // already has its own server-side dedup) — one id generated per compose-attempt by the
+  // caller, so a genuinely-concurrent double-invocation of the same attempt (e.g. a fast
+  // double-tap landing before a sheet visually dismisses) collapses to the one message the
+  // server actually created instead of a real duplicate.
+  Future<MessageModel?> sendMessage(String conversationId, String type, Map<String, dynamic> payload, {String? respondsToMessageId, String? clientMessageId}) async {
     try {
       final res = await ApiService.post('/chat/conversations/$conversationId/messages', {
         'type': type,
         'payloadJson': jsonEncode(payload),
         if (respondsToMessageId != null) 'respondsToMessageId': respondsToMessageId,
+        if (clientMessageId != null) 'clientMessageId': clientMessageId,
       });
       return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
     } catch (e) {
