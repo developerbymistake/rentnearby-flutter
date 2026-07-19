@@ -53,4 +53,18 @@ class InquiryRepository {
     if (data is! Map<String, dynamic>) return null;
     return InquiryDetailModel.fromJson(data);
   }
+
+  /// "Report an issue with my agent" — throws (via ApiService's own Dio interceptor) on failure,
+  /// including a 409 when a Pending report already exists; the controller/screen surface that.
+  Future<InquiryDetailModel> submitEscalation(String id, String reason, {String? note}) async {
+    final res = await ApiService.post('/inquiries/$id/escalate', {
+      'reason': reason,
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+    });
+    final data = res['data'];
+    if (data is! Map<String, dynamic>) {
+      throw Exception('Invalid response from server');
+    }
+    return InquiryDetailModel.fromJson(data);
+  }
 }

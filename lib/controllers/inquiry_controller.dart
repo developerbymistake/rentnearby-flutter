@@ -27,6 +27,7 @@ class InquiryController extends GetxController {
   final Rxn<InquiryDetailModel> currentDetail = Rxn<InquiryDetailModel>();
   final isLoadingDetail = false.obs;
   final isSubmitting = false.obs;
+  final isSubmittingEscalation = false.obs;
 
   InquiryRepository get _repo => Get.find<InquiryRepository>();
 
@@ -92,6 +93,24 @@ class InquiryController extends GetxController {
     }
   }
 
+  /// "Report an issue with my agent" — mirrors [submitInquiry]'s exact shape (own loading flag,
+  /// funnels the authoritative response through [applyStatusUpdate], toasts on failure via the same
+  /// [_errorMessage] helper so a 409 "already reported" surfaces its real server message). Returns
+  /// true on success so the calling sheet knows to close itself.
+  Future<bool> submitEscalation(String inquiryId, String reason, {String? note}) async {
+    isSubmittingEscalation.value = true;
+    try {
+      final detail = await _repo.submitEscalation(inquiryId, reason, note: note);
+      applyStatusUpdate(detail: detail);
+      return true;
+    } catch (e) {
+      AppToast.error(_errorMessage(e));
+      return false;
+    } finally {
+      isSubmittingEscalation.value = false;
+    }
+  }
+
   /// The single local-state-patch funnel — see the class doc comment.
   /// Call with either:
   ///   - [detail]: the full authoritative shape (create response, or a
@@ -116,6 +135,7 @@ class InquiryController extends GetxController {
       myInquiries[idx] = myInquiries[idx].copyWith(
         status: newStatus,
         assignedAgentCount: detail?.assignedAgents.length,
+        hasPendingEscalation: detail?.hasPendingEscalation,
         updatedAt: ts,
       );
     }

@@ -19,6 +19,9 @@ class InquiryModel {
   // Multiple Agents can be assigned simultaneously — 0 means unassigned. Full names only live on
   // the Detail shape (InquiryDetailModel.assignedAgents).
   final int assignedAgentCount;
+  // True while a "report an issue with my agent" is awaiting Admin review. Present since the DTO
+  // shape is shared with the admin list, but not rendered on the consumer's own My Inquiries row.
+  final bool hasPendingEscalation;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -34,6 +37,7 @@ class InquiryModel {
     required this.mobile,
     required this.status,
     required this.assignedAgentCount,
+    required this.hasPendingEscalation,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -43,6 +47,7 @@ class InquiryModel {
   InquiryModel copyWith({
     String? status,
     int? assignedAgentCount,
+    bool? hasPendingEscalation,
     DateTime? updatedAt,
   }) =>
       InquiryModel(
@@ -57,6 +62,7 @@ class InquiryModel {
         mobile: mobile,
         status: status ?? this.status,
         assignedAgentCount: assignedAgentCount ?? this.assignedAgentCount,
+        hasPendingEscalation: hasPendingEscalation ?? this.hasPendingEscalation,
         createdAt: createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -73,6 +79,7 @@ class InquiryModel {
         mobile: json['mobile'] as String? ?? '',
         status: json['status'] as String? ?? '',
         assignedAgentCount: (json['assignedAgentCount'] as num?)?.toInt() ?? 0,
+        hasPendingEscalation: json['hasPendingEscalation'] as bool? ?? false,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
       );

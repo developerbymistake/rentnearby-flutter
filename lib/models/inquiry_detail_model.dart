@@ -1,4 +1,5 @@
 import 'agent_model.dart';
+import 'inquiry_escalation_model.dart';
 import 'inquiry_status_history_model.dart';
 
 /// Full Inquiry Detail shape — GET /inquiries/{id}, and the response body of
@@ -31,6 +32,10 @@ class InquiryDetailModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<InquiryStatusHistoryModel> statusHistory;
+  // Newest first, never null — this consumer's own "report an issue with my agent" history.
+  final List<InquiryEscalationModel> escalations;
+
+  bool get hasPendingEscalation => escalations.any((e) => e.status == 'Pending');
 
   InquiryDetailModel({
     required this.id,
@@ -52,6 +57,7 @@ class InquiryDetailModel {
     required this.createdAt,
     required this.updatedAt,
     required this.statusHistory,
+    this.escalations = const [],
   });
 
   /// Used only by InquiryController.applyStatusUpdate() to patch the
@@ -78,6 +84,7 @@ class InquiryDetailModel {
         createdAt: createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         statusHistory: statusHistory,
+        escalations: escalations,
       );
 
   factory InquiryDetailModel.fromJson(Map<String, dynamic> json) => InquiryDetailModel(
@@ -105,6 +112,9 @@ class InquiryDetailModel {
         updatedAt: DateTime.parse(json['updatedAt'] as String),
         statusHistory: (json['statusHistory'] as List? ?? [])
             .map((e) => InquiryStatusHistoryModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        escalations: (json['escalations'] as List? ?? [])
+            .map((e) => InquiryEscalationModel.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
 }

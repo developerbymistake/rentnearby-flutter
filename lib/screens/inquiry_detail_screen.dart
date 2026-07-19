@@ -11,6 +11,7 @@ import '../models/inquiry_detail_model.dart';
 import '../models/inquiry_status_history_model.dart';
 import '../services/inquiry_hub_service.dart';
 import '../utils/inquiry_status.dart';
+import '../widgets/escalate_inquiry_sheet.dart';
 import '../widgets/max_width_content.dart';
 
 const _months = [
@@ -117,11 +118,13 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
                         const SizedBox(height: 10),
                         if (detail.assignedAgents.isEmpty)
                           _buildNoAgentCard()
-                        else
+                        else ...[
                           for (final agent in detail.assignedAgents) ...[
                             _buildAgentCard(agent),
-                            if (agent != detail.assignedAgents.last) const SizedBox(height: 10),
+                            const SizedBox(height: 10),
                           ],
+                          _buildEscalateSection(detail),
+                        ],
                       ],
                     ),
                   ),
@@ -390,6 +393,76 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Only shown once at least one agent is actually assigned (the caller already gates this) — a
+  // "report an issue" affordance before anyone is handling the lead wouldn't make sense. Once a
+  // report is Pending, the row becomes a disabled confirmation chip instead of staying tappable —
+  // it isn't meant to be spammable, and the agent themselves is never notified, only Admin.
+  Widget _buildEscalateSection(InquiryDetailModel detail) {
+    if (detail.hasPendingEscalation) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFBBF7D0)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, size: 20, color: AppColors.success),
+            SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Issue reported',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF047857))),
+                  Text('Our team is reviewing — you\'ll be notified',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 10, color: Color(0xFF059669))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: () => EscalateInquirySheet.show(context, inquiryId: detail.id),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF7ED),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFDBA74), style: BorderStyle.solid),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(color: AppColors.reportAlert.withValues(alpha: 0.14), shape: BoxShape.circle),
+              child: const Icon(Iconsax.flag, size: 14, color: AppColors.reportAlert),
+            ),
+            const SizedBox(width: 9),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Need help with this agent?',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.reportAlert)),
+                  Text('Report an issue · we\'ll review it',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 10, color: Color(0xFFB45309))),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFFFDBA74)),
+          ],
+        ),
       ),
     );
   }
