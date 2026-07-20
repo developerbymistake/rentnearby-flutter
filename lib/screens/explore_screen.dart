@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
@@ -16,6 +17,7 @@ import '../config/app_map_state.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../models/listing_model.dart';
+import '../widgets/add_listing_shortcut_button.dart';
 import '../widgets/empty_radius_hint.dart';
 import '../widgets/listing_bottom_sheet.dart';
 import '../widgets/location_pill.dart';
@@ -917,68 +919,60 @@ class _ExploreScreenState extends State<ExploreScreen>
               ),
             ),
 
-          // ── Layer 4: UI overlays (unchanged) ─────────────────────────────
+          // ── Layer 4: UI overlays ──────────────────────────────────────────
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            child: Container(
-              decoration:
-                  const BoxDecoration(gradient: AppColors.primaryGradient),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-                  child: Column(children: [
-                    Row(children: [
-                      Expanded(child: LocationPill(accentColor: AppColors.primary)),
-                      const SizedBox(width: 8),
-                      _buildSearchToggleButton(),
-                    ]),
-                    const SizedBox(height: 10),
-                    Row(children: [
-                      Expanded(child: _buildRadiusChips()),
-                      const SizedBox(width: 12),
-                      GestureDetector(
-                        onTap: () => Get.toNamed(AppRoutes.myListings),
-                        child: Container(
-                          padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.12),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 20,
-                                height: 20,
-                                decoration: const BoxDecoration(
-                                    color: AppColors.primary, shape: BoxShape.circle),
-                                child: const Icon(Icons.add_rounded, size: 15, color: Colors.white),
-                              ),
-                              const SizedBox(width: 6),
-                              const Text('Room',
-                                  style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.primary)),
-                            ],
-                          ),
+            child: Column(
+              children: [
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(22),
+                      bottomRight: Radius.circular(22),
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                      child: Column(children: [
+                        // Fixed min-height guards against LocationPill collapsing to a
+                        // zero-size SizedBox during the brief cold-start window before
+                        // LocationController.effectiveDistrict resolves.
+                        SizedBox(
+                          height: 40,
+                          child: LocationPill(accentColor: AppColors.primary),
                         ),
-                      ),
-                    ]),
-                  ]),
+                        const SizedBox(height: 10),
+                        Row(children: [
+                          Expanded(child: _buildRadiusChips()),
+                          const SizedBox(width: 10),
+                          _buildSearchToggleButton(),
+                        ]),
+                      ]),
+                    ),
+                  ),
                 ),
-              ),
+                // Floats over the hero's rounded bottom edge — same overlap technique
+                // as home_screen.dart's _buildToggle() (Transform.translate(0,-22)).
+                Transform.translate(
+                  offset: const Offset(0, -22),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: AddListingShortcutButton(
+                        label: 'Add my room',
+                        icon: Iconsax.home,
+                        onTap: () => Get.toNamed(AppRoutes.myListings),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -1033,11 +1027,12 @@ class _ExploreScreenState extends State<ExploreScreen>
     return Obx(() => GestureDetector(
       onTap: searchResolving ? null : () => onSearchToggleTap(context),
       child: Container(
-        width: 40,
-        height: 40,
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.12),
@@ -1047,15 +1042,28 @@ class _ExploreScreenState extends State<ExploreScreen>
           ],
         ),
         child: searchResolving
-            ? const Padding(
-                padding: EdgeInsets.all(11),
+            ? const SizedBox(
+                width: 15,
+                height: 15,
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: AppColors.primary),
               )
-            : Icon(
-                isSearchActive ? Icons.close_rounded : Icons.search_rounded,
-                color: AppColors.primary,
-                size: 20,
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSearchActive ? Icons.close_rounded : Icons.search_rounded,
+                    color: AppColors.primary,
+                    size: 15,
+                  ),
+                  const SizedBox(width: 5),
+                  const Text('Search',
+                      style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary)),
+                ],
               ),
       ),
     ));
@@ -1066,14 +1074,13 @@ class _ExploreScreenState extends State<ExploreScreen>
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.10),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
+            color: Colors.black.withValues(alpha: 0.12),
             blurRadius: 8,
-            offset: const Offset(0, 3),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -1096,8 +1103,17 @@ class _ExploreScreenState extends State<ExploreScreen>
                 margin: EdgeInsets.only(right: i < radii.length - 1 ? 4 : 0),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: active ? Colors.white : Colors.transparent,
-                  borderRadius: BorderRadius.circular(13),
+                  gradient: active ? AppColors.primaryGradient : null,
+                  borderRadius: BorderRadius.circular(11),
+                  boxShadow: active
+                      ? [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.32),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Text('${r.toInt()} km',
                     overflow: TextOverflow.ellipsis,
@@ -1105,7 +1121,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                       fontFamily: 'Poppins',
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: active ? AppColors.primary : Colors.white,
+                      color: active ? Colors.white : AppColors.textLight,
                     )),
               ),
             ),
