@@ -224,10 +224,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Flutter's BoxShadow has no CSS-style `inset` — the approved mock's emboss
-  // (a top highlight ring + bottom shadow ring) is faked here with a vertical
-  // gradient (lighter at top, like light hitting a raised surface) plus a real
-  // outer shadow for the lift. Deliberate substitution, not a shortcut.
+  // Background stays a barely-there glass circle (same fill/border alpha this
+  // file already used for the old bell/chat icon buttons) — only the icon
+  // glyph itself is solid white, so it reads clearly against the circle
+  // instead of the fill competing with it for "white."
   Widget _menuOption({
     required IconData icon,
     required String label,
@@ -248,21 +248,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.white.withValues(alpha: 0.42),
-                      Colors.white.withValues(alpha: 0.22),
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.16),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                  color: Colors.white.withValues(alpha: 0.18),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 child: Icon(icon, color: Colors.white, size: 17),
               ),

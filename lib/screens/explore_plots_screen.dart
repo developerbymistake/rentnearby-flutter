@@ -890,7 +890,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                       child: SafeArea(
                         bottom: false,
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 35),
                           child: Column(children: [
                             // Fixed min-height guards against LocationPill collapsing to a
                             // zero-size SizedBox during the brief cold-start window before
