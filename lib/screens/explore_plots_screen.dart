@@ -882,15 +882,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(22),
-                          bottomRight: Radius.circular(22),
-                        ),
                       ),
                       child: SafeArea(
                         bottom: false,
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 35),
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                           child: Column(children: [
                             // Fixed min-height guards against LocationPill collapsing to a
                             // zero-size SizedBox during the brief cold-start window before
@@ -930,13 +926,15 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 child: _buildFilterPanel(),
               ),
 
-              // ── Add-listing edge tab ────────────────────────────────────────
-              // View List keeps its left:20 inset; "Add my plot" is now an edge
-              // tab flush with the screen's actual right edge (right:0 on this
-              // Positioned, not 20) — spaceBetween pushes it all the way there.
+              // ── Add-listing / View-List edge tabs ───────────────────────────
+              // Both flush to their own screen edge (left:0/right:0) —
+              // spaceBetween pushes View List all the way left and Add my
+              // plot all the way right. Only a small downward shift
+              // (145 -> 130) — going lower risks crowding the filter panel at
+              // bottom:20 on devices where its type-chip row wraps to 2 lines.
               Positioned(
-                bottom: 145,
-                left: 20,
+                bottom: 130,
+                left: 0,
                 right: 0,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1230,13 +1228,23 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     return GestureDetector(
       onTap: _showListSheet,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF92400E), width: 1.4),
+          // Mirror of AddListingShortcutButton's edge tab — rounded on the
+          // right (facing into the screen), square/flush on the left (touching
+          // the screen's left edge), no border on that flush side.
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          ),
+          border: const Border(
+            top: BorderSide(color: Color(0xFF92400E), width: 1.4),
+            right: BorderSide(color: Color(0xFF92400E), width: 1.4),
+            bottom: BorderSide(color: Color(0xFF92400E), width: 1.4),
+          ),
           boxShadow: [
-            BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(3, 4)),
           ],
         ),
         child: Row(
