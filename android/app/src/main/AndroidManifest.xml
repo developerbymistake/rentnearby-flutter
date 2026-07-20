@@ -36,6 +36,19 @@
                 <action android:name="FLUTTER_NOTIFICATION_CLICK"/>
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
+            <!-- App Links for marketing QR codes/posters: autoVerify makes Android validate
+                 https://developerbymistake.tech/.well-known/assetlinks.json at install time, so a
+                 scanned https://developerbymistake.tech/app link opens straight to this Activity
+                 (Home) instead of a browser, when verification succeeds. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="developerbymistake.tech"
+                    android:pathPrefix="/app"/>
+            </intent-filter>
         </activity>
         <meta-data
             android:name="flutterEmbedding"
