@@ -6,21 +6,24 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
-import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/notification_controller.dart';
-// import '../widgets/coin_balance_chip.dart'; // re-enable with the CoinBalanceChip usage below
+import '../config/app_tabs.dart';
+import '../widgets/coin_balance_chip.dart';
 import '../widgets/max_width_content.dart';
 import '../widgets/sliding_chip_toggle.dart';
 
 const _kPlotColor = Color(0xFF92400E);
+const _kPlotColorDark = Color(0xFF78350F);
 const _kPlotGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [Color(0xFF92400E), Color(0xFF78350F)],
+  colors: [_kPlotColor, _kPlotColorDark],
 );
+const _kRoomsAccentLight = Color(0xFFFDBA74);
+const _kRoomsAccentDark = Color(0xFFB45309);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -52,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 2),
                 _buildListingsSection(),
                 const SizedBox(height: 15),
-                _buildQuickActions(),
+                _buildManageListingsCard(),
                 const SizedBox(height: 20),
                 _buildPromoBanner(),
               ],
@@ -112,147 +115,130 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }),
               ),
-              GestureDetector(
-                onTap: () => Get.toNamed(AppRoutes.notifications),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Iconsax.notification, color: Colors.white, size: 17),
-                    ),
-                    // Same red-pill badge styling as profile_screen.dart's _leadsTile /
-                    // main_screen.dart's _navItem — reused, not reinvented.
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Obx(() {
-                        final count = Get.find<NotificationController>().unreadCount.value;
-                        if (count <= 0) return const SizedBox.shrink();
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                          constraints: const BoxConstraints(minWidth: 16),
-                          decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
-                          child: Text(
-                            count > 99 ? '99+' : '$count',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => Get.toNamed(AppRoutes.chatsList),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Iconsax.message, color: Colors.white, size: 17),
-                    ),
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Obx(() {
-                        final count = Get.find<ChatController>().unreadCount.value;
-                        if (count <= 0) return const SizedBox.shrink();
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                          constraints: const BoxConstraints(minWidth: 16),
-                          decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
-                          child: Text(
-                            count > 99 ? '99+' : '$count',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
-              ),
+              const CoinBalanceChip(color: Colors.white),
             ],
           ),
-          // Coin balance chip — temporarily hidden here, will be re-placed elsewhere later.
-          // const SizedBox(height: 10),
-          // const Align(alignment: Alignment.centerRight, child: CoinBalanceChip(color: Colors.white)),
-          const SizedBox(height: 18),
-          Obx(() => Row(
-                children: [
-                  Expanded(
-                    child: _statCard(
-                      Iconsax.home,
-                      _home.summaryLoading.value ? null : _home.roomsCount.value,
-                      'Rooms nearby',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _statCard(
-                      Icons.landscape_rounded,
-                      _home.summaryLoading.value ? null : _home.plotsCount.value,
-                      'Plots nearby',
-                    ),
-                  ),
-                ],
-              )),
+          const SizedBox(height: 16),
+          _buildActionMenu(),
         ],
       ),
     );
   }
 
-  Widget _statCard(IconData icon, int? count, String label) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
-        borderRadius: BorderRadius.circular(14),
-      ),
+  Widget _buildActionMenu() {
+    return Row(
+      children: [
+        Expanded(
+          child: _menuOption(
+            icon: Iconsax.notification,
+            label: 'Notifications',
+            unreadCount: Get.find<NotificationController>().unreadCount,
+            onTap: () => Get.toNamed(AppRoutes.notifications),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _menuOption(
+            icon: Iconsax.message,
+            label: 'Messages',
+            unreadCount: Get.find<ChatController>().unreadCount,
+            onTap: () => Get.toNamed(AppRoutes.chatsList),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _menuOption(
+            icon: Iconsax.home,
+            label: 'Find Room',
+            onTap: () => _auth.tabIndex.value = AppTabs.rooms,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _menuOption(
+            icon: Icons.landscape_rounded,
+            label: 'Find Plot',
+            onTap: () => _auth.tabIndex.value = AppTabs.plots,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Flutter's BoxShadow has no CSS-style `inset` — the approved mock's emboss
+  // (a top highlight ring + bottom shadow ring) is faked here with a vertical
+  // gradient (lighter at top, like light hitting a raised surface) plus a real
+  // outer shadow for the lift. Deliberate substitution, not a shortcut.
+  Widget _menuOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    RxInt? unreadCount,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
+          Stack(
+            clipBehavior: Clip.none,
             children: [
-              Icon(icon, color: Colors.white, size: 17),
-              const SizedBox(width: 6),
-              count == null
-                  ? _shimmerBlock(width: 24, height: 16, dark: false)
-                  : Text(
-                      '$count',
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.32),
+                      Colors.white.withValues(alpha: 0.16),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.28),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
                     ),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 17),
+              ),
+              if (unreadCount != null)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Obx(() {
+                    final count = unreadCount.value;
+                    if (count <= 0) return const SizedBox.shrink();
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      constraints: const BoxConstraints(minWidth: 16),
+                      decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
+                      child: Text(
+                        count > 99 ? '99+' : '$count',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
+                      ),
+                    );
+                  }),
+                ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Colors.white70,
+              fontSize: 7.5,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
             ),
           ),
         ],
@@ -426,83 +412,210 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
 
-  // ── Quick actions ────────────────────────────────────────────────────────
+  // ── Manage your listings ────────────────────────────────────────────────
 
-  Widget _buildQuickActions() {
+  Widget _buildManageListingsCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: _quickAction(Iconsax.home, 'Find Room', AppColors.primary, AppColors.primary.withValues(alpha: 0.1), () {
-              _auth.tabIndex.value = AppTabs.rooms;
-            }),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 16, 14, 15),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFF6EC), Color(0xFFFDEFEF)],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _quickAction(
-              Icons.landscape_rounded,
-              'Find Plot',
-              AppColors.success,
-              AppColors.success.withValues(alpha: 0.1),
-              () => _auth.tabIndex.value = AppTabs.plots,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: _kPlotColor.withValues(alpha: 0.12),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _quickAction(
-              Icons.meeting_room_rounded,
-              'My Rooms',
-              AppColors.warning,
-              AppColors.warning.withValues(alpha: 0.1),
-              () => Get.toNamed(AppRoutes.myListings),
+          ],
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Stack(
+          children: [
+            // Two soft abstract glows — purely decorative, matching the approved
+            // mock's "richness without an illustration/clutter" design.
+            Positioned(
+              top: -30,
+              right: -24,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [AppColors.warning.withValues(alpha: 0.16), Colors.transparent],
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _quickAction(
-              Icons.terrain_rounded,
-              'My Plots',
-              _kPlotColor,
-              _kPlotColor.withValues(alpha: 0.1),
-              () => Get.toNamed(AppRoutes.myPlots),
+            Positioned(
+              bottom: -36,
+              left: 60,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [_kPlotColor.withValues(alpha: 0.12), Colors.transparent],
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Manage your listings',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Quick access to your listed properties',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF92706A),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _manageListingRow(
+                        label: 'My Rooms',
+                        icon: Iconsax.home,
+                        bg: AppColors.warning.withValues(alpha: 0.14),
+                        border: AppColors.warning.withValues(alpha: 0.22),
+                        iconGradient: const LinearGradient(
+                          colors: [_kRoomsAccentLight, AppColors.warning],
+                        ),
+                        subtitleColor: _kRoomsAccentDark,
+                        chevronColor: _kRoomsAccentDark,
+                        onTap: () => Get.toNamed(AppRoutes.myListings),
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: _manageListingRow(
+                        label: 'My Plots',
+                        icon: Icons.landscape_rounded,
+                        bg: _kPlotColor.withValues(alpha: 0.14),
+                        border: _kPlotColor.withValues(alpha: 0.22),
+                        iconGradient: const LinearGradient(
+                          colors: [Color(0xFFC2825F), _kPlotColor],
+                        ),
+                        subtitleColor: _kPlotColorDark,
+                        chevronColor: _kPlotColorDark,
+                        onTap: () => Get.toNamed(AppRoutes.myPlots),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _quickAction(IconData icon, String label, Color color, Color bg, VoidCallback onTap) {
+  Widget _manageListingRow({
+    required String label,
+    required IconData icon,
+    required Color bg,
+    required Color border,
+    required Gradient iconGradient,
+    required Color subtitleColor,
+    required Color chevronColor,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 7),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: border),
+        ),
+        child: Row(
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: 26,
+              height: 26,
               decoration: BoxDecoration(
-                color: bg,
-                borderRadius: BorderRadius.circular(14),
+                gradient: iconGradient,
+                borderRadius: BorderRadius.circular(9),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: color, size: 20),
+              child: Icon(icon, size: 13, color: Colors.white),
             ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textDark,
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  Text(
+                    'View & manage',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 7.5,
+                      fontWeight: FontWeight.w600,
+                      color: subtitleColor,
+                    ),
+                  ),
+                ],
               ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(Icons.chevron_right_rounded, size: 12, color: chevronColor),
             ),
           ],
         ),
@@ -568,17 +681,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _shimmerBlock({required double width, required double height, double radius = 6, bool dark = true}) {
-    return Shimmer.fromColors(
-      baseColor: dark ? AppColors.shimmerBase : Colors.white.withValues(alpha: 0.3),
-      highlightColor: dark ? AppColors.shimmerHighlight : Colors.white.withValues(alpha: 0.6),
-      child: Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(radius)),
-      ),
-    );
-  }
 }
 
 class _HomeListingCard extends StatelessWidget {
