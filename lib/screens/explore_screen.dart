@@ -956,20 +956,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                     ),
                   ),
                 ),
-                // Floats over the hero's rounded bottom edge — same overlap technique
-                // as home_screen.dart's _buildToggle() (Transform.translate(0,-22)).
-                Transform.translate(
-                  offset: const Offset(0, -22),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: AddListingShortcutButton(
-                        label: 'Add my room',
-                        icon: Iconsax.home,
-                        onTap: () => Get.toNamed(AppRoutes.myListings),
-                      ),
-                    ),
+                // Current-location FAB sits right after the header, on the map,
+                // aligned under Search — no overlap into the header at all.
+                Padding(
+                  padding: const EdgeInsets.only(top: 12, right: 20),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: _buildLocationFab(),
                   ),
                 ),
               ],
@@ -983,22 +976,22 @@ class _ExploreScreenState extends State<ExploreScreen>
             child: _buildFilterPanel(),
           ),
 
-          // View List + current-location FAB share one row spanning the exact
-          // same left:20/right:20 bounds as the filter panel below — this is
-          // what keeps the FAB pixel-identical to its old standalone
-          // Positioned(bottom:145, right:20) (spaceBetween still pushes the
-          // last child to the row's right edge even when the first slot is
-          // an empty SizedBox.shrink()), while giving View List real
-          // breathing room instead of a hand-computed right offset.
+          // View List keeps its left:20 inset; "Add my room" is now an edge
+          // tab flush with the screen's actual right edge (right:0 on this
+          // Positioned, not 20) — spaceBetween pushes it all the way there.
           Positioned(
             bottom: 145,
             left: 20,
-            right: 20,
+            right: 0,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _filteredListings.isNotEmpty ? _buildViewListButton() : const SizedBox.shrink(),
-                _buildLocationFab(),
+                AddListingShortcutButton(
+                  label: 'Add my room',
+                  icon: Iconsax.home,
+                  onTap: () => Get.toNamed(AppRoutes.myListings),
+                ),
               ],
             ),
           ),

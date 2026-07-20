@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Floating "Add my room" / "Add my plot" shortcut — shared by the Rooms and
-/// Plots Explore screens so the CTA's color/border/shape stays byte-identical
+/// "Add my room" / "Add my plot" shortcut — shared by the Rooms and Plots
+/// Explore screens so the CTA's color/border/shape stays byte-identical
 /// between both tabs (only label/icon/destination differ per caller). Sits
-/// positioned at the hero's rounded bottom edge via Transform.translate, the
-/// same overlap technique home_screen.dart's _buildToggle() already uses.
+/// flush against the screen's right edge as an edge tab — rounded on the side
+/// facing into the screen, square on the side touching the edge — reads as a
+/// handle poking out from the side rather than a free-floating pill.
 class AddListingShortcutButton extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -22,20 +23,27 @@ class AddListingShortcutButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(5, 5, 11, 5),
+        padding: const EdgeInsets.fromLTRB(5, 9, 16, 9),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [Color(0xFF10B981), Color(0xFF059669)],
           ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 3),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(22),
+            bottomLeft: Radius.circular(22),
+          ),
+          border: Border(
+            top: BorderSide(color: Colors.white.withValues(alpha: 0.9), width: 3),
+            left: BorderSide(color: Colors.white.withValues(alpha: 0.9), width: 3),
+            bottom: BorderSide(color: Colors.white.withValues(alpha: 0.9), width: 3),
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
+              color: Colors.black.withValues(alpha: 0.22),
               blurRadius: 12,
-              offset: const Offset(0, 4),
+              offset: const Offset(-3, 4),
             ),
           ],
         ),
