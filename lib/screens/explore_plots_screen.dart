@@ -926,15 +926,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 child: _buildFilterPanel(),
               ),
 
-              // ── Add-listing / View-List edge tabs ───────────────────────────
-              // Both flush to their own screen edge (left:0/right:0) —
-              // spaceBetween pushes View List all the way left and Add my
-              // plot all the way right. Only a small downward shift
-              // (145 -> 130) — going lower risks crowding the filter panel at
-              // bottom:20 on devices where its type-chip row wraps to 2 lines.
+              // View List stays a normal rounded pill, aligned to the same
+              // left:20 inset as the filter panel below. "Add my plot" is
+              // still the edge tab flush with the screen's right edge (right:0).
               Positioned(
                 bottom: 130,
-                left: 0,
+                left: 20,
                 right: 0,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1228,23 +1225,13 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     return GestureDetector(
       onTap: _showListSheet,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
-          // Mirror of AddListingShortcutButton's edge tab — rounded on the
-          // right (facing into the screen), square/flush on the left (touching
-          // the screen's left edge), no border on that flush side.
-          borderRadius: const BorderRadius.only(
-            topRight: Radius.circular(20),
-            bottomRight: Radius.circular(20),
-          ),
-          border: const Border(
-            top: BorderSide(color: Color(0xFF92400E), width: 1.4),
-            right: BorderSide(color: Color(0xFF92400E), width: 1.4),
-            bottom: BorderSide(color: Color(0xFF92400E), width: 1.4),
-          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF92400E), width: 1.4),
           boxShadow: [
-            BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(3, 4)),
+            BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4)),
           ],
         ),
         child: Row(
