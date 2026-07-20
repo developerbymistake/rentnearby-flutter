@@ -11,7 +11,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/notification_controller.dart';
-import '../widgets/coin_balance_chip.dart';
+// import '../widgets/coin_balance_chip.dart'; // re-enable with the CoinBalanceChip usage below
 import '../widgets/max_width_content.dart';
 import '../widgets/sliding_chip_toggle.dart';
 
@@ -189,9 +189,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          const Align(alignment: Alignment.centerRight, child: CoinBalanceChip(color: Colors.white)),
-          const SizedBox(height: 14),
+          // Coin balance chip — temporarily hidden here, will be re-placed elsewhere later.
+          // const SizedBox(height: 10),
+          // const Align(alignment: Alignment.centerRight, child: CoinBalanceChip(color: Colors.white)),
+          const SizedBox(height: 18),
           Obx(() => Row(
                 children: [
                   Expanded(
