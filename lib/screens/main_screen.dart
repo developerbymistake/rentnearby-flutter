@@ -58,7 +58,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     TabNavigator(tabId: AppTabs.home),
     TabNavigator(tabId: AppTabs.rooms),
     TabNavigator(tabId: AppTabs.plots),
-    TabNavigator(tabId: AppTabs.chats),
+    TabNavigator(tabId: AppTabs.explore),
     TabNavigator(tabId: AppTabs.profile),
   ];
 
@@ -573,8 +573,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             _navItem(AppTabs.home, Iconsax.home, Iconsax.home5, 'Home'),
             _navItem(AppTabs.rooms, Iconsax.map, Iconsax.map5, 'Rooms'),
             _navItem(AppTabs.plots, Iconsax.location, Iconsax.location5, 'Plots'),
-            _navItem(AppTabs.chats, Iconsax.message, Iconsax.message5, 'Chats', badgeCount: _chatCtrl.unreadCount.value),
-            _navItem(AppTabs.profile, Iconsax.user, Iconsax.user5, 'Profile'),
+            _navItem(AppTabs.explore, Iconsax.discover, Iconsax.discover5, 'Explore'),
+            _navItem(AppTabs.profile, Iconsax.setting_2, Iconsax.setting_25, 'Settings'),
           ],
         ),
       ),
@@ -592,7 +592,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           if (index == AppTabs.plots && _auth.tabIndex.value != AppTabs.plots) {
             Get.find<PlotController>().exploreRefreshTrigger.value++;
           }
-          if (index == AppTabs.chats && _auth.tabIndex.value != AppTabs.chats) _auth.chatsTabTrigger.value++;
           if (index == AppTabs.profile && _auth.tabIndex.value != AppTabs.profile) _auth.profileTabTrigger.value++;
           Get.find<ListingController>().filterResetTrigger.value++;
           Get.find<PlotController>().filterResetTrigger.value++;

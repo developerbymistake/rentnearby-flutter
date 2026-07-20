@@ -9,6 +9,7 @@ const _pauseRoutes = {
   '/listing-detail',
   '/plot-detail',
   '/chat-conversation',
+  '/chats-list',
   '/my-listings',
   '/my-plots',
   '/listing-reports',

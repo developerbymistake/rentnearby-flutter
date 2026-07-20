@@ -4,7 +4,6 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
-import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../models/conversation_model.dart';
 import '../utils/input_formatters.dart';
@@ -18,12 +17,10 @@ class ChatsListScreen extends StatefulWidget {
 class _ChatsListScreenState extends State<ChatsListScreen>
     with WidgetsBindingObserver {
   final _ctrl = Get.find<ChatController>();
-  final _auth = Get.find<AuthController>();
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   String _query = '';
   bool _searchOpen = false;
-  Worker? _chatsTabWorker;
   Worker? _searchAutoFetchWorker;
   // Bounded auto-fetch counter for the search-stalls-on-few-results gap below — reset
   // whenever the query changes or search closes, so a fresh search always gets its own
@@ -46,11 +43,6 @@ class _ChatsListScreenState extends State<ChatsListScreen>
         _ctrl.loadMoreConversations();
       }
     });
-    // ChatsListScreen lives inside main_screen.dart's IndexedStack, so this State is
-    // never disposed on tab switch — without this, a search left open would stay open
-    // when leaving and returning to the Chats tab. Same reset-on-revisit pattern
-    // profile_screen.dart already uses via profileTabTrigger.
-    _chatsTabWorker = ever(_auth.chatsTabTrigger, (_) => _closeSearch());
     // A narrow search query can filter the currently-loaded list down to a handful of rows
     // that don't even fill the viewport — the scroll listener above then structurally never
     // fires (there's nothing to scroll), so loadMoreConversations() would never run even
@@ -69,16 +61,6 @@ class _ChatsListScreenState extends State<ChatsListScreen>
     _ctrl.loadMoreConversations();
   }
 
-  void _closeSearch() {
-    if (!mounted) return;
-    setState(() {
-      _searchOpen = false;
-      _query = '';
-    });
-    _searchCtrl.clear();
-    _autoFetchCount = 0;
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -89,7 +71,6 @@ class _ChatsListScreenState extends State<ChatsListScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _chatsTabWorker?.dispose();
     _searchAutoFetchWorker?.dispose();
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
@@ -153,9 +134,13 @@ class _ChatsListScreenState extends State<ChatsListScreen>
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
+                padding: const EdgeInsets.fromLTRB(4, 16, 12, 20),
                 child: Row(
                   children: [
+                    IconButton(
+                      onPressed: () => Get.back(),
+                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                    ),
                     const Expanded(
                       child: Text(
                         'Messages',

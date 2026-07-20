@@ -20,7 +20,6 @@ class AuthController extends GetxController {
   final user = Rxn<UserModel>();
   final tabIndex = AppTabs.home.obs;
   final profileTabTrigger = 0.obs;
-  final chatsTabTrigger = 0.obs;
 
   // Granular profile observables — each fires only when its specific field changes
   final profileName = ''.obs;
@@ -221,20 +220,39 @@ class AuthController extends GetxController {
     } catch (_) {}
   }
 
-  Future<bool> updateProfile(String? name, {bool? isContactVisible}) async {
+  // Two independent actions (edit-name sheet, visibility-confirm sheet on ProfileScreen), two
+  // independent endpoints — deliberately not one combined "update profile" call, so editing your
+  // name never has to know or care about the visibility toggle's state and vice versa.
+  Future<bool> updateName(String name) async {
     try {
       isLoading.value = true;
-      final body = <String, dynamic>{'name': name};
-      if (isContactVisible != null) body['isContactVisible'] = isContactVisible;
-      final res = await ApiService.put('/users/profile', body);
+      final res = await ApiService.put('/users/profile/name', {'name': name});
       final updated = UserModel.fromJson(res['data'] as Map<String, dynamic>);
       StorageService.saveUser(updated);
       user.value = updated;
-      profileName.value = updated.name ?? '';
+      _syncProfileFields(updated);
       Get.find<UserRepository>().invalidate();
       return true;
     } catch (e) {
-      AppToast.error(_dioMessage(e, 'Could not update profile.'));
+      AppToast.error(_dioMessage(e, 'Could not update name.'));
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<bool> updateContactVisibility(bool isContactVisible) async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.put('/users/profile/contact-visibility', {'isContactVisible': isContactVisible});
+      final updated = UserModel.fromJson(res['data'] as Map<String, dynamic>);
+      StorageService.saveUser(updated);
+      user.value = updated;
+      _syncProfileFields(updated);
+      Get.find<UserRepository>().invalidate();
+      return true;
+    } catch (e) {
+      AppToast.error(_dioMessage(e, 'Could not update contact visibility.'));
       return false;
     } finally {
       isLoading.value = false;

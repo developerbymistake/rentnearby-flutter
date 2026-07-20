@@ -4,7 +4,7 @@ import '../screens/home_screen.dart';
 import '../screens/explore_screen.dart';
 import '../screens/explore_plots_screen.dart';
 import '../screens/profile_screen.dart';
-import '../screens/chats_list_screen.dart';
+import '../screens/local_services_screen.dart';
 import 'tab_keys.dart';
 
 Widget _rootScreen(int tabId) {
@@ -12,7 +12,7 @@ Widget _rootScreen(int tabId) {
     case AppTabs.home: return const HomeScreen();
     case AppTabs.rooms: return const ExploreScreen();
     case AppTabs.plots: return const ExplorePlotsScreen();
-    case AppTabs.chats: return const ChatsListScreen();
+    case AppTabs.explore: return const LocalServicesScreen();
     case AppTabs.profile: return const ProfileScreen();
     default: return const SizedBox.shrink();
   }

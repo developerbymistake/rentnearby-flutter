@@ -4,6 +4,7 @@ import '../models/inquiry_detail_model.dart';
 import '../models/inquiry_model.dart';
 import '../repositories/inquiry_repository.dart';
 import '../utils/app_toast.dart';
+import '../utils/inquiry_status.dart';
 
 /// Owns the consumer's own Inquiry state — the shared "My Inquiries" list
 /// (both verticals together, no per-vertical split) and whichever single
@@ -24,6 +25,10 @@ import '../utils/app_toast.dart';
 class InquiryController extends GetxController {
   final myInquiries = <InquiryModel>[].obs;
   final isLoadingMyInquiries = false.obs;
+  // In-progress (Submitted/Contacted) count — drives the Explore tab header's Inquiries badge.
+  // Recomputed at the end of every myInquiries mutation (loadMyInquiries + applyStatusUpdate),
+  // same "derived, never set directly" shape as ChatController.unreadCount.
+  final activeInquiryCount = 0.obs;
   final Rxn<InquiryDetailModel> currentDetail = Rxn<InquiryDetailModel>();
   final isLoadingDetail = false.obs;
   final isSubmitting = false.obs;
@@ -40,11 +45,18 @@ class InquiryController extends GetxController {
     isLoadingMyInquiries.value = true;
     try {
       myInquiries.value = await _repo.getMyInquiries();
+      _recomputeActiveCount();
     } catch (_) {
       AppToast.error('Could not load your inquiries. Pull to refresh.');
     } finally {
       isLoadingMyInquiries.value = false;
     }
+  }
+
+  void _recomputeActiveCount() {
+    activeInquiryCount.value = myInquiries
+        .where((i) => i.status == InquiryStatus.submitted || i.status == InquiryStatus.contacted)
+        .length;
   }
 
   Future<void> loadInquiryDetail(String inquiryId) async {
@@ -163,6 +175,7 @@ class InquiryController extends GetxController {
         currentDetail.value = open.copyWith(status: newStatus, updatedAt: ts);
       }
     }
+    _recomputeActiveCount();
   }
 
   /// Called when leaving the Inquiry Detail screen so a stale detail isn't

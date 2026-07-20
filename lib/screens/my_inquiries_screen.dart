@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
+import '../config/app_tabs.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/inquiry_controller.dart';
 import '../models/inquiry_model.dart';
 import '../services/inquiry_hub_service.dart';
@@ -66,6 +69,43 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
     Get.toNamed(AppRoutes.inquiryDetail, arguments: {'id': inquiry.id});
   }
 
+  // This screen is reachable from more than the Explore tab (push-notification taps,
+  // inquiry_confirmation_screen.dart) so a plain back button doesn't reliably return to
+  // Explore — jump there explicitly instead.
+  void _goToExplore() {
+    Get.find<AuthController>().tabIndex.value = AppTabs.explore;
+    Get.until((route) => route.settings.name == AppRoutes.main);
+  }
+
+  Widget _exploreShortcutRow() {
+    return InkWell(
+      onTap: _goToExplore,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
+        ),
+        child: Row(children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Iconsax.discover, color: AppColors.primaryLight, size: 18),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text('Explore',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          ),
+          const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textLight),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -86,12 +126,14 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
                   child: ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
-                    itemCount: items.length,
-                    itemBuilder: (_, i) => _InquiryRow(
-                      inquiry: items[i],
-                      dateText: _formatDate(items[i].createdAt),
-                      onTap: () => _openDetail(items[i]),
-                    ),
+                    itemCount: items.length + 1,
+                    itemBuilder: (_, i) => i < items.length
+                        ? _InquiryRow(
+                            inquiry: items[i],
+                            dateText: _formatDate(items[i].createdAt),
+                            onTap: () => _openDetail(items[i]),
+                          )
+                        : _exploreShortcutRow(),
                   ),
                 ),
               );
@@ -131,20 +173,26 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
   }
 
   Widget _buildEmpty() => Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Container(
-            width: 90,
-            height: 90,
-            decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
-            child: const Icon(Icons.list_alt_rounded, size: 40, color: AppColors.primaryLight),
-          ),
-          const SizedBox(height: 20),
-          const Text('No inquiries yet',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          const SizedBox(height: 8),
-          const Text('Enquire about a package to see it show up here.',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-        ]),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Container(
+              width: 90,
+              height: 90,
+              decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
+              child: const Icon(Icons.list_alt_rounded, size: 40, color: AppColors.primaryLight),
+            ),
+            const SizedBox(height: 20),
+            const Text('No inquiries yet',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            const SizedBox(height: 8),
+            const Text('Enquire about a package to see it show up here.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+            const SizedBox(height: 24),
+            _exploreShortcutRow(),
+          ]),
+        ),
       );
 
   Widget _buildShimmer() => MaxWidthContent(

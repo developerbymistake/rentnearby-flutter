@@ -155,8 +155,8 @@ class NotificationService extends GetxService {
   StreamSubscription? _foregroundMessageSub;
   final _localNotifications = FlutterLocalNotificationsPlugin();
 
-  // Explore and Chats are resident tabs (see AppTabs); My Rooms/My Plots are
-  // pushed routes, handled separately below.
+  // Explore is a resident tab (see AppTabs); Chat, My Rooms/My Plots, etc. are all
+  // pushed routes now, handled via _routesOnTopOfMain below.
 
   @override
   Future<void> onInit() async {
@@ -332,6 +332,13 @@ class NotificationService extends GetxService {
     AppRoutes.myLeads,
     AppRoutes.leadDetail,
     AppRoutes.notifications,
+    // Chat moved off the tab bar onto pushed routes — both need to be here so a second
+    // notification arriving while the user is on Chats List or mid-conversation pops back to
+    // main via the lightweight Get.until path below, not the full Get.offAllNamed teardown/
+    // rebuild in the else branch (which was only ever meant for "app was terminated/on
+    // login/splash" — main not in the stack at all).
+    AppRoutes.chatsList,
+    AppRoutes.chatConversation,
   };
 
   void _handleNotificationTap(RemoteMessage message) {
@@ -376,8 +383,10 @@ class NotificationService extends GetxService {
     }
   }
 
-  // Broadcast still lands on the resident Explore tab; Room/Plot membership
-  // notifications now push the My Rooms/My Plots route (no longer tabs).
+  // Broadcast still lands on the Rooms tab (AppTabs.rooms, backed by the class
+  // ExploreScreen/explore_screen.dart — an unrelated older "Explore" naming from that
+  // screen's map/search UI, not the newer AppTabs.explore local-services tab). Room/Plot
+  // membership notifications push the My Rooms/My Plots route (no longer tabs).
   void _routeForNotificationData(Map<String, dynamic> data) {
     final isChatMessage = data['conversation_id'] != null;
     final notificationType = data['notification_type'];
@@ -450,11 +459,12 @@ class NotificationService extends GetxService {
   // Chat pushes only carry `conversation_id` — ChatConversationScreen needs more
   // (listingType, otherPartyId, title, isOwner, status) to render, which already lives
   // in ChatController.conversations (populated by loadConversations(), same fields
-  // chats_list_screen.dart's _openConversation already maps into nav arguments). Land
-  // on the Chats tab immediately as a safe fallback view, then open the specific
-  // conversation once its data is available.
+  // chats_list_screen.dart's _openConversation already maps into nav arguments). Push
+  // the Chats list immediately as a safe fallback view (Chat is a pushed screen, not a
+  // tab, since the Explore-tab rework), then open the specific conversation once its
+  // data is available.
   Future<void> _openChatConversation(String conversationId) async {
-    Get.find<AuthController>().tabIndex.value = AppTabs.chats;
+    Get.toNamed(AppRoutes.chatsList);
 
     if (!Get.isRegistered<ChatController>()) return;
     final chatCtrl = Get.find<ChatController>();

@@ -12,7 +12,6 @@ import '../controllers/wallet_controller.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
 import '../widgets/coin_icon.dart';
-import '../widgets/gradient_button.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
 
@@ -25,28 +24,6 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = Get.find<AuthController>();
   final _agentCtrl = Get.find<AgentController>();
-  final _nameCtrl = TextEditingController();
-  final _isContactVisible = true.obs;
-  Worker? _profileTabWorker;
-
-  @override
-  void initState() {
-    super.initState();
-    _resetForm();
-    _profileTabWorker = ever(_auth.profileTabTrigger, (_) => _resetForm());
-  }
-
-  void _resetForm() {
-    _nameCtrl.text = _auth.user.value?.name ?? '';
-    _isContactVisible.value = _auth.user.value?.isContactVisible ?? true;
-  }
-
-  @override
-  void dispose() {
-    _profileTabWorker?.dispose();
-    _nameCtrl.dispose();
-    super.dispose();
-  }
 
   String _initials(String? name) {
     if (name == null || name.trim().isEmpty) return '';
@@ -85,21 +62,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!await launchUrl(uri)) {
       AppToast.error('Could not open email app. Please email supportbakhli@gmail.com');
     }
-  }
-
-  Future<void> _save() async {
-    FocusManager.instance.primaryFocus?.unfocus();
-    final name = _nameCtrl.text.trim();
-    if (name.isEmpty) {
-      AppToast.error('Name is required.');
-      return;
-    }
-    if (name.length > 100) {
-      AppToast.error('Name cannot exceed 100 characters.');
-      return;
-    }
-    final ok = await _auth.updateProfile(name, isContactVisible: _isContactVisible.value);
-    if (ok && mounted) AppToast.success('Profile updated');
   }
 
   @override
@@ -162,137 +124,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Wallet
             _buildWalletCard(),
 
-            // Edit form
-            Container(
-              margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))
-                ],
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Update Profile',
-                    style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textDark)),
-                const SizedBox(height: 20),
-                _buildField('Full Name', Iconsax.user, _nameCtrl),
-                const SizedBox(height: 20),
-                Row(children: [
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Contact visible to public',
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
-                      const SizedBox(height: 2),
-                      const Text('Show call & WhatsApp on your listings',
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                    ]),
-                  ),
-                  Obx(() => Switch(
-                    value: _isContactVisible.value,
-                    onChanged: (v) => _isContactVisible.value = v,
-                    activeThumbColor: AppColors.primary,
-                    activeTrackColor: AppColors.primaryLight,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  )),
-                ]),
-                const SizedBox(height: 24),
-                Obx(() => GradientButton(
-                  onPressed: _auth.isLoading.value ? null : _save,
-                  isLoading: _auth.isLoading.value,
-                  label: 'Save Profile',
-                )),
-              ]),
-            ),
-
-            // Mobile Number Card
-            _buildMobileNumberCard(),
+            // Account — name (edit-on-demand), phone, and contact-visibility, each its own
+            // independent action now (separate confirm/edit sheets, separate API calls) rather
+            // than one shared "Save Profile" form that always sent both fields together.
+            _sectionGroup('ACCOUNT', [
+              _accountNameTile(),
+              Divider(height: 1, indent: 56, color: AppColors.divider),
+              _accountPhoneTile(),
+              Divider(height: 1, indent: 56, color: AppColors.divider),
+              _accountVisibilityTile(),
+            ]),
 
             // My Activity — every screen that shows "things the user has done/can act on"
-            // (inquiries, reports, leads if they're an agent, redeem code), grouped together and
-            // separate from the pure app-meta Support section below.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
-                ),
-                child: Column(children: [
-                  _legalTile(icon: Iconsax.receipt_text, label: 'My Inquiries', onTap: () => Get.toNamed(AppRoutes.myInquiries)),
-                  Divider(height: 1, indent: 56, color: AppColors.divider),
-                  _legalTile(icon: Iconsax.flag, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
-                  Obx(() => _agentCtrl.isAgent.value
-                      ? Column(children: [
-                          Divider(height: 1, indent: 56, color: AppColors.divider),
-                          _leadsTile(),
-                        ])
-                      : const SizedBox.shrink()),
-                  Divider(height: 1, indent: 56, color: AppColors.divider),
-                  _legalTile(icon: Icons.redeem_rounded, label: 'Redeem Code', onTap: () => Get.toNamed(AppRoutes.redeemCode)),
-                ]),
-              ),
-            ),
+            // (reports, leads if they're an agent, redeem code), grouped together and separate
+            // from the pure app-meta Support section below. My Inquiries moved out to the
+            // Explore tab's own header (its natural hub, since inquiries are submitted from
+            // there) — not duplicated here.
+            _sectionGroup('ACTIVITY', [
+              _legalTile(icon: Iconsax.flag, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
+              Obx(() => _agentCtrl.isAgent.value
+                  ? Column(children: [
+                      Divider(height: 1, indent: 56, color: AppColors.divider),
+                      _leadsTile(),
+                    ])
+                  : const SizedBox.shrink()),
+              Divider(height: 1, indent: 56, color: AppColors.divider),
+              _legalTile(icon: Icons.redeem_rounded, label: 'Redeem Code', onTap: () => Get.toNamed(AppRoutes.redeemCode)),
+            ]),
 
             // Support
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
-                ),
-                child: Column(children: [
-                  _legalTile(icon: Iconsax.message_question, label: 'Contact Support', onTap: _contactSupport),
-                  Divider(height: 1, indent: 56, color: AppColors.divider),
-                  _legalTile(icon: Iconsax.star, label: 'Rate App', onTap: _rateApp),
-                  Divider(height: 1, indent: 56, color: AppColors.divider),
-                  _legalTile(icon: Iconsax.share, label: 'Share App', onTap: _shareApp),
-                ]),
-              ),
-            ),
+            _sectionGroup('SUPPORT', [
+              _legalTile(icon: Iconsax.message_question, label: 'Contact Support', onTap: _contactSupport),
+              Divider(height: 1, indent: 56, color: AppColors.divider),
+              _legalTile(icon: Iconsax.star, label: 'Rate App', onTap: _rateApp),
+              Divider(height: 1, indent: 56, color: AppColors.divider),
+              _legalTile(icon: Iconsax.share, label: 'Share App', onTap: _shareApp),
+            ]),
 
             // Legal
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
-                ),
-                child: Column(children: [
-                  _legalTile(
-                    icon: Iconsax.shield_tick,
-                    label: 'Privacy Policy',
-                    onTap: () async {
-                      await Get.to(() => const PrivacyPolicyScreen(),
-                          transition: Transition.rightToLeft,
-                          duration: const Duration(milliseconds: 300));
-                      _resetForm();
-                    },
-                  ),
-                  Divider(height: 1, indent: 56, color: AppColors.divider),
-                  _legalTile(
-                    icon: Iconsax.document_text,
-                    label: 'Terms of Service',
-                    onTap: () async {
-                      await Get.to(() => const TermsOfServiceScreen(),
-                          transition: Transition.rightToLeft,
-                          duration: const Duration(milliseconds: 300));
-                      _resetForm();
-                    },
-                  ),
-                ]),
+            _sectionGroup('LEGAL', [
+              _legalTile(
+                icon: Iconsax.shield_tick,
+                label: 'Privacy Policy',
+                onTap: () => Get.to(() => const PrivacyPolicyScreen(),
+                    transition: Transition.rightToLeft,
+                    duration: const Duration(milliseconds: 300)),
               ),
-            ),
+              Divider(height: 1, indent: 56, color: AppColors.divider),
+              _legalTile(
+                icon: Iconsax.document_text,
+                label: 'Terms of Service',
+                onTap: () => Get.to(() => const TermsOfServiceScreen(),
+                    transition: Transition.rightToLeft,
+                    duration: const Duration(milliseconds: 300)),
+              ),
+            ]),
 
             // Logout
             Padding(
@@ -408,76 +294,94 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  // Shared wrapper for every card group on this screen (Account/Activity/Support/Legal) — an
+  // uppercase label above a white rounded card, so the six near-identical cards this screen used
+  // to be don't blend into one long shape.
+  Widget _sectionGroup(String label, List<Widget> children) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(label,
+                style: const TextStyle(
+                    fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textLight, letterSpacing: 0.6)),
+          ),
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
             ),
-            child: Row(children: [
-              Icon(Icons.info_outline_rounded, size: 14, color: AppColors.primaryLight),
-              const SizedBox(width: 7),
-              const Expanded(
-                child: Text(
-                  'More ways to spend coins are coming soon.',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textMedium),
-                ),
-              ),
-            ]),
+            child: Column(children: children),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMobileNumberCard() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-      padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
+  Widget _accountNameTile() {
+    return ListTile(
+      onTap: _openEditNameSheet,
+      leading: Container(
+        width: 36, height: 36,
+        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
+        child: const Icon(Iconsax.user, color: AppColors.primaryLight, size: 18),
       ),
+      title: Obx(() {
+        final name = _auth.profileName.value.trim();
+        return Text(name.isNotEmpty ? name : 'Add your name',
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark));
+      }),
+      trailing: const Icon(Iconsax.edit_2, size: 16, color: AppColors.textLight),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    );
+  }
+
+  Widget _accountPhoneTile() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
       child: Row(
         children: [
           Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Iconsax.call, color: AppColors.primaryLight, size: 20),
+            width: 36, height: 36,
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Iconsax.call, color: AppColors.primaryLight, size: 18),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Mobile Number', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                const SizedBox(height: 3),
                 Obx(() => Text('+91 ${_auth.profilePhone.value}',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark))),
-                const SizedBox(height: 6),
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark))),
+                const SizedBox(height: 4),
                 Obx(() {
                   final verified = _auth.profilePhoneVerified.value;
                   return verified
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.verified_rounded, color: AppColors.success, size: 12),
-                          SizedBox(width: 4),
-                          Text('Verified', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.success)),
-                        ]))
-                    : Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 12),
-                          SizedBox(width: 4),
-                          Text('Not verified', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.warning)),
-                        ]));
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.verified_rounded, color: AppColors.success, size: 12),
+                            SizedBox(width: 4),
+                            Text('Verified', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.success)),
+                          ]))
+                      : Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 12),
+                            SizedBox(width: 4),
+                            Text('Not verified', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.warning)),
+                          ]));
                 }),
               ],
             ),
@@ -502,6 +406,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _accountVisibilityTile() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      child: Row(
+        children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Iconsax.eye, color: AppColors.primaryLight, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Contact visible to public',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+              const SizedBox(height: 2),
+              const Text('Show call & WhatsApp on your listings',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+            ]),
+          ),
+          Obx(() => Switch(
+            value: _auth.user.value?.isContactVisible ?? true,
+            onChanged: _auth.isLoading.value ? null : _confirmVisibilityChange,
+            activeThumbColor: AppColors.primary,
+            activeTrackColor: AppColors.primaryLight,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          )),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openPhoneVerify() async {
     final result = await Get.toNamed(
       AppRoutes.phoneVerify,
@@ -509,24 +445,167 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     if (result == true) {
       await _auth.refreshProfile();
-      _resetForm();
     }
   }
 
-  Widget _buildField(String label, IconData icon, TextEditingController ctrl) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
-      const SizedBox(height: 8),
-      TextFormField(
-        controller: ctrl,
-        inputFormatters: noEmojiInputFormatters,
-        style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: AppColors.primaryLight, size: 20),
-          hintText: 'Enter $label',
+  // Bottom sheet with its own text field + Save — replaces the old always-open "Update Profile"
+  // form. Local to this call (not screen state) since nothing else on the screen needs it.
+  Future<void> _openEditNameSheet() async {
+    final ctrl = TextEditingController(text: _auth.profileName.value.trim());
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetCtx) => Padding(
+        padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + MediaQuery.of(sheetCtx).viewInsets.bottom),
+        child: StatefulBuilder(builder: (sheetCtx, setSheetState) {
+          final canSave = ctrl.text.trim().isNotEmpty;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(4)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('Edit name',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: ctrl,
+                autofocus: true,
+                maxLength: 100,
+                inputFormatters: noEmojiInputFormatters,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 15),
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Iconsax.user, color: AppColors.primaryLight, size: 20),
+                  hintText: 'Enter your full name',
+                  counterText: '',
+                ),
+                onChanged: (_) => setSheetState(() {}),
+              ),
+              const SizedBox(height: 20),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(sheetCtx),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textMedium,
+                      side: BorderSide(color: Colors.grey.shade300),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: canSave
+                        ? () async {
+                            final name = ctrl.text.trim();
+                            Navigator.pop(sheetCtx);
+                            final ok = await _auth.updateName(name);
+                            if (ok && mounted) AppToast.success('Profile updated');
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.35),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: const Text('Save', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ]),
+            ],
+          );
+        }),
+      ),
+    ).whenComplete(() => ctrl.dispose());
+  }
+
+  // Confirm-before-commit sheet for the visibility toggle — the switch's bound value never
+  // changes on tap alone; it only follows the server-confirmed AuthController.user state once
+  // the call succeeds, so Cancel genuinely leaves it untouched rather than needing to "revert."
+  Future<void> _confirmVisibilityChange(bool turningOn) async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetCtx) => Padding(
+        padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + MediaQuery.of(sheetCtx).viewInsets.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(4)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: 48, height: 48,
+              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+              child: const Icon(Iconsax.eye, color: AppColors.primary, size: 22),
+            ),
+            const SizedBox(height: 14),
+            Text(turningOn ? 'Show your contact details?' : 'Hide your contact details?',
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+            const SizedBox(height: 8),
+            Text(
+              turningOn
+                  ? 'Owners and renters will be able to see your call and WhatsApp number on your listings.'
+                  : "Owners and renters won't see your call or WhatsApp number on your listings anymore.",
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
+            ),
+            const SizedBox(height: 20),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(sheetCtx),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textMedium,
+                    side: BorderSide(color: Colors.grey.shade300),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(sheetCtx);
+                    final ok = await _auth.updateContactVisibility(turningOn);
+                    if (ok && mounted) AppToast.success('Saved');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: Text(turningOn ? 'Yes, show it' : 'Yes, hide it',
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ]),
+          ],
         ),
       ),
-    ]);
+    );
   }
 
   Widget _legalTile({required IconData icon, required String label, required VoidCallback onTap}) {

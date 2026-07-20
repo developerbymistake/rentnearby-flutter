@@ -11,6 +11,7 @@ import '../screens/my_listings_screen.dart';
 import '../screens/my_plots_screen.dart';
 import '../screens/plot_detail_screen.dart';
 import '../screens/chat_conversation_screen.dart';
+import '../screens/chats_list_screen.dart';
 import '../screens/listing_reports_screen.dart';
 import '../screens/report_detail_screen.dart';
 import '../screens/my_filed_reports_screen.dart';
@@ -44,6 +45,7 @@ class AppRoutes {
   static const String myListings = '/my-listings';
   static const String myPlots = '/my-plots';
   static const String chatConversation = '/chat-conversation';
+  static const String chatsList = '/chats-list';
   static const String listingReports = '/listing-reports';
   static const String reportDetail = '/report-detail';
   static const String myFiledReports = '/my-filed-reports';
@@ -173,6 +175,12 @@ class AppRoutes {
     GetPage(
       name: chatConversation,
       page: () => const ChatConversationScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: chatsList,
+      page: () => const ChatsListScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
