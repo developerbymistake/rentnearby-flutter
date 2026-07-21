@@ -6,16 +6,20 @@ class AgentModel {
   final String id;
   final String name;
   final String photoUrl;
+  // Years of experience, admin-entered — shown to build trust; null if not set.
+  final int? experience;
 
   AgentModel({
     required this.id,
     required this.name,
     required this.photoUrl,
+    this.experience,
   });
 
   factory AgentModel.fromJson(Map<String, dynamic> json) => AgentModel(
         id: json['id'] as String,
         name: json['name'] as String? ?? '',
         photoUrl: json['photoUrl'] as String? ?? '',
+        experience: (json['experience'] as num?)?.toInt(),
       );
 }

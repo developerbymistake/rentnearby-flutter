@@ -355,6 +355,21 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
                   ],
                 ),
               ),
+              if (agent.experience != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.25)),
+                  ),
+                  child: Text(
+                    '${agent.experience} yrs experience',
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 9.5, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
