@@ -609,48 +609,46 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             color: isActive ? AppColors.primary.withValues(alpha: 0.08) : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
           ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Stack(clipBehavior: Clip.none, children: [
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      isActive ? activeIcon : icon,
-                      key: ValueKey(isActive),
-                      color: isActive ? AppColors.primary : AppColors.textHint,
-                      size: 24,
-                    ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(clipBehavior: Clip.none, children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    isActive ? activeIcon : icon,
+                    key: ValueKey(isActive),
+                    color: isActive ? AppColors.primary : AppColors.textHint,
+                    size: 24,
                   ),
-                  if (badgeCount > 0)
-                    Positioned(
-                      right: -6, top: -4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        constraints: const BoxConstraints(minWidth: 16),
-                        decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
-                        child: Text(
-                          badgeCount > 99 ? '99+' : '$badgeCount',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
-                        ),
+                ),
+                if (badgeCount > 0)
+                  Positioned(
+                    right: -6, top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      constraints: const BoxConstraints(minWidth: 16),
+                      decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
+                      child: Text(
+                        badgeCount > 99 ? '99+' : '$badgeCount',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
                       ),
                     ),
-                ]),
-                const SizedBox(height: 4),
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 200),
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 11,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                    color: isActive ? AppColors.primary : AppColors.textHint,
                   ),
-                  child: Text(label),
+              ]),
+              const SizedBox(height: 4),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 11,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                  color: isActive ? AppColors.primary : AppColors.textHint,
                 ),
-              ],
-            ),
+                child: Text(label),
+              ),
+            ],
           ),
         ),
       ),
