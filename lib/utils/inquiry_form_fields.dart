@@ -18,6 +18,7 @@ const _kInquiryFormFieldConfigs = <String, InquiryFormFieldConfig>{
   'Travel': InquiryFormFieldConfig(dateLabel: 'Preferred Travel Date', peopleLabel: 'Number of Travelers'),
   'Event': InquiryFormFieldConfig(dateLabel: 'Event Date', peopleLabel: 'Number of Guests'),
   kFormTypeConsultation: InquiryFormFieldConfig(dateLabel: 'Preferred Consultation Date'),
+  'Education': InquiryFormFieldConfig(dateLabel: 'Preferred Start Date', peopleLabel: 'Number of Students'),
 };
 
 /// Unrecognized/missing FormType (a stale cached response, or a FormType value added on the backend
