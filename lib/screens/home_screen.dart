@@ -622,27 +622,45 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCategoryCards() {
     return Obx(() {
-      if (_serviceCatalog.categoriesLoading.value && _serviceCatalog.categories.isEmpty) {
-        return _buildCategoryCardShimmerRow();
-      }
+      final loading = _serviceCatalog.categoriesLoading.value && _serviceCatalog.categories.isEmpty;
       final cats = _serviceCatalog.activeCategories;
-      if (cats.isEmpty) return const SizedBox.shrink();
-      return SizedBox(
-        height: 168,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          itemCount: cats.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 12),
-          itemBuilder: (_, i) => CategoryCard(
-            category: cats[i],
-            zone: serviceZoneForIndex(i),
-            onTap: () => Get.toNamed(AppRoutes.serviceCategoryGrid, arguments: {
-              'categoryId': cats[i].id,
-              'title': cats[i].name,
-            }),
+      if (!loading && cats.isEmpty) return const SizedBox.shrink();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'Services for you',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
           ),
-        ),
+          const SizedBox(height: 10),
+          loading
+              ? _buildCategoryCardShimmerRow()
+              : SizedBox(
+                  height: 168,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: cats.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (_, i) => CategoryCard(
+                      category: cats[i],
+                      zone: serviceZoneForIndex(i),
+                      onTap: () => Get.toNamed(AppRoutes.serviceCategoryGrid, arguments: {
+                        'categoryId': cats[i].id,
+                        'title': cats[i].name,
+                      }),
+                    ),
+                  ),
+                ),
+        ],
       );
     });
   }
