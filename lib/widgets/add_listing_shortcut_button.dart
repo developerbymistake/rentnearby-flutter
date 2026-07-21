@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
 
 /// "Add my room" / "Add my plot" shortcut — shared by the Rooms and Plots
 /// Explore screens so the CTA's color/border/shape stays byte-identical
@@ -25,11 +26,7 @@ class AddListingShortcutButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(5, 9, 16, 9),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF10B981), Color(0xFF059669)],
-          ),
+          gradient: AppColors.primaryGradient,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(22),
             bottomLeft: Radius.circular(22),
