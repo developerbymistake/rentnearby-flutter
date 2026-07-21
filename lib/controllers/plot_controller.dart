@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
+import '../models/city_model.dart';
 import '../models/go_live_result.dart';
 import '../models/plot_model.dart';
 import '../repositories/plot_repository.dart';
