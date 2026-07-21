@@ -32,16 +32,21 @@ class ApiService {
       onError: (error, handler) async {
         if (error.response?.statusCode == 401 && !_isHandlingUnauthorized) {
           _isHandlingUnauthorized = true;
-          // A session can be revoked out from under the app (not just an explicit logout the
-          // user initiated here) — every persistent hub connection needs tearing down too, or
-          // chat's connection in particular (whose retry policy deliberately never gives up)
-          // keeps retrying forever in the background with a now-invalid token.
-          await disconnectAllHubs();
-          if (Get.isRegistered<NotificationService>()) {
-            unawaited(NotificationService.to.cancelAllChatNotifications());
-          }
-          await StorageService.clearAll();
-          AppToast.info('Session expired. Please log in again.');
+          // Timeout + catch-all: the redirect below must run even if a cleanup step hangs or
+          // throws, or a revoked session leaves the app permanently stuck on the current screen
+          // with this handler latched (never resetting _isHandlingUnauthorized either).
+          try {
+            await Future(() async {
+              await disconnectAllHubs();
+              if (Get.isRegistered<NotificationService>()) {
+                unawaited(NotificationService.to.cancelAllChatNotifications());
+              }
+              await StorageService.clearAll();
+            }).timeout(const Duration(seconds: 5));
+          } catch (_) {}
+          try {
+            AppToast.info('Session expired. Please log in again.');
+          } catch (_) {}
           Get.offAllNamed(AppRoutes.login);
           Future.delayed(const Duration(seconds: 3), () => _isHandlingUnauthorized = false);
         }

@@ -41,7 +41,9 @@ class StorageService {
   static bool get isLoggedIn => _cachedToken != null;
 
   static Future<void> clearAll() async {
-    await clearToken();
+    try {
+      await clearToken();
+    } catch (_) {}
     clearUser();
     clearFcmToken();
     clearAllChatStackedLines();
