@@ -1,19 +1,22 @@
-import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide Response, FormData, MultipartFile;
 import '../config/app_constants.dart';
-import '../config/app_routes.dart';
-import '../utils/app_toast.dart';
-import 'hub_session_manager.dart';
-import 'notification_service.dart';
+import '../controllers/auth_controller.dart';
 import 'storage_service.dart';
 
 class ApiService {
   static late Dio _dio;
   static late Dio _nominatimDio;
-  static bool _isHandlingUnauthorized = false;
+  static Future<void>? _logoutInFlight;
 
-  static void beginLogout() => _isHandlingUnauthorized = true;
+  // Shared single-flight guard for every logout trigger (explicit logout, account deletion, a
+  // forced 401) so concurrent callers all await the exact same cleanup instead of racing —
+  // whichever arrives first runs it, the rest just await the same in-flight Future.
+  static Future<void> runExclusiveLogout(Future<void> Function() cleanup) {
+    return _logoutInFlight ??= cleanup().whenComplete(() {
+      Future.delayed(const Duration(seconds: 3), () => _logoutInFlight = null);
+    });
+  }
 
   static void init() {
     _dio = Dio(BaseOptions(
@@ -30,25 +33,10 @@ class ApiService {
         handler.next(options);
       },
       onError: (error, handler) async {
-        if (error.response?.statusCode == 401 && !_isHandlingUnauthorized) {
-          _isHandlingUnauthorized = true;
-          // Timeout + catch-all: the redirect below must run even if a cleanup step hangs or
-          // throws, or a revoked session leaves the app permanently stuck on the current screen
-          // with this handler latched (never resetting _isHandlingUnauthorized either).
-          try {
-            await Future(() async {
-              await disconnectAllHubs();
-              if (Get.isRegistered<NotificationService>()) {
-                unawaited(NotificationService.to.cancelAllChatNotifications());
-              }
-              await StorageService.clearAll();
-            }).timeout(const Duration(seconds: 5));
-          } catch (_) {}
-          try {
-            AppToast.info('Session expired. Please log in again.');
-          } catch (_) {}
-          Get.offAllNamed(AppRoutes.login);
-          Future.delayed(const Duration(seconds: 3), () => _isHandlingUnauthorized = false);
+        if (error.response?.statusCode == 401) {
+          await runExclusiveLogout(
+            () => Get.find<AuthController>().forceLogout(reason: LogoutReason.sessionExpired),
+          );
         }
         handler.next(error);
       },

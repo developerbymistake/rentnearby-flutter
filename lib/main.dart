@@ -28,8 +28,8 @@ Future<void> main() async {
   ));
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  Get.put(NotificationService());
-  Get.put(AuthController());
+  Get.put(NotificationService(), permanent: true);
+  Get.put(AuthController(), permanent: true);
 
   runApp(const BakhliApp());
 }

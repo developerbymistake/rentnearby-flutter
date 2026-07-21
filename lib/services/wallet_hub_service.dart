@@ -3,6 +3,7 @@ import 'package:signalr_netcore/iretry_policy.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import '../config/app_constants.dart';
 import '../controllers/wallet_controller.dart';
+import 'hub_session_manager.dart';
 import 'storage_service.dart';
 
 /// Same infinite-backoff shape as ChatHubService's own _ChatReconnectPolicy — copied rather
@@ -43,7 +44,7 @@ class WalletHubService extends GetxService {
   }
 
   Future<void> _doConnect() async {
-    if (StorageService.getToken() == null) return;
+    if (StorageService.getToken() == null || isHubSessionLoggingOut) return;
 
     _connection = HubConnectionBuilder()
         .withUrl(

@@ -106,21 +106,6 @@ class WalletController extends GetxController {
     await loadTransactions(reason: reason);
   }
 
-  /// Called from AuthController.logout()/deleteAccount(), mirroring
-  /// ListingController.clearData(). This is a long-lived singleton (put once in
-  /// MainScreen.initState, never re-created on a fresh login without an app restart —
-  /// Get.put() on an already-registered controller is a no-op), so without this a second
-  /// user logging in on the same device would see the previous user's balance/ledger until
-  /// they happened to open a screen that reloads it. coinPacks is a global, not per-user,
-  /// catalog — left alone.
-  void clearData() {
-    balance.value = 0;
-    transactions.clear();
-    hasMoreTransactions.value = false;
-    _transactionsPage = 1;
-    Get.find<WalletRepository>().invalidateBalance();
-  }
-
   // ---- Purchase / redeem flow — reusable across screens, screen-agnostic ----
 
   Future<Map<String, dynamic>?> createOrder(String coinPackId) async {

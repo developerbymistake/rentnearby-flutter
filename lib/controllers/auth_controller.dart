@@ -9,11 +9,12 @@ import '../services/storage_service.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../utils/app_toast.dart';
-import 'listing_controller.dart';
-import 'plot_controller.dart';
-import 'report_controller.dart';
-import 'wallet_controller.dart';
 import '../services/hub_session_manager.dart';
+
+/// What triggered a logout — decides whether the server-side revoke call fires and which (if
+/// any) toast is shown. Kept as a typed reason rather than booleans so each of the 3 real-world
+/// triggers (explicit tap, account deletion, a server-forced 401) is unambiguous at the call site.
+enum LogoutReason { explicitLogout, accountDeleted, sessionExpired }
 
 class AuthController extends GetxController {
   final isLoading = false.obs;
@@ -159,50 +160,75 @@ class AuthController extends GetxController {
         .catchError((e) => debugPrint('FCM token registration failed: $e'));
   }
 
-  Future<void> logout() async {
-    isLoading.value = false;
-    ApiService.beginLogout();
+  // The one shared cleanup routine for every logout trigger — explicit logout, account deletion,
+  // and a server-forced 401 (revoked session) all funnel through here via ApiService's
+  // single-flight guard, so a burst of concurrent 401s (there are ~10+ authenticated calls at
+  // app start) can never race each other or diverge from what an explicit logout does.
+  Future<void> forceLogout({required LogoutReason reason}) {
+    return ApiService.runExclusiveLogout(() => _performLogoutCleanup(reason));
+  }
+
+  Future<void> _performLogoutCleanup(LogoutReason reason) async {
+    // Timeout + catch-all: the redirect below must run even if a cleanup step hangs or throws,
+    // or a revoked session leaves the app permanently stuck on the current screen.
     try {
-      await ApiService.post('/auth/logout', {});
+      await Future(() async {
+        if (reason == LogoutReason.explicitLogout) {
+          // Fire-and-forget, same pattern as _saveSession's FCM registration below — best-effort
+          // server-side revoke that must never block or fail local cleanup. Not awaited: by the
+          // time this runs, ApiService.runExclusiveLogout has ALREADY claimed the single-flight
+          // slot (that claim happens synchronously, several stack frames earlier in logout(),
+          // before this deferred Future's computation even starts) — so if this POST itself
+          // 401s, the interceptor's onError finds _logoutInFlight already non-null and just
+          // awaits it, never re-entering with a different reason/toast. Holds by call-stack
+          // causality, not by any assumption about microtask/macrotask scheduling order.
+          ApiService.post('/auth/logout', {}).catchError((_) => <String, dynamic>{});
+        }
+        try {
+          await NotificationService.to.clearToken();
+        } catch (_) {}
+        try {
+          await NotificationService.to.clearDistrictTopic();
+        } catch (_) {}
+        await disconnectAllHubs();
+        await NotificationService.to.cancelAllChatNotifications();
+        await StorageService.clearAll();
+      }).timeout(const Duration(seconds: 5));
     } catch (_) {}
-    try {
-      await NotificationService.to.clearToken();
-    } catch (_) {}
-    try {
-      await NotificationService.to.clearDistrictTopic();
-    } catch (_) {}
-    await disconnectAllHubs();
-    await NotificationService.to.cancelAllChatNotifications();
-    await StorageService.clearAll();
     user.value = null;
     _syncProfileFields(null);
-    Get.find<ListingController>().clearData();
-    Get.find<PlotController>().clearData();
-    Get.find<WalletController>().clearData();
-    Get.find<ReportController>().reportedListingIds.clear();
+    if (reason == LogoutReason.sessionExpired) {
+      try {
+        AppToast.info('Session expired. Please log in again.');
+      } catch (_) {}
+    }
     Get.offAllNamed(AppRoutes.login);
+    // Deliberately force:false (the default) — GetX's own delete() bypasses BOTH the permanent
+    // check AND the GetxServiceMixin check when force:true, which would delete AuthController
+    // itself (a GetxController marked permanent) and every hub service (GetxService) mid-call.
+    // With force:false, permanent-marked instances and anything extending GetxService are
+    // correctly spared, while every plain GetxController — every data controller/repository
+    // registered in MainScreen.initState() — still gets wiped. This is the single place that
+    // guarantees the next login on the same device never inherits a prior account's in-memory
+    // state, without having to remember to hand-add a reset call per controller.
+    Get.deleteAll();
+  }
+
+  Future<void> logout() {
+    isLoading.value = false;
+    return forceLogout(reason: LogoutReason.explicitLogout);
   }
 
   Future<void> deleteAccount() async {
     try {
       isLoading.value = true;
-      ApiService.beginLogout();
       await ApiService.delete('/account');
-      await NotificationService.to.clearToken();
-      try {
-        await NotificationService.to.clearDistrictTopic();
-      } catch (_) {}
-      await disconnectAllHubs();
-      await NotificationService.to.cancelAllChatNotifications();
-      await StorageService.clearAll();
-      user.value = null;
-      _syncProfileFields(null);
-      Get.find<ListingController>().clearData();
-      Get.find<PlotController>().clearData();
-      Get.find<WalletController>().clearData();
-      Get.find<ReportController>().reportedListingIds.clear();
-      Get.offAllNamed(AppRoutes.login);
+      await forceLogout(reason: LogoutReason.accountDeleted);
     } catch (e) {
+      // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown
+      // its own toast + redirected — showing "Could not delete account" on top would be a
+      // second, contradictory toast on the login screen for the same underlying event.
+      if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error(_dioMessage(e, 'Could not delete account. Please try again.'));
     } finally {
       isLoading.value = false;

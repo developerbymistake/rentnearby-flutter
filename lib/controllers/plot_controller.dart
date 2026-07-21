@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
-import '../models/city_model.dart';
 import '../models/go_live_result.dart';
 import '../models/plot_model.dart';
 import '../repositories/plot_repository.dart';
@@ -254,13 +253,6 @@ class PlotController extends GetxController {
   }
 
   void notifyPlotPosted() => plotPostedTrigger.value++;
-
-  void clearData() {
-    nearbyPlots.clear();
-    myPlots.clear();
-    hasMorePlots.value = false;
-    _myPlotsPage = 1;
-  }
 
   static String _errorMessage(dynamic e, String fallback) {
     if (e is DioException) {

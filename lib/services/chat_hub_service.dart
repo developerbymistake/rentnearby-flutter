@@ -4,6 +4,7 @@ import 'package:signalr_netcore/signalr_client.dart';
 import '../config/app_constants.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
+import 'hub_session_manager.dart';
 import 'storage_service.dart';
 
 /// The package's own DefaultRetryPolicy always appends a final `null` delay even when given
@@ -52,7 +53,7 @@ class ChatHubService extends GetxService {
   Future<void> _doConnect() async {
     final chatCtrl = Get.find<ChatController>();
 
-    if (StorageService.getToken() == null) return;
+    if (StorageService.getToken() == null || isHubSessionLoggingOut) return;
 
     _connection = HubConnectionBuilder()
         .withUrl(

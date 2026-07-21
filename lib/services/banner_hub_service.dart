@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import '../config/app_constants.dart';
 import '../controllers/banner_controller.dart';
+import 'hub_session_manager.dart';
 import 'storage_service.dart';
 
 class BannerHubService extends GetxService {
@@ -20,7 +21,7 @@ class BannerHubService extends GetxService {
 
     await disconnect();
 
-    if (StorageService.getToken() == null) return;
+    if (StorageService.getToken() == null || isHubSessionLoggingOut) return;
 
     _connection = HubConnectionBuilder()
         .withUrl(

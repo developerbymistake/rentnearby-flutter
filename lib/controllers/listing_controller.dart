@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
-import '../models/city_model.dart';
 import '../models/go_live_result.dart';
 import '../models/listing_model.dart';
 import '../repositories/listing_repository.dart';
@@ -259,12 +258,6 @@ class ListingController extends GetxController {
 
   Future<Map<String, Map<String, dynamic>>> getPlans() =>
       Get.find<ListingRepository>().getPlans();
-
-  void clearData() {
-    nearbyListings.clear();
-    myListings.clear();
-    hasMoreMyListings.value = false;
-  }
 
   static String _errorMessage(dynamic e, String fallback) {
     if (e is DioException) {

@@ -77,8 +77,12 @@ adding one-off dismiss calls at new call sites.
 
 **Networking**: a single `Dio` instance wrapped in the static `ApiService`
 (`lib/services/api_service.dart`) — no repository-per-Dio-instance pattern. An `InterceptorsWrapper`
-auto-attaches the bearer token from `StorageService` on every request and auto-logs-out on a 401
-(guarded by an `_isHandlingUnauthorized` flag to prevent repeat logout storms). A second `Dio`
+auto-attaches the bearer token from `StorageService` on every request and auto-logs-out on a 401 by
+calling `AuthController.forceLogout(reason: LogoutReason.sessionExpired)` through
+`ApiService.runExclusiveLogout` — a shared single-flight `Future` guard so concurrent 401s (and
+explicit logout/account-deletion, which route through the same `forceLogout`) all await one cleanup
+instead of racing. `LogoutReason` (`explicitLogout`/`accountDeleted`/`sessionExpired`) decides whether
+the server-side revoke call fires and which toast, if any, is shown. A second `Dio`
 instance (`_nominatimDio`) hits a self-hosted Nominatim reverse-geocoding proxy. `AppConstants.baseUrl`
 (`lib/config/app_constants.dart`) is the single source of truth for the backend origin
 (`https://developerbymistake.tech/api/v1`) — commented-out local/emulator URLs are left there for
