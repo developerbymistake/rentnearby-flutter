@@ -1,27 +1,11 @@
 import 'package:get/get.dart';
-import 'package:signalr_netcore/iretry_policy.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import '../config/app_constants.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
+import 'hub_connection_shared.dart';
 import 'hub_session_manager.dart';
 import 'storage_service.dart';
-
-/// The package's own DefaultRetryPolicy always appends a final `null` delay even when given
-/// a custom retryDelays list — meaning it always eventually gives up permanently, going
-/// Disconnected with nothing to bring it back except the next app-resume/screen-open call to
-/// connect(). A real chat client shouldn't need the user to background-and-resume the app
-/// just to recover from an extended rough patch of network — this never returns null, so
-/// the connection keeps retrying (capped backoff) indefinitely instead of ever giving up.
-class _ChatReconnectPolicy implements IRetryPolicy {
-  static const _delaysMs = [0, 2000, 5000, 10000, 15000, 30000];
-
-  @override
-  int? nextRetryDelayInMilliseconds(RetryContext retryContext) {
-    final i = retryContext.previousRetryCount;
-    return i < _delaysMs.length ? _delaysMs[i] : _delaysMs.last;
-  }
-}
 
 /// One persistent connection for the whole chat feature's session lifetime — established
 /// once (see MainScreen) and kept alive until logout, never torn down just because a
@@ -31,26 +15,20 @@ class _ChatReconnectPolicy implements IRetryPolicy {
 /// the whole connection down and rebuilding it per screen was the root cause of chat going
 /// silently live-mute for the rest of a session the moment any one conversation had been
 /// opened and closed once.
-class ChatHubService extends GetxService {
+class ChatHubService extends GetxService with SingleFlightHubConnect {
   static ChatHubService get to => Get.find();
 
   HubConnection? _connection;
-  Future<void>? _connecting;
   // Only one conversation is assumed "active" at a time (matches this app's normal usage —
   // one conversation screen open at once) — if it's ever pushed on top of another without
   // the first disposing, only the most-recently-joined one gets restored after a reconnect.
   String? _activeConversationId;
 
-  /// Single-flight: concurrent callers (e.g. MainScreen.initState() and a fast-tapped
-  /// conversation open racing it) await the same in-flight attempt instead of each building
-  /// and starting their own HubConnection — this is what removes the race condition the old
-  /// per-screen connect() had.
-  Future<void> connect() {
-    if (_connection?.state == HubConnectionState.Connected) return Future.value();
-    return _connecting ??= _doConnect().whenComplete(() => _connecting = null);
-  }
+  @override
+  HubConnection? get currentConnection => _connection;
 
-  Future<void> _doConnect() async {
+  @override
+  Future<void> performConnect() async {
     final chatCtrl = Get.find<ChatController>();
 
     if (StorageService.getToken() == null || isHubSessionLoggingOut) return;
@@ -63,7 +41,7 @@ class ChatHubService extends GetxService {
             accessTokenFactory: () async => StorageService.getToken() ?? '',
           ),
         )
-        .withAutomaticReconnect(reconnectPolicy: _ChatReconnectPolicy())
+        .withAutomaticReconnect(reconnectPolicy: const HubReconnectPolicy())
         .build();
 
     _connection!.on('MessageReceived', (args) {
@@ -205,7 +183,7 @@ class ChatHubService extends GetxService {
       await _connection?.stop();
     } catch (_) {}
     _connection = null;
-    _connecting = null;
+    resetConnecting();
     _activeConversationId = null;
   }
 }

@@ -1,4 +1,5 @@
 import '../services/api_service.dart';
+import '../utils/ttl_cache.dart';
 
 class ListingRepository {
   Map<String, Map<String, dynamic>>? _plansCache;
@@ -6,11 +7,8 @@ class ListingRepository {
 
   static const _longTtl = Duration(minutes: 5);
 
-  bool _isValid(DateTime? time, Duration ttl) =>
-      time != null && DateTime.now().difference(time) < ttl;
-
   Future<Map<String, Map<String, dynamic>>> getPlans() async {
-    if (_plansCache != null && _isValid(_plansCacheTime, _longTtl)) {
+    if (_plansCache != null && isCacheValid(_plansCacheTime, _longTtl)) {
       return _plansCache!;
     }
     try {

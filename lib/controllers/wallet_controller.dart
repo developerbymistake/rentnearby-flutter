@@ -1,10 +1,10 @@
-import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../models/coin_pack_model.dart';
 import '../models/coin_transaction_model.dart';
 import '../repositories/wallet_repository.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
+import '../utils/dio_error_mapper.dart';
 import 'auth_controller.dart';
 
 /// Single source of truth for "what's my balance right now" — nothing else
@@ -128,7 +128,11 @@ class WalletController extends GetxController {
         'keyId': keyId,
       };
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not start purchase. Please try again.'));
+      AppToast.error(DioErrorMapper.toMessage(
+        e,
+        'Could not start purchase. Please try again.',
+        showRawMessageForStatusCodes: const {400, 404, 409},
+      ));
       return null;
     }
   }
@@ -176,34 +180,12 @@ class WalletController extends GetxController {
       await loadBalance();
       return data;
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not redeem code. Please try again.'));
+      AppToast.error(DioErrorMapper.toMessage(
+        e,
+        'Could not redeem code. Please try again.',
+        showRawMessageForStatusCodes: const {400, 404, 409},
+      ));
       return null;
     }
-  }
-
-  static String _errorMessage(dynamic e, String fallback) {
-    if (e is DioException) {
-      if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.connectionError) {
-        return 'No internet connection. Please check your network.';
-      }
-      final status = e.response?.statusCode;
-      String? message;
-      final responseData = e.response?.data;
-      if (responseData is Map<String, dynamic>) {
-        message = responseData['error']?['message'] as String? ?? responseData['message'] as String?;
-      } else if (responseData is String) {
-        message = responseData;
-      }
-      // 400/404/409 all carry clear, user-facing messages on these endpoints
-      // (invalid/disabled pack, "already in progress", invalid/expired/
-      // exhausted/already-redeemed code) — show them verbatim.
-      if ((status == 400 || status == 404 || status == 409) && message != null) return message;
-      if (status == 429) return 'Too many attempts. Please try again later.';
-      if (status != null && status >= 500) return 'Server error. Please try again.';
-      if (message != null) return message;
-    }
-    return fallback;
   }
 }

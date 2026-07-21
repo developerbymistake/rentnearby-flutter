@@ -1,4 +1,5 @@
 import '../services/api_service.dart';
+import '../utils/ttl_cache.dart';
 
 /// Thin TTL-caching wrapper around GET /config/listing-limits — anonymous,
 /// admin-managed, rarely-changing reference data (the flat per-user
@@ -9,8 +10,7 @@ class ConfigRepository {
   DateTime? _cacheTime;
   static const _ttl = Duration(hours: 1);
 
-  bool get _isValid =>
-      _cache != null && _cacheTime != null && DateTime.now().difference(_cacheTime!) < _ttl;
+  bool get _isValid => _cache != null && isCacheValid(_cacheTime, _ttl);
 
   Future<({int roomLimit, int plotLimit})> getListingLimits() async {
     if (_isValid) return _cache!;

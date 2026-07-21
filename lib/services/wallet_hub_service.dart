@@ -1,23 +1,10 @@
 import 'package:get/get.dart';
-import 'package:signalr_netcore/iretry_policy.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import '../config/app_constants.dart';
 import '../controllers/wallet_controller.dart';
+import 'hub_connection_shared.dart';
 import 'hub_session_manager.dart';
 import 'storage_service.dart';
-
-/// Same infinite-backoff shape as ChatHubService's own _ChatReconnectPolicy — copied rather
-/// than shared, matching this codebase's per-hub-file convention. See that file's comment for
-/// why the package's own DefaultRetryPolicy isn't used (it eventually gives up permanently).
-class _WalletReconnectPolicy implements IRetryPolicy {
-  static const _delaysMs = [0, 2000, 5000, 10000, 15000, 30000];
-
-  @override
-  int? nextRetryDelayInMilliseconds(RetryContext retryContext) {
-    final i = retryContext.previousRetryCount;
-    return i < _delaysMs.length ? _delaysMs[i] : _delaysMs.last;
-  }
-}
 
 /// One persistent connection for the whole session lifetime (like ChatHubService, not the
 /// district-scoped reconnect-per-URL pattern BannerHubService uses — a wallet balance is a pure
@@ -32,18 +19,16 @@ class _WalletReconnectPolicy implements IRetryPolicy {
 /// (network/firewall/old build), the app is not left worse off than before this feature existed:
 /// locally-initiated spends are unaffected, and remote changes just fall back to becoming visible
 /// on the next screen visit or pull-to-refresh.
-class WalletHubService extends GetxService {
+class WalletHubService extends GetxService with SingleFlightHubConnect {
   static WalletHubService get to => Get.find();
 
   HubConnection? _connection;
-  Future<void>? _connecting;
 
-  Future<void> connect() {
-    if (_connection?.state == HubConnectionState.Connected) return Future.value();
-    return _connecting ??= _doConnect().whenComplete(() => _connecting = null);
-  }
+  @override
+  HubConnection? get currentConnection => _connection;
 
-  Future<void> _doConnect() async {
+  @override
+  Future<void> performConnect() async {
     if (StorageService.getToken() == null || isHubSessionLoggingOut) return;
 
     _connection = HubConnectionBuilder()
@@ -53,7 +38,7 @@ class WalletHubService extends GetxService {
             accessTokenFactory: () async => StorageService.getToken() ?? '',
           ),
         )
-        .withAutomaticReconnect(reconnectPolicy: _WalletReconnectPolicy())
+        .withAutomaticReconnect(reconnectPolicy: const HubReconnectPolicy())
         .build();
 
     _connection!.on('WalletBalanceChanged', (args) {
@@ -89,6 +74,6 @@ class WalletHubService extends GetxService {
       await _connection?.stop();
     } catch (_) {}
     _connection = null;
-    _connecting = null;
+    resetConnecting();
   }
 }

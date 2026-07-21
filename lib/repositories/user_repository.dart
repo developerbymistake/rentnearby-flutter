@@ -1,14 +1,13 @@
 import '../models/user_model.dart';
 import '../services/api_service.dart';
+import '../utils/ttl_cache.dart';
 
 class UserRepository {
   UserModel? _profileCache;
   DateTime? _profileCacheTime;
   static const _ttl = Duration(seconds: 60);
 
-  bool _isValid() =>
-      _profileCacheTime != null &&
-      DateTime.now().difference(_profileCacheTime!) < _ttl;
+  bool _isValid() => isCacheValid(_profileCacheTime, _ttl);
 
   Future<UserModel?> getProfile() async {
     if (_profileCache != null && _isValid()) return _profileCache;

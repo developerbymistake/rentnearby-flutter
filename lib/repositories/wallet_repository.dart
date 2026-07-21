@@ -1,6 +1,7 @@
 import '../models/coin_pack_model.dart';
 import '../models/coin_transaction_model.dart';
 import '../services/api_service.dart';
+import '../utils/ttl_cache.dart';
 
 /// Thin TTL-caching wrapper around the wallet/coin-pack read endpoints —
 /// mirrors ListingRepository's style. Balance gets a short TTL since it
@@ -17,14 +18,11 @@ class WalletRepository {
   static const _shortTtl = Duration(seconds: 30);
   static const _longTtl = Duration(minutes: 5);
 
-  bool _isValid(DateTime? time, Duration ttl) =>
-      time != null && DateTime.now().difference(time) < ttl;
-
   /// [forceRefresh] skips the cache check entirely — for explicit user-initiated refresh actions
   /// (pull-to-refresh, hub reconnect resync) where serving a stale cached value would be wrong even
   /// if it's still within TTL.
   Future<int> getBalance({bool forceRefresh = false}) async {
-    if (!forceRefresh && _balanceCache != null && _isValid(_balanceCacheTime, _shortTtl)) {
+    if (!forceRefresh && _balanceCache != null && isCacheValid(_balanceCacheTime, _shortTtl)) {
       return _balanceCache!;
     }
     final res = await ApiService.get('/wallet/balance');
@@ -51,7 +49,7 @@ class WalletRepository {
   }
 
   Future<List<CoinPackModel>> getCoinPacks() async {
-    if (_packsCache != null && _isValid(_packsCacheTime, _longTtl)) {
+    if (_packsCache != null && isCacheValid(_packsCacheTime, _longTtl)) {
       return _packsCache!;
     }
     final res = await ApiService.get('/coin-packs/');

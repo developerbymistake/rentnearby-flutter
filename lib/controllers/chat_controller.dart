@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../models/conversation_model.dart';
 import '../models/message_model.dart';
 import '../models/question_template_model.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
+import '../utils/dio_error_mapper.dart';
 
 class ChatController extends GetxController {
   final conversations = <ConversationModel>[].obs;
@@ -211,7 +211,11 @@ class ChatController extends GetxController {
       }
       return model;
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not start chat. Please try again.'));
+      AppToast.error(DioErrorMapper.toMessage(
+        e,
+        'Could not start chat. Please try again.',
+        showRawMessageForStatusCodes: const {400, 403},
+      ));
       return null;
     }
   }
@@ -384,7 +388,11 @@ class ChatController extends GetxController {
       });
       return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not send that. Please try again.'));
+      AppToast.error(DioErrorMapper.toMessage(
+        e,
+        'Could not send that. Please try again.',
+        showRawMessageForStatusCodes: const {400, 403},
+      ));
       return null;
     }
   }
@@ -394,7 +402,11 @@ class ChatController extends GetxController {
       final res = await ApiService.post('/chat/messages/$messageId/contact-response', {'approve': approve});
       return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not respond. Please try again.'));
+      AppToast.error(DioErrorMapper.toMessage(
+        e,
+        'Could not respond. Please try again.',
+        showRawMessageForStatusCodes: const {400, 403},
+      ));
       return null;
     }
   }
@@ -407,7 +419,11 @@ class ChatController extends GetxController {
       final res = await ApiService.post('/chat/messages/$messageId/schedule-response', body);
       return MessageModel.fromJson({...res['data'] as Map<String, dynamic>, 'isMine': true});
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not respond. Please try again.'));
+      AppToast.error(DioErrorMapper.toMessage(
+        e,
+        'Could not respond. Please try again.',
+        showRawMessageForStatusCodes: const {400, 403},
+      ));
       return null;
     }
   }
@@ -417,7 +433,11 @@ class ChatController extends GetxController {
       await ApiService.post('/chat/users/$userId/block', {});
       return true;
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not block this user. Please try again.'));
+      AppToast.error(DioErrorMapper.toMessage(
+        e,
+        'Could not block this user. Please try again.',
+        showRawMessageForStatusCodes: const {400, 403},
+      ));
       return false;
     }
   }
@@ -427,35 +447,12 @@ class ChatController extends GetxController {
       await ApiService.post('/chat/users/$userId/unblock', {});
       return true;
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not unblock this user. Please try again.'));
+      AppToast.error(DioErrorMapper.toMessage(
+        e,
+        'Could not unblock this user. Please try again.',
+        showRawMessageForStatusCodes: const {400, 403},
+      ));
       return false;
     }
-  }
-
-  static String _errorMessage(dynamic e, String fallback) {
-    if (e is DioException) {
-      if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.connectionError) {
-        return 'No internet connection. Please check your network.';
-      }
-      final status = e.response?.statusCode;
-      String? message;
-
-      final responseData = e.response?.data;
-      if (responseData is Map<String, dynamic>) {
-        message = responseData['error']?['message'] as String? ??
-                  responseData['message'] as String?;
-      } else if (responseData is String) {
-        message = responseData;
-      }
-
-      if (status == 400 && message != null) return message;
-      if (status == 403 && message != null) return message;
-      if (status == 429) return 'Too many attempts. Please try again later.';
-      if (status != null && status >= 500) return 'Server error. Please try again.';
-      if (message != null) return message;
-    }
-    return fallback;
   }
 }

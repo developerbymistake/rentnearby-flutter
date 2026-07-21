@@ -4,6 +4,7 @@ import '../models/service_detail_model.dart';
 import '../models/service_list_item_model.dart';
 import '../models/service_package_model.dart';
 import '../services/api_service.dart';
+import '../utils/ttl_cache.dart';
 
 /// Thin TTL-caching wrapper around the read-only Service Catalog endpoints
 /// (mounted at `/services/...` — the same handlers the admin CRUD group
@@ -31,7 +32,7 @@ class ServiceCatalogRepository {
 
   static const _ttl = Duration(minutes: 5);
 
-  bool _isValid(DateTime? time) => time != null && DateTime.now().difference(time) < _ttl;
+  bool _isValid(DateTime? time) => isCacheValid(time, _ttl);
 
   Future<List<ServiceCategoryModel>> getCategories({bool forceRefresh = false}) async {
     if (!forceRefresh && _categoriesCache != null && _isValid(_categoriesCacheTime)) {

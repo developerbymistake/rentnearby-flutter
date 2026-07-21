@@ -7,6 +7,7 @@ import '../repositories/wallet_repository.dart';
 import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
+import '../utils/dio_error_mapper.dart';
 
 class PlotController extends GetxController {
   final nearbyPlots = <NearbyPlotModel>[].obs;
@@ -53,7 +54,7 @@ class PlotController extends GetxController {
       nearbyPlots.value =
           (res['data']['items'] as List).map((e) => NearbyPlotModel.fromJson(e)).toList();
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not load nearby plots.'));
+      AppToast.error(DioErrorMapper.toMessage(e, 'Could not load nearby plots.'));
     } finally {
       isLoading.value = false;
     }
@@ -93,7 +94,7 @@ class PlotController extends GetxController {
       final res = await ApiService.post('/plots/', data);
       return res['data']?['plotId'] as String?;
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not create plot.'));
+      AppToast.error(DioErrorMapper.toMessage(e, 'Could not create plot.'));
       return null;
     } finally {
       isLoading.value = false;
@@ -163,7 +164,7 @@ class PlotController extends GetxController {
       listingStatusChangedTrigger.value++;
       await loadMyPlots(reset: true);
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not update plot status.'));
+      AppToast.error(DioErrorMapper.toMessage(e, 'Could not update plot status.'));
     } finally {
       isTogglingActive.value = false;
     }
@@ -177,7 +178,7 @@ class PlotController extends GetxController {
       nearbyPlots.removeWhere((p) => p.id == id);
       AppToast.success('Plot removed successfully.');
     } catch (e) {
-      AppToast.error(_errorMessage(e, 'Could not delete plot.'));
+      AppToast.error(DioErrorMapper.toMessage(e, 'Could not delete plot.'));
     } finally {
       isDeleting.value = false;
     }
@@ -244,7 +245,7 @@ class PlotController extends GetxController {
       if (status == 409 && type == 'CONCURRENT_UPDATE') {
         return GoLiveConcurrentUpdate(message ?? 'This plot was just modified by another request. Please retry.');
       }
-      return GoLiveFailure(_errorMessage(e, 'Could not go live. Please try again.'));
+      return GoLiveFailure(DioErrorMapper.toMessage(e, 'Could not go live. Please try again.'));
     } catch (_) {
       return GoLiveFailure('Could not go live. Please try again.');
     } finally {
@@ -253,28 +254,4 @@ class PlotController extends GetxController {
   }
 
   void notifyPlotPosted() => plotPostedTrigger.value++;
-
-  static String _errorMessage(dynamic e, String fallback) {
-    if (e is DioException) {
-      if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.connectionError) {
-        return 'No internet connection. Please check your network.';
-      }
-      final status = e.response?.statusCode;
-      String? message;
-      final responseData = e.response?.data;
-      if (responseData is Map<String, dynamic>) {
-        message = responseData['error']?['message'] as String? ??
-            responseData['message'] as String?;
-      } else if (responseData is String) {
-        message = responseData;
-      }
-      if (status == 400 && message != null) return message;
-      if (status == 429) return 'Too many attempts. Please try again later.';
-      if (status != null && status >= 500) return 'Server error. Please try again.';
-      if (message != null) return message;
-    }
-    return fallback;
-  }
 }
