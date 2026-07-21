@@ -126,14 +126,12 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
                   child: ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
-                    itemCount: items.length + 1,
-                    itemBuilder: (_, i) => i < items.length
-                        ? _InquiryRow(
-                            inquiry: items[i],
-                            dateText: _formatDate(items[i].createdAt),
-                            onTap: () => _openDetail(items[i]),
-                          )
-                        : _servicesShortcutRow(),
+                    itemCount: items.length,
+                    itemBuilder: (_, i) => _InquiryRow(
+                      inquiry: items[i],
+                      dateText: _formatDate(items[i].createdAt),
+                      onTap: () => _openDetail(items[i]),
+                    ),
                   ),
                 ),
               );

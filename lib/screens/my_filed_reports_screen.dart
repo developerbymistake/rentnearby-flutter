@@ -60,8 +60,8 @@ class _MyFiledReportsScreenState extends State<MyFiledReportsScreen> {
                   ? _buildEmpty()
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
-                      itemCount: _reports.length + 1,
-                      itemBuilder: (_, i) => i < _reports.length ? _reportRow(_reports[i]) : _profileSettingsRow(),
+                      itemCount: _reports.length,
+                      itemBuilder: (_, i) => _reportRow(_reports[i]),
                     ),
         ),
       ]),
