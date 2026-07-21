@@ -2,15 +2,15 @@
 /// list (the whole catalog/lead-volume for one consumer is small, unlike the
 /// admin-side paged list). Mirrors
 /// RentNearBy.Core.DTOs.Responses.InquiryListItemDto field-for-field.
-/// ServiceSectionName is what the "My Inquiries" row's small section badge
-/// (e.g. "Explore Uttarakhand" vs "Expert Consultations") is derived from —
-/// this is a SHARED list across both verticals, no per-vertical tab split.
+/// ServiceCategoryName is what the "My Inquiries" row's small category badge
+/// (e.g. "Char Dham Yatra" vs "Yoga & Diet") is derived from — this is a
+/// SHARED list across all categories, no per-category tab split.
 class InquiryModel {
   final String id;
   final String serviceId;
   final String serviceName;
-  final String serviceSectionId;
-  final String serviceSectionName;
+  final String serviceCategoryId;
+  final String serviceCategoryName;
   final String servicePackageId;
   final String servicePackageName;
   final String fullName;
@@ -29,8 +29,8 @@ class InquiryModel {
     required this.id,
     required this.serviceId,
     required this.serviceName,
-    required this.serviceSectionId,
-    required this.serviceSectionName,
+    required this.serviceCategoryId,
+    required this.serviceCategoryName,
     required this.servicePackageId,
     required this.servicePackageName,
     required this.fullName,
@@ -54,8 +54,8 @@ class InquiryModel {
         id: id,
         serviceId: serviceId,
         serviceName: serviceName,
-        serviceSectionId: serviceSectionId,
-        serviceSectionName: serviceSectionName,
+        serviceCategoryId: serviceCategoryId,
+        serviceCategoryName: serviceCategoryName,
         servicePackageId: servicePackageId,
         servicePackageName: servicePackageName,
         fullName: fullName,
@@ -71,8 +71,8 @@ class InquiryModel {
         id: json['id'] as String,
         serviceId: json['serviceId'] as String? ?? '',
         serviceName: json['serviceName'] as String? ?? '',
-        serviceSectionId: json['serviceSectionId'] as String? ?? '',
-        serviceSectionName: json['serviceSectionName'] as String? ?? '',
+        serviceCategoryId: json['serviceCategoryId'] as String? ?? '',
+        serviceCategoryName: json['serviceCategoryName'] as String? ?? '',
         servicePackageId: json['servicePackageId'] as String? ?? '',
         servicePackageName: json['servicePackageName'] as String? ?? '',
         fullName: json['fullName'] as String? ?? '',

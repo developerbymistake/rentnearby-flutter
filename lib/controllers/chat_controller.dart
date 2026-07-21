@@ -16,7 +16,23 @@ class ChatController extends GetxController {
   final loadingMoreConversations = false.obs;
   final hasMoreConversations = true.obs;
   static const _conversationsPageSize = 20;
+
+  // Server-authoritative total unread across ALL conversations (drives the Home header badge).
+  // Never derived by summing the loaded `conversations` list — that list is paginated
+  // (page size 20), so a local sum silently under-counts whenever an unread conversation
+  // sits beyond the loaded pages. Instead the total is anchored to GET /chat/unread-count
+  // at every drift-prone moment (app start, app resume, hub reconnect) and adjusted in
+  // between only by paths that know an exact per-conversation delta (mark-read, live
+  // UnreadCountChanged pushes).
   final unreadCount = 0.obs;
+
+  // Race guards for fetchUnreadCount(): only the newest in-flight fetch may apply its
+  // result (sequence number), and a precise delta landing while a fetch is in flight
+  // schedules one follow-up fetch — the server total was computed concurrently, so it may
+  // or may not already include that delta's change depending on request ordering.
+  int _unreadFetchSeq = 0;
+  bool _unreadFetchInFlight = false;
+  bool _unreadDeltaDuringFetch = false;
 
   final questionTemplates = <QuestionTemplateModel>[].obs;
   bool _templatesLoaded = false;
@@ -33,6 +49,51 @@ class ChatController extends GetxController {
   // screen uses this to fetch anything it missed while offline via getMessages(after: ...).
   final hubReconnected = Rxn<DateTime>();
 
+  @override
+  void onInit() {
+    super.onInit();
+    // App-start anchor — makes the badge exact before (and independent of) the first
+    // conversations-list load, which only ever covers page 1.
+    fetchUnreadCount();
+  }
+
+  // Anchors unreadCount to the server's total (GET /chat/unread-count — a single cheap SUM
+  // across every conversation the user is in). Call sites: onInit (app start), app resume
+  // (main_screen.dart), hub reconnect (chat_hub_service.dart — pushes missed while
+  // disconnected are the one drift source the delta paths can't cover), and
+  // applyUnreadCountChanged's not-loaded branch (no precise delta is knowable there).
+  Future<void> fetchUnreadCount() async {
+    final seq = ++_unreadFetchSeq;
+    _unreadFetchInFlight = true;
+    _unreadDeltaDuringFetch = false;
+    try {
+      final res = await ApiService.get('/chat/unread-count');
+      final total = (res['data']?['count'] as num?)?.toInt() ?? 0;
+      if (seq != _unreadFetchSeq) return; // superseded by a newer fetch — let that one win
+      unreadCount.value = total;
+      if (_unreadDeltaDuringFetch) {
+        // A delta landed mid-flight; the total above may predate it. Re-anchor once so the
+        // value converges instead of a stale server snapshot silently clobbering the delta.
+        _unreadDeltaDuringFetch = false;
+        unawaited(fetchUnreadCount());
+      }
+    } catch (_) {
+      // Best-effort — the badge keeps its last-known value (deltas still apply on top),
+      // and the next sync point re-anchors it.
+    } finally {
+      if (seq == _unreadFetchSeq) _unreadFetchInFlight = false;
+    }
+  }
+
+  // The only way the total moves between server anchors — callers must pass an EXACT
+  // per-conversation delta (old row count vs new), never a guess.
+  void _applyUnreadDelta(int delta) {
+    if (delta == 0) return;
+    final next = unreadCount.value + delta;
+    unreadCount.value = next < 0 ? 0 : next;
+    if (_unreadFetchInFlight) _unreadDeltaDuringFetch = true;
+  }
+
   Future<void> loadConversations({bool forceRefresh = false}) async {
     if (conversationsLoading.value) return;
     conversationsLoading.value = true;
@@ -44,7 +105,9 @@ class ChatController extends GetxController {
           .toList();
       conversations.value = items;
       hasMoreConversations.value = items.length >= _conversationsPageSize;
-      _recomputeUnreadCount();
+      // Deliberately does NOT touch unreadCount — this page-1 load sees at most 20
+      // conversations, and summing a partial list is exactly the under-count
+      // fetchUnreadCount() exists to prevent.
     } catch (_) {
     } finally {
       conversationsLoading.value = false;
@@ -74,7 +137,8 @@ class ChatController extends GetxController {
           .toList();
       conversations.value = items;
       hasMoreConversations.value = items.length >= targetCount;
-      _recomputeUnreadCount();
+      // No unreadCount recompute here either — the reconnect path that calls this also
+      // calls fetchUnreadCount(), which anchors the total properly.
     } catch (_) {
     } finally {
       conversationsLoading.value = false;
@@ -169,7 +233,10 @@ class ChatController extends GetxController {
         isOwner: c.isOwner, status: c.status, isBlockedByMe: c.isBlockedByMe, lastMessageAt: c.lastMessageAt,
         lastMessagePreview: c.lastMessagePreview, unreadCount: 0,
       );
-      _recomputeUnreadCount();
+      // Exact delta: this row held `c.unreadCount` and was just zeroed. The server's own
+      // mark-read push (UnreadCountChanged to user_{id}) then confirms via
+      // applyUnreadCountChanged — consistent, because the row is already 0 by then.
+      _applyUnreadDelta(-c.unreadCount);
     }
     try {
       await ApiService.post('/chat/conversations/$conversationId/read', {});
@@ -192,6 +259,9 @@ class ChatController extends GetxController {
     final index = conversations.indexWhere((c) => c.id == conversationId);
     if (index != -1) {
       final c = conversations[index];
+      // Exact delta: the push carries this conversation's authoritative new count, and we
+      // know what the row held locally — the total moves by precisely the difference.
+      final oldUnreadCount = c.unreadCount;
       conversations[index] = ConversationModel(
         id: c.id, listingType: c.listingType, listingId: c.listingId,
         listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
@@ -201,10 +271,13 @@ class ChatController extends GetxController {
         lastMessagePreview: c.lastMessagePreview, unreadCount: newUnreadCount,
       );
       conversations.sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+      _applyUnreadDelta(newUnreadCount - oldUnreadCount);
     } else {
+      // Conversation isn't in the loaded pages — no local row, so no precise delta is
+      // knowable. Reload the list for the row AND re-anchor the total from the server.
       loadConversations();
+      fetchUnreadCount();
     }
-    _recomputeUnreadCount();
   }
 
   // Called by ChatHubService on a live "MessageReceived" event — bumps the
@@ -357,12 +430,6 @@ class ChatController extends GetxController {
       AppToast.error(_errorMessage(e, 'Could not unblock this user. Please try again.'));
       return false;
     }
-  }
-
-  void _recomputeUnreadCount({String? excludingConversationId}) {
-    unreadCount.value = conversations
-        .where((c) => c.id != excludingConversationId)
-        .fold(0, (sum, c) => sum + c.unreadCount);
   }
 
   static String _errorMessage(dynamic e, String fallback) {

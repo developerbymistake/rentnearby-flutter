@@ -58,7 +58,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     TabNavigator(tabId: AppTabs.home),
     TabNavigator(tabId: AppTabs.rooms),
     TabNavigator(tabId: AppTabs.plots),
-    TabNavigator(tabId: AppTabs.explore),
+    TabNavigator(tabId: AppTabs.services),
     TabNavigator(tabId: AppTabs.profile),
   ];
 
@@ -178,6 +178,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       ChatHubService.to.connect();
       WalletHubService.to.connect();
       Get.find<NotificationController>().loadUnreadCount();
+      // Chat badge's app-resume anchor — pushes may have been missed while backgrounded
+      // (the hub reconnect above isn't guaranteed to fire if the connection quietly died).
+      _chatCtrl.fetchUnreadCount();
       // Inquiry is intentionally not reconnected here — see the comment at its
       // Get.put()/initial-connect site above. It connects lazily instead, and
       // my_inquiries_screen.dart/inquiry_detail_screen.dart each implement their
@@ -573,7 +576,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             _navItem(AppTabs.home, Iconsax.home, Iconsax.home5, 'Home'),
             _navItem(AppTabs.rooms, Iconsax.map, Iconsax.map5, 'Rooms'),
             _navItem(AppTabs.plots, Iconsax.location, Iconsax.location5, 'Plots'),
-            _navItem(AppTabs.explore, Iconsax.discover, Iconsax.discover5, 'Explore'),
+            _navItem(AppTabs.services, Iconsax.briefcase, Iconsax.briefcase5, 'Services'),
             _navItem(AppTabs.profile, Iconsax.setting_2, Iconsax.setting_25, 'Settings'),
           ],
         ),

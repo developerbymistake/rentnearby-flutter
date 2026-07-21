@@ -9,10 +9,15 @@ class InquiryFormFieldConfig {
   const InquiryFormFieldConfig({this.dateLabel, this.peopleLabel});
 }
 
+/// The Consultation FormType — the one place its string lives in-app. Also
+/// drives Service Detail's "Plan" vs "Package" noun (Consultation categories
+/// say "Plan").
+const kFormTypeConsultation = 'Consultation';
+
 const _kInquiryFormFieldConfigs = <String, InquiryFormFieldConfig>{
   'Travel': InquiryFormFieldConfig(dateLabel: 'Preferred Travel Date', peopleLabel: 'Number of Travelers'),
   'Event': InquiryFormFieldConfig(dateLabel: 'Event Date', peopleLabel: 'Number of Guests'),
-  'Consultation': InquiryFormFieldConfig(dateLabel: 'Preferred Consultation Date'),
+  kFormTypeConsultation: InquiryFormFieldConfig(dateLabel: 'Preferred Consultation Date'),
 };
 
 /// Unrecognized/missing FormType (a stale cached response, or a FormType value added on the backend

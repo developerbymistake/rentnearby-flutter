@@ -15,8 +15,8 @@ class InquiryDetailModel {
   final String userId;
   final String serviceId;
   final String serviceName;
-  final String serviceSectionId;
-  final String serviceSectionName;
+  final String serviceCategoryId;
+  final String serviceCategoryName;
   final String servicePackageId;
   final String servicePackageName;
   final String fullName;
@@ -42,8 +42,8 @@ class InquiryDetailModel {
     required this.userId,
     required this.serviceId,
     required this.serviceName,
-    required this.serviceSectionId,
-    required this.serviceSectionName,
+    required this.serviceCategoryId,
+    required this.serviceCategoryName,
     required this.servicePackageId,
     required this.servicePackageName,
     required this.fullName,
@@ -69,8 +69,8 @@ class InquiryDetailModel {
         userId: userId,
         serviceId: serviceId,
         serviceName: serviceName,
-        serviceSectionId: serviceSectionId,
-        serviceSectionName: serviceSectionName,
+        serviceCategoryId: serviceCategoryId,
+        serviceCategoryName: serviceCategoryName,
         servicePackageId: servicePackageId,
         servicePackageName: servicePackageName,
         fullName: fullName,
@@ -92,8 +92,8 @@ class InquiryDetailModel {
         userId: json['userId'] as String? ?? '',
         serviceId: json['serviceId'] as String? ?? '',
         serviceName: json['serviceName'] as String? ?? '',
-        serviceSectionId: json['serviceSectionId'] as String? ?? '',
-        serviceSectionName: json['serviceSectionName'] as String? ?? '',
+        serviceCategoryId: json['serviceCategoryId'] as String? ?? '',
+        serviceCategoryName: json['serviceCategoryName'] as String? ?? '',
         servicePackageId: json['servicePackageId'] as String? ?? '',
         servicePackageName: json['servicePackageName'] as String? ?? '',
         fullName: json['fullName'] as String? ?? '',

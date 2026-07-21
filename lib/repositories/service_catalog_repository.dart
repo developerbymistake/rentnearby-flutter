@@ -3,7 +3,6 @@ import '../models/service_category_model.dart';
 import '../models/service_detail_model.dart';
 import '../models/service_list_item_model.dart';
 import '../models/service_package_model.dart';
-import '../models/service_section_model.dart';
 import '../services/api_service.dart';
 
 /// Thin TTL-caching wrapper around the read-only Service Catalog endpoints
@@ -12,19 +11,15 @@ import '../services/api_service.dart';
 /// GetCities being dual-mounted). Mirrors ListingRepository's/
 /// WalletRepository's style: simple in-memory caches keyed only by time.
 ///
-/// The whole catalog is small (2 sections, 14 categories, 14 services, ~50
-/// packages for the seeded data) and admin-managed, so sections/categories/
-/// services/inclusions are fetched unfiltered and cached for 5 minutes —
-/// callers (ServiceCatalogController) do the parent-scoping client-side
-/// rather than issuing a fresh request per category/section. Package detail
-/// reads (by service, or by id — needed once a specific package's
-/// Inclusions are shown) are never cached: they're only read once per
-/// screen visit and admin package edits (price/discount) should be visible
-/// immediately.
+/// The whole catalog is small (3 categories, 15 services, ~26 packages for
+/// the seeded data) and admin-managed, so categories/services/inclusions are
+/// fetched unfiltered and cached for 5 minutes — callers
+/// (ServiceCatalogController) do the parent-scoping client-side rather than
+/// issuing a fresh request per category. Package detail reads (by service, or
+/// by id — needed once a specific package's Inclusions are shown) are never
+/// cached: they're only read once per screen visit and admin package edits
+/// (price/discount) should be visible immediately.
 class ServiceCatalogRepository {
-  List<ServiceSectionModel>? _sectionsCache;
-  DateTime? _sectionsCacheTime;
-
   List<ServiceCategoryModel>? _categoriesCache;
   DateTime? _categoriesCacheTime;
 
@@ -37,19 +32,6 @@ class ServiceCatalogRepository {
   static const _ttl = Duration(minutes: 5);
 
   bool _isValid(DateTime? time) => time != null && DateTime.now().difference(time) < _ttl;
-
-  Future<List<ServiceSectionModel>> getSections({bool forceRefresh = false}) async {
-    if (!forceRefresh && _sectionsCache != null && _isValid(_sectionsCacheTime)) {
-      return _sectionsCache!;
-    }
-    final res = await ApiService.get('/services/sections');
-    final list = (res['data'] as List? ?? [])
-        .map((e) => ServiceSectionModel.fromJson(e as Map<String, dynamic>))
-        .toList();
-    _sectionsCache = list;
-    _sectionsCacheTime = DateTime.now();
-    return list;
-  }
 
   Future<List<ServiceCategoryModel>> getCategories({bool forceRefresh = false}) async {
     if (!forceRefresh && _categoriesCache != null && _isValid(_categoriesCacheTime)) {
@@ -77,15 +59,15 @@ class ServiceCatalogRepository {
     return list;
   }
 
-  /// Home-rail preview for one Section — pre-sorted (featured first, then
+  /// Rail preview for one Category — pre-sorted (featured first, then
   /// SortOrder) and capped server-side (see GetServicesPreview/
-  /// GetPreviewByServiceSectionIdAsync on the backend). Deliberately
+  /// GetPreviewByServiceCategoryIdAsync on the backend). Deliberately
   /// uncached and parameterized (mirrors getPackages' style, not the
   /// whole-catalog-then-filter style above) since it's inherently a
   /// server-computed slice, not something worth replicating client-side.
-  Future<List<ServiceListItemModel>> getServicesPreview(String sectionId, {int limit = 6}) async {
+  Future<List<ServiceListItemModel>> getServicesPreview(String categoryId, {int limit = 6}) async {
     final res = await ApiService.get('/services/preview', params: {
-      'serviceSectionId': sectionId,
+      'serviceCategoryId': categoryId,
       'limit': '$limit',
     });
     return (res['data'] as List? ?? [])
@@ -132,8 +114,6 @@ class ServiceCatalogRepository {
   /// for parity with ListingRepository/WalletRepository's invalidation
   /// convention and for pull-to-refresh call sites).
   void invalidateAll() {
-    _sectionsCache = null;
-    _sectionsCacheTime = null;
     _categoriesCache = null;
     _categoriesCacheTime = null;
     _servicesCache = null;

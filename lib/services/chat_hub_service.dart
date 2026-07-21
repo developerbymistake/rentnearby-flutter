@@ -125,6 +125,9 @@ class ChatHubService extends GetxService {
       // Preserves however many pages the Chats list had already scrolled through instead of
       // silently snapping it back to a fresh 20-item page 1 on every brief network blip.
       chatCtrl.reloadPreservingPages();
+      // UnreadCountChanged pushes missed while disconnected are the one badge-drift source
+      // the controller's exact-delta paths can't cover — re-anchor the total from the server.
+      chatCtrl.fetchUnreadCount();
       // SignalR's automatic-reconnect gets a brand-new server-side ConnectionId — every
       // group membership from before (including any joined conversation) is gone and must
       // be explicitly redone, or the open conversation screen goes silently live-mute after

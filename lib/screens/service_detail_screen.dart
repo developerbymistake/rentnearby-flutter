@@ -9,6 +9,7 @@ import '../config/app_routes.dart';
 import '../controllers/service_catalog_controller.dart';
 import '../models/service_detail_model.dart';
 import '../models/service_package_model.dart';
+import '../utils/inquiry_form_fields.dart';
 import '../utils/service_icons.dart';
 import '../widgets/max_width_content.dart';
 import '../widgets/service_package_card.dart';
@@ -21,9 +22,9 @@ import '../widgets/service_package_card.dart';
 ///
 /// Every available package/plan for this service is rendered inline here
 /// (no separate "View All Packages" screen) — see [ServicePackageCard].
-/// "Package" vs "Plan" wording switches per Section (Expert Consultations
-/// says "Plan"; every other Section, including any future one, says
-/// "Package" by default).
+/// "Package" vs "Plan" wording switches on the category's FormType
+/// (Consultation categories say "Plan"; every other FormType, including any
+/// future one, says "Package" by default).
 class ServiceDetailScreen extends StatefulWidget {
   const ServiceDetailScreen({super.key});
 
@@ -32,15 +33,13 @@ class ServiceDetailScreen extends StatefulWidget {
 }
 
 class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
-  static const _expertConsultationsSectionName = 'Expert Consultations';
-
   final _ctrl = Get.find<ServiceCatalogController>();
   ServiceDetailModel? _service;
   List<ServicePackageModel> _packages = [];
   bool _loading = true;
   bool _notFound = false;
 
-  bool get _isPlansVertical => (_service?.serviceSectionName ?? '') == _expertConsultationsSectionName;
+  bool get _isPlansVertical => _service?.serviceCategoryFormType == kFormTypeConsultation;
   String get _packagesNoun => _isPlansVertical ? 'Plan' : 'Package';
 
   @override

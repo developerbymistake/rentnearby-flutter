@@ -196,7 +196,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
                   border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.25)),
                 ),
                 child: Text(
-                  detail.serviceSectionName,
+                  detail.serviceCategoryName,
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 9.5, fontWeight: FontWeight.w600, color: AppColors.primary),
                 ),
               ),

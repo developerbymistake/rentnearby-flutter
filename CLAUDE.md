@@ -53,8 +53,10 @@ explicitly:
 - Controllers are looked up elsewhere via `Get.find<T>()`; there is no constructor injection.
 
 **Navigation**: `GetMaterialApp` + named routes declared in `lib/config/app_routes.dart`
-(`AppRoutes.routes`, a flat `List<GetPage>` with per-route transitions). The bottom-nav tabs (Home,
-Rooms, Plots, Chats, Profile — indices defined in `lib/config/app_tabs.dart`) are NOT part of this
+(`AppRoutes.routes`, a flat `List<GetPage>` with per-route transitions). The bottom-nav tabs
+(`lib/config/app_tabs.dart`: `home(0) / rooms(1) / plots(2) / explore(3) / profile(4)` — index 3 was
+`chats` and is commented as repurposed for the local-services marketplace, see below; Chat is no longer
+a bottom-nav tab, reached instead via a header icon on Home) are NOT part of this
 route table: `MainScreen` renders them as an `IndexedStack` of `TabNavigator` widgets
 (`lib/navigation/tab_router.dart`), each wrapping its tab root screen in its own nested `Navigator`
 keyed via `lib/navigation/tab_keys.dart`. This isolates keyboard/layout/MediaQuery changes per tab.
@@ -112,7 +114,14 @@ persisted, reset on every resume/cold start), and a precise map-search pin overr
 the Rooms and Plots explore screens. `effectiveDistrict`/`effectiveCity`/`effectiveSearchCenter` are
 the derived getters screens should read rather than picking through the raw fields. `MainScreen`
 gates the whole app behind full-screen states driven by this controller: offline, GPS-disabled, and
-"district not supported yet" — see `_buildOfflineGate`/`_buildGpsGate`/`_buildDistrictGate`.
+"district not supported yet" — see `_buildOfflineGate`/`_buildGpsGate`/`_buildDistrictGate`. This gate
+wraps the whole app above the `IndexedStack`, regardless of tab count/order.
+
+**Pin/radius mechanics** (client-side only — the backend does not currently re-validate either of these,
+see the Backend repo's CLAUDE.md "Known gap" note): new-listing pin placement is capped to 500m from the
+user's live GPS fix, enforced in `add_listing_screen.dart`/`add_plot_screen.dart` against a client-computed
+distance. Explore radius is a fixed 3-value chip selector, `AppConstants.radiusOptions = [1.0, 5.0, 10.0]`
+(km) — not a slider — used identically by `explore_screen.dart`/`explore_plots_screen.dart`.
 
 **Maps**: `maplibre_gl` (not Google Maps) using a custom style at `assets/map_style.json`. Map-related
 tuning constants (clustering radius, max markers, fallback center coordinates for Uttarakhand) live in
@@ -171,6 +180,45 @@ so callers can branch on `GoLiveInsufficientBalance` specifically to open the sh
 - Both `Get.put(ConfigRepository())`/`Get.put(ConfigController())` and
   `Get.put(WalletRepository())`/`Get.put(WalletController())` are registered in `MainScreen.initState()`
   alongside `ListingRepository`/`PlotRepository`.
+
+**Local services marketplace, Agents & Leads (separate vertical from Room/Plot)**: `local_services_screen.dart`
+is the `services` tab's content, and Home shows the same rails. **Categories are the catalog's top
+level** (the old ServiceSection layer was removed backend-wide): each active `ServiceCategory` renders
+as one color-zoned rail of rich `ServiceRailCard`s via the shared `ServiceCategoryRail` widget
+(`lib/widgets/service_category_rail.dart` + `service_rail_card.dart` + `service_zone.dart` — zones are
+assigned by index rotation over the sorted active list, NEVER by category name, so an admin-added
+category needs no app release). Card tap goes straight to Service Detail (packages/plans inline);
+"View all" opens `ServiceCategoryGridScreen` — a 2-column grid of the same cards sliced client-side
+from the already-loaded catalog (`servicesForCategory`), no intermediate list screens exist anymore.
+Detail's "Plan" vs "Package" noun switches on `serviceCategoryFormType == kFormTypeConsultation`
+(`utils/inquiry_form_fields.dart`). `InquiryModel` (`serviceName`/`serviceCategoryName`/
+`servicePackageName`) powers the category badge on inquiry/lead rows. A consumer submits an `Inquiry`
+(a "lead") against a `Service`/`ServicePackage` via `InquiryController.submitInquiry()`, which has
+**no coin/wallet parameter** — this is a free lead-generation flow, unrelated to the coin economy
+below; every Consultation (Yoga & Diet) package renders "Get Custom Quote" (the team quotes offline).
+`InquiryContactSheet` lets a consumer submit under a different name/mobile (e.g. booking for someone
+else).
+- **`AgentController`** (`lib/controllers/agent_controller.dart`) checks `isAgent` once per session via
+  `GET /agents/me` — false for ~all consumer users, never surfaced as an error. `AgentModel` is
+  identity-only (id/name/photo, deliberately no phone — contact is one-directional, agent reaches
+  customer, never the reverse). `MyLeadsScreen`/`LeadDetailScreen` mirror `MyInquiriesScreen`/
+  `InquiryDetailScreen` but scoped server-side to `GET /agents/me/leads`, with a status-update action.
+  Profile screen has an agent-only "My Leads" tile, badge-counted.
+- **`EscalateInquirySheet`**/`InquiryEscalationModel` let a **consumer** (not the agent) report an issue
+  with their assigned agent (Not responding/Unhelpful/Wrong info/Other) — visible only to that consumer
+  and Admin, never the agent.
+- **`InquiryHubService`** (`lib/services/inquiry_hub_service.dart`) is a push-only, session-lifetime
+  SignalR connection delivering live `InquiryStatusChanged` events; falls back silently to pull-to-refresh
+  if it never connects. `hub_session_manager.dart` added a single teardown point,
+  `disconnectAllHubs()`, concurrently disconnecting all four hubs (Banner/Chat/Wallet/Inquiry) on logout or
+  a forced 401 — a revoked session previously left hubs retrying forever with an empty token.
+
+**Notification inbox**: `NotificationController` (`lib/controllers/notification_controller.dart`) fetches
+`unreadCount` once at `onInit` and exposes a paginated list (`GET /notifications`) with a `_requestId`
+guard against refresh/load-more races. `NotificationModel` carries generic `actionRoute`/`actionArguments`
+so tap-routing is generic, not a per-type switch. This inbox is refreshed on-demand/app-resume, not pushed
+live over SignalR — a deliberate choice per its own code comment (keeping a 5th hub connection out of the
+lazy-hub pattern above wasn't judged worth it for this feature yet).
 
 **Payments**: Razorpay (`razorpay_flutter`) — the coin-pack purchase flow drives the `Razorpay()` SDK
 directly inline from `CoinPacksScreen._purchase`, calling `WalletController.createOrder`/`verifyPayment`/

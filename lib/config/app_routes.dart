@@ -19,7 +19,7 @@ import '../screens/view_all_screen.dart';
 import '../screens/coin_packs_screen.dart';
 import '../screens/redeem_code_screen.dart';
 import '../screens/wallet_ledger_screen.dart';
-import '../screens/service_catalog_list_screen.dart';
+import '../screens/service_category_grid_screen.dart';
 import '../screens/service_detail_screen.dart';
 import '../screens/inquiry_form_screen.dart';
 import '../screens/inquiry_confirmation_screen.dart';
@@ -55,11 +55,11 @@ class AppRoutes {
   static const String redeemCode = '/redeem-code';
   static const String walletLedger = '/wallet-ledger';
 
-  // Local Services Marketplace / Expert Consultations — Consumer catalog +
-  // Inquiry submission flow. Service Detail renders every package/plan
-  // inline (no separate Package List route).
-  static const String serviceCategoryList = '/service-category-list';
-  static const String serviceList = '/service-list';
+  // Local Services Marketplace — Consumer catalog + Inquiry submission flow.
+  // Categories are the top level: rail card -> Service Detail directly, and
+  // "View all" -> the card grid (no intermediate list screens). Service
+  // Detail renders every package/plan inline (no separate Package List route).
+  static const String serviceCategoryGrid = '/service-category-grid';
   static const String serviceDetail = '/service-detail';
   static const String inquiryForm = '/inquiry-form';
   static const String inquiryConfirmation = '/inquiry-confirmation';
@@ -203,14 +203,8 @@ class AppRoutes {
       transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
-      name: serviceCategoryList,
-      page: () => const ServiceCatalogListScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
-    GetPage(
-      name: serviceList,
-      page: () => const ServiceCatalogListScreen(),
+      name: serviceCategoryGrid,
+      page: () => const ServiceCategoryGridScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

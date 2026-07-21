@@ -9,8 +9,6 @@ class ServiceDetailModel {
   final String serviceCategoryId;
   // RentNearBy.Core.Models.ServiceCategoryFormTypes.* — decides which Inquiry Form fields to show.
   final String serviceCategoryFormType;
-  final String serviceSectionId;
-  final String serviceSectionName;
   final String name;
   final String iconName;
   final String shortDescription;
@@ -25,8 +23,6 @@ class ServiceDetailModel {
     required this.id,
     required this.serviceCategoryId,
     required this.serviceCategoryFormType,
-    required this.serviceSectionId,
-    required this.serviceSectionName,
     required this.name,
     required this.iconName,
     required this.shortDescription,
@@ -42,8 +38,6 @@ class ServiceDetailModel {
         id: json['id'] as String,
         serviceCategoryId: json['serviceCategoryId'] as String? ?? '',
         serviceCategoryFormType: json['serviceCategoryFormType'] as String? ?? '',
-        serviceSectionId: json['serviceSectionId'] as String? ?? '',
-        serviceSectionName: json['serviceSectionName'] as String? ?? '',
         name: json['name'] as String? ?? '',
         iconName: json['iconName'] as String? ?? '',
         shortDescription: json['shortDescription'] as String? ?? '',

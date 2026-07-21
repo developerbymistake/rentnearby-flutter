@@ -385,7 +385,7 @@ class NotificationService extends GetxService {
 
   // Broadcast still lands on the Rooms tab (AppTabs.rooms, backed by the class
   // ExploreScreen/explore_screen.dart — an unrelated older "Explore" naming from that
-  // screen's map/search UI, not the newer AppTabs.explore local-services tab). Room/Plot
+  // screen's map/search UI, not the AppTabs.services local-services tab). Room/Plot
   // membership notifications push the My Rooms/My Plots route (no longer tabs).
   void _routeForNotificationData(Map<String, dynamic> data) {
     final isChatMessage = data['conversation_id'] != null;

@@ -12,7 +12,7 @@ Widget _rootScreen(int tabId) {
     case AppTabs.home: return const HomeScreen();
     case AppTabs.rooms: return const ExploreScreen();
     case AppTabs.plots: return const ExplorePlotsScreen();
-    case AppTabs.explore: return const LocalServicesScreen();
+    case AppTabs.services: return const LocalServicesScreen();
     case AppTabs.profile: return const ProfileScreen();
     default: return const SizedBox.shrink();
   }

@@ -18,10 +18,10 @@ const _months = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
-/// A single shared list across BOTH verticals (Explore Uttarakhand + Expert
-/// Consultations) — no per-vertical tab split, confirmed design. Each row
-/// carries a small section badge (derived from ServiceSectionName) so the
-/// two kinds of leads stay visually distinguishable without separate tabs.
+/// A single shared list across ALL catalog categories — no per-category tab
+/// split, confirmed design. Each row carries a small category badge (derived
+/// from ServiceCategoryName) so the different kinds of leads stay visually
+/// distinguishable without separate tabs.
 /// Always a fresh, un-paginated fetch on open (matches how ServicePackage
 /// List reloads every visit) — nothing here is TTL-cached, since a stale
 /// status pill is exactly the failure mode this feature must avoid.
@@ -69,17 +69,17 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
     Get.toNamed(AppRoutes.inquiryDetail, arguments: {'id': inquiry.id});
   }
 
-  // This screen is reachable from more than the Explore tab (push-notification taps,
+  // This screen is reachable from more than the Services tab (push-notification taps,
   // inquiry_confirmation_screen.dart) so a plain back button doesn't reliably return to
-  // Explore — jump there explicitly instead.
-  void _goToExplore() {
-    Get.find<AuthController>().tabIndex.value = AppTabs.explore;
+  // Services — jump there explicitly instead.
+  void _goToServices() {
+    Get.find<AuthController>().tabIndex.value = AppTabs.services;
     Get.until((route) => route.settings.name == AppRoutes.main);
   }
 
-  Widget _exploreShortcutRow() {
+  Widget _servicesShortcutRow() {
     return InkWell(
-      onTap: _goToExplore,
+      onTap: _goToServices,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -93,11 +93,11 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
           Container(
             width: 36, height: 36,
             decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Iconsax.discover, color: AppColors.primaryLight, size: 18),
+            child: const Icon(Iconsax.briefcase, color: AppColors.primaryLight, size: 18),
           ),
           const SizedBox(width: 12),
           const Expanded(
-            child: Text('Explore',
+            child: Text('Services',
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           ),
           const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textLight),
@@ -133,7 +133,7 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
                             dateText: _formatDate(items[i].createdAt),
                             onTap: () => _openDetail(items[i]),
                           )
-                        : _exploreShortcutRow(),
+                        : _servicesShortcutRow(),
                   ),
                 ),
               );
@@ -190,7 +190,7 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
                 textAlign: TextAlign.center,
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
             const SizedBox(height: 24),
-            _exploreShortcutRow(),
+            _servicesShortcutRow(),
           ]),
         ),
       );
@@ -281,7 +281,7 @@ class _InquiryRow extends StatelessWidget {
                     border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.25)),
                   ),
                   child: Text(
-                    inquiry.serviceSectionName,
+                    inquiry.serviceCategoryName,
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 9.5, fontWeight: FontWeight.w600, color: AppColors.primary),
                   ),
                 ),

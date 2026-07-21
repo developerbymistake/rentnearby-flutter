@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:iconsax/iconsax.dart';
 
-/// Resolves an admin-entered `IconName` string column (ServiceSection,
-/// ServiceCategory, Service, Inclusion) to an Iconsax glyph. Iconsax is the
+/// Resolves an admin-entered `IconName` string column (ServiceCategory,
+/// Service, Inclusion) to an Iconsax glyph. Iconsax is the
 /// only icon library this app depends on (explicit product decision — no
 /// Phosphor/Lucide/Solar), so every entry here is a real `Iconsax.*`
 /// constant, never a custom asset.
@@ -15,7 +15,7 @@ import 'package:iconsax/iconsax.dart';
 /// or rendering blank, so a typo'd/forgotten admin icon name degrades
 /// gracefully instead of breaking the screen.
 const Map<String, IconData> _kServiceIconMap = {
-  // ── Seeded verbatim (ServiceSection/ServiceCategory/Service/Inclusion) ──
+  // ── Seeded verbatim (ServiceCategory/Service/Inclusion) ──
   'map': Iconsax.map_1,
   'briefcase': Iconsax.briefcase,
   'route_square': Iconsax.route_square,
