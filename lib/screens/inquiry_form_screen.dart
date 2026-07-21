@@ -104,7 +104,7 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
     }
   }
 
-  Future<void> _submit() async {
+  Future<void> _onSubmitPressed() async {
     FocusManager.instance.primaryFocus?.unfocus();
     final package = _package;
     if (package == null || _serviceId.isEmpty) return;
@@ -118,6 +118,73 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
       AppToast.error('Please agree to be contacted to continue.');
       return;
     }
+    final confirmed = await _confirmSubmitDialog();
+    if (confirmed == true) await _submit();
+  }
+
+  // Same rounded Dialog + icon-circle + Row-of-two-Expanded-buttons shape as
+  // ProfileScreen._confirmLogout(), re-themed to primary (not destructive) since
+  // submitting an inquiry isn't a destructive action.
+  Future<bool?> _confirmSubmitDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 36),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+              child: const Icon(Iconsax.send_2, size: 28, color: AppColors.primary),
+            ),
+            const SizedBox(height: 16),
+            const Text('Submit Inquiry?',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+            const SizedBox(height: 8),
+            const Text('Please confirm your details are correct. Our team will reach out to you soon.',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textMedium,
+                    side: BorderSide(color: Colors.grey.shade300),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Confirm', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    final package = _package!;
     final peopleText = _peopleCtrl.text.trim();
     final numberOfPeople = peopleText.isEmpty ? null : int.tryParse(peopleText);
 
@@ -335,14 +402,20 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          ServicePackagePrice(
-            price: package.price,
-            originalPrice: package.originalPrice,
-            discountPercent: package.discountPercent,
-            isStartingAtPrice: package.isStartingAtPrice,
-            priceUnit: package.priceUnit,
-            priceFontSize: 14,
-            priceColor: AppColors.primary,
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: ServicePackagePrice(
+                price: package.price,
+                originalPrice: package.originalPrice,
+                discountPercent: package.discountPercent,
+                isStartingAtPrice: package.isStartingAtPrice,
+                priceUnit: package.priceUnit,
+                priceFontSize: 14,
+                priceColor: AppColors.primary,
+              ),
+            ),
           ),
         ],
       ),
@@ -476,7 +549,7 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
       color: Colors.white,
       padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + AppInsets.bottomViewPadding(context)),
       child: Obx(() => GradientButton(
-            onPressed: _inquiryCtrl.isSubmitting.value ? null : _submit,
+            onPressed: (_inquiryCtrl.isSubmitting.value || !_agreedToTerms) ? null : _onSubmitPressed,
             isLoading: _inquiryCtrl.isSubmitting.value,
             label: 'Submit Inquiry',
           )),
