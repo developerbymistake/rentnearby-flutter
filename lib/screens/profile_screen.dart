@@ -91,15 +91,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                name.trim().isNotEmpty ? name.trim() : 'Your Profile',
-                                style: const TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      name.trim().isNotEmpty ? name.trim() : 'Your Profile',
+                                      style: const TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 7),
+                                  GestureDetector(
+                                    onTap: _openEditNameSheet,
+                                    child: Container(
+                                      width: 22,
+                                      height: 22,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.18),
+                                        borderRadius: BorderRadius.circular(7),
+                                      ),
+                                      child: const Icon(Iconsax.edit_2, size: 11, color: Colors.white),
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 4),
                               Obx(() => Text(
@@ -124,12 +143,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Wallet
             _buildWalletCard(),
 
-            // Account — name (edit-on-demand), phone, and contact-visibility, each its own
-            // independent action now (separate confirm/edit sheets, separate API calls) rather
-            // than one shared "Save Profile" form that always sent both fields together.
+            // Account — phone and contact-visibility, each its own independent action
+            // (separate confirm/edit sheets, separate API calls). Name is edited from the
+            // pencil in the header above instead of a row here.
             _sectionGroup('ACCOUNT', [
-              _accountNameTile(),
-              Divider(height: 1, indent: 56, color: AppColors.divider),
               _accountPhoneTile(),
               Divider(height: 1, indent: 56, color: AppColors.divider),
               _accountVisibilityTile(),
@@ -324,24 +341,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _accountNameTile() {
-    return ListTile(
-      onTap: _openEditNameSheet,
-      leading: Container(
-        width: 36, height: 36,
-        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
-        child: const Icon(Iconsax.user, color: AppColors.primaryLight, size: 18),
-      ),
-      title: Obx(() {
-        final name = _auth.profileName.value.trim();
-        return Text(name.isNotEmpty ? name : 'Add your name',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark));
-      }),
-      trailing: const Icon(Iconsax.edit_2, size: 16, color: AppColors.textLight),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
 
