@@ -356,25 +356,49 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
           color: Colors.white,
           boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 16, offset: const Offset(0, -4))],
         ),
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: canPay ? () => _purchase(selectedPack) : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.35),
-              minimumSize: const Size(0, 52),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              elevation: 0,
-            ),
-            child: _isPurchasing
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : Text(
-                    selectedPack == null ? 'Select a pack to continue' : 'Pay Now ₹${selectedPack.priceInr}',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.lock_outline_rounded, size: 13, color: AppColors.textLight),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Non-refundable payment. Amount cannot be returned once processed.',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, color: AppColors.textLight, height: 1.45),
+                    ),
                   ),
-          ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: canPay ? () => _purchase(selectedPack) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.35),
+                  minimumSize: const Size(0, 52),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: _isPurchasing
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text(
+                        selectedPack == null ? 'Select a pack to continue' : 'Pay Now ₹${selectedPack.priceInr}',
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700),
+                      ),
+              ),
+            ),
+          ],
         ),
       );
     });
