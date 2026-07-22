@@ -21,8 +21,7 @@ import '../widgets/go_live_success_dialog.dart';
 import '../widgets/insufficient_balance_sheet.dart';
 import '../widgets/pulse_once.dart';
 
-const _kBrown = Color(0xFF92400E);
-const _kBrownDark = Color(0xFF78350F);
+const _kBrown = AppColors.plot;
 
 class MyPlotsScreen extends StatefulWidget {
   const MyPlotsScreen({super.key});
@@ -431,11 +430,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
 
   Widget _buildHeader() => Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [_kBrown, _kBrownDark],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: AppColors.plotGradient,
         ),
         child: SafeArea(
           bottom: false,
@@ -548,7 +543,7 @@ class _PlotCard extends StatelessWidget {
 
   Color _typeColor(String type) => switch (type) {
     'Commercial'   => const Color(0xFFF59E0B),
-    'Agricultural' => const Color(0xFF92400E),
+    'Agricultural' => AppColors.plot,
     'Farmhouse'    => const Color(0xFF16A34A),
     _              => const Color(0xFF3B82F6),
   };
@@ -839,11 +834,7 @@ class _PlotCard extends StatelessWidget {
 
   Widget _placeholder() => Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF92400E), Color(0xFF78350F)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: AppColors.plotGradient,
         ),
         child: const Center(child: Icon(Icons.terrain_rounded, size: 40, color: Colors.white54)),
       );

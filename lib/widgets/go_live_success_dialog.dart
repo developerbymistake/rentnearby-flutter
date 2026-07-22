@@ -70,7 +70,7 @@ class _GoLiveSuccessDialogState extends State<GoLiveSuccessDialog> with TickerPr
   @override
   Widget build(BuildContext context) {
     final isFree = widget.coinsSpent == 0;
-    final color = widget.isPlot ? const Color(0xFF92400E) : AppColors.success;
+    final color = widget.isPlot ? AppColors.plot : AppColors.success;
     final lightColor = widget.isPlot ? const Color(0xFFFFF7ED) : const Color(0xFFECFDF5);
 
     return Dialog(

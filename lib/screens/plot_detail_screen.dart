@@ -82,7 +82,7 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
   };
 
   Widget _buildTitle(PlotModel p) => Row(children: [
-    Icon(_plotTypeIcon(p.plotType), size: 22, color: const Color(0xFF92400E)),
+    Icon(_plotTypeIcon(p.plotType), size: 22, color: AppColors.plot),
     const SizedBox(width: 8),
     Flexible(
       child: Text(
@@ -172,7 +172,7 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
         SliverAppBar(
           expandedHeight: 380,
           pinned: true,
-          backgroundColor: const Color(0xFF92400E),
+          backgroundColor: AppColors.plot,
           leading: GestureDetector(
             onTap: () => Get.back(),
             child: Container(
@@ -195,7 +195,7 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
           flexibleSpace: FlexibleSpaceBar(
             background: p.photos.isEmpty
                 ? Container(
-                    color: const Color(0xFF92400E),
+                    color: AppColors.plot,
                     child: const Center(child: Icon(Icons.landscape_rounded, size: 80, color: Colors.white38)),
                   )
                 : Stack(
@@ -245,7 +245,7 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF92400E),
+                    color: AppColors.plot,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Column(

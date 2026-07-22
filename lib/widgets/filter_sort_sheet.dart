@@ -7,12 +7,8 @@ import '../controllers/view_all_controller.dart';
 import 'gradient_button.dart';
 import 'selectable_chip.dart';
 
-const _kPlotGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [Color(0xFF92400E), Color(0xFF78350F)],
-);
-const _kPlotColor = Color(0xFF92400E);
+const _kPlotGradient = AppColors.plotGradient;
+const _kPlotColor = AppColors.plot;
 
 // Sort options render one-per-row (full-width Newest, then a 2-up pair) so
 // they read as real buttons — taller than the dense room/plot type grid's

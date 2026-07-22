@@ -12,12 +12,8 @@ import '../widgets/location_pill.dart';
 import '../widgets/sliding_chip_toggle.dart';
 import 'explore_location_search_mixin.dart';
 
-const _kPlotGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [Color(0xFF92400E), Color(0xFF78350F)],
-);
-const _kPlotColor = Color(0xFF92400E);
+const _kPlotGradient = AppColors.plotGradient;
+const _kPlotColor = AppColors.plot;
 
 /// "View All" — pushed from Home's Rooms/Plots "View all" links. Reuses the
 /// real gradient-header pushed-screen pattern (my_plots_screen.dart /

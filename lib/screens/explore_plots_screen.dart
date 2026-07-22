@@ -485,7 +485,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         builder: (context2, child2) => CustomPaint(
           painter: _RadarPainter(
               progress: _radarController.value,
-              color: const Color(0xFF92400E)),
+              color: AppColors.plot),
         ),
       ),
     );
@@ -532,7 +532,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(17),
-                  border: Border.all(color: const Color(0xFF92400E), width: 2),
+                  border: Border.all(color: AppColors.plot, width: 2),
                   boxShadow: const [
                     BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
                   ],
@@ -544,7 +544,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                       fontFamily: 'Poppins',
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF78350F),
+                      color: AppColors.plotDark,
                     ),
                   ),
                 ),
@@ -562,11 +562,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
             child: _AnimatedPin(
               child: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF92400E), Color(0xFF78350F)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: AppColors.plotGradient,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
@@ -877,11 +873,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                   children: [
                     Container(
                       decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF92400E), Color(0xFF78350F)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                        gradient: AppColors.plotGradient,
                       ),
                       child: SafeArea(
                         bottom: false,
@@ -893,7 +885,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                             // LocationController.effectiveDistrict resolves.
                             SizedBox(
                               height: 40,
-                              child: LocationPill(accentColor: const Color(0xFF92400E)),
+                              child: LocationPill(accentColor: AppColors.plot),
                             ),
                             const SizedBox(height: 10),
                             Row(children: [
@@ -941,6 +933,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                       label: 'Add my plot',
                       icon: Icons.landscape_rounded,
                       onTap: () => Get.toNamed(AppRoutes.myPlots),
+                      gradient: AppColors.plotGradient,
                     ),
                   ],
                 ),
@@ -987,14 +980,14 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 width: 15,
                 height: 15,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Color(0xFF92400E)),
+                    strokeWidth: 2, color: AppColors.plot),
               )
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     isSearchActive ? Icons.close_rounded : Icons.search_rounded,
-                    color: const Color(0xFF92400E),
+                    color: AppColors.plot,
                     size: 15,
                   ),
                   const SizedBox(width: 5),
@@ -1003,7 +996,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                           fontFamily: 'Poppins',
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF92400E))),
+                          color: AppColors.plot)),
                 ],
               ),
       ),
@@ -1046,14 +1039,14 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 decoration: BoxDecoration(
                   gradient: active
                       ? const LinearGradient(
-                          colors: [Color(0xFF92400E), Color(0xFF78350F)],
+                          colors: [AppColors.plot, AppColors.plotDark],
                         )
                       : null,
                   borderRadius: BorderRadius.circular(11),
                   boxShadow: active
                       ? [
                           BoxShadow(
-                            color: const Color(0xFF92400E).withValues(alpha: 0.32),
+                            color: AppColors.plot.withValues(alpha: 0.32),
                             blurRadius: 8,
                             offset: const Offset(0, 3),
                           ),
@@ -1105,11 +1098,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 width: 54,
                 constraints: const BoxConstraints(minHeight: 52),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF92400E), Color(0xFF78350F)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: AppColors.plotGradient,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -1157,10 +1146,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                                 margin: EdgeInsets.only(right: colIndex < row.length - 1 ? 6 : 0),
                                 padding: const EdgeInsets.symmetric(vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: selected ? const Color(0xFF92400E) : Colors.white,
+                                  color: selected ? AppColors.plot : Colors.white,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                    color: selected ? const Color(0xFF92400E) : AppColors.divider,
+                                    color: selected ? AppColors.plot : AppColors.divider,
                                     width: 1.5,
                                   ),
                                 ),
@@ -1211,7 +1200,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
             BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))
           ],
         ),
-        child: const Icon(Icons.my_location_rounded, color: Color(0xFF92400E), size: 22),
+        child: const Icon(Icons.my_location_rounded, color: AppColors.plot, size: 22),
       ),
     );
   }
@@ -1229,7 +1218,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF92400E), width: 1.4),
+          border: Border.all(color: AppColors.plot, width: 1.4),
           boxShadow: [
             BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4)),
           ],
@@ -1237,14 +1226,14 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.format_list_bulleted_rounded, color: Color(0xFF92400E), size: 16),
+            const Icon(Icons.format_list_bulleted_rounded, color: AppColors.plot, size: 16),
             const SizedBox(width: 6),
             const Text('View List',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF92400E))),
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.plot)),
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: const Color(0xFF92400E), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: AppColors.plot, borderRadius: BorderRadius.circular(10)),
               child: Text('$count',
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
             ),
@@ -1278,11 +1267,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
               children: [
                 Container(
                   decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF92400E), Color(0xFF78350F)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    gradient: AppColors.plotGradient,
                     borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                   ),
                   child: Column(
@@ -1333,7 +1318,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                           title: p.plotType,
                           subtitle: '${p.distanceKm.toStringAsFixed(1)} km away',
                           trailingText: p.areaDisplay,
-                          trailingColor: const Color(0xFF92400E),
+                          trailingColor: AppColors.plot,
                           placeholderIcon: Icons.landscape_rounded,
                           onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id, 'distanceKm': p.distanceKm}),
                         );
@@ -1469,7 +1454,7 @@ class _PlotBottomSheet extends StatelessWidget {
   Color _typeColor(String type) => switch (type) {
         'Residential' => const Color(0xFF3B82F6),
         'Commercial' => const Color(0xFFF59E0B),
-        'Agricultural' => const Color(0xFF92400E),
+        'Agricultural' => AppColors.plot,
         'Farmhouse' => const Color(0xFF16A34A),
         _ => AppColors.primary,
       };
@@ -1621,7 +1606,7 @@ class _PlotBottomSheet extends StatelessWidget {
                         style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF92400E),
+                        backgroundColor: AppColors.plot,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 0,

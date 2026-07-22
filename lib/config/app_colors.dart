@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary palette
+  // Primary palette (Rooms)
   static const Color primary = Color(0xFF1E3A8A);       // Deep navy
   static const Color primaryLight = Color(0xFF3B82F6);  // Royal blue
   static const Color accent = Color(0xFF0EA5E9);        // Cyan highlight
   static const Color accentLight = Color(0xFF38BDF8);
+
+  // Plot palette — the Plots tab's own theme, distinct from Rooms' blue above.
+  static const Color plot = Color(0xFF92400E);      // Brown
+  static const Color plotDark = Color(0xFF78350F);  // Dark brown
 
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+  );
+
+  static const LinearGradient plotGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF92400E), Color(0xFF78350F)],
   );
 
   static const LinearGradient cardGradient = LinearGradient(

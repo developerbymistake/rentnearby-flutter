@@ -18,13 +18,9 @@ import '../widgets/max_width_content.dart';
 import '../widgets/service_zone.dart';
 import '../widgets/sliding_chip_toggle.dart';
 
-const _kPlotColor = Color(0xFF92400E);
-const _kPlotColorDark = Color(0xFF78350F);
-const _kPlotGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [_kPlotColor, _kPlotColorDark],
-);
+const _kPlotColor = AppColors.plot;
+const _kPlotColorDark = AppColors.plotDark;
+const _kPlotGradient = AppColors.plotGradient;
 const _kRoomsAccentLight = Color(0xFFFDBA74);
 const _kRoomsAccentDark = Color(0xFFB45309);
 

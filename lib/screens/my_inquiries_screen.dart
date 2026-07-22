@@ -5,8 +5,6 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
-import '../config/app_tabs.dart';
-import '../controllers/auth_controller.dart';
 import '../controllers/inquiry_controller.dart';
 import '../models/inquiry_model.dart';
 import '../services/inquiry_hub_service.dart';
@@ -60,43 +58,6 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
 
   void _openDetail(InquiryModel inquiry) {
     Get.toNamed(AppRoutes.inquiryDetail, arguments: {'id': inquiry.id});
-  }
-
-  // This screen is reachable from more than the Services tab (push-notification taps,
-  // inquiry_confirmation_screen.dart) so a plain back button doesn't reliably return to
-  // Services — jump there explicitly instead.
-  void _goToServices() {
-    Get.find<AuthController>().tabIndex.value = AppTabs.services;
-    Get.until((route) => route.settings.name == AppRoutes.main);
-  }
-
-  Widget _servicesShortcutRow() {
-    return InkWell(
-      onTap: _goToServices,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
-        ),
-        child: Row(children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Iconsax.briefcase, color: AppColors.primaryLight, size: 18),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text('Services',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          ),
-          const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textLight),
-        ]),
-      ),
-    );
   }
 
   @override
@@ -191,8 +152,6 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
             const Text('Enquire about a package to see it show up here.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-            const SizedBox(height: 24),
-            _servicesShortcutRow(),
           ]),
         ),
       );
