@@ -12,6 +12,7 @@ import '../models/inquiry_status_history_model.dart';
 import '../services/inquiry_hub_service.dart';
 import '../utils/app_date_format.dart';
 import '../utils/inquiry_status.dart';
+import '../utils/role_label_format.dart';
 import '../widgets/escalate_inquiry_sheet.dart';
 import '../widgets/max_width_content.dart';
 
@@ -102,13 +103,15 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
                         const SizedBox(height: 10),
                         _buildDetailsCard(detail),
                         const SizedBox(height: 20),
-                        _buildSectionTitle(detail.assignedAgents.length > 1 ? 'Assigned Agents' : 'Assigned Agent'),
+                        _buildSectionTitle(detail.assignedAgents.length > 1
+                            ? 'Assigned ${RoleLabelFormat.plural(detail.agentRoleLabel)}'
+                            : 'Assigned ${detail.agentRoleLabel}'),
                         const SizedBox(height: 10),
                         if (detail.assignedAgents.isEmpty)
-                          _buildNoAgentCard()
+                          _buildNoAgentCard(detail.agentRoleLabel)
                         else ...[
                           for (final agent in detail.assignedAgents) ...[
-                            _buildAgentCard(agent),
+                            _buildAgentCard(agent, detail.agentRoleLabel),
                             const SizedBox(height: 10),
                           ],
                           _buildEscalateSection(detail),
@@ -298,7 +301,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
     );
   }
 
-  Widget _buildAgentCard(AgentModel agent) {
+  Widget _buildAgentCard(AgentModel agent, String roleLabel) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -334,7 +337,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
                   children: [
                     Text(agent.name, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                     const SizedBox(height: 2),
-                    const Text('Your assigned agent', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                    Text('Your assigned $roleLabel', style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
                   ],
                 ),
               ),
@@ -376,7 +379,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
     );
   }
 
-  Widget _buildNoAgentCard() {
+  Widget _buildNoAgentCard(String roleLabel) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -385,14 +388,14 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Iconsax.user_search, size: 20, color: AppColors.textLight),
-          SizedBox(width: 10),
+          const Icon(Iconsax.user_search, size: 20, color: AppColors.textLight),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'An agent will be assigned to your inquiry shortly.',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textLight),
+              '${RoleLabelFormat.withIndefiniteArticle(roleLabel)} will be assigned to your inquiry shortly.',
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textLight),
             ),
           ),
         ],
@@ -434,7 +437,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
     }
 
     return InkWell(
-      onTap: () => EscalateInquirySheet.show(context, inquiryId: detail.id),
+      onTap: () => EscalateInquirySheet.show(context, inquiryId: detail.id, roleLabel: detail.agentRoleLabel),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
@@ -452,13 +455,13 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
               child: const Icon(Iconsax.flag, size: 14, color: AppColors.reportAlert),
             ),
             const SizedBox(width: 9),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Need help with this agent?',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.reportAlert)),
-                  Text('Report an issue · we\'ll review it',
+                  Text('Need help with this ${detail.agentRoleLabel}?',
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.reportAlert)),
+                  const Text('Report an issue · we\'ll review it',
                       style: TextStyle(fontFamily: 'Poppins', fontSize: 10, color: Color(0xFFB45309))),
                 ],
               ),

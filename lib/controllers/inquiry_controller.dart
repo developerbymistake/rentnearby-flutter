@@ -200,6 +200,7 @@ class InquiryController extends GetxController {
           serviceName: detail.serviceName,
           serviceCategoryId: detail.serviceCategoryId,
           serviceCategoryName: detail.serviceCategoryName,
+          agentRoleLabel: detail.agentRoleLabel,
           servicePackageId: detail.servicePackageId,
           servicePackageName: detail.servicePackageName,
           fullName: detail.fullName,

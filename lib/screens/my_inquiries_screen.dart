@@ -10,6 +10,7 @@ import '../models/inquiry_model.dart';
 import '../services/inquiry_hub_service.dart';
 import '../utils/app_date_format.dart';
 import '../utils/inquiry_status.dart';
+import '../utils/role_label_format.dart';
 import '../widgets/day_header.dart';
 import '../widgets/max_width_content.dart';
 import '../widgets/new_pill.dart';
@@ -261,7 +262,9 @@ class _InquiryRow extends StatelessWidget {
                 // fact alone; the escalation chip already communicates "this is being handled."
                 if (hasAgent || !inquiry.hasPendingEscalation)
                   _Chip(
-                    label: hasAgent ? '${inquiry.assignedAgentCount} agent${inquiry.assignedAgentCount > 1 ? 's' : ''} assigned' : 'No agent yet',
+                    label: hasAgent
+                        ? '${inquiry.assignedAgentCount} ${inquiry.assignedAgentCount > 1 ? RoleLabelFormat.plural(inquiry.agentRoleLabel) : inquiry.agentRoleLabel} assigned'
+                        : 'No ${inquiry.agentRoleLabel} yet',
                     background: (hasAgent ? AppColors.success : AppColors.textLight).withValues(alpha: 0.1),
                     foreground: hasAgent ? AppColors.success : AppColors.textLight,
                     icon: hasAgent ? Iconsax.tick_circle : Iconsax.user_search,

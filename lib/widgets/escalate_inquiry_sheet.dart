@@ -20,9 +20,10 @@ const _reasons = <(String value, String label)>[
 /// already exists, 409) can only be known from the server.
 class EscalateInquirySheet extends StatefulWidget {
   final String inquiryId;
-  const EscalateInquirySheet({super.key, required this.inquiryId});
+  final String roleLabel;
+  const EscalateInquirySheet({super.key, required this.inquiryId, this.roleLabel = 'Agent'});
 
-  static Future<bool?> show(BuildContext context, {required String inquiryId}) {
+  static Future<bool?> show(BuildContext context, {required String inquiryId, String roleLabel = 'Agent'}) {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -32,7 +33,7 @@ class EscalateInquirySheet extends StatefulWidget {
       ),
       builder: (_) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: EscalateInquirySheet(inquiryId: inquiryId),
+        child: EscalateInquirySheet(inquiryId: inquiryId, roleLabel: roleLabel),
       ),
     );
   }
@@ -89,10 +90,10 @@ class _EscalateInquirySheetState extends State<EscalateInquirySheet> {
                   decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(2)),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Need help with this agent?',
+                Text(
+                  'Need help with this ${widget.roleLabel}?',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
                 ),
               ],
             ),

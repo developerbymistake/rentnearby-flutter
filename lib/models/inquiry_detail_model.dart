@@ -17,6 +17,9 @@ class InquiryDetailModel {
   final String serviceName;
   final String serviceCategoryId;
   final String serviceCategoryName;
+  // Admin-editable word shown instead of "Agent" for this category (e.g. "Travel Expert",
+  // "Instructor") — see RoleLabelFormat for pluralization/article helpers.
+  final String agentRoleLabel;
   final String servicePackageId;
   final String servicePackageName;
   final String fullName;
@@ -44,6 +47,7 @@ class InquiryDetailModel {
     required this.serviceName,
     required this.serviceCategoryId,
     required this.serviceCategoryName,
+    required this.agentRoleLabel,
     required this.servicePackageId,
     required this.servicePackageName,
     required this.fullName,
@@ -71,6 +75,7 @@ class InquiryDetailModel {
         serviceName: serviceName,
         serviceCategoryId: serviceCategoryId,
         serviceCategoryName: serviceCategoryName,
+        agentRoleLabel: agentRoleLabel,
         servicePackageId: servicePackageId,
         servicePackageName: servicePackageName,
         fullName: fullName,
@@ -94,6 +99,7 @@ class InquiryDetailModel {
         serviceName: json['serviceName'] as String? ?? '',
         serviceCategoryId: json['serviceCategoryId'] as String? ?? '',
         serviceCategoryName: json['serviceCategoryName'] as String? ?? '',
+        agentRoleLabel: json['serviceCategoryAgentRoleLabel'] as String? ?? 'Agent',
         servicePackageId: json['servicePackageId'] as String? ?? '',
         servicePackageName: json['servicePackageName'] as String? ?? '',
         fullName: json['fullName'] as String? ?? '',
