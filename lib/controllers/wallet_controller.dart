@@ -1,5 +1,7 @@
+import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../models/coin_pack_model.dart';
+import '../models/coin_pack_purchase_result.dart';
 import '../models/coin_transaction_model.dart';
 import '../repositories/wallet_repository.dart';
 import '../services/api_service.dart';
@@ -108,9 +110,13 @@ class WalletController extends GetxController {
 
   // ---- Purchase / redeem flow — reusable across screens, screen-agnostic ----
 
-  Future<Map<String, dynamic>?> createOrder(String coinPackId) async {
+  /// [confirmed] should only ever be true when re-submitting after the
+  /// caller has already shown the user a CreateOrderRecentPurchaseDetected
+  /// warning and they chose to proceed anyway.
+  Future<CreateOrderResult> createOrder(String coinPackId, {bool confirmed = false}) async {
     try {
-      final res = await ApiService.post('/coin-packs/create-order', {'coinPackId': coinPackId});
+      final res = await ApiService.post(
+          '/coin-packs/create-order', {'coinPackId': coinPackId, 'confirmed': confirmed});
       final data = res['data'];
       if (data == null || data is! Map<String, dynamic>) {
         throw Exception('Invalid order response from server');
@@ -121,43 +127,101 @@ class WalletController extends GetxController {
       if (orderId == null || orderId.isEmpty || keyId == null || keyId.isEmpty || amountRaw == null) {
         throw Exception('Missing order details from server');
       }
-      return {
-        'orderId': orderId,
-        'amount': (amountRaw as num).toInt(),
-        'currency': data['currency'] as String? ?? 'INR',
-        'keyId': keyId,
-      };
-    } catch (e) {
-      AppToast.error(DioErrorMapper.toMessage(
+      return CreateOrderSuccess(
+        orderId: orderId,
+        amount: (amountRaw as num).toInt(),
+        currency: data['currency'] as String? ?? 'INR',
+        keyId: keyId,
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 409 && DioErrorMapper.errorType(e) == 'RECENT_PURCHASE_DETECTED') {
+        // No order/DB row was created server-side for this attempt — nothing
+        // to toast, the caller shows a confirm dialog instead.
+        final message = (e.response?.data is Map<String, dynamic>)
+            ? (e.response!.data['error']?['message'] as String?)
+            : null;
+        return CreateOrderRecentPurchaseDetected(message ?? 'You recently bought coins. Buy again?');
+      }
+      final message = DioErrorMapper.toMessage(
         e,
         'Could not start purchase. Please try again.',
         showRawMessageForStatusCodes: const {400, 404, 409},
-      ));
-      return null;
+      );
+      AppToast.error(message);
+      return CreateOrderFailure(message);
+    } catch (_) {
+      const message = 'Could not start purchase. Please try again.';
+      AppToast.error(message);
+      return CreateOrderFailure(message);
     }
   }
 
-  /// Rethrows on failure (rather than toasting) — same shape as the old
-  /// ListingController.verifyPayment — so the caller (which is mid-Razorpay-
-  /// callback) can show its own "contact support if amount was deducted"
-  /// messaging instead of a generic toast.
-  Future<Map<String, dynamic>> verifyPayment({
+  /// Never throws (unlike the old shape this replaced) — always resolves to a
+  /// VerifyPaymentResult so the caller (mid-Razorpay-callback) can branch on
+  /// network-vs-clean-failure, retry accordingly, and treat
+  /// VerifyPaymentAlreadyProcessed as success rather than an error.
+  Future<VerifyPaymentResult> verifyPayment({
     required String razorpayOrderId,
     required String razorpayPaymentId,
     required String razorpaySignature,
   }) async {
-    final res = await ApiService.post('/coin-packs/verify-payment', {
-      'razorpayOrderId': razorpayOrderId,
-      'razorpayPaymentId': razorpayPaymentId,
-      'razorpaySignature': razorpaySignature,
-    });
-    final data = res['data'];
-    if (data == null || data is! Map<String, dynamic> || data['success'] != true) {
-      throw Exception('Payment verification failed');
+    try {
+      final res = await ApiService.post('/coin-packs/verify-payment', {
+        'razorpayOrderId': razorpayOrderId,
+        'razorpayPaymentId': razorpayPaymentId,
+        'razorpaySignature': razorpaySignature,
+      });
+      final data = res['data'];
+      if (data == null || data is! Map<String, dynamic> || data['success'] != true) {
+        return VerifyPaymentFailure('Payment verification failed', isNetworkError: false);
+      }
+      Get.find<WalletRepository>().invalidateBalance();
+      await loadBalance();
+      return VerifyPaymentSuccess(
+        coinsCredited: (data['coinsCredited'] as num?)?.toInt() ?? 0,
+        newBalance: (data['newBalance'] as num?)?.toInt() ?? balance.value,
+      );
+    } on DioException catch (e) {
+      if (DioErrorMapper.isNetworkError(e)) {
+        return VerifyPaymentFailure(
+          DioErrorMapper.toMessage(e, 'No internet connection.'),
+          isNetworkError: true,
+        );
+      }
+      if (DioErrorMapper.errorType(e) == 'ALREADY_PROCESSED') {
+        // Another path (webhook, or an earlier attempt of this same call)
+        // already credited it — force-refresh, bypassing the 30s cache,
+        // since our own local balance may not reflect it yet.
+        balance.value = await Get.find<WalletRepository>().getBalance(forceRefresh: true);
+        return VerifyPaymentAlreadyProcessed();
+      }
+      return VerifyPaymentFailure(
+        DioErrorMapper.toMessage(e, 'Payment verification failed.', showRawMessageForStatusCodes: const {400}),
+        isNetworkError: false,
+      );
+    } catch (_) {
+      return VerifyPaymentFailure('Payment verification failed', isNetworkError: false);
     }
-    Get.find<WalletRepository>().invalidateBalance();
-    await loadBalance();
-    return data;
+  }
+
+  /// Last-resort status check — call only after verify-payment retries are
+  /// exhausted (or can't run at all, e.g. right after an app relaunch with no
+  /// in-memory order state left). Uses only the JWT, no client-held order id.
+  Future<LatestPurchaseStatus> getLatestPurchase() async {
+    try {
+      final res = await ApiService.get('/coin-packs/purchases/latest');
+      final data = res['data'];
+      if (data == null || data is! Map<String, dynamic> || data['hasPurchase'] != true) {
+        return LatestPurchaseStatus(hasPurchase: false);
+      }
+      return LatestPurchaseStatus(
+        hasPurchase: true,
+        status: data['status'] as String?,
+        completedAt: data['completedAt'] != null ? DateTime.tryParse(data['completedAt'] as String) : null,
+      );
+    } catch (_) {
+      return LatestPurchaseStatus(hasPurchase: false);
+    }
   }
 
   /// Fire-and-forget cleanup of a PENDING purchase row — same pattern the old

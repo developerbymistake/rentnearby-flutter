@@ -9,6 +9,7 @@ import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/wallet_controller.dart';
 import '../models/coin_pack_model.dart';
+import '../models/coin_pack_purchase_result.dart';
 import '../utils/app_toast.dart';
 import '../widgets/coin_credited_dialog.dart';
 import '../widgets/coin_icon.dart';
@@ -57,15 +58,24 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
     return raw;
   }
 
-  Future<void> _purchase(CoinPackModel pack) async {
+  Future<void> _purchase(CoinPackModel pack, {bool confirmed = false}) async {
     if (_isPurchasing) return;
     setState(() => _isPurchasing = true);
 
-    final order = await _wallet.createOrder(pack.id);
-    if (order == null) {
+    final orderResult = await _wallet.createOrder(pack.id, confirmed: confirmed);
+
+    if (orderResult is CreateOrderRecentPurchaseDetected) {
       if (mounted) setState(() => _isPurchasing = false);
-      return; // controller already toasted the reason
+      if (!mounted) return;
+      final proceed = await _confirmRecentPurchase(orderResult.message);
+      if (proceed == true && mounted) await _purchase(pack, confirmed: true);
+      return;
     }
+    if (orderResult is! CreateOrderSuccess) {
+      if (mounted) setState(() => _isPurchasing = false);
+      return; // CreateOrderFailure — controller already toasted the reason
+    }
+    final order = orderResult;
 
     final completer = Completer<void>();
     final razorpay = Razorpay();
@@ -78,22 +88,12 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
         if (orderId == null || paymentId == null || signature == null) {
           throw Exception('Invalid payment response from gateway');
         }
-        final data = await _wallet.verifyPayment(
+        await _verifyAndShowResult(
+          pack: pack,
           razorpayOrderId: orderId,
           razorpayPaymentId: paymentId,
           razorpaySignature: signature,
         );
-        if (mounted) {
-          Get.dialog(
-            CoinCreditedDialog(
-              coinsCredited: (data['coinsCredited'] as num?)?.toInt() ?? pack.totalCoins,
-              newBalance: (data['newBalance'] as num?)?.toInt() ?? _wallet.balance.value,
-              continueLabel: _returnToGoLive ? 'Continue to Go Live' : 'Done',
-              onDismiss: _returnToGoLive ? () => Get.back(result: true) : null,
-            ),
-            barrierDismissible: false,
-          );
-        }
       } catch (_) {
         AppToast.error('Payment verification failed. Please contact support if amount was deducted.');
       } finally {
@@ -102,7 +102,7 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
     });
 
     razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, (PaymentFailureResponse response) {
-      _wallet.cancelOrder(order['orderId'] as String);
+      _wallet.cancelOrder(order.orderId);
       if (response.code != Razorpay.PAYMENT_CANCELLED) {
         AppToast.error('Payment failed. Please try again.');
       }
@@ -116,10 +116,10 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
     try {
       final rawPhone = Get.find<AuthController>().user.value?.phoneNumber ?? '';
       razorpay.open({
-        'key': order['keyId'],
-        'amount': (order['amount'] as int) * 100,
-        'currency': order['currency'],
-        'order_id': order['orderId'],
+        'key': order.keyId,
+        'amount': order.amount * 100,
+        'currency': order.currency,
+        'order_id': order.orderId,
         'name': 'Bakhli',
         'description': '${pack.totalCoins} Coins',
         'prefill': {'contact': _formatPhone(rawPhone)},
@@ -130,6 +130,97 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
       razorpay.clear();
       if (mounted) setState(() => _isPurchasing = false);
     }
+  }
+
+  static const _verifyRetryDelays = [Duration(seconds: 1), Duration(seconds: 2), Duration(seconds: 4)];
+
+  /// Money was already captured by Razorpay by the time this runs — the
+  /// verify-payment call is what tells our backend to actually credit it, so
+  /// a lost RESPONSE (not a lost request) must not just show a generic error.
+  /// Retries only on network-level failures (the request may genuinely not
+  /// have landed yet); a clean rejection (bad signature, etc.) is shown
+  /// immediately since retrying it can't help. Safe to retry — verify-payment
+  /// is idempotent server-side. If retries are exhausted, falls back to one
+  /// GET /coin-packs/purchases/latest check (covers "the request landed, only
+  /// the response was lost") before finally showing an error.
+  Future<void> _verifyAndShowResult({
+    required CoinPackModel pack,
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+  }) async {
+    VerifyPaymentResult result = await _wallet.verifyPayment(
+      razorpayOrderId: razorpayOrderId,
+      razorpayPaymentId: razorpayPaymentId,
+      razorpaySignature: razorpaySignature,
+    );
+
+    for (final delay in _verifyRetryDelays) {
+      if (result is! VerifyPaymentFailure || !result.isNetworkError) break;
+      await Future.delayed(delay);
+      result = await _wallet.verifyPayment(
+        razorpayOrderId: razorpayOrderId,
+        razorpayPaymentId: razorpayPaymentId,
+        razorpaySignature: razorpaySignature,
+      );
+    }
+
+    if (result is VerifyPaymentSuccess) {
+      _showCoinCreditedDialog(pack, coinsCredited: result.coinsCredited, newBalance: result.newBalance);
+      return;
+    }
+    if (result is VerifyPaymentAlreadyProcessed) {
+      // Some other path (webhook, or an earlier retry) already credited it —
+      // WalletController.verifyPayment already force-refreshed balance.
+      _showCoinCreditedDialog(pack, coinsCredited: pack.totalCoins, newBalance: _wallet.balance.value);
+      return;
+    }
+
+    final failure = result as VerifyPaymentFailure;
+    if (!failure.isNetworkError) {
+      AppToast.error(failure.message);
+      return;
+    }
+
+    // All retries exhausted on network errors — last resort, ask the server
+    // directly whether the ORIGINAL request actually landed despite every
+    // response being lost.
+    final latest = await _wallet.getLatestPurchase();
+    if (latest.isSuccess) {
+      await _wallet.loadBalance(forceRefresh: true);
+      _showCoinCreditedDialog(pack, coinsCredited: pack.totalCoins, newBalance: _wallet.balance.value);
+      return;
+    }
+    AppToast.error(
+      'Could not confirm your payment due to a network issue. If the amount was deducted, '
+      "it will be automatically credited within a few minutes — check 'Buy Coins' again shortly.",
+    );
+  }
+
+  void _showCoinCreditedDialog(CoinPackModel pack, {required int coinsCredited, required int newBalance}) {
+    if (!mounted) return;
+    Get.dialog(
+      CoinCreditedDialog(
+        coinsCredited: coinsCredited,
+        newBalance: newBalance,
+        continueLabel: _returnToGoLive ? 'Continue to Go Live' : 'Done',
+        onDismiss: _returnToGoLive ? () => Get.back(result: true) : null,
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Future<bool?> _confirmRecentPurchase(String message) {
+    return Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Buy again?', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+        content: Text(message, style: const TextStyle(fontFamily: 'Poppins')),
+        actions: [
+          TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Get.back(result: true), child: const Text('Yes, buy again')),
+        ],
+      ),
+    );
   }
 
   @override
