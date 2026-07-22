@@ -5,11 +5,7 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../controllers/wallet_controller.dart';
 import '../models/coin_transaction_model.dart';
-
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
+import '../utils/app_date_format.dart';
 
 /// Earned/Spent are a pure client-side partition of `amount > 0` vs
 /// `amount < 0` on whatever page(s) of the paginated ledger are already
@@ -68,14 +64,6 @@ class _WalletLedgerScreenState extends State<WalletLedgerScreen> {
 
   Future<void> _refresh() => _wallet.loadTransactions(reset: true);
 
-  String _formatDate(DateTime dt) {
-    final local = dt.toLocal();
-    final hour12 = local.hour % 12 == 0 ? 12 : local.hour % 12;
-    final minute = local.minute.toString().padLeft(2, '0');
-    final ampm = local.hour >= 12 ? 'PM' : 'AM';
-    return '${local.day} ${_months[local.month - 1]} ${local.year}, $hour12:$minute $ampm';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,7 +96,7 @@ class _WalletLedgerScreenState extends State<WalletLedgerScreen> {
                         child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
                       );
                     }
-                    return _TransactionTile(txn: items[i], dateText: _formatDate(items[i].createdAt));
+                    return _TransactionTile(txn: items[i], dateText: AppDateFormat.dateTime(items[i].createdAt));
                   },
                 ),
               );

@@ -8,13 +8,9 @@ import '../config/app_insets.dart';
 import '../controllers/agent_controller.dart';
 import '../models/inquiry_detail_model.dart';
 import '../models/inquiry_status_history_model.dart';
+import '../utils/app_date_format.dart';
 import '../utils/inquiry_status.dart';
 import '../widgets/max_width_content.dart';
-
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
 
 enum _StepState { completed, active, pending, terminalNegative }
 
@@ -55,18 +51,6 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     super.dispose();
   }
 
-  String _formatDate(DateTime dt) {
-    final local = dt.toLocal();
-    final hour12 = local.hour % 12 == 0 ? 12 : local.hour % 12;
-    final minute = local.minute.toString().padLeft(2, '0');
-    final ampm = local.hour >= 12 ? 'PM' : 'AM';
-    return '${local.day} ${_months[local.month - 1]} ${local.year}, $hour12:$minute $ampm';
-  }
-
-  String _formatDateOnly(DateTime dt) {
-    final local = dt.toLocal();
-    return '${local.day} ${_months[local.month - 1]} ${local.year}';
-  }
 
   Future<void> _call(String phone) async {
     final url = Uri.parse('tel:+91$phone');
@@ -214,7 +198,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
           Text(detail.serviceName,
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, fontWeight: FontWeight.w500)),
           const SizedBox(height: 10),
-          Text('Submitted on ${_formatDateOnly(detail.createdAt)}',
+          Text('Submitted on ${AppDateFormat.date(detail.createdAt)}',
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
         ],
       ),
@@ -252,14 +236,14 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                       ? _StepState.completed
                       : (i == currentIndex ? _StepState.active : _StepState.pending)),
               isLast: i == steps.length - 1 && !isNegativeTerminal,
-              timestampText: reached.contains(steps[i]) ? _formatDate(_historyFor(detail, steps[i])!.createdAt) : null,
+              timestampText: reached.contains(steps[i]) ? AppDateFormat.dateTime(_historyFor(detail, steps[i])!.createdAt) : null,
             ),
           if (isNegativeTerminal)
             _StepTile(
               label: detail.status,
               state: _StepState.terminalNegative,
               isLast: true,
-              timestampText: _historyFor(detail, detail.status) != null ? _formatDate(_historyFor(detail, detail.status)!.createdAt) : null,
+              timestampText: _historyFor(detail, detail.status) != null ? AppDateFormat.dateTime(_historyFor(detail, detail.status)!.createdAt) : null,
               note: _historyFor(detail, detail.status)?.note,
             ),
         ],
@@ -283,7 +267,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
           _infoRow(Iconsax.call, 'Mobile', detail.mobile),
           if (detail.email != null && detail.email!.isNotEmpty) _infoRow(Iconsax.sms, 'Email', detail.email!),
           if (detail.preferredDateOrTripStart != null)
-            _infoRow(Iconsax.calendar_1, 'Preferred Date', _formatDateOnly(detail.preferredDateOrTripStart!)),
+            _infoRow(Iconsax.calendar_1, 'Preferred Date', AppDateFormat.date(detail.preferredDateOrTripStart!)),
           if (detail.numberOfPeople != null) _infoRow(Iconsax.profile_2user, 'People', '${detail.numberOfPeople}'),
           if (detail.message != null && detail.message!.isNotEmpty) _infoRow(Iconsax.message_text, 'Message', detail.message!, isLast: true),
         ],
@@ -359,19 +343,21 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     );
   }
 
+  // Reject was dropped deliberately — it was functionally identical to Cancel everywhere in this
+  // codebase (same color, same backend transition rules, no distinct downstream behavior) with no
+  // documented reason to keep both as separate agent-facing actions. Backend/admin untouched —
+  // Rejected remains a valid status generally, just no longer offered as a button here.
   List<(String label, String status, Color color)> _nextStatusOptions(String current) {
     if (current == InquiryStatus.submitted) {
       return [
         ('Mark Contacted', InquiryStatus.contacted, AppColors.warning),
         ('Cancel', InquiryStatus.cancelled, AppColors.error),
-        ('Reject', InquiryStatus.rejected, AppColors.error),
       ];
     }
     if (current == InquiryStatus.contacted) {
       return [
         ('Mark Confirmed', InquiryStatus.confirmed, AppColors.success),
         ('Cancel', InquiryStatus.cancelled, AppColors.error),
-        ('Reject', InquiryStatus.rejected, AppColors.error),
       ];
     }
     return const [];
@@ -407,28 +393,128 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
           const SizedBox(height: 12),
           Obx(() {
             final busy = _ctrl.isUpdatingStatus.value;
-            return Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            return Row(
               children: [
-                for (final opt in options)
-                  ElevatedButton(
-                    onPressed: busy ? null : () => _updateStatus(opt.$2),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: opt.$3,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: opt.$3.withValues(alpha: 0.5),
-                      minimumSize: const Size(0, 42),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
+                for (int i = 0; i < options.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: busy ? null : () => _handleStatusTap(options[i]),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: options[i].$3,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: options[i].$3.withValues(alpha: 0.5),
+                        minimumSize: const Size(0, 42),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: Text(options[i].$1, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
                     ),
-                    child: Text(opt.$1, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
                   ),
+                ],
               ],
             );
           }),
         ],
+      ),
+    );
+  }
+
+  // Mark Contacted is a routine forward step — fires instantly, same as before. Confirmed/Cancelled
+  // are more consequential (one is the terminal happy-path, the other ends the lead entirely), so
+  // both now route through a confirmation dialog first rather than firing on a single tap.
+  void _handleStatusTap((String, String, Color) opt) {
+    final copy = _confirmationCopy(opt.$2);
+    if (copy == null) {
+      _updateStatus(opt.$2);
+      return;
+    }
+    _showStatusConfirmDialog(status: opt.$2, color: opt.$3, copy: copy);
+  }
+
+  ({String title, String message, String confirmLabel})? _confirmationCopy(String status) {
+    if (status == InquiryStatus.confirmed) {
+      return (
+        title: 'Mark as Confirmed?',
+        message: 'Are you sure you want to mark this lead as Confirmed?',
+        confirmLabel: 'Yes, Confirm',
+      );
+    }
+    if (status == InquiryStatus.cancelled) {
+      return (
+        title: 'Cancel this Lead?',
+        message: 'Are you sure you want to cancel this lead?',
+        confirmLabel: 'Yes, Cancel Lead',
+      );
+    }
+    return null;
+  }
+
+  // Same Dialog/Row/Expanded shape as ProfileScreen._confirmLogout — icon circle, title, message,
+  // two Expanded buttons in one row. Dismiss button deliberately says "No, go back" on both dialogs
+  // (not the bare "Cancel" _confirmLogout uses) since "Cancel" is also the lead-status action itself
+  // here — using it for dismiss too would put two different-meaning "Cancel"s in the same dialog.
+  void _showStatusConfirmDialog({
+    required String status,
+    required Color color,
+    required ({String title, String message, String confirmLabel}) copy,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 36),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+              child: Icon(InquiryStatus.icon(status), size: 28, color: color),
+            ),
+            const SizedBox(height: 16),
+            Text(copy.title, style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+            const SizedBox(height: 8),
+            Text(copy.message,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textMedium,
+                    side: BorderSide(color: Colors.grey.shade300),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('No, go back', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _updateStatus(status);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: Text(copy.confirmLabel, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ]),
+          ]),
+        ),
       ),
     );
   }

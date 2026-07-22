@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../models/inquiry_detail_model.dart';
 import '../models/inquiry_model.dart';
 import '../repositories/agent_repository.dart';
+import '../services/inquiry_hub_service.dart';
 import '../utils/app_toast.dart';
 
 /// Owns "is this account an Agent, and what do they need to see" — checked once per session
@@ -38,6 +40,12 @@ class AgentController extends GetxController {
       isAgent.value = true;
       agentId.value = profile['agentId'] as String?;
       pendingLeadCount.value = (profile['pendingLeadCount'] as num?)?.toInt() ?? 0;
+      // Connect the Inquiry hub only once we actually know this account is an agent — chained
+      // off this call's own completion rather than a synchronous check at app-start, since
+      // isAgent isn't resolved yet at the point MainScreen.initState() runs. Also re-called on
+      // every resume (see main_screen.dart) as a no-op-if-already-connected reconnect, covering
+      // a connection that quietly died while backgrounded.
+      InquiryHubService.to.connect();
     } catch (_) {
       // Best-effort background check — a network hiccup here just means the My Leads row stays
       // hidden this session, not a user-facing error.
@@ -94,6 +102,9 @@ class AgentController extends GetxController {
         pendingLeadCount.value--;
       }
       return true;
+    } on DioException catch (e) {
+      AppToast.error(_errorMessage(e));
+      return false;
     } catch (_) {
       AppToast.error('Could not update status. Please try again.');
       return false;
@@ -102,7 +113,58 @@ class AgentController extends GetxController {
     }
   }
 
+  // Mirrors InquiryController._errorMessage's shape — surfaces the server's own message for an
+  // expected 4xx (an invalid status transition, or the CONCURRENT_UPDATE 409 a co-assigned agent/
+  // admin race can now produce) instead of collapsing every failure into one generic string, same
+  // as ListingController/PlotController already do for their own CONCURRENT_UPDATE case.
+  String _errorMessage(DioException e) {
+    final status = e.response?.statusCode;
+    String? message;
+    final responseData = e.response?.data;
+    if (responseData is Map<String, dynamic>) {
+      message = responseData['error']?['message'] as String? ?? responseData['message'] as String?;
+    }
+    if ((status == 400 || status == 409) && message != null) return message;
+    return 'Could not update status. Please try again.';
+  }
+
   /// Called when leaving Lead Detail so a stale lead isn't silently reused if a different one is
   /// opened next — mirrors InquiryController.clearCurrentDetail().
   void clearCurrentLeadDetail() => currentLeadDetail.value = null;
+
+  /// Driven by InquiryHubService's live "NotificationReceived" (type == LeadAssigned) push — a new
+  /// auto/manual assignment landed for this agent. The push payload only carries
+  /// id/type/title/body/actionRoute (no inquiry fields), so unlike InquiryController
+  /// .applyStatusUpdate's in-place patch, this can't construct the new row locally.
+  ///
+  /// Deliberately does NOT locally increment pendingLeadCount: both the auto-assign path
+  /// (CreateInquiry) and the admin-assign path (AdminSetInquiryAgents) always transition the
+  /// inquiry Submitted -> Contacted in the SAME write that triggers this notification, so by the
+  /// time this push arrives the lead is never actually in the Submitted state pendingLeadCount is
+  /// defined to count (see its own doc comment above) — a blind increment here would silently
+  /// drift the badge above the server's own count. checkAgentStatus() re-fetches the authoritative
+  /// value instead; loadMyLeads() (only if the list is already loaded) makes the new lead itself
+  /// show up, not just any count.
+  void applyLeadAssigned() {
+    checkAgentStatus();
+    if (myLeads.isNotEmpty) loadMyLeads();
+  }
+
+  /// Driven by InquiryHubService's live "InquiryStatusChanged" push when a co-assigned agent or
+  /// Admin changes a lead's status (see InquiryHandlers.NotifyCoAssignedAgentsOfStatusChangeAsync)
+  /// — mirrors InquiryController.applyStatusUpdate's minimal-patch branch exactly, just scoped to
+  /// myLeads/currentLeadDetail instead of myInquiries/currentDetail. A no-op for a lead not
+  /// currently held in either (nothing to patch — the next screen visit picks up the real value),
+  /// same as the consumer-side method.
+  void applyLeadStatusUpdate(String inquiryId, String status) {
+    final ts = DateTime.now();
+    final idx = myLeads.indexWhere((l) => l.id == inquiryId);
+    if (idx != -1) {
+      myLeads[idx] = myLeads[idx].copyWith(status: status, updatedAt: ts);
+    }
+    final open = currentLeadDetail.value;
+    if (open != null && open.id == inquiryId) {
+      currentLeadDetail.value = open.copyWith(status: status, updatedAt: ts);
+    }
+  }
 }

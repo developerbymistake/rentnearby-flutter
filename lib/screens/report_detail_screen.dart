@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../models/listing_report_model.dart';
+import '../utils/app_date_format.dart';
 
 class ReportDetailScreen extends StatelessWidget {
   const ReportDetailScreen({super.key});
@@ -60,10 +61,10 @@ class ReportDetailScreen extends StatelessWidget {
               const SizedBox(height: 16),
               _field('Status', r.status),
               const SizedBox(height: 16),
-              _field('Filed on', _formatDate(r.createdAt)),
+              _field('Filed on', AppDateFormat.date(r.createdAt)),
               if (r.resolvedAt != null) ...[
                 const SizedBox(height: 16),
-                _field('Resolved on', _formatDate(r.resolvedAt!)),
+                _field('Resolved on', AppDateFormat.date(r.resolvedAt!)),
               ],
               const SizedBox(height: 20),
               Container(
@@ -96,8 +97,4 @@ class ReportDetailScreen extends StatelessWidget {
     ]);
   }
 
-  String _formatDate(DateTime dt) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
-  }
 }

@@ -428,6 +428,11 @@ class NotificationService extends GetxService {
       // — unlike chat, no data-only custom rendering needed here. 'id' matches the argument key
       // InquiryDetailScreen itself reads (see my_inquiries_screen.dart's own Get.toNamed call).
       Get.toNamed(AppRoutes.inquiryDetail, arguments: {'id': data['inquiry_id']});
+    } else if (notificationType == 'agent_lead_status') {
+      // Same payload shape as inquiry_status above, but the recipient is a co-assigned agent, not
+      // the submitting consumer — GetInquiryDetail would 403 them, so this routes to their own
+      // Lead Detail screen instead (same route LeadAssigned's action_route already uses).
+      Get.toNamed(AppRoutes.leadDetail, arguments: {'id': data['inquiry_id']});
     } else if (notificationType == 'broadcast') {
       Get.find<AuthController>().tabIndex.value = AppTabs.rooms;
     } else {

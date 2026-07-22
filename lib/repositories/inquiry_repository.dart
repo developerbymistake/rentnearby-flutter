@@ -47,6 +47,13 @@ class InquiryRepository {
         .toList();
   }
 
+  /// Server-anchored counterpart to getMyInquiries — mirrors NotificationRepository.getUnreadCount's
+  /// shape, for refreshing the Explore tab's Inquiries badge without loading the full list.
+  Future<int> getActiveCount() async {
+    final res = await ApiService.get('/inquiries/active-count');
+    return (res['data']?['count'] as num?)?.toInt() ?? 0;
+  }
+
   Future<InquiryDetailModel?> getInquiryDetail(String id) async {
     final res = await ApiService.get('/inquiries/$id');
     final data = res['data'];

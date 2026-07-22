@@ -181,12 +181,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       // Chat badge's app-resume anchor — pushes may have been missed while backgrounded
       // (the hub reconnect above isn't guaranteed to fire if the connection quietly died).
       _chatCtrl.fetchUnreadCount();
-      // Inquiry is intentionally not reconnected here — see the comment at its
-      // Get.put()/initial-connect site above. It connects lazily instead, and
-      // my_inquiries_screen.dart/inquiry_detail_screen.dart each implement their
-      // own WidgetsBindingObserver + didChangeAppLifecycleState resume-reconnect
-      // while they're the active screen, so this is covered without MainScreen
-      // needing to know about Inquiry at all when neither screen is open.
+      // Inquiry's hub itself is still not unconditionally reconnected here — see the comment at
+      // its Get.put()/initial-connect site above; my_inquiries_screen.dart/inquiry_detail_screen.dart
+      // still own their own reconnect while they're the active screen. But the two counts that
+      // silently went stale without either screen ever being opened this session (the consumer
+      // badge and the agent pendingLeadCount, both server-anchored) do need a resume anchor here,
+      // same as Chat/Notifications above. checkAgentStatus() re-resolves isAgent and internally
+      // reconnects InquiryHubService itself if this account is an agent (see its own comment).
+      Get.find<InquiryController>().fetchActiveCount();
+      Get.find<AgentController>().checkAgentStatus();
     }
   }
 

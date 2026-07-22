@@ -10,14 +10,10 @@ import '../models/agent_model.dart';
 import '../models/inquiry_detail_model.dart';
 import '../models/inquiry_status_history_model.dart';
 import '../services/inquiry_hub_service.dart';
+import '../utils/app_date_format.dart';
 import '../utils/inquiry_status.dart';
 import '../widgets/escalate_inquiry_sheet.dart';
 import '../widgets/max_width_content.dart';
-
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
 
 enum _StepState { completed, active, pending, terminalNegative }
 
@@ -71,19 +67,6 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
     // inquiry no screen is actually showing.
     _ctrl.clearCurrentDetail();
     super.dispose();
-  }
-
-  String _formatDate(DateTime dt) {
-    final local = dt.toLocal();
-    final hour12 = local.hour % 12 == 0 ? 12 : local.hour % 12;
-    final minute = local.minute.toString().padLeft(2, '0');
-    final ampm = local.hour >= 12 ? 'PM' : 'AM';
-    return '${local.day} ${_months[local.month - 1]} ${local.year}, $hour12:$minute $ampm';
-  }
-
-  String _formatDateOnly(DateTime dt) {
-    final local = dt.toLocal();
-    return '${local.day} ${_months[local.month - 1]} ${local.year}';
   }
 
   @override
@@ -218,7 +201,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
           Text(detail.serviceName,
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, fontWeight: FontWeight.w500)),
           const SizedBox(height: 10),
-          Text('Submitted on ${_formatDateOnly(detail.createdAt)}',
+          Text('Submitted on ${AppDateFormat.date(detail.createdAt)}',
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
         ],
       ),
@@ -256,14 +239,14 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
                       ? _StepState.completed
                       : (i == currentIndex ? _StepState.active : _StepState.pending)),
               isLast: i == steps.length - 1 && !isNegativeTerminal,
-              timestampText: reached.contains(steps[i]) ? _formatDate(_historyFor(detail, steps[i])!.createdAt) : null,
+              timestampText: reached.contains(steps[i]) ? AppDateFormat.dateTime(_historyFor(detail, steps[i])!.createdAt) : null,
             ),
           if (isNegativeTerminal)
             _StepTile(
               label: detail.status,
               state: _StepState.terminalNegative,
               isLast: true,
-              timestampText: _historyFor(detail, detail.status) != null ? _formatDate(_historyFor(detail, detail.status)!.createdAt) : null,
+              timestampText: _historyFor(detail, detail.status) != null ? AppDateFormat.dateTime(_historyFor(detail, detail.status)!.createdAt) : null,
               note: _historyFor(detail, detail.status)?.note,
             ),
         ],
@@ -287,7 +270,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
           _infoRow(Iconsax.call, 'Mobile', detail.mobile),
           if (detail.email != null && detail.email!.isNotEmpty) _infoRow(Iconsax.sms, 'Email', detail.email!),
           if (detail.preferredDateOrTripStart != null)
-            _infoRow(Iconsax.calendar_1, 'Preferred Date', _formatDateOnly(detail.preferredDateOrTripStart!)),
+            _infoRow(Iconsax.calendar_1, 'Preferred Date', AppDateFormat.date(detail.preferredDateOrTripStart!)),
           if (detail.numberOfPeople != null) _infoRow(Iconsax.profile_2user, 'People', '${detail.numberOfPeople}'),
           if (detail.message != null && detail.message!.isNotEmpty) _infoRow(Iconsax.message_text, 'Message', detail.message!, isLast: true),
         ],

@@ -5,12 +5,11 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../controllers/notification_controller.dart';
 import '../models/notification_model.dart';
+import '../utils/app_date_format.dart';
+import '../utils/notification_visuals.dart';
+import '../widgets/day_header.dart';
 import '../widgets/max_width_content.dart';
-
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
+import '../widgets/new_pill.dart';
 
 /// The Home-screen bell's inbox — infinite-scroll paginated, mirroring
 /// WalletLedgerScreen's ScrollController + footer-loader-row pattern (this
@@ -51,11 +50,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _refresh() => _ctrl.loadNotifications(reset: true);
 
-  String _formatDate(DateTime dt) {
-    final local = dt.toLocal();
-    return '${local.day} ${_months[local.month - 1]} ${local.year}';
-  }
-
   void _openNotification(NotificationModel n) {
     _ctrl.markRead(n.id);
     if (n.actionRoute != null) {
@@ -78,6 +72,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               final hasMore = _ctrl.hasMoreNotifications.value;
               if (loading && items.isEmpty) return _buildShimmer();
               if (items.isEmpty) return _buildEmpty();
+
+              // Flat, index-addressable list of day headers + rows — recomputed on every build,
+              // which is cheap (a pure O(n) pass, no state of its own) for this list's size and
+              // re-groups correctly as loadMoreNotifications() appends further pages, since it
+              // walks the full accumulated list each time rather than per-page.
+              final cells = groupByDay<NotificationModel>(items, (n) => n.createdAt);
+
               return RefreshIndicator(
                 color: AppColors.primary,
                 onRefresh: _refresh,
@@ -86,19 +87,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     controller: _scrollCtrl,
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
-                    itemCount: items.length + (hasMore || loadingMore ? 1 : 0),
+                    itemCount: cells.length + (hasMore || loadingMore ? 1 : 0),
                     itemBuilder: (_, i) {
-                      if (i == items.length) {
+                      if (i == cells.length) {
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 20),
                           child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
                         );
                       }
-                      return _NotificationRow(
-                        notification: items[i],
-                        dateText: _formatDate(items[i].createdAt),
-                        onTap: () => _openNotification(items[i]),
-                      );
+                      final cell = cells[i];
+                      return switch (cell) {
+                        DayHeaderCell<NotificationModel>() => DayHeader(cell.label),
+                        DayItemCell<NotificationModel>(item: final n) => _NotificationRow(
+                            notification: n,
+                            dateText: AppDateFormat.time(n.createdAt),
+                            onTap: () => _openNotification(n),
+                          ),
+                      };
                     },
                   ),
                 ),
@@ -170,7 +175,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             baseColor: AppColors.shimmerBase,
             highlightColor: AppColors.shimmerHighlight,
             child: Container(
-              height: 78,
+              height: 90,
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
             ),
@@ -189,12 +194,13 @@ class _NotificationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRead = notification.isRead;
+    final tint = NotificationVisuals.color(notification.type);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
           color: isRead ? Colors.white : AppColors.primary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(14),
@@ -203,32 +209,38 @@ class _NotificationRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: isRead ? Colors.transparent : AppColors.primary,
-                  shape: BoxShape.circle,
-                ),
-              ),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(color: tint.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(11)),
+              child: Icon(NotificationVisuals.icon(notification.type), size: 17, color: tint),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 11),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    notification.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13.5,
-                      fontWeight: isRead ? FontWeight.w600 : FontWeight.w700,
-                      color: AppColors.textDark,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          notification.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 13.5,
+                            fontWeight: isRead ? FontWeight.w600 : FontWeight.w700,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ),
+                      if (!isRead) ...[
+                        const SizedBox(width: 8),
+                        const NewPill(),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 3),
                   Text(

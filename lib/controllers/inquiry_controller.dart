@@ -39,7 +39,33 @@ class InquiryController extends GetxController {
   // currentDetail with stale data for whichever inquiry screen is now actually open.
   int _detailRequestId = 0;
 
+  // Same guard shape as _detailRequestId, for fetchActiveCount() — Inquiry has no live delta-push
+  // for this count (unlike Chat's unread count), so a single sequence number is enough to drop a
+  // stale in-flight response without needing Chat's fuller reconciliation machinery.
+  int _activeCountRequestId = 0;
+
   InquiryRepository get _repo => Get.find<InquiryRepository>();
+
+  @override
+  void onInit() {
+    super.onInit();
+    fetchActiveCount();
+  }
+
+  /// Server-anchored refresh for the Explore tab's Inquiries badge — called at session start,
+  /// on InquiryHubService reconnect, and on app resume, so the badge stays correct even when
+  /// My Inquiries has never been opened this session (loadMyInquiries()/applyStatusUpdate's own
+  /// _recomputeActiveCount() still runs whenever that full list is actually loaded/patched).
+  Future<void> fetchActiveCount() async {
+    final requestId = ++_activeCountRequestId;
+    try {
+      final count = await _repo.getActiveCount();
+      if (requestId != _activeCountRequestId) return;
+      activeInquiryCount.value = count;
+    } catch (_) {
+      // Best-effort — badge just keeps its last known value on failure.
+    }
+  }
 
   Future<void> loadMyInquiries() async {
     isLoadingMyInquiries.value = true;
@@ -159,6 +185,31 @@ class InquiryController extends GetxController {
         assignedAgentCount: detail?.assignedAgents.length,
         hasPendingEscalation: detail?.hasPendingEscalation,
         updatedAt: ts,
+      );
+    } else if (detail != null) {
+      // A full detail for an inquiry not yet in myInquiries — e.g. submitInquiry()'s own create
+      // response — reflects it immediately instead of silently waiting for the next full
+      // loadMyInquiries()/fetchActiveCount() anchor. InquiryDetailModel carries every field
+      // InquiryModel needs; a minimal inquiryId+status push for an unknown id (never happens
+      // today — this device always creates its own inquiries locally first) is still a no-op.
+      myInquiries.insert(
+        0,
+        InquiryModel(
+          id: detail.id,
+          serviceId: detail.serviceId,
+          serviceName: detail.serviceName,
+          serviceCategoryId: detail.serviceCategoryId,
+          serviceCategoryName: detail.serviceCategoryName,
+          servicePackageId: detail.servicePackageId,
+          servicePackageName: detail.servicePackageName,
+          fullName: detail.fullName,
+          mobile: detail.mobile,
+          status: detail.status,
+          assignedAgentCount: detail.assignedAgents.length,
+          hasPendingEscalation: detail.hasPendingEscalation,
+          createdAt: detail.createdAt,
+          updatedAt: detail.updatedAt,
+        ),
       );
     }
 

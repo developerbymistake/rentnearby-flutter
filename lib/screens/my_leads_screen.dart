@@ -9,13 +9,9 @@ import '../config/app_tabs.dart';
 import '../controllers/agent_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../models/inquiry_model.dart';
+import '../utils/app_date_format.dart';
 import '../utils/inquiry_status.dart';
 import '../widgets/max_width_content.dart';
-
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
 
 /// The Agent-facing mirror of MyInquiriesScreen — same shared, un-paginated,
 /// always-fresh-on-open list shape, but scoped server-side to the caller's
@@ -37,11 +33,6 @@ class _MyLeadsScreenState extends State<MyLeadsScreen> {
   void initState() {
     super.initState();
     _ctrl.loadMyLeads();
-  }
-
-  String _formatDate(DateTime dt) {
-    final local = dt.toLocal();
-    return '${local.day} ${_months[local.month - 1]} ${local.year}';
   }
 
   void _openDetail(InquiryModel lead) {
@@ -108,7 +99,7 @@ class _MyLeadsScreenState extends State<MyLeadsScreen> {
                     itemBuilder: (_, i) => i < items.length
                         ? _LeadRow(
                             lead: items[i],
-                            dateText: _formatDate(items[i].createdAt),
+                            dateText: AppDateFormat.date(items[i].createdAt),
                             onTap: () => _openDetail(items[i]),
                           )
                         : _profileSettingsRow(),

@@ -8,6 +8,7 @@ import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/report_controller.dart';
 import '../models/listing_report_model.dart';
+import '../utils/app_date_format.dart';
 
 class MyFiledReportsScreen extends StatefulWidget {
   const MyFiledReportsScreen({super.key});
@@ -170,8 +171,5 @@ class _MyFiledReportsScreenState extends State<MyFiledReportsScreen> {
         ),
       );
 
-  String _formatDate(DateTime dt) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return 'Filed ${dt.day} ${months[dt.month - 1]} ${dt.year}';
-  }
+  String _formatDate(DateTime dt) => 'Filed ${AppDateFormat.date(dt)}';
 }

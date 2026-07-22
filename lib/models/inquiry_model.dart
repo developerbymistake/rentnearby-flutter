@@ -19,8 +19,8 @@ class InquiryModel {
   // Multiple Agents can be assigned simultaneously — 0 means unassigned. Full names only live on
   // the Detail shape (InquiryDetailModel.assignedAgents).
   final int assignedAgentCount;
-  // True while a "report an issue with my agent" is awaiting Admin review. Present since the DTO
-  // shape is shared with the admin list, but not rendered on the consumer's own My Inquiries row.
+  // True while a "report an issue with my agent" is awaiting Admin review. Drives the "Report
+  // under review" chip on the consumer's own My Inquiries row (see my_inquiries_screen.dart).
   final bool hasPendingEscalation;
   final DateTime createdAt;
   final DateTime updatedAt;

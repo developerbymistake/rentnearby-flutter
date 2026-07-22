@@ -9,6 +9,7 @@ import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/inquiry_controller.dart';
 import '../models/service_package_model.dart';
+import '../utils/app_date_format.dart';
 import '../utils/app_toast.dart';
 import '../utils/inquiry_form_fields.dart';
 import '../utils/input_formatters.dart';
@@ -99,7 +100,7 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
         // previous UTC day. Tagging the same y/m/d as UTC satisfies the backend's
         // `timestamp with time zone` column without shifting which date was actually picked.
         _preferredDate = DateTime.utc(picked.year, picked.month, picked.day);
-        _dateDisplayCtrl.text = _formatDate(picked);
+        _dateDisplayCtrl.text = AppDateFormat.date(picked);
       });
     }
   }
@@ -325,11 +326,6 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
       );
-
-  String _formatDate(DateTime dt) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
-  }
 
   Widget _buildHeader() {
     return Container(
