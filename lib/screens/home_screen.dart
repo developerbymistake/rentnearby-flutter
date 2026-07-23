@@ -11,11 +11,11 @@ import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/service_catalog_controller.dart';
-import '../config/app_tabs.dart';
+import '../widgets/auto_carousel.dart';
 import '../widgets/category_card.dart';
-import '../widgets/coin_balance_chip.dart';
 import '../widgets/service_zone.dart';
 import '../widgets/sliding_chip_toggle.dart';
+import '../models/service_category_model.dart';
 
 const _kPlotColor = AppColors.plot;
 const _kPlotColorDark = AppColors.plotDark;
@@ -44,7 +44,9 @@ class _HomeScreenState extends State<HomeScreen> {
         onRefresh: _home.reloadDistrict,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(bottom: 24 + AppInsets.bottomViewPadding(context)),
+          padding: EdgeInsets.only(
+            bottom: 24 + AppInsets.bottomViewPadding(context),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -55,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 15),
               _buildManageListingsCard(),
               const SizedBox(height: 15),
-              _buildCategoryCards(),
+              _buildRecentlyAddedSection(),
               const SizedBox(height: 20),
               _buildPromoBanner(),
             ],
@@ -77,7 +79,12 @@ class _HomeScreenState extends State<HomeScreen> {
           bottomRight: Radius.circular(24),
         ),
       ),
-      padding: EdgeInsets.fromLTRB(20, AppInsets.topViewPadding(context) + 14, 20, 40),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        AppInsets.topViewPadding(context) + 14,
+        20,
+        40,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -87,7 +94,9 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: Obx(() {
                   final name = _auth.profileName.value;
-                  final firstName = name.trim().isNotEmpty ? name.trim().split(' ').first : 'there';
+                  final firstName = name.trim().isNotEmpty
+                      ? name.trim().split(' ').first
+                      : 'there';
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -114,122 +123,130 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }),
               ),
-              const CoinBalanceChip(color: Colors.white),
+              Row(
+                children: [
+                  _buildMiniIcon(
+                    icon: Iconsax.notification,
+                    unreadCount: Get.find<NotificationController>().unreadCount,
+                    onTap: () => Get.toNamed(AppRoutes.notifications),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildMiniIcon(
+                    icon: Iconsax.message,
+                    unreadCount: Get.find<ChatController>().unreadCount,
+                    onTap: () => Get.toNamed(AppRoutes.chatsList),
+                  ),
+                ],
+              ),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildActionMenu(),
+          const SizedBox(height: 18),
+          _buildServicesCarousel(),
         ],
       ),
     );
   }
 
-  Widget _buildActionMenu() {
-    return Row(
-      children: [
-        Expanded(
-          child: _menuOption(
-            icon: Iconsax.notification,
-            label: 'Notifications',
-            unreadCount: Get.find<NotificationController>().unreadCount,
-            onTap: () => Get.toNamed(AppRoutes.notifications),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _menuOption(
-            icon: Iconsax.message,
-            label: 'Messages',
-            unreadCount: Get.find<ChatController>().unreadCount,
-            onTap: () => Get.toNamed(AppRoutes.chatsList),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _menuOption(
-            icon: Iconsax.home,
-            label: 'Find Room',
-            onTap: () => _auth.tabIndex.value = AppTabs.rooms,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _menuOption(
-            icon: Icons.landscape_rounded,
-            label: 'Find Plot',
-            onTap: () => _auth.tabIndex.value = AppTabs.plots,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Background stays a barely-there glass circle (same fill/border alpha this
-  // file already used for the old bell/chat icon buttons) — only the icon
-  // glyph itself is solid white, so it reads clearly against the circle
-  // instead of the fill competing with it for "white."
-  Widget _menuOption({
+  // Compact icon-only quick-action (Notifications/Messages), replacing the
+  // coin chip's old spot beside the greeting — same translucent-circle +
+  // red-badge treatment as the app's other icon buttons, just without a
+  // text label since it now sits inline with the greeting instead of its
+  // own labeled row.
+  Widget _buildMiniIcon({
     required IconData icon,
-    required String label,
+    required RxInt unreadCount,
     required VoidCallback onTap,
-    RxInt? unreadCount,
   }) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.18),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                ),
-                child: Icon(icon, color: Colors.white, size: 17),
-              ),
-              if (unreadCount != null)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Obx(() {
-                    final count = unreadCount.value;
-                    if (count <= 0) return const SizedBox.shrink();
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      constraints: const BoxConstraints(minWidth: 16),
-                      decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
-                      child: Text(
-                        count > 99 ? '99+' : '$count',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
-                      ),
-                    );
-                  }),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 7.5,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
             ),
+            child: Icon(icon, color: Colors.white, size: 16),
+          ),
+          Positioned(
+            top: -4,
+            right: -4,
+            child: Obx(() {
+              final count = unreadCount.value;
+              if (count <= 0) return const SizedBox.shrink();
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                constraints: const BoxConstraints(minWidth: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.error,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  count > 99 ? '99+' : '$count',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              );
+            }),
           ),
         ],
       ),
     );
+  }
+
+  // ── "Services for you" — relocated into the hero as a swipeable,
+  // auto-advancing carousel (one category per slide) in place of the old
+  // 4-icon quick-menu. Find Room/Find Plot are dropped here since they're
+  // already one tap away via the bottom Rooms/Plots tabs. Never hardcoded —
+  // driven by ServiceCatalogController.activeCategories, so a new
+  // admin-added category needs zero app code to show up here.
+  Widget _buildServicesCarousel() {
+    return Obx(() {
+      final loading =
+          _serviceCatalog.categoriesLoading.value &&
+          _serviceCatalog.categories.isEmpty;
+      final cats = _serviceCatalog.activeCategories;
+      if (!loading && cats.isEmpty) return const SizedBox.shrink();
+      if (loading) {
+        return SizedBox(
+          height: 176,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: 3,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (_, __) =>
+                const SizedBox(width: 260, child: CategoryCardShimmer()),
+          ),
+        );
+      }
+      return AutoCarousel<ServiceCategoryModel>(
+        items: cats,
+        height: 176,
+        viewportFraction: 0.86,
+        itemBuilder: (context, category, i) => Padding(
+          padding: const EdgeInsets.only(right: 10),
+          child: CategoryCard(
+            category: category,
+            zone: serviceZoneForIndex(i),
+            width: double.infinity,
+            onTap: () => Get.toNamed(
+              AppRoutes.serviceCategoryGrid,
+              arguments: {'categoryId': category.id, 'title': category.name},
+            ),
+          ),
+        ),
+      );
+    });
   }
 
   // ── Rooms/Plots toggle, floating in the hero's bottom edge ─────────────────
@@ -271,7 +288,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildListingsSection() {
     return Obx(() {
       final isRooms = _home.activeTab.value == 'rooms';
-      final loading = isRooms ? _home.roomsLoading.value : _home.plotsLoading.value;
+      final loading = isRooms
+          ? _home.roomsLoading.value
+          : _home.plotsLoading.value;
       final title = isRooms ? 'Rooms for you' : 'Plots for you';
 
       return Column(
@@ -292,7 +311,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 GestureDetector(
-                  onTap: () => Get.toNamed(isRooms ? AppRoutes.viewAllRooms : AppRoutes.viewAllPlots),
+                  onTap: () => Get.toNamed(
+                    isRooms ? AppRoutes.viewAllRooms : AppRoutes.viewAllPlots,
+                  ),
                   child: const Text(
                     'View all',
                     style: TextStyle(
@@ -312,16 +333,18 @@ class _HomeScreenState extends State<HomeScreen> {
             child: loading
                 ? _buildListingShimmerRail()
                 : isRooms
-                    ? _buildRoomsRail()
-                    : _buildPlotsRail(),
+                ? _buildRoomsRail(_home.recentRooms)
+                : _buildPlotsRail(_home.recentPlots),
           ),
         ],
       );
     });
   }
 
-  Widget _buildRoomsRail() {
-    final items = _home.recentRooms;
+  // Shared by "Rooms for you" and "Recently added Rooms" — takes whichever
+  // list the caller wants rendered, so the rail-building logic (and the
+  // location-label/tap-to-detail fixes) only exist in one place.
+  Widget _buildRoomsRail(List<HomeRoomModel> items) {
     if (items.isEmpty) return _emptyRailMessage('No rooms listed here yet.');
     return ListView.separated(
       scrollDirection: Axis.horizontal,
@@ -334,14 +357,15 @@ class _HomeScreenState extends State<HomeScreen> {
           thumbnailUrl: r.thumbnailUrl,
           priceLabel: '₹${r.priceMonthly}/mo',
           title: r.roomTypeName ?? 'Room',
-          locationLabel: r.cityName ?? r.districtName,
+          locationLabel: r.districtName,
+          onTap: () =>
+              Get.toNamed(AppRoutes.listingDetail, arguments: {'id': r.id}),
         );
       },
     );
   }
 
-  Widget _buildPlotsRail() {
-    final items = _home.recentPlots;
+  Widget _buildPlotsRail(List<HomePlotModel> items) {
     if (items.isEmpty) return _emptyRailMessage('No plots listed here yet.');
     return ListView.separated(
       scrollDirection: Axis.horizontal,
@@ -357,7 +381,9 @@ class _HomeScreenState extends State<HomeScreen> {
           thumbnailUrl: p.thumbnailUrl,
           priceLabel: '$area ${p.areaUnit}',
           title: p.plotTypeName ?? 'Plot',
-          locationLabel: p.cityName ?? p.districtName,
+          locationLabel: p.districtName,
+          onTap: () =>
+              Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id}),
         );
       },
     );
@@ -374,29 +400,36 @@ class _HomeScreenState extends State<HomeScreen> {
         highlightColor: AppColors.shimmerHighlight,
         child: Container(
           width: 140,
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       ),
     );
   }
 
   Widget _emptyRailMessage(String text) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Container(
-          height: 100,
-          width: double.infinity,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.divider),
-          ),
-          child: Text(
-            text,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-          ),
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    child: Container(
+      height: 100,
+      width: double.infinity,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 12,
+          color: AppColors.textLight,
         ),
-      );
+      ),
+    ),
+  );
 
   // ── Manage your listings ────────────────────────────────────────────────
 
@@ -420,35 +453,47 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        clipBehavior: Clip.hardEdge,
+        // Clip.antiAlias (not hardEdge) — hardEdge cut these glow circles
+        // off with a jagged edge exactly at the card's rounded corner,
+        // which read as a second, harder-edged shadow next to the real
+        // BoxShadow above. The circles are also sized/positioned so their
+        // own gradient fully fades to transparent before crossing the
+        // card boundary, instead of getting clipped mid-fade.
+        clipBehavior: Clip.antiAlias,
         child: Stack(
           children: [
             // Two soft abstract glows — purely decorative, matching the approved
             // mock's "richness without an illustration/clutter" design.
             Positioned(
-              top: -30,
-              right: -24,
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [AppColors.warning.withValues(alpha: 0.16), Colors.transparent],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -36,
-              left: 60,
+              top: -20,
+              right: -16,
               child: Container(
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [_kPlotColor.withValues(alpha: 0.12), Colors.transparent],
+                    colors: [
+                      AppColors.warning.withValues(alpha: 0.16),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -24,
+              left: 64,
+              child: Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      _kPlotColor.withValues(alpha: 0.12),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
               ),
@@ -601,7 +646,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              child: Icon(Icons.chevron_right_rounded, size: 12, color: chevronColor),
+              child: Icon(
+                Icons.chevron_right_rounded,
+                size: 12,
+                color: chevronColor,
+              ),
             ),
           ],
         ),
@@ -609,23 +658,29 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Category cards — one per active ServiceCategory, tap jumps straight to
-  // that category's service grid. Never hardcoded, so a new admin-added
-  // Category needs zero app code to show up here.
+  // ── "Recently added Rooms"/"Recently added Plots" — toggle-aware like
+  // "Rooms for you"/"Plots for you" above, but sorted newest-first
+  // (HomeController.recentlyAddedRooms/Plots, via the existing
+  // /home/{rooms|plots}/browse?sortBy=newest endpoint) instead of the "for
+  // you" ranking. Sits where the old standalone "Services for you" section
+  // used to be — Services moved into the hero carousel instead.
 
-  Widget _buildCategoryCards() {
+  Widget _buildRecentlyAddedSection() {
     return Obx(() {
-      final loading = _serviceCatalog.categoriesLoading.value && _serviceCatalog.categories.isEmpty;
-      final cats = _serviceCatalog.activeCategories;
-      if (!loading && cats.isEmpty) return const SizedBox.shrink();
+      final isRooms = _home.activeTab.value == 'rooms';
+      final loading = isRooms
+          ? _home.recentlyAddedRoomsLoading.value
+          : _home.recentlyAddedPlotsLoading.value;
+      final title = isRooms ? 'Recently added Rooms' : 'Recently added Plots';
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-              'Services for you',
-              style: TextStyle(
+              title,
+              style: const TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -634,41 +689,17 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          loading
-              ? _buildCategoryCardShimmerRow()
-              : SizedBox(
-                  height: 168,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: cats.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (_, i) => CategoryCard(
-                      category: cats[i],
-                      zone: serviceZoneForIndex(i),
-                      onTap: () => Get.toNamed(AppRoutes.serviceCategoryGrid, arguments: {
-                        'categoryId': cats[i].id,
-                        'title': cats[i].name,
-                      }),
-                    ),
-                  ),
-                ),
+          SizedBox(
+            height: 168,
+            child: loading
+                ? _buildListingShimmerRail()
+                : isRooms
+                ? _buildRoomsRail(_home.recentlyAddedRooms)
+                : _buildPlotsRail(_home.recentlyAddedPlots),
+          ),
         ],
       );
     });
-  }
-
-  Widget _buildCategoryCardShimmerRow() {
-    return SizedBox(
-      height: 168,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: 3,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (_, __) => const CategoryCardShimmer(),
-      ),
-    );
   }
 
   // ── Promo banner ─────────────────────────────────────────────────────────
@@ -688,7 +719,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               width: 40,
               height: 40,
-              decoration: const BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.all(Radius.circular(11))),
+              decoration: const BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.all(Radius.circular(11)),
+              ),
               child: const Icon(Iconsax.add, color: Colors.white, size: 18),
             ),
             const SizedBox(width: 10),
@@ -698,11 +732,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     'List your property',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
                   ),
                   Text(
                     'Reach renters nearby',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 10, color: AppColors.textLight),
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 10,
+                      color: AppColors.textLight,
+                    ),
                   ),
                 ],
               ),
@@ -710,11 +753,22 @@ class _HomeScreenState extends State<HomeScreen> {
             GestureDetector(
               onTap: () => Get.toNamed(AppRoutes.myListings),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                decoration: const BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.all(Radius.circular(20))),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 9,
+                ),
+                decoration: const BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.all(Radius.circular(20)),
+                ),
                 child: const Text(
                   'My Room',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
@@ -723,7 +777,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
 }
 
 class _HomeListingCard extends StatelessWidget {
@@ -731,97 +784,145 @@ class _HomeListingCard extends StatelessWidget {
   final String priceLabel;
   final String title;
   final String locationLabel;
+  final VoidCallback onTap;
 
   const _HomeListingCard({
     required this.thumbnailUrl,
     required this.priceLabel,
     required this.title,
     required this.locationLabel,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 140,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 6)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Stack(
-              children: [
-                SizedBox(
-                  height: 108,
-                  width: double.infinity,
-                  child: thumbnailUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: thumbnailUrl!,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(color: AppColors.surface),
-                          errorWidget: (_, __, ___) => _placeholder(),
-                        )
-                      : _placeholder(),
-                ),
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.93), borderRadius: BorderRadius.circular(20)),
-                    child: Text(
-                      priceLabel,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primary),
-                    ),
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 140,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.divider.withValues(alpha: 0.6)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    const Icon(Iconsax.location, size: 10, color: AppColors.primaryLight),
-                    const SizedBox(width: 3),
-                    Expanded(
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
+              child: Stack(
+                children: [
+                  SizedBox(
+                    height: 108,
+                    width: double.infinity,
+                    child: thumbnailUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: thumbnailUrl!,
+                            fit: BoxFit.cover,
+                            // Card is a fixed 140x108 — cap decode
+                            // resolution to that instead of caching
+                            // full-size source photos.
+                            memCacheWidth:
+                                (140 * MediaQuery.of(context).devicePixelRatio)
+                                    .round(),
+                            memCacheHeight:
+                                (108 * MediaQuery.of(context).devicePixelRatio)
+                                    .round(),
+                            placeholder: (_, __) =>
+                                Container(color: AppColors.surface),
+                            errorWidget: (_, __, ___) => _placeholder(),
+                          )
+                        : _placeholder(),
+                  ),
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.93),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                       child: Text(
-                        locationLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, color: AppColors.textLight, fontWeight: FontWeight.w500),
+                        priceLabel,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      const Icon(
+                        Iconsax.location,
+                        size: 10,
+                        color: AppColors.primaryLight,
+                      ),
+                      const SizedBox(width: 3),
+                      Expanded(
+                        child: Text(
+                          locationLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 10,
+                            color: AppColors.textLight,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   static Widget _placeholder() => Container(
-        color: AppColors.surface,
-        child: const Center(child: Icon(Icons.home_rounded, size: 28, color: AppColors.primaryLight)),
-      );
+    color: AppColors.surface,
+    child: const Center(
+      child: Icon(Icons.home_rounded, size: 28, color: AppColors.primaryLight),
+    ),
+  );
 }
-

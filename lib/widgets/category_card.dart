@@ -10,8 +10,15 @@ class CategoryCard extends StatelessWidget {
   final ServiceCategoryModel category;
   final ServiceZone zone;
   final VoidCallback onTap;
+  final double? width;
 
-  const CategoryCard({super.key, required this.category, required this.zone, required this.onTap});
+  const CategoryCard({
+    super.key,
+    required this.category,
+    required this.zone,
+    required this.onTap,
+    this.width,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,20 +26,26 @@ class CategoryCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 140,
+        width: width ?? 140,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.divider.withValues(alpha: 0.6)),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 6)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
               child: SizedBox(
                 height: 108,
                 width: double.infinity,
@@ -40,6 +53,12 @@ class CategoryCard extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: category.coverPhotoUrl,
                         fit: BoxFit.cover,
+                        // Width varies (140 in a rail, full-bleed in the hero
+                        // carousel) but height never does — capping decode
+                        // height alone keeps memory bounded either way.
+                        memCacheHeight:
+                            (108 * MediaQuery.of(context).devicePixelRatio)
+                                .round(),
                         placeholder: (_, __) => Container(color: zone.imgBg),
                         errorWidget: (_, __, ___) => _iconFallback(),
                       )
@@ -52,7 +71,12 @@ class CategoryCard extends StatelessWidget {
                 category.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
               ),
             ),
           ],
@@ -62,9 +86,9 @@ class CategoryCard extends StatelessWidget {
   }
 
   Widget _iconFallback() => Container(
-        color: zone.imgBg,
-        child: Icon(Iconsax.category, size: 32, color: zone.accent),
-      );
+    color: zone.imgBg,
+    child: Icon(Iconsax.category, size: 32, color: zone.accent),
+  );
 }
 
 class CategoryCardShimmer extends StatelessWidget {
@@ -77,7 +101,10 @@ class CategoryCardShimmer extends StatelessWidget {
       highlightColor: AppColors.shimmerHighlight,
       child: Container(
         width: 140,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
     );
   }
