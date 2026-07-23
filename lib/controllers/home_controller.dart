@@ -111,20 +111,27 @@ class HomeController extends GetxController {
       },
     );
 
-    // A room/plot's active status only changes via My Rooms/My Plots'
-    // toggleActive(), which bumps listingStatusChangedTrigger only after the
-    // server confirms the change — a genuine "the data changed" signal, not
-    // a bare tab-switch. Deliberately NOT exploreRefreshTrigger: that one is
+    // Bumped after the server confirms a genuine data change: toggleActive
+    // (listingStatusChangedTrigger) or Go Live (listingPostedTrigger/
+    // plotPostedTrigger — separate trigger, was missing here entirely, which
+    // is why a newly-live listing never showed on Home until a manual
+    // pull-to-refresh). Deliberately NOT exploreRefreshTrigger: that one is
     // also bumped unconditionally on every switch to the Rooms/Plots bottom
     // tab (main_screen.dart, for Explore's own unrelated refresh needs), so
     // listening to it here would silently reload Home on plain navigation —
     // exactly the behaviour this fix must not reintroduce.
-    _plotRefreshWorker = ever(
-      Get.find<PlotController>().listingStatusChangedTrigger,
+    _plotRefreshWorker = everAll(
+      [
+        Get.find<PlotController>().listingStatusChangedTrigger,
+        Get.find<PlotController>().plotPostedTrigger,
+      ],
       (_) => _forceReload(),
     );
-    _roomRefreshWorker = ever(
-      Get.find<ListingController>().listingStatusChangedTrigger,
+    _roomRefreshWorker = everAll(
+      [
+        Get.find<ListingController>().listingStatusChangedTrigger,
+        Get.find<ListingController>().listingPostedTrigger,
+      ],
       (_) => _forceReload(),
     );
 
