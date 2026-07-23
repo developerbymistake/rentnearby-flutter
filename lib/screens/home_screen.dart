@@ -14,7 +14,6 @@ import '../controllers/service_catalog_controller.dart';
 import '../config/app_tabs.dart';
 import '../widgets/category_card.dart';
 import '../widgets/coin_balance_chip.dart';
-import '../widgets/max_width_content.dart';
 import '../widgets/service_zone.dart';
 import '../widgets/sliding_chip_toggle.dart';
 
@@ -46,22 +45,20 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(bottom: 24 + AppInsets.bottomViewPadding(context)),
-          child: MaxWidthContent(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHero(context),
-                _buildToggle(),
-                const SizedBox(height: 2),
-                _buildListingsSection(),
-                const SizedBox(height: 15),
-                _buildManageListingsCard(),
-                const SizedBox(height: 15),
-                _buildCategoryCards(),
-                const SizedBox(height: 20),
-                _buildPromoBanner(),
-              ],
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHero(context),
+              _buildToggle(),
+              const SizedBox(height: 2),
+              _buildListingsSection(),
+              const SizedBox(height: 15),
+              _buildManageListingsCard(),
+              const SizedBox(height: 15),
+              _buildCategoryCards(),
+              const SizedBox(height: 20),
+              _buildPromoBanner(),
+            ],
           ),
         ),
       ),

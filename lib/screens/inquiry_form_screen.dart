@@ -15,7 +15,6 @@ import '../utils/inquiry_form_fields.dart';
 import '../utils/input_formatters.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/inquiry_contact_sheet.dart';
-import '../widgets/max_width_content.dart';
 import '../widgets/service_package_price.dart';
 
 /// Full pushed screen (per AppRoutes.inquiryForm), pre-filled with the
@@ -52,8 +51,10 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
   DateTime? _preferredDate;
   bool _agreedToTerms = false;
 
-  String get _effectiveName => _contactOverride?.name ?? _auth.user.value?.name?.trim() ?? '';
-  String get _effectiveMobile => _contactOverride?.mobile ?? (_auth.user.value?.phoneNumber ?? '').trim();
+  String get _effectiveName =>
+      _contactOverride?.name ?? _auth.user.value?.name?.trim() ?? '';
+  String get _effectiveMobile =>
+      _contactOverride?.mobile ?? (_auth.user.value?.phoneNumber ?? '').trim();
 
   @override
   void initState() {
@@ -135,50 +136,94 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
         insetPadding: const EdgeInsets.symmetric(horizontal: 36),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-              child: const Icon(Iconsax.send_2, size: 28, color: AppColors.primary),
-            ),
-            const SizedBox(height: 16),
-            const Text('Submit Inquiry?',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-            const SizedBox(height: 8),
-            const Text('Please confirm your details are correct. Our team will reach out to you soon.',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            Row(children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textMedium,
-                    side: BorderSide(color: Colors.grey.shade300),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Iconsax.send_2,
+                  size: 28,
+                  color: AppColors.primary,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: const Text('Confirm', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 16),
+              const Text(
+                'Submit Inquiry?',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
                 ),
               ),
-            ]),
-          ]),
+              const SizedBox(height: 8),
+              const Text(
+                'Please confirm your details are correct. Our team will reach out to you soon.',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 13,
+                  color: AppColors.textMedium,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textMedium,
+                        side: BorderSide(color: Colors.grey.shade300),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Confirm',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -196,27 +241,52 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
       mobile: _effectiveMobile,
       preferredDateOrTripStart: _preferredDate,
       numberOfPeople: numberOfPeople,
-      message: _messageCtrl.text.trim().isEmpty ? null : _messageCtrl.text.trim(),
+      message: _messageCtrl.text.trim().isEmpty
+          ? null
+          : _messageCtrl.text.trim(),
       agreedToTerms: _agreedToTerms,
     );
     if (detail != null && mounted) {
-      Get.offNamed(AppRoutes.inquiryConfirmation, arguments: {'detail': detail});
+      Get.offNamed(
+        AppRoutes.inquiryConfirmation,
+        arguments: {'detail': detail},
+      );
     }
   }
 
-  InputDecoration _inputDec(String hint, {Widget? prefixIcon, Widget? suffixIcon}) => InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
-        prefixIcon: prefixIcon,
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error)),
-      );
+  InputDecoration _inputDec(
+    String hint, {
+    Widget? prefixIcon,
+    Widget? suffixIcon,
+  }) => InputDecoration(
+    hintText: hint,
+    hintStyle: const TextStyle(
+      fontFamily: 'Poppins',
+      fontSize: 14,
+      color: AppColors.textHint,
+    ),
+    prefixIcon: prefixIcon,
+    suffixIcon: suffixIcon,
+    filled: true,
+    fillColor: AppColors.surface,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide.none,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.divider),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.error),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -228,7 +298,14 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
             _buildHeader(),
             const Expanded(
               child: Center(
-                child: Text('This inquiry link is invalid.', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+                child: Text(
+                  'This inquiry link is invalid.',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    color: AppColors.textLight,
+                  ),
+                ),
               ),
             ),
           ],
@@ -244,73 +321,101 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 24),
-              child: MaxWidthContent(
-                child: Form(
-                  key: _formKey,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildPackageSummary(_package!),
-                        const SizedBox(height: 14),
-                        _buildIdentityStrip(),
-                        if (_fieldConfig.dateLabel != null) ...[
-                          const SizedBox(height: 16),
-                          _fieldLabel('${_fieldConfig.dateLabel} (Optional)'),
-                          TextFormField(
-                            controller: _dateDisplayCtrl,
-                            readOnly: true,
-                            onTap: _pickDate,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-                            decoration: _inputDec(
-                              'Select a date',
-                              prefixIcon: const Icon(Iconsax.calendar_1, size: 18, color: AppColors.textLight),
-                              suffixIcon: _preferredDate != null
-                                  ? IconButton(
-                                      icon: const Icon(Iconsax.close_circle, size: 18, color: AppColors.textLight),
-                                      onPressed: () => setState(() {
-                                        _preferredDate = null;
-                                        _dateDisplayCtrl.clear();
-                                      }),
-                                    )
-                                  : null,
+              child: Form(
+                key: _formKey,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildPackageSummary(_package!),
+                      const SizedBox(height: 14),
+                      _buildIdentityStrip(),
+                      if (_fieldConfig.dateLabel != null) ...[
+                        const SizedBox(height: 16),
+                        _fieldLabel('${_fieldConfig.dateLabel} (Optional)'),
+                        TextFormField(
+                          controller: _dateDisplayCtrl,
+                          readOnly: true,
+                          onTap: _pickDate,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                          ),
+                          decoration: _inputDec(
+                            'Select a date',
+                            prefixIcon: const Icon(
+                              Iconsax.calendar_1,
+                              size: 18,
+                              color: AppColors.textLight,
+                            ),
+                            suffixIcon: _preferredDate != null
+                                ? IconButton(
+                                    icon: const Icon(
+                                      Iconsax.close_circle,
+                                      size: 18,
+                                      color: AppColors.textLight,
+                                    ),
+                                    onPressed: () => setState(() {
+                                      _preferredDate = null;
+                                      _dateDisplayCtrl.clear();
+                                    }),
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ],
+                      if (_fieldConfig.peopleLabel != null) ...[
+                        const SizedBox(height: 16),
+                        _fieldLabel('${_fieldConfig.peopleLabel} (Optional)'),
+                        TextFormField(
+                          controller: _peopleCtrl,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(3),
+                          ],
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                          ),
+                          decoration: _inputDec(
+                            'e.g. 4',
+                            prefixIcon: const Icon(
+                              Iconsax.profile_2user,
+                              size: 18,
+                              color: AppColors.textLight,
                             ),
                           ),
-                        ],
-                        if (_fieldConfig.peopleLabel != null) ...[
-                          const SizedBox(height: 16),
-                          _fieldLabel('${_fieldConfig.peopleLabel} (Optional)'),
-                          TextFormField(
-                            controller: _peopleCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(3)],
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-                            decoration: _inputDec('e.g. 4', prefixIcon: const Icon(Iconsax.profile_2user, size: 18, color: AppColors.textLight)),
-                            validator: (v) {
-                              final t = v?.trim() ?? '';
-                              if (t.isEmpty) return null;
-                              final n = int.tryParse(t);
-                              if (n == null || n <= 0) return 'Enter a valid number';
-                              return null;
-                            },
-                          ),
-                        ],
-                        const SizedBox(height: 16),
-                        _fieldLabel('Message (Optional)'),
-                        TextFormField(
-                          controller: _messageCtrl,
-                          maxLines: 4,
-                          maxLength: 500,
-                          inputFormatters: noEmojiInputFormatters,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-                          decoration: _inputDec('Tell us anything specific about your requirement...'),
+                          validator: (v) {
+                            final t = v?.trim() ?? '';
+                            if (t.isEmpty) return null;
+                            final n = int.tryParse(t);
+                            if (n == null || n <= 0)
+                              return 'Enter a valid number';
+                            return null;
+                          },
                         ),
-                        const SizedBox(height: 6),
-                        _buildTermsCheckbox(),
-                        const SizedBox(height: 8),
                       ],
-                    ),
+                      const SizedBox(height: 16),
+                      _fieldLabel('Message (Optional)'),
+                      TextFormField(
+                        controller: _messageCtrl,
+                        maxLines: 4,
+                        maxLength: 500,
+                        inputFormatters: noEmojiInputFormatters,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                        ),
+                        decoration: _inputDec(
+                          'Tell us anything specific about your requirement...',
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      _buildTermsCheckbox(),
+                      const SizedBox(height: 8),
+                    ],
                   ),
                 ),
               ),
@@ -323,9 +428,17 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
   }
 
   Widget _fieldLabel(String label) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      label,
+      style: const TextStyle(
+        fontFamily: 'Poppins',
+        fontSize: 12.5,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textDark,
+      ),
+    ),
+  );
 
   Widget _buildHeader() {
     return Container(
@@ -338,14 +451,22 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
             children: [
               IconButton(
                 onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+                icon: const Icon(
+                  Icons.arrow_back_ios_rounded,
+                  color: Colors.white,
+                ),
               ),
               const Expanded(
                 child: Text(
                   'Submit an Inquiry',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white),
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
@@ -371,12 +492,27 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
               width: 54,
               height: 54,
               child: package.thumbnailUrl.isEmpty
-                  ? Container(color: AppColors.surface, child: const Icon(Iconsax.gallery, color: AppColors.primaryLight, size: 20))
+                  ? Container(
+                      color: AppColors.surface,
+                      child: const Icon(
+                        Iconsax.gallery,
+                        color: AppColors.primaryLight,
+                        size: 20,
+                      ),
+                    )
                   : CachedNetworkImage(
                       imageUrl: package.thumbnailUrl,
                       fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: AppColors.surface),
-                      errorWidget: (_, __, ___) => Container(color: AppColors.surface, child: const Icon(Iconsax.gallery, color: AppColors.primaryLight, size: 20)),
+                      placeholder: (_, __) =>
+                          Container(color: AppColors.surface),
+                      errorWidget: (_, __, ___) => Container(
+                        color: AppColors.surface,
+                        child: const Icon(
+                          Iconsax.gallery,
+                          color: AppColors.primaryLight,
+                          size: 20,
+                        ),
+                      ),
                     ),
             ),
           ),
@@ -385,15 +521,29 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_serviceName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textLight)),
+                Text(
+                  _serviceName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textLight,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(package.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                Text(
+                  package.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                ),
               ],
             ),
           ),
@@ -440,10 +590,21 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
               const Icon(Iconsax.user, size: 18, color: AppColors.error),
               const SizedBox(width: 10),
               const Expanded(
-                child: Text('Add your name & mobile number to continue',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.error)),
+                child: Text(
+                  'Add your name & mobile number to continue',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.error,
+                  ),
+                ),
               ),
-              const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.error),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 12,
+                color: AppColors.error,
+              ),
             ],
           ),
         ),
@@ -466,7 +627,15 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
           CircleAvatar(
             radius: 18,
             backgroundColor: AppColors.primary,
-            child: Text(initial, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+            child: Text(
+              initial,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -476,34 +645,68 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
                 Row(
                   children: [
                     Flexible(
-                      child: Text(name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
+                        ),
+                      ),
                     ),
                     if (override != null) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20)),
-                        child: const Text('For someone else',
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 8.5, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'For someone else',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
                       ),
                     ],
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text("We'll contact ${override != null ? 'them' : 'you'} on $mobile",
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                Text(
+                  "We'll contact ${override != null ? 'them' : 'you'} on $mobile",
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    color: AppColors.textLight,
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: override != null ? () => setState(() => _contactOverride = null) : _openContactSheet,
+            onTap: override != null
+                ? () => setState(() => _contactOverride = null)
+                : _openContactSheet,
             child: Text(
               override != null ? 'Use my account' : 'Not you?',
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primary, decoration: TextDecoration.underline),
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+                decoration: TextDecoration.underline,
+              ),
             ),
           ),
         ],
@@ -522,7 +725,9 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
             value: _agreedToTerms,
             onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
             activeColor: AppColors.primary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ),
@@ -532,7 +737,12 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
             onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
             child: const Text(
               'I agree to be contacted regarding this inquiry and confirm the details above are correct.',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, height: 1.5),
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                color: AppColors.textLight,
+                height: 1.5,
+              ),
             ),
           ),
         ),
@@ -543,12 +753,21 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
   Widget _buildBottomBar() {
     return Container(
       color: Colors.white,
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + AppInsets.bottomViewPadding(context)),
-      child: Obx(() => GradientButton(
-            onPressed: (_inquiryCtrl.isSubmitting.value || !_agreedToTerms) ? null : _onSubmitPressed,
-            isLoading: _inquiryCtrl.isSubmitting.value,
-            label: 'Submit Inquiry',
-          )),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        12,
+        20,
+        12 + AppInsets.bottomViewPadding(context),
+      ),
+      child: Obx(
+        () => GradientButton(
+          onPressed: (_inquiryCtrl.isSubmitting.value || !_agreedToTerms)
+              ? null
+              : _onSubmitPressed,
+          isLoading: _inquiryCtrl.isSubmitting.value,
+          label: 'Submit Inquiry',
+        ),
+      ),
     );
   }
 }

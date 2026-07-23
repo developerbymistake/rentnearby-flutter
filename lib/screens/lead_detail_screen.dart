@@ -10,7 +10,6 @@ import '../models/inquiry_detail_model.dart';
 import '../models/inquiry_status_history_model.dart';
 import '../utils/app_date_format.dart';
 import '../utils/inquiry_status.dart';
-import '../widgets/max_width_content.dart';
 
 enum _StepState { completed, active, pending, terminalNegative }
 
@@ -87,31 +86,29 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
-                  child: MaxWidthContent(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSummaryCard(detail),
-                        const SizedBox(height: 16),
-                        _buildSectionTitle('Status'),
-                        const SizedBox(height: 10),
-                        _buildStatusTimeline(detail),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSummaryCard(detail),
+                      const SizedBox(height: 16),
+                      _buildSectionTitle('Status'),
+                      const SizedBox(height: 10),
+                      _buildStatusTimeline(detail),
+                      const SizedBox(height: 20),
+                      _buildSectionTitle('Customer Details'),
+                      const SizedBox(height: 10),
+                      _buildDetailsCard(detail),
+                      const SizedBox(height: 20),
+                      _buildSectionTitle('Contact Customer'),
+                      const SizedBox(height: 10),
+                      _buildContactCard(detail),
+                      if (!InquiryStatus.isTerminalNegative(detail.status) && detail.status != InquiryStatus.confirmed) ...[
                         const SizedBox(height: 20),
-                        _buildSectionTitle('Customer Details'),
+                        _buildSectionTitle('Update Status'),
                         const SizedBox(height: 10),
-                        _buildDetailsCard(detail),
-                        const SizedBox(height: 20),
-                        _buildSectionTitle('Contact Customer'),
-                        const SizedBox(height: 10),
-                        _buildContactCard(detail),
-                        if (!InquiryStatus.isTerminalNegative(detail.status) && detail.status != InquiryStatus.confirmed) ...[
-                          const SizedBox(height: 20),
-                          _buildSectionTitle('Update Status'),
-                          const SizedBox(height: 10),
-                          _buildUpdateStatusCard(detail),
-                        ],
+                        _buildUpdateStatusCard(detail),
                       ],
-                    ),
+                    ],
                   ),
                 ),
               );
@@ -524,21 +521,19 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
       );
 
   Widget _buildShimmer() {
-    return MaxWidthContent(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Shimmer.fromColors(
-          baseColor: AppColors.shimmerBase,
-          highlightColor: AppColors.shimmerHighlight,
-          child: Column(
-            children: [
-              Container(height: 110, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
-              const SizedBox(height: 16),
-              Container(height: 180, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
-              const SizedBox(height: 16),
-              Container(height: 140, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
-            ],
-          ),
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Shimmer.fromColors(
+        baseColor: AppColors.shimmerBase,
+        highlightColor: AppColors.shimmerHighlight,
+        child: Column(
+          children: [
+            Container(height: 110, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
+            const SizedBox(height: 16),
+            Container(height: 180, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
+            const SizedBox(height: 16),
+            Container(height: 140, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
+          ],
         ),
       ),
     );

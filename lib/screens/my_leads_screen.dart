@@ -11,7 +11,6 @@ import '../controllers/auth_controller.dart';
 import '../models/inquiry_model.dart';
 import '../utils/app_date_format.dart';
 import '../utils/inquiry_status.dart';
-import '../widgets/max_width_content.dart';
 
 /// The Agent-facing mirror of MyInquiriesScreen — same shared, un-paginated,
 /// always-fresh-on-open list shape, but scoped server-side to the caller's
@@ -91,19 +90,17 @@ class _MyLeadsScreenState extends State<MyLeadsScreen> {
               return RefreshIndicator(
                 color: AppColors.primary,
                 onRefresh: _ctrl.loadMyLeads,
-                child: MaxWidthContent(
-                  child: ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
-                    itemCount: items.length + 1,
-                    itemBuilder: (_, i) => i < items.length
-                        ? _LeadRow(
-                            lead: items[i],
-                            dateText: AppDateFormat.date(items[i].createdAt),
-                            onTap: () => _openDetail(items[i]),
-                          )
-                        : _profileSettingsRow(),
-                  ),
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
+                  itemCount: items.length + 1,
+                  itemBuilder: (_, i) => i < items.length
+                      ? _LeadRow(
+                          lead: items[i],
+                          dateText: AppDateFormat.date(items[i].createdAt),
+                          onTap: () => _openDetail(items[i]),
+                        )
+                      : _profileSettingsRow(),
                 ),
               );
             }),
@@ -164,18 +161,16 @@ class _MyLeadsScreenState extends State<MyLeadsScreen> {
         ),
       );
 
-  Widget _buildShimmer() => MaxWidthContent(
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: 6,
-          itemBuilder: (_, __) => Shimmer.fromColors(
-            baseColor: AppColors.shimmerBase,
-            highlightColor: AppColors.shimmerHighlight,
-            child: Container(
-              height: 108,
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-            ),
+  Widget _buildShimmer() => ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        itemBuilder: (_, __) => Shimmer.fromColors(
+          baseColor: AppColors.shimmerBase,
+          highlightColor: AppColors.shimmerHighlight,
+          child: Container(
+            height: 108,
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
           ),
         ),
       );

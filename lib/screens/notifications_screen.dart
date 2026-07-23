@@ -8,7 +8,6 @@ import '../models/notification_model.dart';
 import '../utils/app_date_format.dart';
 import '../utils/notification_visuals.dart';
 import '../widgets/day_header.dart';
-import '../widgets/max_width_content.dart';
 import '../widgets/new_pill.dart';
 
 /// The Home-screen bell's inbox — infinite-scroll paginated, mirroring
@@ -82,30 +81,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               return RefreshIndicator(
                 color: AppColors.primary,
                 onRefresh: _refresh,
-                child: MaxWidthContent(
-                  child: ListView.builder(
-                    controller: _scrollCtrl,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
-                    itemCount: cells.length + (hasMore || loadingMore ? 1 : 0),
-                    itemBuilder: (_, i) {
-                      if (i == cells.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
-                        );
-                      }
-                      final cell = cells[i];
-                      return switch (cell) {
-                        DayHeaderCell<NotificationModel>() => DayHeader(cell.label),
-                        DayItemCell<NotificationModel>(item: final n) => _NotificationRow(
-                            notification: n,
-                            dateText: AppDateFormat.time(n.createdAt),
-                            onTap: () => _openNotification(n),
-                          ),
-                      };
-                    },
-                  ),
+                child: ListView.builder(
+                  controller: _scrollCtrl,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
+                  itemCount: cells.length + (hasMore || loadingMore ? 1 : 0),
+                  itemBuilder: (_, i) {
+                    if (i == cells.length) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
+                      );
+                    }
+                    final cell = cells[i];
+                    return switch (cell) {
+                      DayHeaderCell<NotificationModel>() => DayHeader(cell.label),
+                      DayItemCell<NotificationModel>(item: final n) => _NotificationRow(
+                          notification: n,
+                          dateText: AppDateFormat.time(n.createdAt),
+                          onTap: () => _openNotification(n),
+                        ),
+                    };
+                  },
                 ),
               );
             }),
@@ -167,18 +164,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ]),
       );
 
-  Widget _buildShimmer() => MaxWidthContent(
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: 6,
-          itemBuilder: (_, __) => Shimmer.fromColors(
-            baseColor: AppColors.shimmerBase,
-            highlightColor: AppColors.shimmerHighlight,
-            child: Container(
-              height: 90,
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-            ),
+  Widget _buildShimmer() => ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        itemBuilder: (_, __) => Shimmer.fromColors(
+          baseColor: AppColors.shimmerBase,
+          highlightColor: AppColors.shimmerHighlight,
+          child: Container(
+            height: 90,
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
           ),
         ),
       );

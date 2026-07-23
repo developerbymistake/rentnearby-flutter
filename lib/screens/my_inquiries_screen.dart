@@ -12,7 +12,6 @@ import '../utils/app_date_format.dart';
 import '../utils/inquiry_status.dart';
 import '../utils/role_label_format.dart';
 import '../widgets/day_header.dart';
-import '../widgets/max_width_content.dart';
 import '../widgets/new_pill.dart';
 
 /// A single shared list across ALL catalog categories — no per-category tab
@@ -82,23 +81,21 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
               return RefreshIndicator(
                 color: AppColors.primary,
                 onRefresh: _ctrl.loadMyInquiries,
-                child: MaxWidthContent(
-                  child: ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
-                    itemCount: cells.length,
-                    itemBuilder: (_, i) {
-                      final cell = cells[i];
-                      return switch (cell) {
-                        DayHeaderCell<InquiryModel>() => DayHeader(cell.label),
-                        DayItemCell<InquiryModel>(item: final inquiry) => _InquiryRow(
-                            inquiry: inquiry,
-                            dateText: AppDateFormat.time(inquiry.createdAt),
-                            onTap: () => _openDetail(inquiry),
-                          ),
-                      };
-                    },
-                  ),
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
+                  itemCount: cells.length,
+                  itemBuilder: (_, i) {
+                    final cell = cells[i];
+                    return switch (cell) {
+                      DayHeaderCell<InquiryModel>() => DayHeader(cell.label),
+                      DayItemCell<InquiryModel>(item: final inquiry) => _InquiryRow(
+                          inquiry: inquiry,
+                          dateText: AppDateFormat.time(inquiry.createdAt),
+                          onTap: () => _openDetail(inquiry),
+                        ),
+                    };
+                  },
                 ),
               );
             }),
@@ -157,18 +154,16 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
         ),
       );
 
-  Widget _buildShimmer() => MaxWidthContent(
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: 6,
-          itemBuilder: (_, __) => Shimmer.fromColors(
-            baseColor: AppColors.shimmerBase,
-            highlightColor: AppColors.shimmerHighlight,
-            child: Container(
-              height: 106,
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-            ),
+  Widget _buildShimmer() => ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        itemBuilder: (_, __) => Shimmer.fromColors(
+          baseColor: AppColors.shimmerBase,
+          highlightColor: AppColors.shimmerHighlight,
+          child: Container(
+            height: 106,
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
           ),
         ),
       );

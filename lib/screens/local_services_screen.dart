@@ -6,7 +6,6 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/inquiry_controller.dart';
 import '../controllers/service_catalog_controller.dart';
-import '../widgets/max_width_content.dart';
 import '../widgets/service_category_rail.dart';
 import '../widgets/service_zone.dart';
 
@@ -42,15 +41,13 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
       body: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(bottom: 24 + AppInsets.bottomViewPadding(context)),
-        child: MaxWidthContent(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 4),
-              _buildServiceRails(),
-            ],
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 4),
+            _buildServiceRails(),
+          ],
         ),
       ),
     );

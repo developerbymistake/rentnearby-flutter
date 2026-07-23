@@ -4,7 +4,6 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../controllers/service_catalog_controller.dart';
-import '../widgets/max_width_content.dart';
 import '../widgets/service_rail_card.dart';
 import '../widgets/service_zone.dart';
 
@@ -70,18 +69,16 @@ class _ServiceCategoryGridScreenState extends State<ServiceCategoryGridScreen> {
                 // the exact colors the user just tapped through.
                 final zoneIndex = catalog.activeCategories.indexWhere((c) => c.id == categoryId);
                 final zone = serviceZoneForIndex(zoneIndex);
-                return MaxWidthContent(
-                  child: GridView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
-                    gridDelegate: _gridDelegate,
-                    itemCount: services.length,
-                    itemBuilder: (_, i) => ServiceRailCard(
-                      service: services[i],
-                      zone: zone,
-                      width: null,
-                      imageHeight: 110,
-                    ),
+                return GridView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
+                  gridDelegate: _gridDelegate,
+                  itemCount: services.length,
+                  itemBuilder: (_, i) => ServiceRailCard(
+                    service: services[i],
+                    zone: zone,
+                    width: null,
+                    imageHeight: 110,
                   ),
                 );
               }),
@@ -121,18 +118,16 @@ class _ServiceCategoryGridScreenState extends State<ServiceCategoryGridScreen> {
   }
 
   Widget _buildGridShimmer(BuildContext context) {
-    return MaxWidthContent(
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
-        gridDelegate: _gridDelegate,
-        itemCount: 6,
-        itemBuilder: (_, __) => Shimmer.fromColors(
-          baseColor: AppColors.shimmerBase,
-          highlightColor: AppColors.shimmerHighlight,
-          child: Container(
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-          ),
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
+      gridDelegate: _gridDelegate,
+      itemCount: 6,
+      itemBuilder: (_, __) => Shimmer.fromColors(
+        baseColor: AppColors.shimmerBase,
+        highlightColor: AppColors.shimmerHighlight,
+        child: Container(
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );

@@ -14,7 +14,6 @@ import '../utils/app_date_format.dart';
 import '../utils/inquiry_status.dart';
 import '../utils/role_label_format.dart';
 import '../widgets/escalate_inquiry_sheet.dart';
-import '../widgets/max_width_content.dart';
 
 enum _StepState { completed, active, pending, terminalNegative }
 
@@ -23,8 +22,7 @@ enum _StepState { completed, active, pending, terminalNegative }
 /// path rather than steps on it) plus an assigned-Agent card with two
 /// genuinely separate Call/WhatsApp buttons (agent.phone vs
 /// agent.whatsAppNumber are confirmed-separate fields — never one combined
-/// button). MaxWidthContent-wrapped like every other single-column screen
-/// in this feature.
+/// button).
 class InquiryDetailScreen extends StatefulWidget {
   const InquiryDetailScreen({super.key});
 
@@ -89,35 +87,33 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
-                  child: MaxWidthContent(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSummaryCard(detail),
-                        const SizedBox(height: 16),
-                        _buildSectionTitle('Status'),
-                        const SizedBox(height: 10),
-                        _buildStatusTimeline(detail),
-                        const SizedBox(height: 20),
-                        _buildSectionTitle('Your Details'),
-                        const SizedBox(height: 10),
-                        _buildDetailsCard(detail),
-                        const SizedBox(height: 20),
-                        _buildSectionTitle(detail.assignedAgents.length > 1
-                            ? 'Assigned ${RoleLabelFormat.plural(detail.agentRoleLabel)}'
-                            : 'Assigned ${detail.agentRoleLabel}'),
-                        const SizedBox(height: 10),
-                        if (detail.assignedAgents.isEmpty)
-                          _buildNoAgentCard(detail.agentRoleLabel)
-                        else ...[
-                          for (final agent in detail.assignedAgents) ...[
-                            _buildAgentCard(agent, detail.agentRoleLabel),
-                            const SizedBox(height: 10),
-                          ],
-                          _buildEscalateSection(detail),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSummaryCard(detail),
+                      const SizedBox(height: 16),
+                      _buildSectionTitle('Status'),
+                      const SizedBox(height: 10),
+                      _buildStatusTimeline(detail),
+                      const SizedBox(height: 20),
+                      _buildSectionTitle('Your Details'),
+                      const SizedBox(height: 10),
+                      _buildDetailsCard(detail),
+                      const SizedBox(height: 20),
+                      _buildSectionTitle(detail.assignedAgents.length > 1
+                          ? 'Assigned ${RoleLabelFormat.plural(detail.agentRoleLabel)}'
+                          : 'Assigned ${detail.agentRoleLabel}'),
+                      const SizedBox(height: 10),
+                      if (detail.assignedAgents.isEmpty)
+                        _buildNoAgentCard(detail.agentRoleLabel)
+                      else ...[
+                        for (final agent in detail.assignedAgents) ...[
+                          _buildAgentCard(agent, detail.agentRoleLabel),
+                          const SizedBox(height: 10),
                         ],
+                        _buildEscalateSection(detail),
                       ],
-                    ),
+                    ],
                   ),
                 ),
               );
@@ -478,21 +474,19 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
       );
 
   Widget _buildShimmer() {
-    return MaxWidthContent(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Shimmer.fromColors(
-          baseColor: AppColors.shimmerBase,
-          highlightColor: AppColors.shimmerHighlight,
-          child: Column(
-            children: [
-              Container(height: 110, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
-              const SizedBox(height: 16),
-              Container(height: 180, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
-              const SizedBox(height: 16),
-              Container(height: 140, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
-            ],
-          ),
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Shimmer.fromColors(
+        baseColor: AppColors.shimmerBase,
+        highlightColor: AppColors.shimmerHighlight,
+        child: Column(
+          children: [
+            Container(height: 110, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
+            const SizedBox(height: 16),
+            Container(height: 180, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
+            const SizedBox(height: 16),
+            Container(height: 140, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
+          ],
         ),
       ),
     );
