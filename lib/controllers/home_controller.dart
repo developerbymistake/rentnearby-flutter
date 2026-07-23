@@ -72,12 +72,9 @@ class HomePlotModel {
   );
 }
 
-/// Home tab's data source. Loads a district-scoped summary + 5 most-recent
-/// rooms/plots + relies on LocationController.nearbyCities (already fetched
-/// by the existing GPS/district-resolution flow) for Popular Areas.
+/// Home tab's data source. Loads 5 most-recent (district-scoped "for you"
+/// and district-free "recently added") rooms/plots per active tab.
 class HomeController extends GetxController {
-  final roomsCount = 0.obs;
-  final plotsCount = 0.obs;
   final recentRooms = <HomeRoomModel>[].obs;
   final recentPlots = <HomePlotModel>[].obs;
 
@@ -89,7 +86,6 @@ class HomeController extends GetxController {
   final recentlyAddedRooms = <HomeRoomModel>[].obs;
   final recentlyAddedPlots = <HomePlotModel>[].obs;
 
-  final summaryLoading = true.obs;
   final roomsLoading = true.obs;
   final plotsLoading = true.obs;
   final recentlyAddedRoomsLoading = true.obs;
@@ -156,14 +152,12 @@ class HomeController extends GetxController {
   Future<void> loadHomeData(String districtId) async {
     if (_loadedDistrictId == districtId) return;
     _loadedDistrictId = districtId;
-    summaryLoading.value = true;
     roomsLoading.value = true;
     plotsLoading.value = true;
     recentlyAddedRoomsLoading.value = true;
     recentlyAddedPlotsLoading.value = true;
 
     await Future.wait([
-      _loadSummary(districtId),
       _loadList(
         path: '/home/rooms',
         params: {'districtId': districtId, 'limit': 5},
@@ -230,21 +224,5 @@ class HomeController extends GetxController {
     if (districtId == null) return;
     _loadedDistrictId = null;
     await loadHomeData(districtId);
-  }
-
-  Future<void> _loadSummary(String districtId) async {
-    try {
-      final res = await ApiService.get(
-        '/home/summary',
-        params: {'districtId': districtId},
-      );
-      final data = res['data'] as Map<String, dynamic>?;
-      roomsCount.value = (data?['roomsCount'] as num?)?.toInt() ?? 0;
-      plotsCount.value = (data?['plotsCount'] as num?)?.toInt() ?? 0;
-    } catch (_) {
-      // Leave last-known counts on failure — a stale number beats a blank one.
-    } finally {
-      summaryLoading.value = false;
-    }
   }
 }
