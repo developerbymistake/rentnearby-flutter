@@ -178,29 +178,22 @@ class HomeController extends GetxController {
         loading: plotsLoading,
         parse: HomePlotModel.fromJson,
       ),
-      // "Recently added" — same district scope as recentRooms/recentPlots,
-      // sorted newest-first via the existing browse endpoint (the same one
-      // ViewAllController already calls) instead of the "for you" ranking.
+      // "Recently added" — deliberately NOT district-scoped, unlike
+      // recentRooms/recentPlots above. Dedicated backend endpoints
+      // (/home/rooms/recent, /home/plots/recent — no districtId param at
+      // all, server-side cached since the result is identical for every
+      // caller) so this genuinely shows the newest listings across every
+      // district, not a relabeled copy of "X for you".
       _loadList(
-        path: '/home/rooms/browse',
-        params: {
-          'districtId': districtId,
-          'sortBy': 'newest',
-          'page': 1,
-          'pageSize': 5,
-        },
+        path: '/home/rooms/recent',
+        params: {'limit': 5},
         target: recentlyAddedRooms,
         loading: recentlyAddedRoomsLoading,
         parse: HomeRoomModel.fromJson,
       ),
       _loadList(
-        path: '/home/plots/browse',
-        params: {
-          'districtId': districtId,
-          'sortBy': 'newest',
-          'page': 1,
-          'pageSize': 5,
-        },
+        path: '/home/plots/recent',
+        params: {'limit': 5},
         target: recentlyAddedPlots,
         loading: recentlyAddedPlotsLoading,
         parse: HomePlotModel.fromJson,
