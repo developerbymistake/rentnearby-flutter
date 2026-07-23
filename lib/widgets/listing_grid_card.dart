@@ -14,7 +14,7 @@ class ListingGridCard extends StatelessWidget {
   final String title;
   final String locationLabel;
   final VoidCallback onViewDetails;
-  final VoidCallback? onChat; // null hides the Chat action — e.g. the viewer's own listing
+  final VoidCallback onChat;
 
   const ListingGridCard({
     super.key,
@@ -52,6 +52,12 @@ class ListingGridCard extends StatelessWidget {
                       ? CachedNetworkImage(
                           imageUrl: thumbnailUrl!,
                           fit: BoxFit.cover,
+                          // Grid column is at most 190 (maxCrossAxisExtent in
+                          // view_all_screen.dart) — cap decode to that on an
+                          // infinite-scroll grid instead of caching full-size
+                          // source photos per item.
+                          memCacheWidth: (190 * MediaQuery.of(context).devicePixelRatio).round(),
+                          memCacheHeight: (130 * MediaQuery.of(context).devicePixelRatio).round(),
                           placeholder: (_, __) => Container(color: AppColors.surface),
                           errorWidget: (_, __, ___) => _placeholder(),
                         )
@@ -105,7 +111,7 @@ class ListingGridCard extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -130,25 +136,24 @@ class ListingGridCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (onChat != null) ...[
-                  const SizedBox(height: 7),
-                  GestureDetector(
-                    onTap: onChat,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(9)),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Iconsax.message_text, size: 10, color: Colors.white),
-                          SizedBox(width: 4),
-                          Text('Chat', style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
-                        ],
-                      ),
+                const SizedBox(height: 7),
+                GestureDetector(
+                  onTap: onChat,
+                  child: Container(
+                    width: double.infinity,
+                    height: 26,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(9)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Iconsax.message_text, size: 10, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text('Chat', style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ],
             ),
           ),

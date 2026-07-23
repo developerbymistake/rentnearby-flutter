@@ -6,6 +6,7 @@ import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/view_all_controller.dart';
+import '../utils/app_toast.dart';
 import '../widgets/filter_sort_sheet.dart';
 import '../widgets/listing_grid_card.dart';
 import '../widgets/location_pill.dart';
@@ -14,6 +15,16 @@ import 'explore_location_search_mixin.dart';
 
 const _kPlotGradient = AppColors.plotGradient;
 const _kPlotColor = AppColors.plot;
+
+// mainAxisExtent matches ListingGridCard's real content height (photo 130 +
+// text block + the Chat button, now with a bit of bottom margin below it) —
+// shared by the real grid and its loading shimmer so they can't drift out of sync.
+const _kGridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
+  maxCrossAxisExtent: 190,
+  mainAxisSpacing: 12,
+  crossAxisSpacing: 12,
+  mainAxisExtent: 212,
+);
 
 /// "View All" — pushed from Home's Rooms/Plots "View all" links. Reuses the
 /// real gradient-header pushed-screen pattern (my_plots_screen.dart /
@@ -213,12 +224,7 @@ class _ViewAllScreenState extends State<ViewAllScreen>
                     controller: _scrollCtrl,
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                     physics: const AlwaysScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 190,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.72,
-                    ),
+                    gridDelegate: _kGridDelegate,
                     itemCount: items.length + (hasMore ? 1 : 0),
                     itemBuilder: (_, i) {
                       if (i >= items.length) {
@@ -233,7 +239,9 @@ class _ViewAllScreenState extends State<ViewAllScreen>
                         title: item.title,
                         locationLabel: item.locationLabel,
                         onViewDetails: () => _viewDetails(item),
-                        onChat: isOwnListing ? null : () => _chat(item),
+                        onChat: isOwnListing
+                            ? () => AppToast.info("You can't chat on your own listing")
+                            : () => _chat(item),
                       );
                     },
                   );
@@ -285,12 +293,7 @@ class _ViewAllScreenState extends State<ViewAllScreen>
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       physics: const AlwaysScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 190,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.72,
-      ),
+      gridDelegate: _kGridDelegate,
       itemCount: 6,
       itemBuilder: (_, __) => Shimmer.fromColors(
         baseColor: AppColors.shimmerBase,

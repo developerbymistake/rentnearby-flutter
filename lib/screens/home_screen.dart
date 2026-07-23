@@ -11,11 +11,11 @@ import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/service_catalog_controller.dart';
-import '../widgets/auto_carousel.dart';
+import '../config/app_tabs.dart';
 import '../widgets/category_card.dart';
+import '../widgets/coin_balance_chip.dart';
 import '../widgets/service_zone.dart';
 import '../widgets/sliding_chip_toggle.dart';
-import '../models/service_category_model.dart';
 
 const _kPlotColor = AppColors.plot;
 const _kPlotColorDark = AppColors.plotDark;
@@ -57,9 +57,10 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 15),
               _buildManageListingsCard(),
               const SizedBox(height: 15),
+              _buildCategoryCards(),
+              const SizedBox(height: 15),
               _buildRecentlyAddedSection(),
               const SizedBox(height: 20),
-              _buildPromoBanner(),
             ],
           ),
         ),
@@ -123,130 +124,133 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }),
               ),
-              Row(
-                children: [
-                  _buildMiniIcon(
-                    icon: Iconsax.notification,
-                    unreadCount: Get.find<NotificationController>().unreadCount,
-                    onTap: () => Get.toNamed(AppRoutes.notifications),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildMiniIcon(
-                    icon: Iconsax.message,
-                    unreadCount: Get.find<ChatController>().unreadCount,
-                    onTap: () => Get.toNamed(AppRoutes.chatsList),
-                  ),
-                ],
-              ),
+              const CoinBalanceChip(color: Colors.white),
             ],
           ),
-          const SizedBox(height: 18),
-          _buildServicesCarousel(),
+          const SizedBox(height: 16),
+          _buildActionMenu(),
         ],
       ),
     );
   }
 
-  // Compact icon-only quick-action (Notifications/Messages), replacing the
-  // coin chip's old spot beside the greeting — same translucent-circle +
-  // red-badge treatment as the app's other icon buttons, just without a
-  // text label since it now sits inline with the greeting instead of its
-  // own labeled row.
-  Widget _buildMiniIcon({
+  Widget _buildActionMenu() {
+    return Row(
+      children: [
+        Expanded(
+          child: _menuOption(
+            icon: Iconsax.notification,
+            label: 'Notifications',
+            unreadCount: Get.find<NotificationController>().unreadCount,
+            onTap: () => Get.toNamed(AppRoutes.notifications),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _menuOption(
+            icon: Iconsax.message,
+            label: 'Messages',
+            unreadCount: Get.find<ChatController>().unreadCount,
+            onTap: () => Get.toNamed(AppRoutes.chatsList),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _menuOption(
+            icon: Iconsax.home,
+            label: 'Find Room',
+            onTap: () => _auth.tabIndex.value = AppTabs.rooms,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _menuOption(
+            icon: Icons.landscape_rounded,
+            label: 'Find Plot',
+            onTap: () => _auth.tabIndex.value = AppTabs.plots,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Background stays a barely-there glass circle (same fill/border alpha this
+  // file already used for the old bell/chat icon buttons) — only the icon
+  // glyph itself is solid white, so it reads clearly against the circle
+  // instead of the fill competing with it for "white."
+  Widget _menuOption({
     required IconData icon,
-    required RxInt unreadCount,
+    required String label,
     required VoidCallback onTap,
+    RxInt? unreadCount,
   }) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Stack(
-        clipBehavior: Clip.none,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.18),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-            ),
-            child: Icon(icon, color: Colors.white, size: 16),
-          ),
-          Positioned(
-            top: -4,
-            right: -4,
-            child: Obx(() {
-              final count = unreadCount.value;
-              if (count <= 0) return const SizedBox.shrink();
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                constraints: const BoxConstraints(minWidth: 16),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: AppColors.error,
-                  borderRadius: BorderRadius.circular(20),
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.18),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
-                child: Text(
-                  count > 99 ? '99+' : '$count',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
+                child: Icon(icon, color: Colors.white, size: 17),
+              ),
+              if (unreadCount != null)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Obx(() {
+                    final count = unreadCount.value;
+                    if (count <= 0) return const SizedBox.shrink();
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      constraints: const BoxConstraints(minWidth: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        count > 99 ? '99+' : '$count',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    );
+                  }),
                 ),
-              );
-            }),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 7.5,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
           ),
         ],
       ),
     );
-  }
-
-  // ── "Services for you" — relocated into the hero as a swipeable,
-  // auto-advancing carousel (one category per slide) in place of the old
-  // 4-icon quick-menu. Find Room/Find Plot are dropped here since they're
-  // already one tap away via the bottom Rooms/Plots tabs. Never hardcoded —
-  // driven by ServiceCatalogController.activeCategories, so a new
-  // admin-added category needs zero app code to show up here.
-  Widget _buildServicesCarousel() {
-    return Obx(() {
-      final loading =
-          _serviceCatalog.categoriesLoading.value &&
-          _serviceCatalog.categories.isEmpty;
-      final cats = _serviceCatalog.activeCategories;
-      if (!loading && cats.isEmpty) return const SizedBox.shrink();
-      if (loading) {
-        return SizedBox(
-          height: 176,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: 3,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (_, __) =>
-                const SizedBox(width: 260, child: CategoryCardShimmer()),
-          ),
-        );
-      }
-      return AutoCarousel<ServiceCategoryModel>(
-        items: cats,
-        height: 176,
-        viewportFraction: 0.86,
-        itemBuilder: (context, category, i) => Padding(
-          padding: const EdgeInsets.only(right: 10),
-          child: CategoryCard(
-            category: category,
-            zone: serviceZoneForIndex(i),
-            width: double.infinity,
-            onTap: () => Get.toNamed(
-              AppRoutes.serviceCategoryGrid,
-              arguments: {'categoryId': category.id, 'title': category.name},
-            ),
-          ),
-        ),
-      );
-    });
   }
 
   // ── Rooms/Plots toggle, floating in the hero's bottom edge ─────────────────
@@ -329,7 +333,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 168,
+            height: 150,
             child: loading
                 ? _buildListingShimmerRail()
                 : isRooms
@@ -341,9 +345,9 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Shared by "Rooms for you" and "Recently added Rooms" — takes whichever
-  // list the caller wants rendered, so the rail-building logic (and the
-  // location-label/tap-to-detail fixes) only exist in one place.
+  // "Rooms/Plots for you" — the only remaining callers of these two, both
+  // always clickable and never NEW-tagged. Recently added has its own
+  // vertical list builders below instead.
   Widget _buildRoomsRail(List<HomeRoomModel> items) {
     if (items.isEmpty) return _emptyRailMessage('No rooms listed here yet.');
     return ListView.separated(
@@ -356,7 +360,11 @@ class _HomeScreenState extends State<HomeScreen> {
         return _HomeListingCard(
           thumbnailUrl: r.thumbnailUrl,
           priceLabel: '₹${r.priceMonthly}/mo',
-          title: r.roomTypeName ?? 'Room',
+          // Same "RoomType · FurnishedStatus" combination ViewAllController
+          // already uses for this same data — Home's rail was silently
+          // dropping the furnished-status half of it.
+          title:
+              '${r.roomTypeName ?? 'Room'}${r.furnishedStatus != 'None' ? ' · ${r.furnishedStatus}' : ''}',
           locationLabel: r.districtName,
           onTap: () =>
               Get.toNamed(AppRoutes.listingDetail, arguments: {'id': r.id}),
@@ -658,12 +666,77 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ── Category cards — one per active ServiceCategory, tap jumps straight to
+  // that category's service grid. Never hardcoded, so a new admin-added
+  // Category needs zero app code to show up here.
+
+  Widget _buildCategoryCards() {
+    return Obx(() {
+      final loading =
+          _serviceCatalog.categoriesLoading.value &&
+          _serviceCatalog.categories.isEmpty;
+      final cats = _serviceCatalog.activeCategories;
+      if (!loading && cats.isEmpty) return const SizedBox.shrink();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'Services for you',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          loading
+              ? _buildCategoryCardShimmerRow()
+              : SizedBox(
+                  height: 135,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: cats.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (_, i) => CategoryCard(
+                      category: cats[i],
+                      zone: serviceZoneForIndex(i),
+                      onTap: () => Get.toNamed(
+                        AppRoutes.serviceCategoryGrid,
+                        arguments: {
+                          'categoryId': cats[i].id,
+                          'title': cats[i].name,
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildCategoryCardShimmerRow() {
+    return SizedBox(
+      height: 135,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: 3,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (_, __) => const CategoryCardShimmer(),
+      ),
+    );
+  }
+
   // ── "Recently added Rooms"/"Recently added Plots" — toggle-aware like
-  // "Rooms for you"/"Plots for you" above, but sorted newest-first
-  // (HomeController.recentlyAddedRooms/Plots, via the existing
-  // /home/{rooms|plots}/browse?sortBy=newest endpoint) instead of the "for
-  // you" ranking. Sits where the old standalone "Services for you" section
-  // used to be — Services moved into the hero carousel instead.
+  // "Rooms for you"/"Plots for you" above, but sorted newest-first, and
+  // district-free (see HomeController.recentlyAddedRooms/Plots and the
+  // dedicated /home/{rooms|plots}/recent endpoints).
 
   Widget _buildRecentlyAddedSection() {
     return Obx(() {
@@ -689,91 +762,85 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            height: 168,
-            child: loading
-                ? _buildListingShimmerRail()
-                : isRooms
-                ? _buildRoomsRail(_home.recentlyAddedRooms)
-                : _buildPlotsRail(_home.recentlyAddedPlots),
-          ),
+          loading
+              ? _buildRecentlyAddedShimmerList()
+              : isRooms
+              ? _buildRecentlyAddedRoomsList(_home.recentlyAddedRooms)
+              : _buildRecentlyAddedPlotsList(_home.recentlyAddedPlots),
         ],
       );
     });
   }
 
-  // ── Promo banner ─────────────────────────────────────────────────────────
-
-  Widget _buildPromoBanner() {
+  // Vertical list-row layout for "Recently added" — same white rounded-card
+  // + soft-shadow treatment as a chat conversation row, stacked top to
+  // bottom and scrolled with the rest of the page (not its own horizontal
+  // rail). Display-only — _HomeListingRow has no onTap at all.
+  Widget _buildRecentlyAddedRoomsList(List<HomeRoomModel> items) {
+    if (items.isEmpty) return _emptyRailMessage('No rooms listed here yet.');
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.all(Radius.circular(11)),
-              ),
-              child: const Icon(Iconsax.add, color: Colors.white, size: 18),
+      child: Column(
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            _HomeListingRow(
+              thumbnailUrl: items[i].thumbnailUrl,
+              priceLabel: '₹${items[i].priceMonthly}/mo',
+              title:
+                  '${items[i].roomTypeName ?? 'Room'}${items[i].furnishedStatus != 'None' ? ' · ${items[i].furnishedStatus}' : ''}',
+              locationLabel: items[i].districtName,
+              isNew: true,
             ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'List your property',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  Text(
-                    'Reach renters nearby',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 10,
-                      color: AppColors.textLight,
-                    ),
-                  ),
-                ],
-              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentlyAddedPlotsList(List<HomePlotModel> items) {
+    if (items.isEmpty) return _emptyRailMessage('No plots listed here yet.');
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            _HomeListingRow(
+              thumbnailUrl: items[i].thumbnailUrl,
+              priceLabel: items[i].areaValue == items[i].areaValue.roundToDouble()
+                  ? '${items[i].areaValue.toStringAsFixed(0)} ${items[i].areaUnit}'
+                  : '${items[i].areaValue.toStringAsFixed(1)} ${items[i].areaUnit}',
+              title: items[i].plotTypeName ?? 'Plot',
+              locationLabel: items[i].districtName,
+              isNew: true,
             ),
-            GestureDetector(
-              onTap: () => Get.toNamed(AppRoutes.myListings),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentlyAddedShimmerList() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          for (var i = 0; i < 3; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            Shimmer.fromColors(
+              baseColor: AppColors.shimmerBase,
+              highlightColor: AppColors.shimmerHighlight,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 9,
-                ),
-                decoration: const BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.all(Radius.circular(20)),
-                ),
-                child: const Text(
-                  'My Room',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -823,20 +890,17 @@ class _HomeListingCard extends StatelessWidget {
               child: Stack(
                 children: [
                   SizedBox(
-                    height: 108,
+                    height: 100,
                     width: double.infinity,
                     child: thumbnailUrl != null
                         ? CachedNetworkImage(
                             imageUrl: thumbnailUrl!,
                             fit: BoxFit.cover,
-                            // Card is a fixed 140x108 — cap decode
-                            // resolution to that instead of caching
-                            // full-size source photos.
                             memCacheWidth:
                                 (140 * MediaQuery.of(context).devicePixelRatio)
                                     .round(),
                             memCacheHeight:
-                                (108 * MediaQuery.of(context).devicePixelRatio)
+                                (100 * MediaQuery.of(context).devicePixelRatio)
                                     .round(),
                             placeholder: (_, __) =>
                                 Container(color: AppColors.surface),
@@ -923,6 +987,161 @@ class _HomeListingCard extends StatelessWidget {
     color: AppColors.surface,
     child: const Center(
       child: Icon(Icons.home_rounded, size: 28, color: AppColors.primaryLight),
+    ),
+  );
+}
+
+/// "Recently added"'s vertical row layout — same chat-conversation-row card
+/// treatment (white, rounded, soft shadow), thumbnail left, price right.
+/// Display-only (no onTap) — matches _buildRoomsRail/_buildPlotsRail's
+/// clickable: false for this section.
+class _HomeListingRow extends StatelessWidget {
+  final String? thumbnailUrl;
+  final String priceLabel;
+  final String title;
+  final String locationLabel;
+  final bool isNew;
+
+  const _HomeListingRow({
+    required this.thumbnailUrl,
+    required this.priceLabel,
+    required this.title,
+    required this.locationLabel,
+    this.isNew = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              children: [
+                SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: thumbnailUrl != null
+                      ? CachedNetworkImage(
+                          imageUrl: thumbnailUrl!,
+                          fit: BoxFit.cover,
+                          memCacheWidth:
+                              (60 * MediaQuery.of(context).devicePixelRatio)
+                                  .round(),
+                          memCacheHeight:
+                              (60 * MediaQuery.of(context).devicePixelRatio)
+                                  .round(),
+                          placeholder: (_, __) =>
+                              Container(color: AppColors.surface),
+                          errorWidget: (_, __, ___) => _placeholder(),
+                        )
+                      : _placeholder(),
+                ),
+                if (isNew)
+                  Positioned(
+                    bottom: 3,
+                    right: 3,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1.5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.success,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'NEW',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 6.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    const Icon(
+                      Iconsax.location,
+                      size: 10,
+                      color: AppColors.primaryLight,
+                    ),
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Text(
+                        locationLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 10.5,
+                          color: AppColors.textLight,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            priceLabel,
+            maxLines: 1,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12.5,
+              fontWeight: FontWeight.w800,
+              color: AppColors.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _placeholder() => Container(
+    color: AppColors.surface,
+    child: const Center(
+      child: Icon(Icons.home_rounded, size: 22, color: AppColors.primaryLight),
     ),
   );
 }

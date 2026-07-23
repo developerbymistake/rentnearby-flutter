@@ -146,7 +146,7 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
                   ? _serviceCatalog.categoryPreviews[cats[i].id]
                   : null,
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 12),
           ],
         ],
       );

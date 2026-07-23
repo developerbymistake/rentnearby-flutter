@@ -10,14 +10,12 @@ class CategoryCard extends StatelessWidget {
   final ServiceCategoryModel category;
   final ServiceZone zone;
   final VoidCallback onTap;
-  final double? width;
 
   const CategoryCard({
     super.key,
     required this.category,
     required this.zone,
     required this.onTap,
-    this.width,
   });
 
   @override
@@ -26,7 +24,7 @@ class CategoryCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: width ?? 140,
+        width: 140,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -47,17 +45,17 @@ class CategoryCard extends StatelessWidget {
                 top: Radius.circular(16),
               ),
               child: SizedBox(
-                height: 108,
+                height: 100,
                 width: double.infinity,
                 child: hasPhoto
                     ? CachedNetworkImage(
                         imageUrl: category.coverPhotoUrl,
                         fit: BoxFit.cover,
-                        // Width varies (140 in a rail, full-bleed in the hero
-                        // carousel) but height never does — capping decode
-                        // height alone keeps memory bounded either way.
+                        memCacheWidth:
+                            (140 * MediaQuery.of(context).devicePixelRatio)
+                                .round(),
                         memCacheHeight:
-                            (108 * MediaQuery.of(context).devicePixelRatio)
+                            (100 * MediaQuery.of(context).devicePixelRatio)
                                 .round(),
                         placeholder: (_, __) => Container(color: zone.imgBg),
                         errorWidget: (_, __, ___) => _iconFallback(),
@@ -69,7 +67,7 @@ class CategoryCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
               child: Text(
                 category.name,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontFamily: 'Poppins',
