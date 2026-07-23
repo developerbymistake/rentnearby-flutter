@@ -72,7 +72,12 @@ class InquiryController extends GetxController {
     try {
       myInquiries.value = await _repo.getMyInquiries();
       _recomputeActiveCount();
-    } catch (_) {
+    } catch (e) {
+      // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown
+      // its own toast + redirected — this call fires unconditionally at app start (IndexedStack
+      // builds every tab eagerly), so showing "Could not load your inquiries" on top would be a
+      // second, contradictory toast flashing over the login screen for the same underlying event.
+      if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error('Could not load your inquiries. Pull to refresh.');
     } finally {
       isLoadingMyInquiries.value = false;
