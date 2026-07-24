@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../config/app_tour_state.dart';
 import '../models/listing_model.dart';
 import 'pulse_once.dart';
 
@@ -321,7 +323,8 @@ class ListingCard extends StatelessWidget {
   }
 
   Widget _makeItLiveButton() {
-    return PulseOnce(
+    return Obx(() => PulseOnce(
+      paused: tourInProgress.value,
       child: GestureDetector(
       onTap: isGoLiveLoading ? null : onGoLive,
       child: Container(
@@ -364,7 +367,7 @@ class ListingCard extends StatelessWidget {
               ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _liveToggle() {

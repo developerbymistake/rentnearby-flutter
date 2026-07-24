@@ -6,6 +6,7 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/inquiry_controller.dart';
 import '../controllers/service_catalog_controller.dart';
+import '../navigation/tour_keys.dart';
 import '../widgets/service_category_rail.dart';
 import '../widgets/service_zone.dart';
 
@@ -77,6 +78,7 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
                   GestureDetector(
                     onTap: () => Get.toNamed(AppRoutes.myInquiries),
                     child: Container(
+                      key: TourKeys.servicesInquiriesButton,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -136,15 +138,18 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (var i = 0; i < cats.length; i++) ...[
-            ServiceCategoryRail(
-              category: cats[i],
-              zone: serviceZoneForIndex(i),
-              // containsKey, not just an empty list, distinguishes "this category's
-              // preview hasn't come back yet" (rail shows its shimmer) from "it came
-              // back and there's genuinely nothing to show" (rail renders nothing).
-              items: _serviceCatalog.categoryPreviews.containsKey(cats[i].id)
-                  ? _serviceCatalog.categoryPreviews[cats[i].id]
-                  : null,
+            KeyedSubtree(
+              key: TourKeys.serviceCategoryKey(cats[i].id),
+              child: ServiceCategoryRail(
+                category: cats[i],
+                zone: serviceZoneForIndex(i),
+                // containsKey, not just an empty list, distinguishes "this category's
+                // preview hasn't come back yet" (rail shows its shimmer) from "it came
+                // back and there's genuinely nothing to show" (rail renders nothing).
+                items: _serviceCatalog.categoryPreviews.containsKey(cats[i].id)
+                    ? _serviceCatalog.categoryPreviews[cats[i].id]
+                    : null,
+              ),
             ),
             const SizedBox(height: 12),
           ],

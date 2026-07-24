@@ -70,6 +70,13 @@ class StorageService {
   static void clearNotifPromptDismissedAt() =>
       _box.remove(AppConstants.notifPromptDismissedKey);
 
+  // Generic pair, not one method per tour — tour_registry.dart already carries
+  // each tour's storage key as data, so a hand-written getter/setter per tour
+  // here would just relocate that duplication rather than remove it.
+  static bool getTourSeen(String key) => _box.read<bool>(key) ?? false;
+
+  static void saveTourSeen(String key) => _box.write(key, true);
+
   static Future<void> saveSubscribedDistrictTopic(String topic) async =>
       _box.write(AppConstants.subscribedDistrictTopicKey, topic);
 

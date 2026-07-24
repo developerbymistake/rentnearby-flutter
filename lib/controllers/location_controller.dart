@@ -79,6 +79,12 @@ class LocationController extends GetxController {
   /// comments on GetNearbyAsync).
   CityModel? get effectiveCity => browsingCity.value ?? autoCity.value;
 
+  /// True whenever MainScreen would currently be showing one of its full-screen
+  /// gates (offline / GPS-disabled / district-unavailable) — the same formula
+  /// MainScreen.build() computes inline; read this getter instead of
+  /// re-deriving it so the formula exists in exactly one place.
+  bool get hasActiveGate => isOffline.value || !gpsEnabled.value || districtUnavailable.value;
+
   /// Map/radius center for the explore screens: precise search pin (if any)
   /// > browsed city's stored coordinate > live GPS > GPS-nearest city >
   /// hardcoded last-resort fallback. Shared across Rooms and Plots — moved

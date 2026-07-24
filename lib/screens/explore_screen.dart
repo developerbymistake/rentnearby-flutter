@@ -17,6 +17,7 @@ import '../config/app_map_state.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../models/listing_model.dart';
+import '../navigation/tour_keys.dart';
 import '../widgets/add_listing_shortcut_button.dart';
 import '../widgets/empty_radius_hint.dart';
 import '../widgets/listing_bottom_sheet.dart';
@@ -940,13 +941,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                         // LocationController.effectiveDistrict resolves.
                         SizedBox(
                           height: 40,
-                          child: LocationPill(accentColor: AppColors.primary),
+                          child: LocationPill(key: TourKeys.roomsLocationPill, accentColor: AppColors.primary),
                         ),
                         const SizedBox(height: 10),
                         Row(children: [
-                          Expanded(child: _buildRadiusChips()),
+                          Expanded(child: KeyedSubtree(key: TourKeys.roomsRadiusChips, child: _buildRadiusChips())),
                           const SizedBox(width: 10),
-                          _buildSearchToggleButton(),
+                          KeyedSubtree(key: TourKeys.roomsSearchToggle, child: _buildSearchToggleButton()),
                         ]),
                       ]),
                     ),
@@ -969,7 +970,10 @@ class _ExploreScreenState extends State<ExploreScreen>
             bottom: 20,
             left: 20,
             right: 20,
-            child: _buildFilterPanel(),
+            child: KeyedSubtree(
+              key: TourKeys.roomsFilterPanel,
+              child: _buildFilterPanel(),
+            ),
           ),
 
           // View List stays a normal rounded pill, aligned to the same
@@ -984,6 +988,7 @@ class _ExploreScreenState extends State<ExploreScreen>
               children: [
                 _filteredListings.isNotEmpty ? _buildViewListButton() : const SizedBox.shrink(),
                 AddListingShortcutButton(
+                  key: TourKeys.roomsAddShortcut,
                   label: 'Add my room',
                   icon: Iconsax.home,
                   onTap: () => Get.toNamed(AppRoutes.myListings),

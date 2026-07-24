@@ -11,6 +11,8 @@ import 'services/api_service.dart';
 import 'services/map_pause_observer.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
+import 'services/tour_dismiss_observer.dart';
+import 'widgets/tour_host.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,11 +49,16 @@ class BakhliApp extends StatelessWidget {
       getPages: AppRoutes.routes,
       defaultTransition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
-      navigatorObservers: [MapPauseObserver()],
+      navigatorObservers: [MapPauseObserver(), TourDismissObserver()],
       builder: (context, child) => ToastificationWrapper(
         child: MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
-          child: child!,
+          child: Stack(
+            children: [
+              Positioned.fill(child: child!),
+              const TourHost(),
+            ],
+          ),
         ),
       ),
     );

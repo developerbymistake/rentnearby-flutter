@@ -7,8 +7,9 @@ import 'package:flutter/material.dart';
 class PulseOnce extends StatefulWidget {
   final Widget child;
   final int pulseCount;
+  final bool paused;
 
-  const PulseOnce({super.key, required this.child, this.pulseCount = 3});
+  const PulseOnce({super.key, required this.child, this.pulseCount = 3, this.paused = false});
 
   @override
   State<PulseOnce> createState() => _PulseOnceState();
@@ -38,7 +39,16 @@ class _PulseOnceState extends State<PulseOnce> with SingleTickerProviderStateMix
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_started && !MediaQuery.of(context).disableAnimations) {
+    if (!_started && !widget.paused && !MediaQuery.of(context).disableAnimations) {
+      _started = true;
+      _runPulses();
+    }
+  }
+
+  @override
+  void didUpdateWidget(PulseOnce oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.paused && !widget.paused && !_started && !MediaQuery.of(context).disableAnimations) {
       _started = true;
       _runPulses();
     }
@@ -46,7 +56,7 @@ class _PulseOnceState extends State<PulseOnce> with SingleTickerProviderStateMix
 
   Future<void> _runPulses() async {
     for (var i = 0; i < widget.pulseCount; i++) {
-      if (!mounted) return;
+      if (!mounted || widget.paused) return;
       await _controller.forward(from: 0);
     }
   }

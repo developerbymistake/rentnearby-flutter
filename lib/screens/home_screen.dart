@@ -12,6 +12,7 @@ import '../controllers/home_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/service_catalog_controller.dart';
 import '../config/app_tabs.dart';
+import '../navigation/tour_keys.dart';
 import '../widgets/category_card.dart';
 import '../widgets/coin_balance_chip.dart';
 import '../widgets/service_zone.dart';
@@ -124,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }),
               ),
-              const CoinBalanceChip(color: Colors.white),
+              CoinBalanceChip(key: TourKeys.homeCoinBalance, color: Colors.white),
             ],
           ),
           const SizedBox(height: 16),
@@ -136,6 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildActionMenu() {
     return Row(
+      key: TourKeys.homeActionMenu,
       children: [
         Expanded(
           child: _menuOption(
@@ -265,6 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Obx(() {
           final active = _home.activeTab.value;
           return SlidingChipToggle(
+            key: TourKeys.homeToggle,
             selectedIndex: active == 'rooms' ? 0 : 1,
             onChanged: (i) => _home.setActiveTab(i == 0 ? 'rooms' : 'plots'),
             options: [
@@ -443,6 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildManageListingsCard() {
     return Padding(
+      key: TourKeys.homeManageListingsCard,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         padding: const EdgeInsets.fromLTRB(14, 16, 14, 15),

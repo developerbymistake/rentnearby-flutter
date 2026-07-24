@@ -17,6 +17,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../models/plot_model.dart';
+import '../navigation/tour_keys.dart';
 import '../widgets/add_listing_shortcut_button.dart';
 import '../widgets/empty_radius_hint.dart';
 import '../widgets/location_pill.dart';
@@ -885,13 +886,13 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                             // LocationController.effectiveDistrict resolves.
                             SizedBox(
                               height: 40,
-                              child: LocationPill(accentColor: AppColors.plot),
+                              child: LocationPill(key: TourKeys.plotsLocationPill, accentColor: AppColors.plot),
                             ),
                             const SizedBox(height: 10),
                             Row(children: [
-                              Expanded(child: _buildRadiusChips()),
+                              Expanded(child: KeyedSubtree(key: TourKeys.plotsRadiusChips, child: _buildRadiusChips())),
                               const SizedBox(width: 10),
-                              _buildSearchToggleButton(),
+                              KeyedSubtree(key: TourKeys.plotsSearchToggle, child: _buildSearchToggleButton()),
                             ]),
                           ]),
                         ),
@@ -915,7 +916,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 bottom: 20,
                 left: 20,
                 right: 20,
-                child: _buildFilterPanel(),
+                child: KeyedSubtree(
+                  key: TourKeys.plotsFilterPanel,
+                  child: _buildFilterPanel(),
+                ),
               ),
 
               // View List stays a normal rounded pill, aligned to the same
@@ -930,6 +934,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                   children: [
                     _filteredPlots.isNotEmpty ? _buildViewListButton() : const SizedBox.shrink(),
                     AddListingShortcutButton(
+                      key: TourKeys.plotsAddShortcut,
                       label: 'Add my plot',
                       icon: Icons.landscape_rounded,
                       onTap: () => Get.toNamed(AppRoutes.myPlots),

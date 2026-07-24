@@ -37,6 +37,8 @@ import '../widgets/district_banner_overlay.dart';
 import '../widgets/gradient_button.dart';
 import '../navigation/tab_router.dart';
 import '../navigation/tab_keys.dart';
+import '../navigation/tour_keys.dart';
+import '../controllers/tour_controller.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -157,6 +159,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       _previousTabIndex = newIndex;
     });
     _auth.refreshProfile();
+    // Last, deliberately — needs every controller any tour could reference
+    // (LocationController, AuthController) already registered above.
+    Get.put(TourController());
   }
 
   @override
@@ -482,10 +487,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             bottomNavigationBar: Obx(() => _buildBottomNav()),
           ),
           Obx(() {
-            final hasGate = _locationCtrl.isOffline.value ||
-                            !_locationCtrl.gpsEnabled.value ||
-                            _locationCtrl.districtUnavailable.value;
-            if (hasGate) return const SizedBox.shrink();
+            if (_locationCtrl.hasActiveGate) return const SizedBox.shrink();
             final banner = _bannerCtrl.activeBanner.value;
             if (banner == null) return const SizedBox.shrink();
             return DistrictBannerOverlay(
@@ -577,10 +579,22 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         child: Row(
           children: [
             _navItem(AppTabs.home, Iconsax.home, Iconsax.home5, 'Home'),
-            _navItem(AppTabs.rooms, Iconsax.map, Iconsax.map5, 'Rooms'),
-            _navItem(AppTabs.plots, Iconsax.location, Iconsax.location5, 'Plots'),
-            _navItem(AppTabs.services, Iconsax.briefcase, Iconsax.briefcase5, 'Services'),
-            _navItem(AppTabs.profile, Iconsax.user, Iconsax.user5, 'Profile'),
+            KeyedSubtree(
+              key: TourKeys.homeRoomsNavIcon,
+              child: _navItem(AppTabs.rooms, Iconsax.map, Iconsax.map5, 'Rooms'),
+            ),
+            KeyedSubtree(
+              key: TourKeys.homePlotsNavIcon,
+              child: _navItem(AppTabs.plots, Iconsax.location, Iconsax.location5, 'Plots'),
+            ),
+            KeyedSubtree(
+              key: TourKeys.homeServicesNavIcon,
+              child: _navItem(AppTabs.services, Iconsax.briefcase, Iconsax.briefcase5, 'Services'),
+            ),
+            KeyedSubtree(
+              key: TourKeys.homeProfileNavIcon,
+              child: _navItem(AppTabs.profile, Iconsax.user, Iconsax.user5, 'Profile'),
+            ),
           ],
         ),
       ),
