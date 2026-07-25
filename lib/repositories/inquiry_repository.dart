@@ -61,6 +61,8 @@ class InquiryRepository {
     return InquiryDetailModel.fromJson(data);
   }
 
+  Future<void> markSeen(String id) async => ApiService.put('/inquiries/$id/seen', {});
+
   /// "Report an issue with my agent" — throws (via ApiService's own Dio interceptor) on failure,
   /// including a 409 when a Pending report already exists; the controller/screen surface that.
   Future<InquiryDetailModel> submitEscalation(String id, String reason, {String? note}) async {

@@ -39,7 +39,10 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     super.initState();
     final args = (Get.arguments as Map?) ?? const {};
     _leadId = args['id'] as String? ?? '';
-    if (_leadId.isNotEmpty) _ctrl.loadLeadDetail(_leadId);
+    if (_leadId.isNotEmpty) {
+      _ctrl.loadLeadDetail(_leadId);
+      _ctrl.markLeadSeen(_leadId);
+    }
   }
 
   @override

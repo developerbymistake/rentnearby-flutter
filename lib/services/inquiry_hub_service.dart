@@ -80,6 +80,8 @@ class InquiryHubService extends GetxService with SingleFlightHubConnect {
       // server-anchored) alongside the full list reload.
       Get.find<InquiryController>().loadMyInquiries();
       Get.find<InquiryController>().fetchActiveCount();
+      Get.find<AgentController>().checkAgentStatus();
+      if (Get.find<AgentController>().myLeads.isNotEmpty) Get.find<AgentController>().loadMyLeads();
     });
 
     try {

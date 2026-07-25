@@ -35,6 +35,8 @@ class AgentRepository {
     return InquiryDetailModel.fromJson(data);
   }
 
+  Future<void> markLeadSeen(String id) async => ApiService.put('/agents/me/leads/$id/seen', {});
+
   Future<InquiryDetailModel?> updateLeadStatus(String id, String status, {String? note}) async {
     final res = await ApiService.put('/agents/me/leads/$id/status', {
       'status': status,
