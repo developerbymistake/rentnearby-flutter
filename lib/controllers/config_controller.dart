@@ -11,11 +11,11 @@ class ConfigController extends GetxController {
   final plotLimit = 5.obs;
   final isLoaded = false.obs;
 
-  // Payment kill-switch (GET /config/payment-feature). Defaults to true
-  // (payment required) so that before the first load completes — or if it
-  // never does — the app fails toward showing payment UI, never toward
-  // silently hiding it.
-  final paymentEnabled = true.obs;
+  // Payment kill-switch (GET /config/payment-feature). Defaults to false
+  // (no payment UI) so that before the first load completes — or if it
+  // never does — the app never flashes payment/credit UI on screen only to
+  // hide it a moment later once the real value arrives.
+  final paymentEnabled = false.obs;
   final freeGoLiveDurationDays = 30.obs;
 
   @override

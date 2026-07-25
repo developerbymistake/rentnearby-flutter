@@ -8,7 +8,6 @@ class TourKeys {
   // Home
   static final homeToggle = GlobalKey();
   static final homeManageListingsCard = GlobalKey();
-  static final homeCreditBalance = GlobalKey();
   static final homeActionMenu = GlobalKey();
   static final homeRoomsNavIcon = GlobalKey();
   static final homePlotsNavIcon = GlobalKey();

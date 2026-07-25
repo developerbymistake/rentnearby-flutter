@@ -15,7 +15,6 @@ import '../models/plot_model.dart';
 import '../services/plot_permission_service.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
-import '../widgets/credit_balance_chip.dart';
 import '../widgets/go_live_plan_sheet.dart';
 import '../widgets/go_live_submitted_dialog.dart';
 import '../widgets/go_live_success_dialog.dart';
@@ -469,9 +468,6 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                           style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
                     ]),
                     const Spacer(),
-                    Obx(() => Get.find<ConfigController>().paymentEnabled.value
-                        ? const CreditBalanceChip(color: Colors.white)
-                        : const SizedBox.shrink()),
                   ],
                 ),
                 const SizedBox(height: 14),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import '../controllers/config_controller.dart';
 import '../controllers/service_catalog_controller.dart';
 import '../navigation/tour_keys.dart';
 import 'app_constants.dart';
@@ -64,16 +63,11 @@ class TourDefinition {
   List<TourStep> get steps => stepsBuilder();
 }
 
-/// Home's credit-balance step targets the same CreditBalanceChip that Home
-/// itself hides behind ConfigController.paymentEnabled (see CreditBalanceChip
-/// call sites in home_screen.dart/my_listings_screen.dart/my_plots_screen.dart
-/// and ProfileScreen's wallet card) — the payment kill switch. When the
-/// switch is off that chip is never in the render tree, so its tour step
-/// must be omitted too, or the spotlight would target a missing key. Built
-/// as a function (like _buildServicesSteps below) rather than a static list
-/// so it re-reads the live flag every time TourController accesses `.steps`.
+/// Built as a function (like _buildServicesSteps below), even though this
+/// list is currently fixed, for consistency with the other per-tab builders
+/// and so a future Home step can freely depend on live state again without
+/// having to change the TourDefinition's shape.
 List<TourStep> _buildHomeSteps() {
-  final paymentEnabled = Get.find<ConfigController>().paymentEnabled.value;
   return [
     TourStep(
       key: TourKeys.homeToggle,
@@ -87,13 +81,6 @@ List<TourStep> _buildHomeSteps() {
       title: 'List your own place',
       body: "Got a room or plot to rent out? Manage everything you've listed right here.",
     ),
-    if (paymentEnabled)
-      TourStep(
-        key: TourKeys.homeCreditBalance,
-        icon: Iconsax.wallet_money,
-        title: 'This is your credit balance',
-        body: 'Credits are how you make a listing go live. Tap here anytime to top up.',
-      ),
     TourStep(
       key: TourKeys.homeActionMenu,
       icon: Iconsax.notification_bing,

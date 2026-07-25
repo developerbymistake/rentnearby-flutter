@@ -141,10 +141,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // Wallet
+            // Wallet — when hidden, keep the card's own top margin as a plain gap so
+            // the ACCOUNT section below (whose own Padding has zero top inset) doesn't
+            // end up flush against the header above.
             Obx(() => Get.find<ConfigController>().paymentEnabled.value
                 ? _buildWalletCard()
-                : const SizedBox.shrink()),
+                : const SizedBox(height: 20)),
 
             // Account — phone and contact-visibility, each its own independent action
             // (separate confirm/edit sheets, separate API calls). Name is edited from the
