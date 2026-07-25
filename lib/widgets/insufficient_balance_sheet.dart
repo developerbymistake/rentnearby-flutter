@@ -48,7 +48,7 @@ class InsufficientBalanceSheet extends StatelessWidget {
           Container(
             width: 60,
             height: 60,
-            decoration: BoxDecoration(color: const Color(0xFFFFF7ED), borderRadius: BorderRadius.circular(16)),
+            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
             child: const CreditIcon(size: 30),
           ),
           const SizedBox(height: 16),
