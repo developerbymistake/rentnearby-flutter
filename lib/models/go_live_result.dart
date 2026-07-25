@@ -12,6 +12,15 @@ class GoLiveSuccess extends GoLiveResult {
   GoLiveSuccess({required this.validUntil, required this.planType, required this.balance});
 }
 
+/// First-time (or never-approved) Go-Live now submits for admin review instead
+/// of activating immediately — [creditsSpent] is 0 for the free case (nothing
+/// charged), >0 for the paid case (plan already spent, refunded only on
+/// reject/delete-while-pending).
+class GoLiveSubmittedForReview extends GoLiveResult {
+  final int creditsSpent;
+  GoLiveSubmittedForReview({required this.creditsSpent});
+}
+
 /// [requiredCredits] is the price of the plan the caller attempted to activate
 /// — known client-side from the selected plan (0 is never passed here, since
 /// this outcome only occurs on the paid branch), not parsed out of the

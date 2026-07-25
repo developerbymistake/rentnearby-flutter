@@ -100,6 +100,34 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     return parts.join(', ');
   }
 
+  Widget? _buildModerationBanner(ListingModel l) {
+    if (l.isPendingReview) {
+      return _moderationBanner(color: AppColors.warning, icon: Icons.hourglass_top_rounded, text: 'Pending review');
+    }
+    if (l.isRejected) {
+      final reason = l.rejectionReason;
+      final text = reason != null && reason.isNotEmpty ? 'Rejected: $reason' : 'Rejected';
+      return _moderationBanner(color: AppColors.error, icon: Icons.cancel_rounded, text: text);
+    }
+    return null;
+  }
+
+  Widget _moderationBanner({required Color color, required IconData icon, required String text}) {
+    return Container(
+      width: double.infinity,
+      color: color,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(children: [
+        Icon(icon, size: 16, color: Colors.white),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(text,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+        ),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -234,6 +262,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   ),
           ),
         ),
+        if (_buildModerationBanner(l) != null)
+          SliverToBoxAdapter(child: _buildModerationBanner(l)!),
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -374,7 +404,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     return Obx(() => DetailActionBar(
           latitude: l.latitude,
           longitude: l.longitude,
-          ownerPhone: l.ownerPhone,
+          // An owner previewing their own listing must not see call/WhatsApp buttons
+          // targeting their own number — DetailActionBar only checks hasPhone, so this
+          // must be gated here.
+          ownerPhone: _isOwner ? null : l.ownerPhone,
           isOwner: _isOwner,
           onReport: (l.hasReported || reportCtrl.reportedListingIds.contains(l.id))
               ? null

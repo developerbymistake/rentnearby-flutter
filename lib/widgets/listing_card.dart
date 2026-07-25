@@ -15,6 +15,7 @@ class ListingCard extends StatelessWidget {
   final VoidCallback? onGoLive;
   final bool isGoLiveLoading;
   final VoidCallback? onReportsTap;
+  final VoidCallback? onPreview;
 
   const ListingCard({
     super.key,
@@ -25,6 +26,7 @@ class ListingCard extends StatelessWidget {
     this.onGoLive,
     this.isGoLiveLoading = false,
     this.onReportsTap,
+    this.onPreview,
   });
 
   @override
@@ -124,15 +126,25 @@ class ListingCard extends StatelessWidget {
   }
 
   Widget _statusBadge() {
-    final isLive = listing.isActive;
+    final String label;
+    final List<Color> colors;
+    if (listing.isActive) {
+      label = 'LIVE';
+      colors = [const Color(0xFF10B981), const Color(0xFF059669)];
+    } else if (listing.isPendingReview) {
+      label = 'PENDING';
+      colors = [const Color(0xFFF59E0B), const Color(0xFFD97706)];
+    } else if (listing.isRejected) {
+      label = 'REJECTED';
+      colors = [const Color(0xFFEF4444), const Color(0xFFDC2626)];
+    } else {
+      label = 'OFFLINE';
+      colors = [const Color(0xFF94A3B8), const Color(0xFF64748B)];
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isLive
-              ? [const Color(0xFF10B981), const Color(0xFF059669)]
-              : [const Color(0xFFF59E0B), const Color(0xFFD97706)],
-        ),
+        gradient: LinearGradient(colors: colors),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -155,7 +167,7 @@ class ListingCard extends StatelessWidget {
           ),
           const SizedBox(width: 5),
           Text(
-            isLive ? 'LIVE' : 'OFFLINE',
+            label,
             style: const TextStyle(
               fontFamily: 'Poppins',
               fontSize: 10,
@@ -268,7 +280,7 @@ class ListingCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
-          if (onDelete != null || onToggleActive != null || onGoLive != null) ...[
+          if (onDelete != null || onToggleActive != null || onGoLive != null || onPreview != null) ...[
             const SizedBox(height: 12),
             const Divider(height: 1, color: AppColors.divider),
             const SizedBox(height: 10),
@@ -282,13 +294,31 @@ class ListingCard extends StatelessWidget {
   Widget _buildActions() {
     return Row(
       children: [
-        if (!listing.isActive && onGoLive != null)
+        if (!listing.isActive && !listing.isPendingReview && !listing.isRejected && onGoLive != null)
           _makeItLiveButton()
         else if (listing.isActive && onToggleActive != null)
           _liveToggle(),
         const Spacer(),
+        if (onPreview != null) ...[
+          _previewButton(),
+          const SizedBox(width: 8),
+        ],
         if (onDelete != null) _deleteButton(),
       ],
+    );
+  }
+
+  Widget _previewButton() {
+    return IconButton(
+      onPressed: onPreview,
+      icon: const Icon(Iconsax.eye, size: 18, color: AppColors.textLight),
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      style: IconButton.styleFrom(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
     );
   }
 

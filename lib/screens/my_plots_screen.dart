@@ -17,6 +17,7 @@ import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/credit_balance_chip.dart';
 import '../widgets/go_live_plan_sheet.dart';
+import '../widgets/go_live_submitted_dialog.dart';
 import '../widgets/go_live_success_dialog.dart';
 import '../widgets/insufficient_balance_sheet.dart';
 import '../widgets/pulse_once.dart';
@@ -172,6 +173,16 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
             planType: result.planType,
             creditsSpent: spentCredits,
             validUntil: result.validUntil,
+            onDismiss: _refresh,
+          ),
+          barrierDismissible: false,
+        );
+        return false;
+      case GoLiveSubmittedForReview():
+        Get.dialog(
+          GoLiveSubmittedDialog(
+            isPlot: true,
+            creditsSpent: result.creditsSpent,
             onDismiss: _refresh,
           ),
           barrierDismissible: false,
@@ -419,6 +430,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                           'listingType': 'Plot',
                           'title': plots[i].areaDisplay,
                         }),
+                        onPreview: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': plots[i].id}),
                       ),
                     );
                   },
@@ -537,6 +549,7 @@ class _PlotCard extends StatelessWidget {
   final VoidCallback onDelete;
   final bool isGoLiveLoading;
   final VoidCallback? onReportsTap;
+  final VoidCallback? onPreview;
 
   const _PlotCard({
     required this.plot,
@@ -545,6 +558,7 @@ class _PlotCard extends StatelessWidget {
     required this.onDelete,
     this.isGoLiveLoading = false,
     this.onReportsTap,
+    this.onPreview,
   });
 
   Color _typeColor(String type) => switch (type) {
@@ -710,8 +724,10 @@ class _PlotCard extends StatelessWidget {
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                       ),
-                    ] else ...[
-                      // Inactive: show "Make it Live" button
+                    ] else if (!plot.isPendingReview && !plot.isRejected) ...[
+                      // Inactive (and never submitted, or previously approved and now
+                      // expired): show "Make it Live" button. Pending/Rejected must not
+                      // resurrect a request the backend has no resubmit path for.
                       PulseOnce(
                         child: GestureDetector(
                         onTap: isGoLiveLoading ? null : onGoLive,
@@ -755,6 +771,20 @@ class _PlotCard extends StatelessWidget {
                       ),
                     ],
                     const Spacer(),
+                    if (onPreview != null) ...[
+                      IconButton(
+                        onPressed: onPreview,
+                        icon: const Icon(Iconsax.eye, size: 18, color: AppColors.textLight),
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.surface,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     // Delete button
                     GestureDetector(
                       onTap: onDelete,
@@ -787,15 +817,25 @@ class _PlotCard extends StatelessWidget {
   }
 
   Widget _statusBadge() {
-    final isLive = plot.isActive;
+    final String label;
+    final List<Color> colors;
+    if (plot.isActive) {
+      label = 'LIVE';
+      colors = [const Color(0xFF10B981), const Color(0xFF059669)];
+    } else if (plot.isPendingReview) {
+      label = 'PENDING';
+      colors = [const Color(0xFFF59E0B), const Color(0xFFD97706)];
+    } else if (plot.isRejected) {
+      label = 'REJECTED';
+      colors = [const Color(0xFFEF4444), const Color(0xFFDC2626)];
+    } else {
+      label = 'OFFLINE';
+      colors = [const Color(0xFF94A3B8), const Color(0xFF64748B)];
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isLive
-              ? [const Color(0xFF10B981), const Color(0xFF059669)]
-              : [const Color(0xFFF59E0B), const Color(0xFFD97706)],
-        ),
+        gradient: LinearGradient(colors: colors),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 4, offset: const Offset(0, 2)),
@@ -807,7 +847,7 @@ class _PlotCard extends StatelessWidget {
           Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
           const SizedBox(width: 5),
           Text(
-            isLive ? 'LIVE' : 'OFFLINE',
+            label,
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5),
           ),
         ],
