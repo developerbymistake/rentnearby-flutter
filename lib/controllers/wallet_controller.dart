@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
-import '../models/coin_pack_model.dart';
-import '../models/coin_pack_purchase_result.dart';
-import '../models/coin_transaction_model.dart';
+import '../models/credit_pack_model.dart';
+import '../models/credit_pack_purchase_result.dart';
+import '../models/credit_transaction_model.dart';
 import '../repositories/wallet_repository.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
@@ -10,7 +10,7 @@ import '../utils/dio_error_mapper.dart';
 import 'auth_controller.dart';
 
 /// Single source of truth for "what's my balance right now" — nothing else
-/// in the app caches it separately. Also owns the coin-pack catalog, the
+/// in the app caches it separately. Also owns the credit-pack catalog, the
 /// wallet ledger's pagination state, and the reusable purchase/redeem flow
 /// (order creation + Razorpay verification + cancel, code redemption) so
 /// screens don't embed payment plumbing themselves (mirrors how the old
@@ -19,9 +19,9 @@ import 'auth_controller.dart';
 class WalletController extends GetxController {
   final balance = 0.obs;
   final isLoadingBalance = false.obs;
-  final coinPacks = <CoinPackModel>[].obs;
+  final creditPacks = <CreditPackModel>[].obs;
   final isLoadingPacks = false.obs;
-  final transactions = <CoinTransactionModel>[].obs;
+  final transactions = <CreditTransactionModel>[].obs;
   final isLoadingTransactions = false.obs;
   final hasMoreTransactions = false.obs;
   int _transactionsPage = 1;
@@ -30,7 +30,7 @@ class WalletController extends GetxController {
   void onInit() {
     super.onInit();
     loadBalance();
-    loadCoinPacks();
+    loadCreditPacks();
   }
 
   Future<void> loadBalance({bool forceRefresh = false}) async {
@@ -55,7 +55,7 @@ class WalletController extends GetxController {
     Get.find<WalletRepository>().primeBalance(newBalance);
   }
 
-  // The 100-coin welcome bonus is credited silently server-side on signup (best-effort, idempotent
+  // The 100-credit welcome bonus is credited silently server-side on signup (best-effort, idempotent
   // coupon redemption) — this is the one place that turns it into something the owner actually sees,
   // on the very first balance load after a brand-new account finishes onboarding. Consumed exactly
   // once via AuthController.justSignedUp; never fires for a returning login.
@@ -64,16 +64,16 @@ class WalletController extends GetxController {
     if (auth == null || !auth.justSignedUp) return;
     auth.justSignedUp = false;
     if (balance.value > 0) {
-      AppToast.success('🎉 ${balance.value} coins added — Welcome Bonus!');
+      AppToast.success('🎉 ${balance.value} credits added — Welcome Bonus!');
     }
   }
 
-  Future<void> loadCoinPacks() async {
+  Future<void> loadCreditPacks() async {
     isLoadingPacks.value = true;
     try {
-      coinPacks.value = await Get.find<WalletRepository>().getCoinPacks();
+      creditPacks.value = await Get.find<WalletRepository>().getCreditPacks();
     } catch (_) {
-      AppToast.error('Could not load coin packs. Pull to refresh.');
+      AppToast.error('Could not load credit packs. Pull to refresh.');
     } finally {
       isLoadingPacks.value = false;
     }
@@ -113,10 +113,10 @@ class WalletController extends GetxController {
   /// [confirmed] should only ever be true when re-submitting after the
   /// caller has already shown the user a CreateOrderRecentPurchaseDetected
   /// warning and they chose to proceed anyway.
-  Future<CreateOrderResult> createOrder(String coinPackId, {bool confirmed = false}) async {
+  Future<CreateOrderResult> createOrder(String creditPackId, {bool confirmed = false}) async {
     try {
       final res = await ApiService.post(
-          '/coin-packs/create-order', {'coinPackId': coinPackId, 'confirmed': confirmed});
+          '/credit-packs/create-order', {'creditPackId': creditPackId, 'confirmed': confirmed});
       final data = res['data'];
       if (data == null || data is! Map<String, dynamic>) {
         throw Exception('Invalid order response from server');
@@ -140,7 +140,7 @@ class WalletController extends GetxController {
         final message = (e.response?.data is Map<String, dynamic>)
             ? (e.response!.data['error']?['message'] as String?)
             : null;
-        return CreateOrderRecentPurchaseDetected(message ?? 'You recently bought coins. Buy again?');
+        return CreateOrderRecentPurchaseDetected(message ?? 'You recently bought credits. Buy again?');
       }
       final message = DioErrorMapper.toMessage(
         e,
@@ -166,7 +166,7 @@ class WalletController extends GetxController {
     required String razorpaySignature,
   }) async {
     try {
-      final res = await ApiService.post('/coin-packs/verify-payment', {
+      final res = await ApiService.post('/credit-packs/verify-payment', {
         'razorpayOrderId': razorpayOrderId,
         'razorpayPaymentId': razorpayPaymentId,
         'razorpaySignature': razorpaySignature,
@@ -178,7 +178,7 @@ class WalletController extends GetxController {
       Get.find<WalletRepository>().invalidateBalance();
       await loadBalance();
       return VerifyPaymentSuccess(
-        coinsCredited: (data['coinsCredited'] as num?)?.toInt() ?? 0,
+        creditsCredited: (data['creditsCredited'] as num?)?.toInt() ?? 0,
         newBalance: (data['newBalance'] as num?)?.toInt() ?? balance.value,
       );
     } on DioException catch (e) {
@@ -209,7 +209,7 @@ class WalletController extends GetxController {
   /// in-memory order state left). Uses only the JWT, no client-held order id.
   Future<LatestPurchaseStatus> getLatestPurchase() async {
     try {
-      final res = await ApiService.get('/coin-packs/purchases/latest');
+      final res = await ApiService.get('/credit-packs/purchases/latest');
       final data = res['data'];
       if (data == null || data is! Map<String, dynamic> || data['hasPurchase'] != true) {
         return LatestPurchaseStatus(hasPurchase: false);
@@ -226,10 +226,10 @@ class WalletController extends GetxController {
 
   /// Fire-and-forget cleanup of a PENDING purchase row — same pattern the old
   /// payment_screen.dart used against /payments/cancel-order, just pointed at
-  /// the coin-pack endpoint. Never blocks the UI.
+  /// the credit-pack endpoint. Never blocks the UI.
   Future<void> cancelOrder(String razorpayOrderId) async {
     try {
-      await ApiService.post('/coin-packs/cancel-order', {'razorpayOrderId': razorpayOrderId});
+      await ApiService.post('/credit-packs/cancel-order', {'razorpayOrderId': razorpayOrderId});
     } catch (_) {}
   }
 

@@ -8,23 +8,23 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/wallet_controller.dart';
-import '../models/coin_pack_model.dart';
-import '../models/coin_pack_purchase_result.dart';
+import '../models/credit_pack_model.dart';
+import '../models/credit_pack_purchase_result.dart';
 import '../utils/app_toast.dart';
-import '../widgets/coin_credited_dialog.dart';
-import '../widgets/coin_icon.dart';
+import '../widgets/credits_added_dialog.dart';
+import '../widgets/credit_icon.dart';
 
-/// "Buy Coins" catalog — the wallet home screen. Shows the live balance up
-/// top, a grid of purchasable coin packs (tap to drive the Razorpay purchase
+/// "Buy Credits" catalog — the wallet home screen. Shows the live balance up
+/// top, a grid of purchasable credit packs (tap to drive the Razorpay purchase
 /// flow in-place, loading state on the tapped card), and a "Transaction
 /// History" entry point into the ledger screen.
-class CoinPacksScreen extends StatefulWidget {
-  const CoinPacksScreen({super.key});
+class CreditPacksScreen extends StatefulWidget {
+  const CreditPacksScreen({super.key});
   @override
-  State<CoinPacksScreen> createState() => _CoinPacksScreenState();
+  State<CreditPacksScreen> createState() => _CreditPacksScreenState();
 }
 
-class _CoinPacksScreenState extends State<CoinPacksScreen> {
+class _CreditPacksScreenState extends State<CreditPacksScreen> {
   final _wallet = Get.find<WalletController>();
   // Disjoint on purpose: _selectedPackId survives a failed/cancelled attempt (so Pay
   // Now can just be tapped again without re-picking), _isPurchasing is transient and
@@ -33,7 +33,7 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
   String? _selectedPackId;
   bool _isPurchasing = false;
 
-  /// Set when this screen was reached from an insufficient-balance/Add-Coins
+  /// Set when this screen was reached from an insufficient-balance/Add-Credits
   /// prompt mid-Go-Live (`arguments: {'returnToGoLive': true}` — see
   /// InsufficientBalanceSheet and the shared GoLivePlanSheet). When true, a
   /// successful purchase pops this screen with `result: true` instead of
@@ -48,7 +48,7 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
     final args = Get.arguments;
     if (args is Map) _returnToGoLive = args['returnToGoLive'] == true;
     _wallet.loadBalance();
-    _wallet.loadCoinPacks();
+    _wallet.loadCreditPacks();
   }
 
   String _formatPhone(String raw) {
@@ -58,7 +58,7 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
     return raw;
   }
 
-  Future<void> _purchase(CoinPackModel pack, {bool confirmed = false}) async {
+  Future<void> _purchase(CreditPackModel pack, {bool confirmed = false}) async {
     if (_isPurchasing) return;
     setState(() => _isPurchasing = true);
 
@@ -121,7 +121,7 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
         'currency': order.currency,
         'order_id': order.orderId,
         'name': 'Bakhli',
-        'description': '${pack.totalCoins} Coins',
+        'description': '${pack.totalCredits} Credits',
         'prefill': {'contact': _formatPhone(rawPhone)},
         'theme': {'color': '#1E3A8A'},
       });
@@ -141,10 +141,10 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
   /// have landed yet); a clean rejection (bad signature, etc.) is shown
   /// immediately since retrying it can't help. Safe to retry — verify-payment
   /// is idempotent server-side. If retries are exhausted, falls back to one
-  /// GET /coin-packs/purchases/latest check (covers "the request landed, only
+  /// GET /credit-packs/purchases/latest check (covers "the request landed, only
   /// the response was lost") before finally showing an error.
   Future<void> _verifyAndShowResult({
-    required CoinPackModel pack,
+    required CreditPackModel pack,
     required String razorpayOrderId,
     required String razorpayPaymentId,
     required String razorpaySignature,
@@ -166,13 +166,13 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
     }
 
     if (result is VerifyPaymentSuccess) {
-      _showCoinCreditedDialog(pack, coinsCredited: result.coinsCredited, newBalance: result.newBalance);
+      _showCreditsAddedDialog(pack, creditsCredited: result.creditsCredited, newBalance: result.newBalance);
       return;
     }
     if (result is VerifyPaymentAlreadyProcessed) {
       // Some other path (webhook, or an earlier retry) already credited it —
       // WalletController.verifyPayment already force-refreshed balance.
-      _showCoinCreditedDialog(pack, coinsCredited: pack.totalCoins, newBalance: _wallet.balance.value);
+      _showCreditsAddedDialog(pack, creditsCredited: pack.totalCredits, newBalance: _wallet.balance.value);
       return;
     }
 
@@ -188,20 +188,20 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
     final latest = await _wallet.getLatestPurchase();
     if (latest.isSuccess) {
       await _wallet.loadBalance(forceRefresh: true);
-      _showCoinCreditedDialog(pack, coinsCredited: pack.totalCoins, newBalance: _wallet.balance.value);
+      _showCreditsAddedDialog(pack, creditsCredited: pack.totalCredits, newBalance: _wallet.balance.value);
       return;
     }
     AppToast.error(
       'Could not confirm your payment due to a network issue. If the amount was deducted, '
-      "it will be automatically credited within a few minutes — check 'Buy Coins' again shortly.",
+      "it will be automatically credited within a few minutes — check 'Buy Credits' again shortly.",
     );
   }
 
-  void _showCoinCreditedDialog(CoinPackModel pack, {required int coinsCredited, required int newBalance}) {
+  void _showCreditsAddedDialog(CreditPackModel pack, {required int creditsCredited, required int newBalance}) {
     if (!mounted) return;
     Get.dialog(
-      CoinCreditedDialog(
-        coinsCredited: coinsCredited,
+      CreditsAddedDialog(
+        creditsCredited: creditsCredited,
         newBalance: newBalance,
         continueLabel: _returnToGoLive ? 'Continue to Go Live' : 'Done',
         onDismiss: _returnToGoLive ? () => Get.back(result: true) : null,
@@ -233,7 +233,7 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
           Expanded(
             child: Obx(() {
               final loading = _wallet.isLoadingPacks.value;
-              final packs = _wallet.coinPacks;
+              final packs = _wallet.creditPacks;
               if (loading && packs.isEmpty) return _buildShimmer();
               if (packs.isEmpty) return _buildEmpty();
 
@@ -241,10 +241,10 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
                 color: AppColors.primary,
                 onRefresh: () async {
                   _wallet.loadBalance(forceRefresh: true);
-                  await _wallet.loadCoinPacks();
+                  await _wallet.loadCreditPacks();
                 },
                 child: ListView.separated(
-                  // Single-column full-width rows (icon left, coins+bonus middle, price right,
+                  // Single-column full-width rows (icon left, credits+bonus middle, price right,
                   // "Best Value" as a corner tag) — matches the approved mockup exactly; a 2-column
                   // grid of centered cards was never what was designed.
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + AppInsets.bottomViewPadding(context)),
@@ -281,7 +281,7 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
                     onPressed: () => Get.back(),
                     icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
                   ),
-                  const Text('Buy Coins',
+                  const Text('Buy Credits',
                       style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
                   const Spacer(),
                   GestureDetector(
@@ -311,12 +311,12 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(children: [
-                    const CoinIcon(size: 22),
+                    const CreditIcon(size: 22),
                     const SizedBox(width: 10),
                     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       const Text('Your Balance', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: Colors.white70)),
                       Obx(() => Text(
-                            '${_wallet.balance.value} coins',
+                            '${_wallet.balance.value} credits',
                             style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
                           )),
                     ]),
@@ -348,7 +348,7 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
   // actually prevents a duplicate order, not this button's enabled state.
   Widget _buildPayNowBar() {
     return Obx(() {
-      final selectedPack = _wallet.coinPacks.firstWhereOrNull((p) => p.id == _selectedPackId);
+      final selectedPack = _wallet.creditPacks.firstWhereOrNull((p) => p.id == _selectedPackId);
       final canPay = selectedPack != null && !_isPurchasing;
       return Container(
         padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + AppInsets.bottomViewPadding(context)),
@@ -410,10 +410,10 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
             width: 90,
             height: 90,
             decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
-            child: const CoinIcon(size: 40),
+            child: const CreditIcon(size: 40),
           ),
           const SizedBox(height: 20),
-          const Text('No coin packs available',
+          const Text('No credit packs available',
               style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           const SizedBox(height: 8),
           const Text('Please check back later.',
@@ -437,7 +437,7 @@ class _CoinPacksScreenState extends State<CoinPacksScreen> {
 }
 
 class _PackCard extends StatelessWidget {
-  final CoinPackModel pack;
+  final CreditPackModel pack;
   final bool isSelected;
   final bool disabled;
   final VoidCallback onTap;
@@ -483,7 +483,7 @@ class _PackCard extends StatelessWidget {
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      const CoinIcon(size: 40),
+                      const CreditIcon(size: 40),
                       if (isSelected)
                         Positioned(
                           bottom: -2,
@@ -504,12 +504,12 @@ class _PackCard extends StatelessWidget {
                   const SizedBox(width: 13),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${pack.totalCoins} coins',
+                      Text('${pack.totalCredits} credits',
                           style: const TextStyle(fontFamily: 'Poppins', fontSize: 15.5, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                       const SizedBox(height: 1),
                       Opacity(
-                        opacity: pack.bonusCoins > 0 ? 1 : 0,
-                        child: Text('+${pack.bonusCoins} bonus coins',
+                        opacity: pack.bonusCredits > 0 ? 1 : 0,
+                        child: Text('+${pack.bonusCredits} bonus credits',
                             style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.success)),
                       ),
                     ]),

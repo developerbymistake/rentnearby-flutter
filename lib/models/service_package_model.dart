@@ -5,7 +5,7 @@ import 'inclusion_model.dart';
 /// RentNearBy.Core.DTOs.Responses.ServicePackageDto field-for-field.
 ///
 /// Pricing semantics (confirmed, copied field-for-field from the entity's
-/// own doc comment — NOT the same role assignment as CoinPlan/
+/// own doc comment — NOT the same role assignment as CreditPlan/
 /// go_live_plan_sheet.dart, where the naming is reversed):
 ///   - price == null            -> "Get Custom Quote" (Diet Plans/Financial
 ///     Planning packages never render a rupee amount).

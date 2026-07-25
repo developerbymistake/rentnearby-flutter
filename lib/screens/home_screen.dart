@@ -14,7 +14,7 @@ import '../controllers/service_catalog_controller.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
 import '../widgets/category_card.dart';
-import '../widgets/coin_balance_chip.dart';
+import '../widgets/credit_balance_chip.dart';
 import '../widgets/service_zone.dart';
 import '../widgets/sliding_chip_toggle.dart';
 
@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }),
               ),
-              CoinBalanceChip(key: TourKeys.homeCoinBalance, color: Colors.white),
+              CreditBalanceChip(key: TourKeys.homeCreditBalance, color: Colors.white),
             ],
           ),
           const SizedBox(height: 16),

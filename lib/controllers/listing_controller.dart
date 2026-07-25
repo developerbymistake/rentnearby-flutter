@@ -201,11 +201,11 @@ class ListingController extends GetxController {
 
   /// POST /listings/{id}/go-live. Pass [planType] null for a free
   /// reactivation of a listing still within its previously-paid ValidUntil
-  /// window; pass it (and the coin cost of that plan, so an
+  /// window; pass it (and the credit cost of that plan, so an
   /// INSUFFICIENT_BALANCE result can report it) when going live for the
   /// first time or after expiry. On success, refreshes myListings and the
   /// wallet balance (a spend just happened).
-  Future<GoLiveResult> goLive(String listingId, {String? planType, int requiredCoins = 0}) async {
+  Future<GoLiveResult> goLive(String listingId, {String? planType, int requiredCredits = 0}) async {
     try {
       isLoading.value = true;
       final res = await ApiService.post('/listings/$listingId/go-live', {'planType': planType});
@@ -245,7 +245,7 @@ class ListingController extends GetxController {
         // the caller reads WalletController.balance.value synchronously right after this returns.
         Get.find<WalletRepository>().invalidateBalance();
         await Get.find<WalletController>().loadBalance();
-        return GoLiveInsufficientBalance(message: message ?? 'Insufficient balance.', requiredCoins: requiredCoins);
+        return GoLiveInsufficientBalance(message: message ?? 'Insufficient balance.', requiredCredits: requiredCredits);
       }
       if (status == 409 && type == 'CONCURRENT_UPDATE') {
         return GoLiveConcurrentUpdate(message ?? 'This listing was just modified by another request. Please retry.');

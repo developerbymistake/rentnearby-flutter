@@ -4,7 +4,7 @@ import '../config/app_colors.dart';
 import '../controllers/wallet_controller.dart';
 import '../models/plan_selection_result.dart';
 import '../utils/app_toast.dart';
-import 'coin_icon.dart';
+import 'credit_icon.dart';
 import 'pulse_once.dart';
 
 /// The one shared Go-Live plan picker — used identically by Room and Plot
@@ -34,8 +34,8 @@ class GoLivePlanSheet {
 
     // Affordability is computed client-side against the live wallet balance
     // (read once — a fresh sheet is opened whenever the balance can have
-    // changed, e.g. after a coin top-up) so each row can render its own
-    // Select-vs-Add-Coins state instead of only discovering a shortfall
+    // changed, e.g. after a credit top-up) so each row can render its own
+    // Select-vs-Add-Credits state instead of only discovering a shortfall
     // reactively from a 409 INSUFFICIENT_BALANCE after the network call.
     final walletBalance = Get.find<WalletController>().balance.value;
     String? selectedType = visiblePlans
@@ -69,7 +69,7 @@ class GoLivePlanSheet {
             maxHeightFraction: 0.86,
             child: confirming
                 ? _ConfirmSpendView(
-                    coins: selOrigPrice,
+                    credits: selOrigPrice,
                     days: selDays,
                     accentColor: accentColor,
                     onCancel: () => setS(() => confirming = false),
@@ -84,7 +84,7 @@ class GoLivePlanSheet {
                     unitPlural: unitPlural,
                     accentColor: accentColor,
                     onSelect: (raw) => setS(() => selectedType = raw),
-                    onAddCoins: () => Navigator.pop(ctx, PlanSelectionAddCoins()),
+                    onAddCredits: () => Navigator.pop(ctx, PlanSelectionAddCredits()),
                     onContinue: selectedPlan == null
                         ? null
                         : () {
@@ -93,7 +93,7 @@ class GoLivePlanSheet {
                               return;
                             }
                             // Distinct "Confirm Spend" moment, folded into this
-                            // same sheet — the coin debit must not fire until
+                            // same sheet — the credit debit must not fire until
                             // the owner explicitly confirms the exact spend.
                             setS(() => confirming = true);
                           },
@@ -146,7 +146,7 @@ class _PlanListView extends StatelessWidget {
   final String unitPlural;
   final Color accentColor;
   final ValueChanged<String> onSelect;
-  final VoidCallback onAddCoins;
+  final VoidCallback onAddCredits;
   final VoidCallback? onContinue;
 
   const _PlanListView({
@@ -158,7 +158,7 @@ class _PlanListView extends StatelessWidget {
     required this.unitPlural,
     required this.accentColor,
     required this.onSelect,
-    required this.onAddCoins,
+    required this.onAddCredits,
     required this.onContinue,
   });
 
@@ -191,7 +191,7 @@ class _PlanListView extends StatelessWidget {
               const Text('Wallet balance',
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFFB45309))),
               Row(mainAxisSize: MainAxisSize.min, children: [
-                const CoinIcon(size: 16),
+                const CreditIcon(size: 16),
                 const SizedBox(width: 5),
                 Text('$walletBalance',
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFFB45309))),
@@ -277,15 +277,15 @@ class _PlanListView extends StatelessWidget {
                                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
                             if (!afford) ...[
                               const SizedBox(height: 4),
-                              Text('Need $shortfall more coin${shortfall == 1 ? '' : 's'}',
+                              Text('Need $shortfall more credit${shortfall == 1 ? '' : 's'}',
                                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.error)),
                             ],
                           ]),
                         ),
                         const SizedBox(width: 8),
                         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                          if (hasDiscount) _coinAmount(normalPrice, color: AppColors.textLight, size: 12, strikethrough: true),
-                          _coinAmount(origPrice, color: origPrice == 0 ? AppColors.success : accentColor),
+                          if (hasDiscount) _creditAmount(normalPrice, color: AppColors.textLight, size: 12, strikethrough: true),
+                          _creditAmount(origPrice, color: origPrice == 0 ? AppColors.success : accentColor),
                           if (!afford) ...[
                             const SizedBox(height: 6),
                             // Same zoom-in/zoom-out pulse as the "Make it Live" button
@@ -294,11 +294,11 @@ class _PlanListView extends StatelessWidget {
                             // so draw the eye to it the same way.
                             PulseOnce(
                               child: GestureDetector(
-                                onTap: onAddCoins,
+                                onTap: onAddCredits,
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                   decoration: BoxDecoration(color: AppColors.warning, borderRadius: BorderRadius.circular(8)),
-                                  child: const Text('Add Coins',
+                                  child: const Text('Add Credits',
                                       style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
                                 ),
                               ),
@@ -344,9 +344,9 @@ class _PlanListView extends StatelessWidget {
     );
   }
 
-  Widget _coinAmount(int amount, {required Color color, double size = 16, bool strikethrough = false}) {
+  Widget _creditAmount(int amount, {required Color color, double size = 16, bool strikethrough = false}) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      CoinIcon(size: size),
+      CreditIcon(size: size),
       const SizedBox(width: 4),
       Text(
         '$amount',
@@ -363,14 +363,14 @@ class _PlanListView extends StatelessWidget {
 }
 
 class _ConfirmSpendView extends StatelessWidget {
-  final int coins;
+  final int credits;
   final int days;
   final Color accentColor;
   final VoidCallback onCancel;
   final VoidCallback onConfirm;
 
   const _ConfirmSpendView({
-    required this.coins,
+    required this.credits,
     required this.days,
     required this.accentColor,
     required this.onCancel,
@@ -386,14 +386,14 @@ class _ConfirmSpendView extends StatelessWidget {
           width: 56,
           height: 56,
           decoration: BoxDecoration(color: const Color(0xFFFFF7ED), borderRadius: BorderRadius.circular(16)),
-          child: const CoinIcon(size: 30),
+          child: const CreditIcon(size: 30),
         ),
         const SizedBox(height: 14),
         const Text('Confirm Spend',
             style: TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark)),
         const SizedBox(height: 8),
         Text(
-          'Spend $coins coins to go live for $days days?',
+          'Spend $credits credits to go live for $days days?',
           textAlign: TextAlign.center,
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, color: AppColors.textMedium, height: 1.5),
         ),

@@ -322,7 +322,7 @@ class NotificationService extends GetxService {
     AppRoutes.plotDetail,
     AppRoutes.addListing,
     AppRoutes.addPlot,
-    AppRoutes.coinPacks,
+    AppRoutes.creditPacks,
     AppRoutes.redeemCode,
     AppRoutes.walletLedger,
     AppRoutes.listingReports,

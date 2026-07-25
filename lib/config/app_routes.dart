@@ -16,7 +16,7 @@ import '../screens/listing_reports_screen.dart';
 import '../screens/report_detail_screen.dart';
 import '../screens/my_filed_reports_screen.dart';
 import '../screens/view_all_screen.dart';
-import '../screens/coin_packs_screen.dart';
+import '../screens/credit_packs_screen.dart';
 import '../screens/redeem_code_screen.dart';
 import '../screens/wallet_ledger_screen.dart';
 import '../screens/service_category_grid_screen.dart';
@@ -51,7 +51,7 @@ class AppRoutes {
   static const String myFiledReports = '/my-filed-reports';
   static const String viewAllRooms = '/view-all-rooms';
   static const String viewAllPlots = '/view-all-plots';
-  static const String coinPacks = '/coin-packs';
+  static const String creditPacks = '/credit-packs';
   static const String redeemCode = '/redeem-code';
   static const String walletLedger = '/wallet-ledger';
 
@@ -155,8 +155,8 @@ class AppRoutes {
       transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
-      name: coinPacks,
-      page: () => const CoinPacksScreen(),
+      name: creditPacks,
+      page: () => const CreditPacksScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

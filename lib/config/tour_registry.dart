@@ -131,10 +131,10 @@ final Map<int, TourDefinition> tourRegistry = {
         body: "Got a room or plot to rent out? Manage everything you've listed right here.",
       ),
       TourStep(
-        key: TourKeys.homeCoinBalance,
-        icon: Iconsax.coin,
-        title: 'This is your coin balance',
-        body: 'Coins are how you make a listing go live. Tap here anytime to top up.',
+        key: TourKeys.homeCreditBalance,
+        icon: Iconsax.wallet_money,
+        title: 'This is your credit balance',
+        body: 'Credits are how you make a listing go live. Tap here anytime to top up.',
       ),
       TourStep(
         key: TourKeys.homeActionMenu,

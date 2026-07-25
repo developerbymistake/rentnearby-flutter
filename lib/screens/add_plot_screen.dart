@@ -714,7 +714,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     if (mounted) setState(() => _isFinalizing = true);
     try {
       // A newly created plot is always inactive (server-enforced) — Go Live
-      // (spending coins or a free reactivation) happens later from My Plots,
+      // (spending credits or a free reactivation) happens later from My Plots,
       // never automatically here.
       await _ctrl.loadMyPlots(reset: true);
       if (mounted) Get.back();

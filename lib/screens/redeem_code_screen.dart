@@ -3,12 +3,12 @@ import 'package:get/get.dart';
 import '../config/app_colors.dart';
 import '../controllers/wallet_controller.dart';
 import '../utils/input_formatters.dart';
-import '../widgets/coin_credited_dialog.dart';
+import '../widgets/credits_added_dialog.dart';
 import '../widgets/gradient_button.dart';
 
 /// Simple text-field + submit screen for redeeming a promo/coupon code —
-/// calls WalletController.redeemCode and shows the same coin-credited
-/// success moment as a coin-pack purchase on success. Errors surface via
+/// calls WalletController.redeemCode and shows the same credits-added
+/// success moment as a credit-pack purchase on success. Errors surface via
 /// AppToast (WalletController.redeemCode already toasts the exact
 /// server-provided message), matching this app's existing error-display
 /// convention rather than an inline error box.
@@ -41,8 +41,8 @@ class _RedeemCodeScreenState extends State<RedeemCodeScreen> {
 
       final campaignLabel = data['campaignLabel'] as String?;
       Get.dialog(
-        CoinCreditedDialog(
-          coinsCredited: (data['coinsCredited'] as num?)?.toInt() ?? 0,
+        CreditsAddedDialog(
+          creditsCredited: (data['creditsCredited'] as num?)?.toInt() ?? 0,
           newBalance: (data['newBalance'] as num?)?.toInt() ?? _wallet.balance.value,
           title: campaignLabel != null && campaignLabel.isNotEmpty ? campaignLabel : 'Code Redeemed!',
           onDismiss: () => _codeCtrl.clear(),
@@ -79,7 +79,7 @@ class _RedeemCodeScreenState extends State<RedeemCodeScreen> {
                         const Text('Have a code?',
                             style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                         const SizedBox(height: 6),
-                        const Text('Enter a promo or redeem code to add coins to your wallet.',
+                        const Text('Enter a promo or redeem code to add credits to your wallet.',
                             style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight, height: 1.5)),
                         const SizedBox(height: 20),
                         TextField(

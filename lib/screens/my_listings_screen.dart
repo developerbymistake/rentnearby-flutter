@@ -15,7 +15,7 @@ import '../models/plan_selection_result.dart';
 import '../services/listing_permission_service.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
-import '../widgets/coin_balance_chip.dart';
+import '../widgets/credit_balance_chip.dart';
 import '../widgets/go_live_plan_sheet.dart';
 import '../widgets/go_live_success_dialog.dart';
 import '../widgets/insufficient_balance_sheet.dart';
@@ -119,7 +119,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                               style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
                         ]),
                         const Spacer(),
-                        const CoinBalanceChip(color: Colors.white),
+                        const CreditBalanceChip(color: Colors.white),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -331,14 +331,14 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         // Free reactivation — owner turned it off, is turning it back on
         // before the previously-paid window expired. No plan dialog needed.
         final result = await _ctrl.goLive(listing.id);
-        if (mounted) await _handleGoLiveResult(result, spentCoins: 0);
+        if (mounted) await _handleGoLiveResult(result, spentCredits: 0);
         return;
       }
 
-      // Loop rather than a single pass: picking "Add Coins" on an
+      // Loop rather than a single pass: picking "Add Credits" on an
       // unaffordable row (or hitting a 409 INSUFFICIENT_BALANCE despite the
       // client-side check, e.g. balance changed elsewhere) routes to
-      // CoinPacksScreen and, on a successful purchase, comes back here to
+      // CreditPacksScreen and, on a successful purchase, comes back here to
       // reopen the plan sheet against the refreshed balance — same loading
       // state (`_goLiveLoadingId`) held the whole way through instead of a
       // fragile recursive re-entry into this method.
@@ -355,8 +355,8 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         );
         if (selection == null) return; // "Maybe Later" / dismissed
 
-        if (selection is PlanSelectionAddCoins) {
-          final toppedUp = await Get.toNamed(AppRoutes.coinPacks, arguments: {'returnToGoLive': true});
+        if (selection is PlanSelectionAddCredits) {
+          final toppedUp = await Get.toNamed(AppRoutes.creditPacks, arguments: {'returnToGoLive': true});
           if (toppedUp == true && mounted) continue;
           return;
         }
@@ -364,9 +364,9 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         final selectedPlan = (selection as PlanSelected).plan;
         final planType = selectedPlan['planType'] as String? ?? '';
         final price = (selectedPlan['originalPrice'] as num?)?.toInt() ?? 0;
-        final result = await _ctrl.goLive(listing.id, planType: planType, requiredCoins: price);
+        final result = await _ctrl.goLive(listing.id, planType: planType, requiredCredits: price);
         if (!mounted) return;
-        final retry = await _handleGoLiveResult(result, spentCoins: price);
+        final retry = await _handleGoLiveResult(result, spentCredits: price);
         if (retry && mounted) continue;
         return;
       }
@@ -378,14 +378,14 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   /// Returns true when the caller should loop back and re-show the plan
   /// sheet (owner topped up from the insufficient-balance sheet and wants to
   /// resume), false for every other outcome.
-  Future<bool> _handleGoLiveResult(GoLiveResult result, {required int spentCoins}) async {
+  Future<bool> _handleGoLiveResult(GoLiveResult result, {required int spentCredits}) async {
     switch (result) {
       case GoLiveSuccess():
         Get.dialog(
           GoLiveSuccessDialog(
             isPlot: false,
             planType: result.planType,
-            coinsSpent: spentCoins,
+            creditsSpent: spentCredits,
             validUntil: result.validUntil,
             onDismiss: _refresh,
           ),
@@ -396,7 +396,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         if (!mounted) return false;
         return InsufficientBalanceSheet.show(
           context,
-          required: g.requiredCoins,
+          required: g.requiredCredits,
           current: Get.find<WalletController>().balance.value,
         );
       case GoLiveConcurrentUpdate g:
@@ -472,7 +472,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     );
   }
 
-  // Coins are only "at risk" while the paid ValidUntil window hasn't lapsed yet — reactivating
+  // Credits are only "at risk" while the paid ValidUntil window hasn't lapsed yet — reactivating
   // within that window is free, so a paused (isActive: false) listing can still be sitting on
   // unused paid days that a delete would forfeit. isActive alone would miss that case.
   bool _hasUnusedPaidWindow(ListingModel listing) =>
@@ -530,7 +530,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                               Expanded(
                                 child: Text(
                                   'You still have unused paid days on this listing. Deleting it '
-                                  'will not refund the coins you spent — they will be lost.',
+                                  'will not refund the credits you spent — they will be lost.',
                                   style: TextStyle(
                                       fontFamily: 'Poppins',
                                       fontSize: 12.5,

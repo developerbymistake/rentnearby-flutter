@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
-import 'coin_icon.dart';
+import 'credit_icon.dart';
 
 /// The one shared bottom sheet used identically by Room and Plot Go-Live
 /// whenever a spend attempt returns INSUFFICIENT_BALANCE — parameterized by
 /// the numbers, never duplicated per listing kind. This is the single most
-/// important UX moment in the coin economy: a clear "Recharge" call-to-
+/// important UX moment in the credit economy: a clear "Recharge" call-to-
 /// action, not just a toast.
 class InsufficientBalanceSheet extends StatelessWidget {
   final int required;
@@ -49,16 +49,16 @@ class InsufficientBalanceSheet extends StatelessWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(color: const Color(0xFFFFF7ED), borderRadius: BorderRadius.circular(16)),
-            child: const CoinIcon(size: 30),
+            child: const CreditIcon(size: 30),
           ),
           const SizedBox(height: 16),
           const Text(
-            'Not Enough Coins',
+            'Not Enough Credits',
             style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
           ),
           const SizedBox(height: 8),
           Text(
-            'This plan costs $required coins. Top up $shortfall more to continue.',
+            'This plan costs $required credits. Top up $shortfall more to continue.',
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
             textAlign: TextAlign.center,
           ),
@@ -75,11 +75,11 @@ class InsufficientBalanceSheet extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () async {
-                // Stay open behind the coin-packs route rather than popping
-                // first — that way the purchase result (see CoinPacksScreen's
+                // Stay open behind the credit-packs route rather than popping
+                // first — that way the purchase result (see CreditPacksScreen's
                 // `returnToGoLive` handling) can be relayed on through this
                 // sheet's own Navigator.pop, and show() above resolves it.
-                final result = await Get.toNamed(AppRoutes.coinPacks, arguments: {'returnToGoLive': true});
+                final result = await Get.toNamed(AppRoutes.creditPacks, arguments: {'returnToGoLive': true});
                 if (context.mounted) Navigator.pop(context, result == true);
               },
               icon: const Icon(Icons.bolt_rounded, size: 16),
