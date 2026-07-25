@@ -11,7 +11,7 @@ import '../models/inquiry_status_history_model.dart';
 import '../utils/app_date_format.dart';
 import '../utils/inquiry_status.dart';
 
-enum _StepState { completed, active, pending, terminalNegative }
+enum _StepState { completed, active, pending }
 
 /// The Agent-facing mirror of InquiryDetailScreen — same summary card and
 /// status stepper (InquiryStatus/_StepTile reused as-is, generic over
@@ -19,10 +19,9 @@ enum _StepState { completed, active, pending, terminalNegative }
 /// an agent needs: the customer's name/mobile/message), but swaps the
 /// consumer's read-only "Assigned Agent" card for a Contact Customer card
 /// (Call/WhatsApp against the lead's own mobile) plus a genuinely new
-/// status-update control. Matches AdminUpdateInquiryStatus's permissiveness
-/// (no enforced state machine) rather than inventing new transition rules —
-/// buttons just offer the natural forward step plus the two terminal
-/// branches, same shape the stepper itself already draws.
+/// status-update control. Buttons just offer the single natural forward step
+/// at each stage (Submitted -> Contacted -> Closed), mirroring the backend's
+/// transition table.
 class LeadDetailScreen extends StatefulWidget {
   const LeadDetailScreen({super.key});
 
@@ -102,7 +101,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                       _buildSectionTitle('Contact Customer'),
                       const SizedBox(height: 10),
                       _buildContactCard(detail),
-                      if (!InquiryStatus.isTerminalNegative(detail.status) && detail.status != InquiryStatus.confirmed) ...[
+                      if (detail.status != InquiryStatus.closed) ...[
                         const SizedBox(height: 20),
                         _buildSectionTitle('Update Status'),
                         const SizedBox(height: 10),
@@ -211,7 +210,6 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
 
   Widget _buildStatusTimeline(InquiryDetailModel detail) {
     final steps = InquiryStatus.steps;
-    final isNegativeTerminal = InquiryStatus.isTerminalNegative(detail.status);
     final currentIndex = steps.indexOf(detail.status);
     final reached = detail.statusHistory.map((h) => h.status).toSet();
 
@@ -227,21 +225,11 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
           for (int i = 0; i < steps.length; i++)
             _StepTile(
               label: steps[i],
-              state: isNegativeTerminal
-                  ? (reached.contains(steps[i]) ? _StepState.completed : _StepState.pending)
-                  : (i < currentIndex
-                      ? _StepState.completed
-                      : (i == currentIndex ? _StepState.active : _StepState.pending)),
-              isLast: i == steps.length - 1 && !isNegativeTerminal,
+              state: i < currentIndex
+                  ? _StepState.completed
+                  : (i == currentIndex ? _StepState.active : _StepState.pending),
+              isLast: i == steps.length - 1,
               timestampText: reached.contains(steps[i]) ? AppDateFormat.dateTime(_historyFor(detail, steps[i])!.createdAt) : null,
-            ),
-          if (isNegativeTerminal)
-            _StepTile(
-              label: detail.status,
-              state: _StepState.terminalNegative,
-              isLast: true,
-              timestampText: _historyFor(detail, detail.status) != null ? AppDateFormat.dateTime(_historyFor(detail, detail.status)!.createdAt) : null,
-              note: _historyFor(detail, detail.status)?.note,
             ),
         ],
       ),
@@ -340,21 +328,19 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     );
   }
 
-  // Reject was dropped deliberately — it was functionally identical to Cancel everywhere in this
-  // codebase (same color, same backend transition rules, no distinct downstream behavior) with no
-  // documented reason to keep both as separate agent-facing actions. Backend/admin untouched —
-  // Rejected remains a valid status generally, just no longer offered as a button here.
+  // Only one forward step is ever offered at each stage, mirroring the backend's transition table:
+  // Submitted can only move to Contacted (no direct Submitted->Closed), and Contacted can only move
+  // to Closed. Cancel/Reject were dropped entirely — the lead pipeline no longer distinguishes why a
+  // lead ended, just that it's Closed.
   List<(String label, String status, Color color)> _nextStatusOptions(String current) {
     if (current == InquiryStatus.submitted) {
       return [
         ('Mark Contacted', InquiryStatus.contacted, AppColors.warning),
-        ('Cancel', InquiryStatus.cancelled, AppColors.error),
       ];
     }
     if (current == InquiryStatus.contacted) {
       return [
-        ('Mark Confirmed', InquiryStatus.confirmed, AppColors.success),
-        ('Cancel', InquiryStatus.cancelled, AppColors.error),
+        ('Mark Closed', InquiryStatus.closed, AppColors.success),
       ];
     }
     return const [];
@@ -418,9 +404,9 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     );
   }
 
-  // Mark Contacted is a routine forward step — fires instantly, same as before. Confirmed/Cancelled
-  // are more consequential (one is the terminal happy-path, the other ends the lead entirely), so
-  // both now route through a confirmation dialog first rather than firing on a single tap.
+  // Mark Contacted is a routine forward step — fires instantly. Mark Closed is more consequential
+  // (it ends the lead entirely), so it routes through a confirmation dialog first rather than
+  // firing on a single tap.
   void _handleStatusTap((String, String, Color) opt) {
     final copy = _confirmationCopy(opt.$2);
     if (copy == null) {
@@ -431,18 +417,11 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
   }
 
   ({String title, String message, String confirmLabel})? _confirmationCopy(String status) {
-    if (status == InquiryStatus.confirmed) {
+    if (status == InquiryStatus.closed) {
       return (
-        title: 'Mark as Confirmed?',
-        message: 'Are you sure you want to mark this lead as Confirmed?',
-        confirmLabel: 'Yes, Confirm',
-      );
-    }
-    if (status == InquiryStatus.cancelled) {
-      return (
-        title: 'Cancel this Lead?',
-        message: 'Are you sure you want to cancel this lead?',
-        confirmLabel: 'Yes, Cancel Lead',
+        title: 'Mark as Closed?',
+        message: 'Are you sure you want to mark this lead as Closed?',
+        confirmLabel: 'Yes, Close Lead',
       );
     }
     return null;
@@ -545,15 +524,13 @@ class _StepTile extends StatelessWidget {
   final _StepState state;
   final bool isLast;
   final String? timestampText;
-  final String? note;
 
-  const _StepTile({required this.label, required this.state, required this.isLast, this.timestampText, this.note});
+  const _StepTile({required this.label, required this.state, required this.isLast, this.timestampText});
 
   Color get _dotColor => switch (state) {
         _StepState.completed => AppColors.success,
         _StepState.active => AppColors.primary,
         _StepState.pending => AppColors.divider,
-        _StepState.terminalNegative => AppColors.error,
       };
 
   Color get _labelColor => state == _StepState.pending ? AppColors.textLight : AppColors.textDark;
@@ -574,12 +551,8 @@ class _StepTile extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: _dotColor, width: 2),
                 ),
-                child: state == _StepState.completed || state == _StepState.terminalNegative
-                    ? Icon(
-                        state == _StepState.terminalNegative ? Icons.close_rounded : Icons.check_rounded,
-                        size: 14,
-                        color: Colors.white,
-                      )
+                child: state == _StepState.completed
+                    ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
                     : null,
               ),
               if (!isLast) Expanded(child: Container(width: 2, color: AppColors.divider)),
@@ -597,10 +570,6 @@ class _StepTile extends StatelessWidget {
                   if (timestampText != null) ...[
                     const SizedBox(height: 2),
                     Text(timestampText!, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                  ],
-                  if (note != null && note!.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Text(note!, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textMedium, fontStyle: FontStyle.italic)),
                   ],
                 ],
               ),

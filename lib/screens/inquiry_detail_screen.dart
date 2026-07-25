@@ -15,14 +15,12 @@ import '../utils/inquiry_status.dart';
 import '../utils/role_label_format.dart';
 import '../widgets/escalate_inquiry_sheet.dart';
 
-enum _StepState { completed, active, pending, terminalNegative }
+enum _StepState { completed, active, pending }
 
 /// Full Inquiry Detail — a vertical status stepper (Submitted -> Contacted
-/// -> Confirmed, with Cancelled/Rejected as terminal red branches off that
-/// path rather than steps on it) plus an assigned-Agent card with two
-/// genuinely separate Call/WhatsApp buttons (agent.phone vs
-/// agent.whatsAppNumber are confirmed-separate fields — never one combined
-/// button).
+/// -> Closed) plus an assigned-Agent card with two genuinely separate
+/// Call/WhatsApp buttons (agent.phone vs agent.whatsAppNumber are
+/// confirmed-separate fields — never one combined button).
 class InquiryDetailScreen extends StatefulWidget {
   const InquiryDetailScreen({super.key});
 
@@ -216,7 +214,6 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
 
   Widget _buildStatusTimeline(InquiryDetailModel detail) {
     final steps = InquiryStatus.steps;
-    final isNegativeTerminal = InquiryStatus.isTerminalNegative(detail.status);
     final currentIndex = steps.indexOf(detail.status);
     final reached = detail.statusHistory.map((h) => h.status).toSet();
 
@@ -232,21 +229,11 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
           for (int i = 0; i < steps.length; i++)
             _StepTile(
               label: steps[i],
-              state: isNegativeTerminal
-                  ? (reached.contains(steps[i]) ? _StepState.completed : _StepState.pending)
-                  : (i < currentIndex
-                      ? _StepState.completed
-                      : (i == currentIndex ? _StepState.active : _StepState.pending)),
-              isLast: i == steps.length - 1 && !isNegativeTerminal,
+              state: i < currentIndex
+                  ? _StepState.completed
+                  : (i == currentIndex ? _StepState.active : _StepState.pending),
+              isLast: i == steps.length - 1,
               timestampText: reached.contains(steps[i]) ? AppDateFormat.dateTime(_historyFor(detail, steps[i])!.createdAt) : null,
-            ),
-          if (isNegativeTerminal)
-            _StepTile(
-              label: detail.status,
-              state: _StepState.terminalNegative,
-              isLast: true,
-              timestampText: _historyFor(detail, detail.status) != null ? AppDateFormat.dateTime(_historyFor(detail, detail.status)!.createdAt) : null,
-              note: _historyFor(detail, detail.status)?.note,
             ),
         ],
       ),
@@ -498,15 +485,13 @@ class _StepTile extends StatelessWidget {
   final _StepState state;
   final bool isLast;
   final String? timestampText;
-  final String? note;
 
-  const _StepTile({required this.label, required this.state, required this.isLast, this.timestampText, this.note});
+  const _StepTile({required this.label, required this.state, required this.isLast, this.timestampText});
 
   Color get _dotColor => switch (state) {
         _StepState.completed => AppColors.success,
         _StepState.active => AppColors.primary,
         _StepState.pending => AppColors.divider,
-        _StepState.terminalNegative => AppColors.error,
       };
 
   Color get _labelColor => state == _StepState.pending ? AppColors.textLight : AppColors.textDark;
@@ -527,12 +512,8 @@ class _StepTile extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: _dotColor, width: 2),
                 ),
-                child: state == _StepState.completed || state == _StepState.terminalNegative
-                    ? Icon(
-                        state == _StepState.terminalNegative ? Icons.close_rounded : Icons.check_rounded,
-                        size: 14,
-                        color: Colors.white,
-                      )
+                child: state == _StepState.completed
+                    ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
                     : null,
               ),
               if (!isLast) Expanded(child: Container(width: 2, color: AppColors.divider)),
@@ -550,10 +531,6 @@ class _StepTile extends StatelessWidget {
                   if (timestampText != null) ...[
                     const SizedBox(height: 2),
                     Text(timestampText!, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                  ],
-                  if (note != null && note!.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Text(note!, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textMedium, fontStyle: FontStyle.italic)),
                   ],
                 ],
               ),
