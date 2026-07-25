@@ -29,6 +29,10 @@ class TermsOfServiceScreen extends StatelessWidget {
             'Bakhli helps property owners reach genuine prospective tenants by giving their listings visibility to people actively searching for accommodation nearby. For those looking for a place to stay, Bakhli makes it simple to discover available rooms and plots in their area — with the ability to view photos, location, rent, and contact the owner directly.\n\nBakhli is a digital service that enables property owners across India to list rental accommodation and allows individuals to discover properties available near them. Bakhli is neither a broker nor an agent. All rental arrangements, negotiations, and agreements take place directly and exclusively between the property owner and the prospective tenant.',
           ),
           _sectionBody(
+            'Local Services and Inquiries',
+            'In addition to room and plot listings, Bakhli allows users to submit inquiries ("leads") for local services — such as travel, event, or consultation services — offered by independent service providers ("Agents") listed on the platform. Submitting an inquiry is entirely free of charge.\n\nBakhli\'s role is strictly limited to connecting you with the relevant Agent. Bakhli does not participate in, charge for, process payment for, or take any commission on any service, booking, or transaction that may follow. All such arrangements, negotiations, and payments take place directly and exclusively between you and the Agent, entirely outside of Bakhli. Bakhli does not verify, endorse, or guarantee the quality, safety, or legitimacy of any Agent or service listed, and bears no responsibility for the outcome of any interaction or arrangement with an Agent.',
+          ),
+          _sectionBody(
             'Eligibility',
             'Bakhli is designed for individuals who are 18 years of age or older. By creating an account, you confirm that you meet this age requirement.',
           ),
