@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
-import 'coin_icon.dart';
+import 'credit_icon.dart';
 
-/// Shown after a successful POST /{listings|plots}/{id}/go-live — the coin-
+/// Shown after a successful POST /{listings|plots}/{id}/go-live — the credit-
 /// economy replacement for the old razorpay PaymentSuccessDialog. Covers
-/// both a paid plan activation ([coinsSpent] > 0) and a free reactivation
-/// within an already-paid window ([coinsSpent] == 0, [planType] null).
+/// both a paid plan activation ([creditsSpent] > 0) and a free reactivation
+/// within an already-paid window ([creditsSpent] == 0, [planType] null).
 class GoLiveSuccessDialog extends StatefulWidget {
   final bool isPlot;
   final String? planType;
-  final int coinsSpent;
+  final int creditsSpent;
   final DateTime? validUntil;
   final VoidCallback onDismiss;
 
   const GoLiveSuccessDialog({
     required this.isPlot,
     this.planType,
-    this.coinsSpent = 0,
+    this.creditsSpent = 0,
     this.validUntil,
     required this.onDismiss,
     super.key,
@@ -69,7 +69,7 @@ class _GoLiveSuccessDialogState extends State<GoLiveSuccessDialog> with TickerPr
 
   @override
   Widget build(BuildContext context) {
-    final isFree = widget.coinsSpent == 0;
+    final isFree = widget.creditsSpent == 0;
     final color = widget.isPlot ? AppColors.plot : AppColors.success;
     final lightColor = widget.isPlot ? const Color(0xFFFFF7ED) : const Color(0xFFECFDF5);
 
@@ -114,9 +114,9 @@ class _GoLiveSuccessDialogState extends State<GoLiveSuccessDialog> with TickerPr
             const SizedBox(height: 18),
             Row(children: [
               _statBox(
-                icon: const CoinIcon(size: 16),
-                label: 'Coins Spent',
-                value: isFree ? 'FREE' : '${widget.coinsSpent}',
+                icon: const CreditIcon(size: 16),
+                label: 'Credits Spent',
+                value: isFree ? 'FREE' : '${widget.creditsSpent}',
                 color: color,
                 lightColor: lightColor,
               ),

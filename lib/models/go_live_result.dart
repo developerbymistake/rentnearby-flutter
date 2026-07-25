@@ -12,15 +12,15 @@ class GoLiveSuccess extends GoLiveResult {
   GoLiveSuccess({required this.validUntil, required this.planType, required this.balance});
 }
 
-/// [requiredCoins] is the price of the plan the caller attempted to activate
+/// [requiredCredits] is the price of the plan the caller attempted to activate
 /// — known client-side from the selected plan (0 is never passed here, since
 /// this outcome only occurs on the paid branch), not parsed out of the
 /// server's message string. Paired with the caller's live wallet balance to
 /// drive InsufficientBalanceSheet.
 class GoLiveInsufficientBalance extends GoLiveResult {
   final String message;
-  final int requiredCoins;
-  GoLiveInsufficientBalance({required this.message, required this.requiredCoins});
+  final int requiredCredits;
+  GoLiveInsufficientBalance({required this.message, required this.requiredCredits});
 }
 
 class GoLiveConcurrentUpdate extends GoLiveResult {

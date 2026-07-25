@@ -658,7 +658,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     if (mounted) setState(() => _isFinalizing = true);
     try {
       // A newly created listing is always inactive (server-enforced) — Go
-      // Live (spending coins or a free reactivation) happens later from My
+      // Live (spending credits or a free reactivation) happens later from My
       // Rooms, never automatically here.
       await _ctrl.loadMyListings();
       if (mounted) Get.back();

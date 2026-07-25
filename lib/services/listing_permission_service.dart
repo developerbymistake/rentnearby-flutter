@@ -19,7 +19,7 @@ class ListingLimitReached extends ListingPermissionResult {
 /// There is no more per-user free-vs-paid tier — everyone shares the same
 /// cap — and no "upgrade plan to raise your cap" concept, so this collapses
 /// to a 3-case result instead of the old 5-case one. Whether a listing is
-/// *live* (paid via coins) is a separate, later question — see
+/// *live* (paid via credits) is a separate, later question — see
 /// ListingController.goLive.
 class ListingPermissionService {
   final ListingController _ctrl;

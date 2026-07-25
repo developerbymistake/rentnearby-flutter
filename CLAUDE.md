@@ -147,15 +147,15 @@ topic subscriptions (`district_<id>`), kept in sync with `LocationController.sel
 comments in `NotificationService._handleNotificationTap`/`_navigateToChatConversation` before changing
 navigation-on-tap behavior.
 
-**Coin economy (replaces the old membership/payment model)**: there is no more per-listing membership
-entity and no more free-vs-paid tier on listing *creation*. Users buy coins (Razorpay packs, redeem
-codes, or admin credit) into a wallet, then spend coins to "Go Live" on a specific Room/Plot listing.
+**Credit economy (replaces the old membership/payment model)**: there is no more per-listing membership
+entity and no more free-vs-paid tier on listing *creation*. Users buy credits (Razorpay packs, redeem
+codes, or admin credit) into a wallet, then spend credits to "Go Live" on a specific Room/Plot listing.
 A listing's own `isActive`/`validUntil` fields are the only per-listing state — deactivating and
 reactivating within the same paid window is free (`ListingController.toggleActive`/
 `PlotController.toggleActive`, deactivation only now — the backend 400s a PUT that tries to set
 `isActive: true`, directing callers to Go Live instead); going live after expiry (or for the first
-time) costs coins per a chosen plan (`GET /listings/plans` or `/plots/plans`, unchanged endpoints, now
-priced in coins not rupees) via `ListingController.goLive`/`PlotController.goLivePlot`
+time) costs credits per a chosen plan (`GET /listings/plans` or `/plots/plans`, unchanged endpoints, now
+priced in credits not rupees) via `ListingController.goLive`/`PlotController.goLivePlot`
 (`POST /{listings|plots}/{id}/go-live`). Both return a `GoLiveResult` (`lib/models/go_live_result.dart`)
 so callers can branch on `GoLiveInsufficientBalance` specifically to open the shared
 `InsufficientBalanceSheet` (`lib/widgets/insufficient_balance_sheet.dart`) rather than just toasting.
@@ -168,19 +168,19 @@ so callers can branch on `GoLiveInsufficientBalance` specifically to open the sh
   new listing is `Allowed`, `NeedsDistrict`, or `LimitReached(cap)` — a 3-case sealed result, don't duplicate
   this gating logic in screens. This is entirely separate from whether a listing is *live* (see above).
 - **Wallet**: `WalletController`/`WalletRepository` (`lib/controllers/wallet_controller.dart`,
-  `lib/repositories/wallet_repository.dart`) are the single source of truth for the user's live coin
-  balance (`GET /wallet/balance`, 30s TTL), the coin-pack catalog (`GET /coin-packs/`, 5min TTL), and the
+  `lib/repositories/wallet_repository.dart`) are the single source of truth for the user's live credit
+  balance (`GET /wallet/balance`, 30s TTL), the credit-pack catalog (`GET /credit-packs/`, 5min TTL), and the
   paginated transaction ledger (`GET /wallet/transactions`, uncached). `WalletController` also owns the
   reusable purchase flow (create-order → Razorpay → verify-payment → cancel-order, same Razorpay SDK
-  mechanism the old payment flow used, just pointed at coin packs) and `redeemCode()`. Call
+  mechanism the old payment flow used, just pointed at credit packs) and `redeemCode()`. Call
   `WalletController.loadBalance()` (or let `goLive`/`goLivePlot`/`verifyPayment`/`redeemCode` do it for
-  you — they already do) after anything that credits or debits coins so the balance stays live everywhere;
-  nothing else should cache balance separately. `CoinBalanceChip` (`lib/widgets/coin_balance_chip.dart`) is
+  you — they already do) after any balance-changing spend or credit so the balance stays live everywhere;
+  nothing else should cache balance separately. `CreditBalanceChip` (`lib/widgets/credit_balance_chip.dart`) is
   the reusable balance pill dropped into My Rooms and My Plots. Profile has its own bespoke wallet card
-  (`ProfileScreen._buildWalletCard`) instead — balance + Buy Coins button + a "more ways to spend coins are
-  coming soon" note that doesn't fit the shared chip's shape.
-- **Screens**: `CoinPacksScreen` (buy coins + entry points to redeem/history), `RedeemCodeScreen`,
-  `WalletLedgerScreen` — reachable via `AppRoutes.coinPacks`/`redeemCode`/`walletLedger`.
+  (`ProfileScreen._buildWalletCard`) instead — balance + Buy Credits button, since it doesn't fit the shared
+  chip's shape.
+- **Screens**: `CreditPacksScreen` (buy credits + entry points to redeem/history), `RedeemCodeScreen`,
+  `WalletLedgerScreen` — reachable via `AppRoutes.creditPacks`/`redeemCode`/`walletLedger`.
 - Both `Get.put(ConfigRepository())`/`Get.put(ConfigController())` and
   `Get.put(WalletRepository())`/`Get.put(WalletController())` are registered in `MainScreen.initState()`
   alongside `ListingRepository`/`PlotRepository`.
@@ -198,7 +198,7 @@ Detail's "Plan" vs "Package" noun switches on `serviceCategoryFormType == kFormT
 (`utils/inquiry_form_fields.dart`). `InquiryModel` (`serviceName`/`serviceCategoryName`/
 `servicePackageName`) powers the category badge on inquiry/lead rows. A consumer submits an `Inquiry`
 (a "lead") against a `Service`/`ServicePackage` via `InquiryController.submitInquiry()`, which has
-**no coin/wallet parameter** — this is a free lead-generation flow, unrelated to the coin economy
+**no credit/wallet parameter** — this is a free lead-generation flow, unrelated to the credit economy
 below; every Consultation (Yoga & Diet) package renders "Get Custom Quote" (the team quotes offline).
 `InquiryContactSheet` lets a consumer submit under a different name/mobile (e.g. booking for someone
 else).
@@ -224,8 +224,8 @@ so tap-routing is generic, not a per-type switch. This inbox is refreshed on-dem
 live over SignalR — a deliberate choice per its own code comment (keeping a 5th hub connection out of the
 lazy-hub pattern above wasn't judged worth it for this feature yet).
 
-**Payments**: Razorpay (`razorpay_flutter`) — the coin-pack purchase flow drives the `Razorpay()` SDK
-directly inline from `CoinPacksScreen._purchase`, calling `WalletController.createOrder`/`verifyPayment`/
+**Payments**: Razorpay (`razorpay_flutter`) — the credit-pack purchase flow drives the `Razorpay()` SDK
+directly inline from `CreditPacksScreen._purchase`, calling `WalletController.createOrder`/`verifyPayment`/
 `cancelOrder` around it (order creation and verification happen server-side; the SDK only drives the
 native checkout UI and reports success/failure via callbacks). `lib/services/razorpay_service.dart`
 (`RazorpayPaymentService`) predates this and is unused by both the old and new flow — a callback wrapper

@@ -1,32 +1,32 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
-import 'coin_icon.dart';
+import 'credit_icon.dart';
 
-/// "N coins added to your wallet" — the coin-purchase/redeem-code equivalent
+/// "N credits added to your wallet" — the credit-purchase/redeem-code equivalent
 /// of the old PaymentSuccessDialog, minus the plan-shaped fields (planType/
-/// days/maxRooms) that don't apply to a plain coin credit. Shares the same
+/// days/maxRooms) that don't apply to a plain credit top-up. Shares the same
 /// scale-in check + auto-dismiss-countdown visual language as the original.
-class CoinCreditedDialog extends StatefulWidget {
-  final int coinsCredited;
+class CreditsAddedDialog extends StatefulWidget {
+  final int creditsCredited;
   final int newBalance;
   final String title;
   final VoidCallback? onDismiss;
   final String continueLabel;
 
-  const CoinCreditedDialog({
-    required this.coinsCredited,
+  const CreditsAddedDialog({
+    required this.creditsCredited,
     required this.newBalance,
-    this.title = 'Coins Added!',
+    this.title = 'Credits Added!',
     this.onDismiss,
     this.continueLabel = 'Done',
     super.key,
   });
 
   @override
-  State<CoinCreditedDialog> createState() => _CoinCreditedDialogState();
+  State<CreditsAddedDialog> createState() => _CreditsAddedDialogState();
 }
 
-class _CoinCreditedDialogState extends State<CoinCreditedDialog> with TickerProviderStateMixin {
+class _CreditsAddedDialogState extends State<CreditsAddedDialog> with TickerProviderStateMixin {
   late AnimationController _scaleCtrl;
   late AnimationController _progressCtrl;
   int _seconds = 3;
@@ -81,7 +81,7 @@ class _CoinCreditedDialogState extends State<CoinCreditedDialog> with TickerProv
                 width: 68,
                 height: 68,
                 decoration: const BoxDecoration(color: lightColor, shape: BoxShape.circle),
-                child: const CoinIcon(size: 38),
+                child: const CreditIcon(size: 38),
               ),
             ),
             const SizedBox(height: 14),
@@ -98,7 +98,7 @@ class _CoinCreditedDialogState extends State<CoinCreditedDialog> with TickerProv
                 border: Border.all(color: color.withValues(alpha: 0.35)),
               ),
               child: Text(
-                '+${widget.coinsCredited} coins',
+                '+${widget.creditsCredited} credits',
                 style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, fontFamily: 'Poppins', color: color),
               ),
             ),
@@ -111,7 +111,7 @@ class _CoinCreditedDialogState extends State<CoinCreditedDialog> with TickerProv
                 const Text('New Balance', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
                 const SizedBox(height: 4),
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const CoinIcon(size: 18),
+                  const CreditIcon(size: 18),
                   const SizedBox(width: 6),
                   Text(
                     '${widget.newBalance}',

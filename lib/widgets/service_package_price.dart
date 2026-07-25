@@ -7,7 +7,7 @@ import '../config/app_colors.dart';
 /// go_live_plan_sheet.dart's `_PlanListView` — but note the field roles are
 /// NOT copied verbatim, because ServicePackage's Price/OriginalPrice are the
 /// conventional way round (Price = current/charged, OriginalPrice = "was"),
-/// the opposite of how CoinPlan's Price/OriginalPrice happen to be used
+/// the opposite of how CreditPlan's Price/OriginalPrice happen to be used
 /// there. See ServicePackageModel's doc comment.
 ///
 /// Used by both the Service Detail package-preview cards and the full

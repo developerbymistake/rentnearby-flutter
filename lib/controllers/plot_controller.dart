@@ -204,7 +204,7 @@ class PlotController extends GetxController {
   }
 
   /// POST /plots/{id}/go-live — exact mirror of ListingController.goLive.
-  Future<GoLiveResult> goLivePlot(String plotId, {String? planType, int requiredCoins = 0}) async {
+  Future<GoLiveResult> goLivePlot(String plotId, {String? planType, int requiredCredits = 0}) async {
     try {
       isLoading.value = true;
       final res = await ApiService.post('/plots/$plotId/go-live', {'planType': planType});
@@ -241,7 +241,7 @@ class PlotController extends GetxController {
         // must be awaited.
         Get.find<WalletRepository>().invalidateBalance();
         await Get.find<WalletController>().loadBalance();
-        return GoLiveInsufficientBalance(message: message ?? 'Insufficient balance.', requiredCoins: requiredCoins);
+        return GoLiveInsufficientBalance(message: message ?? 'Insufficient balance.', requiredCredits: requiredCredits);
       }
       if (status == 409 && type == 'CONCURRENT_UPDATE') {
         return GoLiveConcurrentUpdate(message ?? 'This plot was just modified by another request. Please retry.');

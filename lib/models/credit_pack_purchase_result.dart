@@ -1,5 +1,5 @@
-/// Outcome of WalletController.createOrder — lets CoinPacksScreen branch on
-/// "user recently bought coins" specifically (show a confirm dialog) instead
+/// Outcome of WalletController.createOrder — lets CreditPacksScreen branch on
+/// "user recently bought credits" specifically (show a confirm dialog) instead
 /// of just toasting a generic error. Mirrors the GoLiveResult pattern
 /// (lib/models/go_live_result.dart).
 sealed class CreateOrderResult {}
@@ -30,14 +30,14 @@ class CreateOrderFailure extends CreateOrderResult {
 sealed class VerifyPaymentResult {}
 
 class VerifyPaymentSuccess extends VerifyPaymentResult {
-  final int coinsCredited;
+  final int creditsCredited;
   final int newBalance;
-  VerifyPaymentSuccess({required this.coinsCredited, required this.newBalance});
+  VerifyPaymentSuccess({required this.creditsCredited, required this.newBalance});
 }
 
 /// Another path (the webhook, or an earlier attempt of this same call) already
 /// credited this exact purchase — treat as success, but there's no fresh
-/// coinsCredited/newBalance here; caller should force-refresh balance.
+/// creditsCredited/newBalance here; caller should force-refresh balance.
 class VerifyPaymentAlreadyProcessed extends VerifyPaymentResult {}
 
 /// isNetworkError distinguishes "worth retrying" (timeout/connection drop)

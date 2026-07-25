@@ -1,7 +1,7 @@
 /// One append-only ledger entry in an Inquiry's status timeline — mirrors
 /// RentNearBy.Core.DTOs.Responses.InquiryStatusHistoryDto field-for-field.
 /// Embedded inside InquiryDetailModel.statusHistory, never fetched standalone
-/// (matches CoinTransactionModel's shape, not a separately-paginated list).
+/// (matches CreditTransactionModel's shape, not a separately-paginated list).
 class InquiryStatusHistoryModel {
   final String id;
   final String inquiryId;

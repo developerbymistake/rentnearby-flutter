@@ -5,7 +5,7 @@ import '../config/app_colors.dart';
 /// Single source of truth for the Inquiry pipeline's 5 confirmed states
 /// (Submitted|Contacted|Confirmed|Cancelled|Rejected, admin-controlled only)
 /// — status pill color/icon on My Inquiries rows, and the vertical stepper
-/// on Inquiry Detail. Mirrors CoinTransactionModel.label()/icon()'s
+/// on Inquiry Detail. Mirrors CreditTransactionModel.label()/icon()'s
 /// switch-on-raw-backend-string convention rather than a separate enum, so
 /// an unrecognized/future status degrades to a neutral pill instead of
 /// crashing.

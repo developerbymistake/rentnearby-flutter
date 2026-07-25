@@ -4,7 +4,7 @@ import '../services/api_service.dart';
 
 /// Thin wrapper around the consumer inquiry endpoints (`/inquiries/...`) —
 /// deliberately uncached (matches WalletRepository's transactions ledger,
-/// not its balance/coin-pack caches): an inquiry's status is exactly the
+/// not its balance/credit-pack caches): an inquiry's status is exactly the
 /// kind of value that must never be served stale, and the list/detail reads
 /// here are only ever hit once per screen visit anyway.
 class InquiryRepository {

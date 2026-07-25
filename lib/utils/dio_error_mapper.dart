@@ -11,7 +11,7 @@ class DioErrorMapper {
   /// True for a genuine connectivity failure (timeout, dropped connection,
   /// DNS/socket-level issue reported as connectionError) — as opposed to a
   /// clean HTTP response the server chose to send (4xx/5xx). Callers that
-  /// want to retry-on-transient-failure (e.g. coin-pack verify-payment)
+  /// want to retry-on-transient-failure (e.g. credit-pack verify-payment)
   /// should gate on this, not on "any exception at all" — retrying a clean
   /// rejection (bad signature, etc.) wastes calls without helping. Does NOT
   /// include sendTimeout in the original 3-type check this was extracted

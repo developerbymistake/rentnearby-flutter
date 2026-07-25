@@ -1,18 +1,18 @@
-import '../models/coin_pack_model.dart';
-import '../models/coin_transaction_model.dart';
+import '../models/credit_pack_model.dart';
+import '../models/credit_transaction_model.dart';
 import '../services/api_service.dart';
 import '../utils/ttl_cache.dart';
 
-/// Thin TTL-caching wrapper around the wallet/coin-pack read endpoints —
+/// Thin TTL-caching wrapper around the wallet/credit-pack read endpoints —
 /// mirrors ListingRepository's style. Balance gets a short TTL since it
-/// changes on every spend/credit; the coin-pack catalog is admin-managed and
+/// changes on every spend/credit; the credit-pack catalog is admin-managed and
 /// barely changes, so it gets a long TTL; transactions are a paginated list
 /// and are never cached — always fetched fresh.
 class WalletRepository {
   int? _balanceCache;
   DateTime? _balanceCacheTime;
 
-  List<CoinPackModel>? _packsCache;
+  List<CreditPackModel>? _packsCache;
   DateTime? _packsCacheTime;
 
   static const _shortTtl = Duration(seconds: 30);
@@ -48,20 +48,20 @@ class WalletRepository {
     _balanceCacheTime = DateTime.now();
   }
 
-  Future<List<CoinPackModel>> getCoinPacks() async {
+  Future<List<CreditPackModel>> getCreditPacks() async {
     if (_packsCache != null && isCacheValid(_packsCacheTime, _longTtl)) {
       return _packsCache!;
     }
-    final res = await ApiService.get('/coin-packs/');
+    final res = await ApiService.get('/credit-packs/');
     final list = (res['data'] as List? ?? [])
-        .map((e) => CoinPackModel.fromJson(e as Map<String, dynamic>))
+        .map((e) => CreditPackModel.fromJson(e as Map<String, dynamic>))
         .toList();
     _packsCache = list;
     _packsCacheTime = DateTime.now();
     return list;
   }
 
-  Future<({List<CoinTransactionModel> items, bool hasMore})> getTransactions({
+  Future<({List<CreditTransactionModel> items, bool hasMore})> getTransactions({
     int page = 1,
     int pageSize = 20,
     String? reason,
@@ -71,7 +71,7 @@ class WalletRepository {
     final res = await ApiService.get('/wallet/transactions', params: params);
     final data = res['data'] as Map<String, dynamic>? ?? {};
     final items = (data['items'] as List? ?? [])
-        .map((e) => CoinTransactionModel.fromJson(e as Map<String, dynamic>))
+        .map((e) => CreditTransactionModel.fromJson(e as Map<String, dynamic>))
         .toList();
     return (items: items, hasMore: data['hasMore'] == true);
   }

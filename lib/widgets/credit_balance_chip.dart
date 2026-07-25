@@ -3,19 +3,19 @@ import 'package:get/get.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/wallet_controller.dart';
-import 'coin_icon.dart';
+import 'credit_icon.dart';
 
-/// Small reusable pill showing the user's live coin balance — Obx-wrapped
+/// Small reusable pill showing the user's live credit balance — Obx-wrapped
 /// around WalletController.balance so it stays live across the app without
-/// each call site needing its own listener. Tap navigates to the Coin Packs
+/// each call site needing its own listener. Tap navigates to the Credit Packs
 /// (wallet home) screen. [color] lets callers on a dark gradient header
 /// (e.g. My Rooms/My Plots) pass Colors.white; defaults to AppColors.primary
 /// for light backgrounds (e.g. Profile).
-class CoinBalanceChip extends StatelessWidget {
+class CreditBalanceChip extends StatelessWidget {
   final Color? color;
   final EdgeInsetsGeometry padding;
 
-  const CoinBalanceChip({
+  const CreditBalanceChip({
     super.key,
     this.color,
     this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -25,7 +25,7 @@ class CoinBalanceChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = color ?? AppColors.primary;
     return GestureDetector(
-      onTap: () => Get.toNamed(AppRoutes.coinPacks),
+      onTap: () => Get.toNamed(AppRoutes.creditPacks),
       child: Obx(() {
         final wallet = Get.find<WalletController>();
         return Container(
@@ -38,7 +38,7 @@ class CoinBalanceChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CoinIcon(size: 16),
+              const CreditIcon(size: 16),
               const SizedBox(width: 6),
               Text(
                 wallet.isLoadingBalance.value && wallet.balance.value == 0

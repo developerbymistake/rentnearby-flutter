@@ -14,8 +14,8 @@ class PlanSelected extends PlanSelectionResult {
   PlanSelected(this.plan);
 }
 
-/// User tapped "Add Coins" on an unaffordable plan row instead of selecting
-/// one. Caller should route to CoinPacksScreen (with `returnToGoLive: true`)
+/// User tapped "Add Credits" on an unaffordable plan row instead of selecting
+/// one. Caller should route to CreditPacksScreen (with `returnToGoLive: true`)
 /// and, if the purchase completes, reopen GoLivePlanSheet — it will
 /// re-evaluate affordability against the refreshed wallet balance.
-class PlanSelectionAddCoins extends PlanSelectionResult {}
+class PlanSelectionAddCredits extends PlanSelectionResult {}

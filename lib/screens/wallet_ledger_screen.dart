@@ -4,12 +4,12 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../controllers/wallet_controller.dart';
-import '../models/coin_transaction_model.dart';
+import '../models/credit_transaction_model.dart';
 import '../utils/app_date_format.dart';
 
 /// Earned/Spent are a pure client-side partition of `amount > 0` vs
 /// `amount < 0` on whatever page(s) of the paginated ledger are already
-/// loaded — `CoinTransactionModel.amount` is already signed, and "Earned"
+/// loaded — `CreditTransactionModel.amount` is already signed, and "Earned"
 /// legitimately spans several backend reason codes (RECHARGE, COUPON_REDEEM,
 /// WELCOME_BONUS, ADMIN_CREDIT) so a single-reason backend filter wouldn't
 /// be correct anyway. Only "All" ever needs a network fetch (which already
@@ -31,7 +31,7 @@ class _WalletLedgerScreenState extends State<WalletLedgerScreen> {
   final _scrollCtrl = ScrollController();
   _LedgerFilter _filter = _LedgerFilter.all;
 
-  List<CoinTransactionModel> _applyFilter(List<CoinTransactionModel> items) {
+  List<CreditTransactionModel> _applyFilter(List<CreditTransactionModel> items) {
     switch (_filter) {
       case _LedgerFilter.all:
         return items;
@@ -123,7 +123,7 @@ class _WalletLedgerScreenState extends State<WalletLedgerScreen> {
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('Transaction History',
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
-                Obx(() => Text('Balance: ${_wallet.balance.value} coins',
+                Obx(() => Text('Balance: ${_wallet.balance.value} credits',
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Colors.white70))),
               ]),
             ],
@@ -180,7 +180,7 @@ class _WalletLedgerScreenState extends State<WalletLedgerScreen> {
           const Text('No transactions yet',
               style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           const SizedBox(height: 8),
-          const Text('Your coin activity will show up here.',
+          const Text('Your credit activity will show up here.',
               style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
         ]),
       );
@@ -194,7 +194,7 @@ class _WalletLedgerScreenState extends State<WalletLedgerScreen> {
             child: const Icon(Icons.filter_alt_off_rounded, size: 40, color: AppColors.primaryLight),
           ),
           const SizedBox(height: 20),
-          Text(_filter == _LedgerFilter.earned ? 'No earned coins yet' : 'No spends yet',
+          Text(_filter == _LedgerFilter.earned ? 'No earned credits yet' : 'No spends yet',
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           const SizedBox(height: 8),
           const Text('Switch tabs or pull to refresh.',
@@ -218,7 +218,7 @@ class _WalletLedgerScreenState extends State<WalletLedgerScreen> {
 }
 
 class _TransactionTile extends StatelessWidget {
-  final CoinTransactionModel txn;
+  final CreditTransactionModel txn;
   final String dateText;
 
   const _TransactionTile({required this.txn, required this.dateText});
@@ -242,14 +242,14 @@ class _TransactionTile extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(color: amountColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-            child: Icon(CoinTransactionModel.icon(txn.reason), size: 18, color: amountColor),
+            child: Icon(CreditTransactionModel.icon(txn.reason), size: 18, color: amountColor),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(CoinTransactionModel.label(txn.reason),
+                Text(CreditTransactionModel.label(txn.reason),
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                 const SizedBox(height: 3),
                 Text(dateText, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),

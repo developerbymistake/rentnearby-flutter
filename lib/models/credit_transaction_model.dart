@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 /// A single wallet ledger row (GET /wallet/transactions). [amount] is signed
 /// — positive for a credit, negative for a debit — matching the backend
 /// contract directly rather than splitting into separate credit/debit fields.
-class CoinTransactionModel {
+class CreditTransactionModel {
   final String id;
   final int amount;
   final String reason;
@@ -12,7 +12,7 @@ class CoinTransactionModel {
   final String? note;
   final DateTime createdAt;
 
-  CoinTransactionModel({
+  CreditTransactionModel({
     required this.id,
     required this.amount,
     required this.reason,
@@ -22,7 +22,7 @@ class CoinTransactionModel {
     required this.createdAt,
   });
 
-  factory CoinTransactionModel.fromJson(Map<String, dynamic> json) => CoinTransactionModel(
+  factory CreditTransactionModel.fromJson(Map<String, dynamic> json) => CreditTransactionModel(
         id: json['id'] as String,
         amount: (json['amount'] as num?)?.toInt() ?? 0,
         reason: json['reason'] as String? ?? '',
@@ -38,7 +38,7 @@ class CoinTransactionModel {
   /// string never leaks into the wallet ledger UI. Unknown/future reasons
   /// fall back to the raw string rather than crashing.
   static String label(String reason) => switch (reason) {
-        'RECHARGE' => 'Coin Recharge',
+        'RECHARGE' => 'Credit Recharge',
         'COUPON_REDEEM' => 'Code Redeemed',
         'WELCOME_BONUS' => 'Welcome Bonus',
         'ROOM_GOLIVE' => 'Room Go Live',

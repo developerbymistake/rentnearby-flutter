@@ -30,7 +30,7 @@ class AuthController extends GetxController {
 
   // Set right after a brand-new account finishes onboarding, consumed exactly once by
   // WalletController's first loadBalance() on MainScreen mount — that's what turns the
-  // silent server-side welcome-bonus credit into a one-time "100 coins added!" toast,
+  // silent server-side welcome-bonus credit into a one-time "100 credits added!" toast,
   // without a dedicated backend endpoint for it. Never true for a returning login.
   bool justSignedUp = false;
 
