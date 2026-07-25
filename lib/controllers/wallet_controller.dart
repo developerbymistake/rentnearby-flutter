@@ -72,7 +72,10 @@ class WalletController extends GetxController {
     isLoadingPacks.value = true;
     try {
       creditPacks.value = await Get.find<WalletRepository>().getCreditPacks();
-    } catch (_) {
+    } catch (e) {
+      // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown
+      // its own toast + redirected — see InquiryController.loadMyInquiries for the same guard.
+      if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error('Could not load credit packs. Pull to refresh.');
     } finally {
       isLoadingPacks.value = false;
@@ -95,7 +98,8 @@ class WalletController extends GetxController {
         transactions.addAll(result.items);
       }
       hasMoreTransactions.value = result.hasMore;
-    } catch (_) {
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error('Could not load transactions. Pull to refresh.');
     } finally {
       isLoadingTransactions.value = false;

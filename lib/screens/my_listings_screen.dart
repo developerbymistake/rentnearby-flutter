@@ -119,48 +119,44 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                               style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
                         ]),
                         const Spacer(),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        onTap: _isAddingRoom ? null : _onAddRoom,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.12),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: _isAddingRoom
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: AppColors.primary),
-                                )
-                              : const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
-                                    SizedBox(width: 4),
-                                    Text('Add Room',
-                                        style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.primary)),
-                                  ],
+                        GestureDetector(
+                          onTap: _isAddingRoom ? null : _onAddRoom,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.12),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
                                 ),
+                              ],
+                            ),
+                            child: _isAddingRoom
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: AppColors.primary),
+                                  )
+                                : const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
+                                      SizedBox(width: 4),
+                                      Text('Add Room',
+                                          style: TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.primary)),
+                                    ],
+                                  ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ],
                 ),

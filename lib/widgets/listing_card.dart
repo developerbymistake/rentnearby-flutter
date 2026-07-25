@@ -131,12 +131,6 @@ class ListingCard extends StatelessWidget {
     if (listing.isActive) {
       label = 'LIVE';
       colors = [const Color(0xFF10B981), const Color(0xFF059669)];
-    } else if (listing.isPendingReview) {
-      label = 'PENDING';
-      colors = [const Color(0xFFF59E0B), const Color(0xFFD97706)];
-    } else if (listing.isRejected) {
-      label = 'REJECTED';
-      colors = [const Color(0xFFEF4444), const Color(0xFFDC2626)];
     } else {
       label = 'OFFLINE';
       colors = [const Color(0xFF94A3B8), const Color(0xFF64748B)];
@@ -297,7 +291,11 @@ class ListingCard extends StatelessWidget {
         if (!listing.isActive && !listing.isPendingReview && !listing.isRejected && onGoLive != null)
           _makeItLiveButton()
         else if (listing.isActive && onToggleActive != null)
-          _liveToggle(),
+          _liveToggle()
+        else if (listing.isPendingReview)
+          _pendingReviewBadge()
+        else if (listing.isRejected)
+          _rejectedBadge(),
         const Spacer(),
         if (onPreview != null) ...[
           _previewButton(),
@@ -398,6 +396,60 @@ class ListingCard extends StatelessWidget {
         ),
       ),
     ));
+  }
+
+  Widget _pendingReviewBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Iconsax.clock, size: 14, color: Color(0xFFD97706)),
+          SizedBox(width: 6),
+          Text(
+            'In Review',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFFD97706),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _rejectedBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFECACA)),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Iconsax.close_circle, size: 14, color: AppColors.error),
+          SizedBox(width: 6),
+          Text(
+            'Rejected',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.error,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _liveToggle() {

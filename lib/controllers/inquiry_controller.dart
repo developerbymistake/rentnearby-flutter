@@ -104,7 +104,10 @@ class InquiryController extends GetxController {
       // rather than clobbering currentDetail out from under whichever screen is now open.
       if (requestId != _detailRequestId) return;
       if (detail != null) applyStatusUpdate(detail: detail);
-    } catch (_) {
+    } catch (e) {
+      // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown
+      // its own toast + redirected — see loadMyInquiries for the same guard.
+      if (e is DioException && e.response?.statusCode == 401) return;
       if (requestId == _detailRequestId) AppToast.error('Could not load inquiry details.');
     } finally {
       if (requestId == _detailRequestId) isLoadingDetail.value = false;

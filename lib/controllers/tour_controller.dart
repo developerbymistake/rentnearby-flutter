@@ -41,7 +41,7 @@ class TourController extends GetxController {
   static const int _maxFrameRetries = 2;
   static const int _totalRetryBudget = 4;
   static const Duration _delayedRetryGap = Duration(milliseconds: 500);
-  static const Duration _preTourPause = Duration(milliseconds: 2000);
+  static const Duration _preTourPause = Duration(milliseconds: 1000);
 
   late final AuthController _auth;
   late final LocationController _locationCtrl;

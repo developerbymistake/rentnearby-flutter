@@ -53,6 +53,9 @@ class ListingController extends GetxController {
       });
       nearbyListings.value = (res['data']['items'] as List).map((e) => NearbyListingModel.fromJson(e)).toList();
     } catch (e) {
+      // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown
+      // its own toast + redirected — showing a second, contradictory toast on top would be wrong.
+      if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not load nearby rooms.'));
     } finally {
       isLoading.value = false;
@@ -71,7 +74,8 @@ class ListingController extends GetxController {
         myListings.addAll(items);
       }
       hasMoreMyListings.value = res['data']['hasMore'] == true;
-    } catch (_) {
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error('Could not load your rooms. Pull to refresh.');
     } finally {
       isLoading.value = false;
@@ -88,7 +92,7 @@ class ListingController extends GetxController {
             e.type == DioExceptionType.receiveTimeout ||
             e.type == DioExceptionType.connectionError) {
           AppToast.error('No internet connection. Please check your network.');
-        } else if (e.response?.statusCode != 404) {
+        } else if (e.response?.statusCode != 404 && e.response?.statusCode != 401) {
           AppToast.error('Could not load room. Please try again.');
         }
       }
@@ -105,6 +109,7 @@ class ListingController extends GetxController {
       // Let AddListingScreen control when to notify (after photos are uploaded or skipped)
       return listingId;
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return null;
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not create listing.'));
       return null;
     } finally {
@@ -179,6 +184,7 @@ class ListingController extends GetxController {
       listingStatusChangedTrigger.value++;
       await loadMyListings();
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not update listing status.'));
     } finally {
       isTogglingActive.value = false;
@@ -193,6 +199,7 @@ class ListingController extends GetxController {
       nearbyListings.removeWhere((l) => l.id == id);
       AppToast.success('Listing removed successfully.');
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not delete listing.'));
     } finally {
       isDeleting.value = false;

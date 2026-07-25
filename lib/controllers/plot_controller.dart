@@ -55,6 +55,9 @@ class PlotController extends GetxController {
       nearbyPlots.value =
           (res['data']['items'] as List).map((e) => NearbyPlotModel.fromJson(e)).toList();
     } catch (e) {
+      // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown
+      // its own toast + redirected — showing a second, contradictory toast on top would be wrong.
+      if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not load nearby plots.'));
     } finally {
       isLoading.value = false;
@@ -95,6 +98,7 @@ class PlotController extends GetxController {
       final res = await ApiService.post('/plots/', data);
       return res['data']?['plotId'] as String?;
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return null;
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not create plot.'));
       return null;
     } finally {
@@ -165,6 +169,7 @@ class PlotController extends GetxController {
       listingStatusChangedTrigger.value++;
       await loadMyPlots(reset: true);
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not update plot status.'));
     } finally {
       isTogglingActive.value = false;
@@ -179,6 +184,7 @@ class PlotController extends GetxController {
       nearbyPlots.removeWhere((p) => p.id == id);
       AppToast.success('Plot removed successfully.');
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not delete plot.'));
     } finally {
       isDeleting.value = false;
@@ -195,7 +201,7 @@ class PlotController extends GetxController {
             e.type == DioExceptionType.receiveTimeout ||
             e.type == DioExceptionType.connectionError) {
           AppToast.error('No internet connection. Please check your network.');
-        } else if (e.response?.statusCode != 404) {
+        } else if (e.response?.statusCode != 404 && e.response?.statusCode != 401) {
           AppToast.error('Could not load plot. Please try again.');
         }
       }
