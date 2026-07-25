@@ -38,7 +38,10 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
     WidgetsBinding.instance.addObserver(this);
     final args = (Get.arguments as Map?) ?? const {};
     _inquiryId = args['id'] as String? ?? '';
-    if (_inquiryId.isNotEmpty) _ctrl.loadInquiryDetail(_inquiryId);
+    if (_inquiryId.isNotEmpty) {
+      _ctrl.loadInquiryDetail(_inquiryId);
+      _ctrl.markSeen(_inquiryId);
+    }
     // Connected lazily here rather than app-wide (see main_screen.dart) — this
     // screen can be reached directly from a push notification tap, not only
     // via My Inquiries, so it needs its own connect() too; a no-op if already

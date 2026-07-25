@@ -53,6 +53,13 @@ class AgentController extends GetxController {
     }
   }
 
+  Future<void> markLeadSeen(String id) async {
+    try {
+      await _repo.markLeadSeen(id);
+      await checkAgentStatus();
+    } catch (_) {}
+  }
+
   Future<void> loadMyLeads() async {
     isLoadingLeads.value = true;
     try {
@@ -166,5 +173,6 @@ class AgentController extends GetxController {
     if (open != null && open.id == inquiryId) {
       currentLeadDetail.value = open.copyWith(status: status, updatedAt: ts);
     }
+    if (idx != -1) checkAgentStatus();
   }
 }

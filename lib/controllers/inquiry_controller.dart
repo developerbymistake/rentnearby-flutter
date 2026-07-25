@@ -67,6 +67,13 @@ class InquiryController extends GetxController {
     }
   }
 
+  Future<void> markSeen(String id) async {
+    try {
+      await _repo.markSeen(id);
+      await fetchActiveCount();
+    } catch (_) {}
+  }
+
   Future<void> loadMyInquiries() async {
     isLoadingMyInquiries.value = true;
     try {
