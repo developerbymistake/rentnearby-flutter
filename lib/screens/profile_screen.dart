@@ -8,6 +8,7 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/agent_controller.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/config_controller.dart';
 import '../controllers/wallet_controller.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
@@ -141,7 +142,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
 
             // Wallet
-            _buildWalletCard(),
+            Obx(() => Get.find<ConfigController>().paymentEnabled.value
+                ? _buildWalletCard()
+                : const SizedBox.shrink()),
 
             // Account — phone and contact-visibility, each its own independent action
             // (separate confirm/edit sheets, separate API calls). Name is edited from the
@@ -165,8 +168,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _leadsTile(),
                     ])
                   : const SizedBox.shrink()),
-              Divider(height: 1, indent: 56, color: AppColors.divider),
-              _legalTile(icon: Icons.redeem_rounded, label: 'Redeem Code', onTap: () => Get.toNamed(AppRoutes.redeemCode)),
+              Obx(() => Get.find<ConfigController>().paymentEnabled.value
+                  ? Column(children: [
+                      Divider(height: 1, indent: 56, color: AppColors.divider),
+                      _legalTile(icon: Icons.redeem_rounded, label: 'Redeem Code', onTap: () => Get.toNamed(AppRoutes.redeemCode)),
+                    ])
+                  : const SizedBox.shrink()),
             ]),
 
             // Support

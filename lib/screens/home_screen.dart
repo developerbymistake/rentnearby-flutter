@@ -8,6 +8,7 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
+import '../controllers/config_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/service_catalog_controller.dart';
@@ -125,7 +126,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }),
               ),
-              CreditBalanceChip(key: TourKeys.homeCreditBalance, color: Colors.white),
+              Obx(() => Get.find<ConfigController>().paymentEnabled.value
+                  ? CreditBalanceChip(key: TourKeys.homeCreditBalance, color: Colors.white)
+                  : const SizedBox.shrink()),
             ],
           ),
           const SizedBox(height: 16),
