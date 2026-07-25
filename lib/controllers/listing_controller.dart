@@ -219,6 +219,11 @@ class ListingController extends GetxController {
       // instead of triggering a separate (cache-prone, previously-buggy) refresh call.
       final newBalance = (data['balance'] as num?)?.toInt() ?? 0;
       Get.find<WalletController>().applyBalanceUpdate(newBalance, reason: 'golive');
+      // A first-time (or never-approved) Go-Live now submits for admin review instead of
+      // activating immediately — isActive stays false and the server marks status Pending.
+      if (data['isActive'] == false && data['status'] == 'Pending') {
+        return GoLiveSubmittedForReview(creditsSpent: (data['creditsSpent'] as num?)?.toInt() ?? 0);
+      }
       return GoLiveSuccess(
         validUntil: data['validUntil'] != null ? DateTime.tryParse(data['validUntil'] as String) : null,
         planType: data['planType'] as String?,

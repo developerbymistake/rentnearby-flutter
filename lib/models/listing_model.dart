@@ -23,6 +23,8 @@ class ListingModel {
   final String furnishedStatus;
   final bool hasReported;
   final int pendingReportCount;
+  final String? moderationStatus;
+  final String? rejectionReason;
 
   ListingModel({
     required this.id,
@@ -47,6 +49,8 @@ class ListingModel {
     this.furnishedStatus = 'None',
     this.hasReported = false,
     this.pendingReportCount = 0,
+    this.moderationStatus,
+    this.rejectionReason,
   });
 
   factory ListingModel.fromJson(Map<String, dynamic> json) => ListingModel(
@@ -76,7 +80,13 @@ class ListingModel {
         furnishedStatus: json['furnishedStatus'] ?? 'None',
         hasReported: json['hasReported'] ?? false,
         pendingReportCount: json['pendingReportCount'] ?? 0,
+        // GoLiveRequestStatuses.* ("Pending"/"Approved"/"Rejected") or null if never requested.
+        moderationStatus: json['liveRequestStatus'] as String?,
+        rejectionReason: json['rejectedReason'] as String?,
       );
+
+  bool get isPendingReview => moderationStatus == 'Pending';
+  bool get isRejected => moderationStatus == 'Rejected';
 
   String get priceDisplay =>
       priceMonthly != null ? '₹${_formatPrice(priceMonthly!)}/mo' : 'Price on request';

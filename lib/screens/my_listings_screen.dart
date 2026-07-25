@@ -17,6 +17,7 @@ import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/credit_balance_chip.dart';
 import '../widgets/go_live_plan_sheet.dart';
+import '../widgets/go_live_submitted_dialog.dart';
 import '../widgets/go_live_success_dialog.dart';
 import '../widgets/insufficient_balance_sheet.dart';
 import '../widgets/listing_card.dart';
@@ -212,6 +213,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                           'listingType': 'Room',
                           'title': listings[i].roomTypeName ?? 'Room for Rent',
                         }),
+                        onPreview: () => Get.toNamed(AppRoutes.listingDetail, arguments: {'id': listings[i].id}),
                       ),
                     );
                   },
@@ -393,6 +395,16 @@ class _MyListingsScreenState extends State<MyListingsScreen>
             planType: result.planType,
             creditsSpent: spentCredits,
             validUntil: result.validUntil,
+            onDismiss: _refresh,
+          ),
+          barrierDismissible: false,
+        );
+        return false;
+      case GoLiveSubmittedForReview():
+        Get.dialog(
+          GoLiveSubmittedDialog(
+            isPlot: false,
+            creditsSpent: result.creditsSpent,
             onDismiss: _refresh,
           ),
           barrierDismissible: false,

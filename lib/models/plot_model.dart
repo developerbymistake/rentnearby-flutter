@@ -84,6 +84,8 @@ class PlotModel {
   final DateTime createdAt;
   final bool hasReported;
   final int pendingReportCount;
+  final String? moderationStatus;
+  final String? rejectionReason;
 
   PlotModel({
     required this.id,
@@ -108,6 +110,8 @@ class PlotModel {
     required this.createdAt,
     this.hasReported = false,
     this.pendingReportCount = 0,
+    this.moderationStatus,
+    this.rejectionReason,
   });
 
   factory PlotModel.fromJson(Map<String, dynamic> json) => PlotModel(
@@ -135,7 +139,13 @@ class PlotModel {
         createdAt: DateTime.parse(json['createdAt']),
         hasReported: json['hasReported'] ?? false,
         pendingReportCount: json['pendingReportCount'] ?? 0,
+        // GoLiveRequestStatuses.* ("Pending"/"Approved"/"Rejected") or null if never requested.
+        moderationStatus: json['liveRequestStatus'] as String?,
+        rejectionReason: json['rejectedReason'] as String?,
       );
 
   String get areaDisplay => _formatArea(areaValue, areaUnit);
+
+  bool get isPendingReview => moderationStatus == 'Pending';
+  bool get isRejected => moderationStatus == 'Rejected';
 }
