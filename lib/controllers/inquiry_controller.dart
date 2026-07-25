@@ -4,7 +4,6 @@ import '../models/inquiry_detail_model.dart';
 import '../models/inquiry_model.dart';
 import '../repositories/inquiry_repository.dart';
 import '../utils/app_toast.dart';
-import '../utils/inquiry_status.dart';
 
 /// Owns the consumer's own Inquiry state — the shared "My Inquiries" list
 /// (both verticals together, no per-vertical split) and whichever single
@@ -25,9 +24,12 @@ import '../utils/inquiry_status.dart';
 class InquiryController extends GetxController {
   final myInquiries = <InquiryModel>[].obs;
   final isLoadingMyInquiries = false.obs;
-  // In-progress (Submitted/Contacted) count — drives the Explore tab header's Inquiries badge.
-  // Recomputed at the end of every myInquiries mutation (loadMyInquiries + applyStatusUpdate),
-  // same "derived, never set directly" shape as ChatController.unreadCount.
+  // Server-computed "not-Closed AND updated since I last saw it" count — drives the Explore tab
+  // header's Inquiries badge. Always re-anchored via fetchActiveCount() (at the end of every
+  // myInquiries mutation, same as loadMyInquiries + applyStatusUpdate), never derived locally from
+  // myInquiries — the client doesn't have the per-inquiry seen-timestamp needed to replicate this
+  // formula, same "server-anchored, never locally recomputed" shape AgentController's
+  // pendingLeadCount follows for the equivalent agent-side badge.
   final activeInquiryCount = 0.obs;
   final Rxn<InquiryDetailModel> currentDetail = Rxn<InquiryDetailModel>();
   final isLoadingDetail = false.obs;
@@ -54,8 +56,9 @@ class InquiryController extends GetxController {
 
   /// Server-anchored refresh for the Explore tab's Inquiries badge — called at session start,
   /// on InquiryHubService reconnect, and on app resume, so the badge stays correct even when
-  /// My Inquiries has never been opened this session (loadMyInquiries()/applyStatusUpdate's own
-  /// _recomputeActiveCount() still runs whenever that full list is actually loaded/patched).
+  /// My Inquiries has never been opened this session (loadMyInquiries() and applyStatusUpdate()
+  /// both also call this at the end of every myInquiries mutation, so the badge never goes stale
+  /// after a full list load or a live status patch either).
   Future<void> fetchActiveCount() async {
     final requestId = ++_activeCountRequestId;
     try {
@@ -78,7 +81,7 @@ class InquiryController extends GetxController {
     isLoadingMyInquiries.value = true;
     try {
       myInquiries.value = await _repo.getMyInquiries();
-      _recomputeActiveCount();
+      await fetchActiveCount();
     } catch (e) {
       // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown
       // its own toast + redirected — this call fires unconditionally at app start (IndexedStack
@@ -89,12 +92,6 @@ class InquiryController extends GetxController {
     } finally {
       isLoadingMyInquiries.value = false;
     }
-  }
-
-  void _recomputeActiveCount() {
-    activeInquiryCount.value = myInquiries
-        .where((i) => i.status == InquiryStatus.submitted || i.status == InquiryStatus.contacted)
-        .length;
   }
 
   Future<void> loadInquiryDetail(String inquiryId) async {
@@ -239,7 +236,7 @@ class InquiryController extends GetxController {
         currentDetail.value = open.copyWith(status: newStatus, updatedAt: ts);
       }
     }
-    _recomputeActiveCount();
+    fetchActiveCount();
   }
 
   /// Called when leaving the Inquiry Detail screen so a stale detail isn't

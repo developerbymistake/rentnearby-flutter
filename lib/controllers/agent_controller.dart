@@ -13,7 +13,12 @@ import '../utils/app_toast.dart';
 class AgentController extends GetxController {
   final isAgent = false.obs;
   final agentId = Rxn<String>();
-  // Leads still at Status == Submitted — the "something new landed" badge count, not every open lead.
+  // Server-computed count of this agent's assigned, not-Closed leads that have changed since the
+  // agent last viewed them ("unseen") — the "something new landed" badge count, not every open
+  // lead. Entirely server-anchored via checkAgentStatus()/markLeadSeen(); never derived or
+  // decremented locally (mirrors InquiryController.activeInquiryCount's equivalent consumer-side
+  // design for the same reason — the client doesn't have the per-lead seen-timestamp needed to
+  // replicate the formula).
   final pendingLeadCount = 0.obs;
 
   final myLeads = <InquiryModel>[].obs;
@@ -83,18 +88,7 @@ class AgentController extends GetxController {
     }
   }
 
-  InquiryModel? _findLead(String id) {
-    for (final l in myLeads) {
-      if (l.id == id) return l;
-    }
-    return null;
-  }
-
   Future<bool> updateLeadStatus(String id, String status, {String? note}) async {
-    // Captured before the call — only a lead that WAS Submitted should decrement the badge; an
-    // already-Contacted lead moving to Confirmed shouldn't touch a count it was never part of.
-    final wasSubmitted = (currentLeadDetail.value?.id == id ? currentLeadDetail.value?.status : _findLead(id)?.status) == 'Submitted';
-
     isUpdatingStatus.value = true;
     try {
       final detail = await _repo.updateLeadStatus(id, status, note: note);
@@ -105,9 +99,9 @@ class AgentController extends GetxController {
       if (idx != -1) {
         myLeads[idx] = myLeads[idx].copyWith(status: detail.status, updatedAt: detail.updatedAt);
       }
-      if (wasSubmitted && status != 'Submitted' && pendingLeadCount.value > 0) {
-        pendingLeadCount.value--;
-      }
+      // pendingLeadCount is entirely server-anchored (see its own doc comment) — re-fetch the
+      // authoritative value instead of guessing at a local delta.
+      await checkAgentStatus();
       return true;
     } on DioException catch (e) {
       AppToast.error(_errorMessage(e));
@@ -144,14 +138,12 @@ class AgentController extends GetxController {
   /// id/type/title/body/actionRoute (no inquiry fields), so unlike InquiryController
   /// .applyStatusUpdate's in-place patch, this can't construct the new row locally.
   ///
-  /// Deliberately does NOT locally increment pendingLeadCount: both the auto-assign path
-  /// (CreateInquiry) and the admin-assign path (AdminSetInquiryAgents) always transition the
-  /// inquiry Submitted -> Contacted in the SAME write that triggers this notification, so by the
-  /// time this push arrives the lead is never actually in the Submitted state pendingLeadCount is
-  /// defined to count (see its own doc comment above) — a blind increment here would silently
-  /// drift the badge above the server's own count. checkAgentStatus() re-fetches the authoritative
-  /// value instead; loadMyLeads() (only if the list is already loaded) makes the new lead itself
-  /// show up, not just any count.
+  /// Deliberately does NOT locally increment pendingLeadCount: the count is entirely server-anchored
+  /// (see its own doc comment above) and the client has no way to replicate the server's "unseen"
+  /// formula for the newly-assigned lead — a blind increment here could easily drift the badge away
+  /// from the server's own count. checkAgentStatus() re-fetches the authoritative value instead;
+  /// loadMyLeads() (only if the list is already loaded) makes the new lead itself show up, not just
+  /// any count.
   void applyLeadAssigned() {
     checkAgentStatus();
     if (myLeads.isNotEmpty) loadMyLeads();
