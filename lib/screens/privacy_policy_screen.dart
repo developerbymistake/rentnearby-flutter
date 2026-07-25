@@ -69,6 +69,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
             'This Privacy Policy may be revised periodically. Any changes will be reflected in the \'Last updated\' date shown at the top of this document. We encourage you to review this policy from time to time.',
           ),
           _sectionBody(
+            'Grievance Officer',
+            'In accordance with the Information Technology Act, 2000 and the rules made thereunder, the contact details of the Grievance Officer are provided below:\n\nGrievance Officer\nEmail: supportbakhli@gmail.com\n\nBakhli will acknowledge grievances within 24 hours of receipt and endeavour to resolve them within 15 days.',
+          ),
+          _sectionBody(
             'Contact Us',
             'For any questions or concerns regarding this Privacy Policy, please write to us at:\n\nEmail: supportbakhli@gmail.com',
           ),
