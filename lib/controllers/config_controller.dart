@@ -11,6 +11,13 @@ class ConfigController extends GetxController {
   final plotLimit = 5.obs;
   final isLoaded = false.obs;
 
+  // Payment kill-switch (GET /config/payment-feature). Defaults to true
+  // (payment required) so that before the first load completes — or if it
+  // never does — the app fails toward showing payment UI, never toward
+  // silently hiding it.
+  final paymentEnabled = true.obs;
+  final freeGoLiveDurationDays = 30.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -18,9 +25,13 @@ class ConfigController extends GetxController {
   }
 
   Future<void> _load() async {
-    final limits = await Get.find<ConfigRepository>().getListingLimits();
+    final repo = Get.find<ConfigRepository>();
+    final limits = await repo.getListingLimits();
     roomLimit.value = limits.roomLimit;
     plotLimit.value = limits.plotLimit;
+    final paymentFeature = await repo.getPaymentFeature();
+    paymentEnabled.value = paymentFeature.enabled;
+    freeGoLiveDurationDays.value = paymentFeature.freeGoLiveDurationDays;
     isLoaded.value = true;
   }
 

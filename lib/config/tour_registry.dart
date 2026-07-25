@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import '../controllers/config_controller.dart';
 import '../controllers/service_catalog_controller.dart';
 import '../navigation/tour_keys.dart';
 import 'app_constants.dart';
@@ -63,6 +64,69 @@ class TourDefinition {
   List<TourStep> get steps => stepsBuilder();
 }
 
+/// Home's credit-balance step targets the same CreditBalanceChip that Home
+/// itself hides behind ConfigController.paymentEnabled (see CreditBalanceChip
+/// call sites in home_screen.dart/my_listings_screen.dart/my_plots_screen.dart
+/// and ProfileScreen's wallet card) — the payment kill switch. When the
+/// switch is off that chip is never in the render tree, so its tour step
+/// must be omitted too, or the spotlight would target a missing key. Built
+/// as a function (like _buildServicesSteps below) rather than a static list
+/// so it re-reads the live flag every time TourController accesses `.steps`.
+List<TourStep> _buildHomeSteps() {
+  final paymentEnabled = Get.find<ConfigController>().paymentEnabled.value;
+  return [
+    TourStep(
+      key: TourKeys.homeToggle,
+      icon: Iconsax.arrow_swap_horizontal,
+      title: 'Rooms & Plots are separate',
+      body: 'Switch between the two anytime — each has its own listings, pricing and posting limit.',
+    ),
+    TourStep(
+      key: TourKeys.homeManageListingsCard,
+      icon: Iconsax.building,
+      title: 'List your own place',
+      body: "Got a room or plot to rent out? Manage everything you've listed right here.",
+    ),
+    if (paymentEnabled)
+      TourStep(
+        key: TourKeys.homeCreditBalance,
+        icon: Iconsax.wallet_money,
+        title: 'This is your credit balance',
+        body: 'Credits are how you make a listing go live. Tap here anytime to top up.',
+      ),
+    TourStep(
+      key: TourKeys.homeActionMenu,
+      icon: Iconsax.notification_bing,
+      title: 'Notifications & Messages',
+      body: 'Keep track of updates and chat with owners or seekers, straight from Home.',
+    ),
+    TourStep(
+      key: TourKeys.homeRoomsNavIcon,
+      icon: Iconsax.home,
+      title: 'Looking for a room?',
+      body: 'Tap here anytime to search rooms nearby.',
+    ),
+    TourStep(
+      key: TourKeys.homePlotsNavIcon,
+      icon: Icons.landscape_rounded,
+      title: 'Looking for a plot?',
+      body: 'Tap here anytime to search plots nearby.',
+    ),
+    TourStep(
+      key: TourKeys.homeServicesNavIcon,
+      icon: Iconsax.briefcase,
+      title: 'Trip plans, wellness & more',
+      body: 'From trip planning to diet & wellness — submit a request and the right person reaches out to you.',
+    ),
+    TourStep(
+      key: TourKeys.homeProfileNavIcon,
+      icon: Iconsax.user,
+      title: 'Your account lives here',
+      body: 'Manage your profile, listings, wallet and settings from here.',
+    ),
+  ];
+}
+
 /// Services' category catalog (ServiceCatalogController.activeCategories) is
 /// genuinely dynamic — admin-configurable, no fixed app-compile-time count
 /// (see CLAUDE.md: "an admin-added category needs no app release"). So its
@@ -117,56 +181,7 @@ final Map<int, TourDefinition> tourRegistry = {
       body: 'Rooms and Plots each show you their own quick tour the first time you open them — try tapping Rooms below to see yours.',
       primaryLabel: 'Start Exploring',
     ),
-    stepsBuilder: () => [
-      TourStep(
-        key: TourKeys.homeToggle,
-        icon: Iconsax.arrow_swap_horizontal,
-        title: 'Rooms & Plots are separate',
-        body: 'Switch between the two anytime — each has its own listings, pricing and posting limit.',
-      ),
-      TourStep(
-        key: TourKeys.homeManageListingsCard,
-        icon: Iconsax.building,
-        title: 'List your own place',
-        body: "Got a room or plot to rent out? Manage everything you've listed right here.",
-      ),
-      TourStep(
-        key: TourKeys.homeCreditBalance,
-        icon: Iconsax.wallet_money,
-        title: 'This is your credit balance',
-        body: 'Credits are how you make a listing go live. Tap here anytime to top up.',
-      ),
-      TourStep(
-        key: TourKeys.homeActionMenu,
-        icon: Iconsax.notification_bing,
-        title: 'Notifications & Messages',
-        body: 'Keep track of updates and chat with owners or seekers, straight from Home.',
-      ),
-      TourStep(
-        key: TourKeys.homeRoomsNavIcon,
-        icon: Iconsax.home,
-        title: 'Looking for a room?',
-        body: 'Tap here anytime to search rooms nearby.',
-      ),
-      TourStep(
-        key: TourKeys.homePlotsNavIcon,
-        icon: Icons.landscape_rounded,
-        title: 'Looking for a plot?',
-        body: 'Tap here anytime to search plots nearby.',
-      ),
-      TourStep(
-        key: TourKeys.homeServicesNavIcon,
-        icon: Iconsax.briefcase,
-        title: 'Trip plans, wellness & more',
-        body: 'From trip planning to diet & wellness — submit a request and the right person reaches out to you.',
-      ),
-      TourStep(
-        key: TourKeys.homeProfileNavIcon,
-        icon: Iconsax.user,
-        title: 'Your account lives here',
-        body: 'Manage your profile, listings, wallet and settings from here.',
-      ),
-    ],
+    stepsBuilder: _buildHomeSteps,
   ),
   AppTabs.rooms: TourDefinition(
     tabIndex: AppTabs.rooms,

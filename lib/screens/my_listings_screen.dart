@@ -119,7 +119,9 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                               style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
                         ]),
                         const Spacer(),
-                        const CreditBalanceChip(color: Colors.white),
+                        Obx(() => Get.find<ConfigController>().paymentEnabled.value
+                            ? const CreditBalanceChip(color: Colors.white)
+                            : const SizedBox.shrink()),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -326,10 +328,14 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     try {
       final stillWithinValidity = listing.validUntil != null &&
           listing.validUntil!.toUtc().isAfter(DateTime.now().toUtc());
+      final paymentEnabled = Get.find<ConfigController>().paymentEnabled.value;
 
-      if (stillWithinValidity) {
+      if (stillWithinValidity || !paymentEnabled) {
         // Free reactivation — owner turned it off, is turning it back on
-        // before the previously-paid window expired. No plan dialog needed.
+        // before the previously-paid window expired. Also taken whenever the
+        // payment kill switch is off, regardless of validity, since the
+        // backend accepts a null-planType go-live for free in that case. No
+        // plan dialog needed either way.
         final result = await _ctrl.goLive(listing.id);
         if (mounted) await _handleGoLiveResult(result, spentCredits: 0);
         return;
