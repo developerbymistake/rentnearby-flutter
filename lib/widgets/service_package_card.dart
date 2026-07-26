@@ -9,10 +9,16 @@ import 'service_package_price.dart';
 /// available package inline, each with its own Enquire/Get Quote button.
 /// Replaces the old screen-private `_PackageCard` (service_package_list_screen.dart,
 /// now deleted) and `_PackagePreviewCard` (service_detail_screen.dart), fixing
-/// their inconsistencies: the media block is always present (never
-/// conditionally absent), the title is bounded to 2 lines, and a featured
-/// package gets a real visual treatment (accent border + overlay badge)
-/// instead of a small pill squeezed next to the title.
+/// their inconsistencies: the title is bounded to 2 lines, and a featured
+/// package with a real photo gets an overlay "POPULAR" badge on the media
+/// block. The media block itself is conditional on thumbnailUrl actually
+/// being set — no catalog package has a real thumbnail today (every Char
+/// Dham/Tour/Yoga package seeds ThumbnailUrl empty), so rendering a bare
+/// icon-placeholder block for every card added visual bulk with no real
+/// content; a package with a genuine photo still gets the full media
+/// treatment. A featured package with no photo shows "POPULAR" as an inline
+/// pill next to its title instead (see the Row wrapping package.name below)
+/// so the badge is never silently lost.
 class ServicePackageCard extends StatelessWidget {
   final ServicePackageModel package;
   final VoidCallback onEnquire;
@@ -52,48 +58,68 @@ class ServicePackageCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
-                child: SizedBox(
-                  height: 140,
-                  width: double.infinity,
-                  child: package.thumbnailUrl.isEmpty
-                      ? _mediaPlaceholder()
-                      : CachedNetworkImage(
-                          imageUrl: package.thumbnailUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(color: AppColors.surface),
-                          errorWidget: (_, __, ___) => _mediaPlaceholder(),
-                        ),
-                ),
-              ),
-              if (featured)
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
-                    child: const Text(
-                      'POPULAR',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 9.5, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.3),
+          if (package.thumbnailUrl.isNotEmpty)
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
+                  child: SizedBox(
+                    height: 140,
+                    width: double.infinity,
+                    child: CachedNetworkImage(
+                      imageUrl: package.thumbnailUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(color: AppColors.surface),
+                      errorWidget: (_, __, ___) => _mediaPlaceholder(),
                     ),
                   ),
                 ),
-            ],
-          ),
+                if (featured)
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
+                      child: const Text(
+                        'POPULAR',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 9.5, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.3),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  package.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        package.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                      ),
+                    ),
+                    // Overlay badge above only fires when there's a photo to overlay onto — a
+                    // featured package with no thumbnail still needs SOME "POPULAR" treatment,
+                    // or the flag silently disappears for it.
+                    if (featured && package.thumbnailUrl.isEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
+                        child: const Text(
+                          'POPULAR',
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.3),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 if (duration != null) ...[
                   const SizedBox(height: 4),
