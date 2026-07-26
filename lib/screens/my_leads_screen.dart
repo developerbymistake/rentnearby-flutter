@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
-import '../config/app_tabs.dart';
 import '../controllers/agent_controller.dart';
-import '../controllers/auth_controller.dart';
 import '../models/inquiry_model.dart';
 import '../utils/app_date_format.dart';
 import '../utils/inquiry_status.dart';
@@ -38,42 +35,6 @@ class _MyLeadsScreenState extends State<MyLeadsScreen> {
     Get.toNamed(AppRoutes.leadDetail, arguments: {'id': lead.id});
   }
 
-  // Reachable from more than the Profile tab (push-notification taps) so a plain back button
-  // doesn't reliably return to Settings — jump there explicitly instead.
-  void _goToProfileSettings() {
-    Get.find<AuthController>().tabIndex.value = AppTabs.profile;
-    Get.until((route) => route.settings.name == AppRoutes.main);
-  }
-
-  Widget _profileSettingsRow() {
-    return InkWell(
-      onTap: _goToProfileSettings,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
-        ),
-        child: Row(children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Iconsax.setting_2, color: AppColors.primaryLight, size: 18),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text('Profile Settings',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          ),
-          const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textLight),
-        ]),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -93,14 +54,12 @@ class _MyLeadsScreenState extends State<MyLeadsScreen> {
                 child: ListView.builder(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
-                  itemCount: items.length + 1,
-                  itemBuilder: (_, i) => i < items.length
-                      ? _LeadRow(
-                          lead: items[i],
-                          dateText: AppDateFormat.date(items[i].createdAt),
-                          onTap: () => _openDetail(items[i]),
-                        )
-                      : _profileSettingsRow(),
+                  itemCount: items.length,
+                  itemBuilder: (_, i) => _LeadRow(
+                    lead: items[i],
+                    dateText: AppDateFormat.date(items[i].createdAt),
+                    onTap: () => _openDetail(items[i]),
+                  ),
                 ),
               );
             }),
@@ -155,8 +114,6 @@ class _MyLeadsScreenState extends State<MyLeadsScreen> {
             const Text('Inquiries assigned to you will show up here.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-            const SizedBox(height: 24),
-            _profileSettingsRow(),
           ]),
         ),
       );
