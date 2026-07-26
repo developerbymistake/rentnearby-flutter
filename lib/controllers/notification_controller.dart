@@ -2,10 +2,14 @@ import 'package:get/get.dart';
 import '../models/notification_model.dart';
 import '../repositories/notification_repository.dart';
 
-/// Owns the Home-screen bell's unread badge and the notification inbox list. Fetches
-/// [unreadCount] once per session (mirrors AgentController.checkAgentStatus's onInit()-fetches
-/// -once pattern), refreshed on app resume rather than a live push — see the plan's Design
-/// decisions for why InquiryHubService staying lazy-connected wasn't worth reversing for this.
+/// Owns the Home-screen bell's unread badge and the notification inbox list. [unreadCount] is
+/// fetched once per session at onInit() (mirrors AgentController.checkAgentStatus's own
+/// onInit()-fetches-once pattern) and again on app resume (see main_screen.dart) — that REST
+/// anchor alone already covers cold-start/reopen-after-close correctly and is unchanged.
+/// [applyLiveNotification] is the separate foreground-live path: InquiryHubService's
+/// session-wide "NotificationReceived" push now reaches this controller unconditionally for
+/// every event (not just Agent lead-assignment), so the badge/list update immediately instead
+/// of waiting for the next resume or a manual pull-to-refresh.
 class NotificationController extends GetxController {
   final unreadCount = 0.obs;
   final notifications = <NotificationModel>[].obs;
@@ -95,5 +99,39 @@ class NotificationController extends GetxController {
     try {
       await _repo.markAllRead();
     } catch (_) {}
+  }
+
+  /// Driven by InquiryHubService's live "NotificationReceived" push — called unconditionally for
+  /// every event regardless of [Map] `type` (see InquiryHubService's own comment on why this
+  /// differs from AgentController.applyLeadAssigned's type-gated call from the same handler).
+  /// unreadCount is incremented unconditionally — the badge should always reflect a genuinely
+  /// new push — but the row is only prepended into [notifications] when the list is both already
+  /// loaded AND fully paginated (`!hasMoreNotifications`). Unlike myLeads (unpaginated), this
+  /// list is page-cursor-based (`_notificationsPage`), so inserting locally while further pages
+  /// are still unfetched would desync the in-memory list from the next loadMoreNotifications()
+  /// page fetch (a duplicate or skipped row) — safe only once every page is already in memory,
+  /// same as this codebase's other server-anchored counts falling back to "next real fetch picks
+  /// up the true value" rather than guessing at a local patch it can't fully reconcile.
+  void applyLiveNotification(Map<String, dynamic> data) {
+    unreadCount.value++;
+    if (notifications.isEmpty || hasMoreNotifications.value) return;
+    try {
+      notifications.insert(
+        0,
+        NotificationModel(
+          id: data['id'] as String,
+          type: data['type'] as String? ?? '',
+          title: data['title'] as String? ?? '',
+          body: data['body'] as String? ?? '',
+          actionRoute: data['actionRoute'] as String?,
+          actionArguments: (data['actionArguments'] as Map?)?.cast<String, dynamic>(),
+          isRead: false,
+          createdAt: DateTime.now(),
+        ),
+      );
+    } catch (_) {
+      // Malformed/missing id — the unreadCount increment above still stands (a real push landed
+      // server-side regardless); the row itself just won't appear until the next loadNotifications().
+    }
   }
 }

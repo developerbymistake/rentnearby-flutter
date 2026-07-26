@@ -212,17 +212,22 @@ else).
   with their assigned agent (Not responding/Unhelpful/Wrong info/Other) — visible only to that consumer
   and Admin, never the agent.
 - **`InquiryHubService`** (`lib/services/inquiry_hub_service.dart`) is a push-only, session-lifetime
-  SignalR connection delivering live `InquiryStatusChanged` events; falls back silently to pull-to-refresh
-  if it never connects. `hub_session_manager.dart` added a single teardown point,
-  `disconnectAllHubs()`, concurrently disconnecting all four hubs (Banner/Chat/Wallet/Inquiry) on logout or
-  a forced 401 — a revoked session previously left hubs retrying forever with an empty token.
+  SignalR connection connected unconditionally from `MainScreen.initState()`/app-resume (same shape as
+  Chat/Wallet, not lazily via a screen or business check), delivering live `InquiryStatusChanged` events
+  and a generic `NotificationReceived` envelope (today's only producer is Agent lead-assignment, but the
+  event is meant to be reused by future producers); falls back silently to pull-to-refresh if it never
+  connects. `hub_session_manager.dart` added a single teardown point, `disconnectAllHubs()`, concurrently
+  disconnecting all four hubs (Banner/Chat/Wallet/Inquiry) on logout or a forced 401 — a revoked session
+  previously left hubs retrying forever with an empty token.
 
 **Notification inbox**: `NotificationController` (`lib/controllers/notification_controller.dart`) fetches
-`unreadCount` once at `onInit` and exposes a paginated list (`GET /notifications`) with a `_requestId`
-guard against refresh/load-more races. `NotificationModel` carries generic `actionRoute`/`actionArguments`
-so tap-routing is generic, not a per-type switch. This inbox is refreshed on-demand/app-resume, not pushed
-live over SignalR — a deliberate choice per its own code comment (keeping a 5th hub connection out of the
-lazy-hub pattern above wasn't judged worth it for this feature yet).
+`unreadCount` once at `onInit` and again on app resume (the REST anchor that keeps cold-start/reopen
+correct) and exposes a paginated list (`GET /notifications`) with a `_requestId` guard against
+refresh/load-more races. `NotificationModel` carries generic `actionRoute`/`actionArguments` so
+tap-routing is generic, not a per-type switch. `InquiryHubService`'s `NotificationReceived` push also
+reaches this controller live (`applyLiveNotification` — increments `unreadCount` and prepends into
+`notifications` if already loaded), so the bell updates immediately in foreground instead of only on the
+next resume/pull-to-refresh.
 
 **Payments**: Razorpay (`razorpay_flutter`) — the credit-pack purchase flow drives the `Razorpay()` SDK
 directly inline from `CreditPacksScreen._purchase`, calling `WalletController.createOrder`/`verifyPayment`/

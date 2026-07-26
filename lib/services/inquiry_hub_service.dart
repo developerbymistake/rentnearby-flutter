@@ -3,6 +3,7 @@ import 'package:signalr_netcore/signalr_client.dart';
 import '../config/app_constants.dart';
 import '../controllers/agent_controller.dart';
 import '../controllers/inquiry_controller.dart';
+import '../controllers/notification_controller.dart';
 import 'hub_connection_shared.dart';
 import 'hub_session_manager.dart';
 import 'storage_service.dart';
@@ -60,13 +61,17 @@ class InquiryHubService extends GetxService with SingleFlightHubConnect {
     });
 
     // Generic NotificationEvent delivery (see InquiryHandlers.PushNotificationReceivedAsync) —
-    // today the only producer is Agent lead-assignment, but the event name/shape is meant to be
-    // reused by future NotificationEvent producers too, so this stays a type switch rather than
-    // being renamed to something lead-assignment-specific.
+    // today's only producer is Agent lead-assignment, but the event name/shape is meant to be
+    // reused by future NotificationEvent producers too. Every event unconditionally reaches the
+    // Home-bell inbox (NotificationController.applyLiveNotification) since that's a generic
+    // envelope-shaped feature by design; AgentController.applyLeadAssigned() stays gated to
+    // type == 'LeadAssigned' specifically, since it patches Agent-only state that a future
+    // non-lead-assignment producer's event has no business touching.
     _connection!.on('NotificationReceived', (args) {
       if (args == null || args.isEmpty) return;
       try {
         final data = Map<String, dynamic>.from(args[0] as Map);
+        Get.find<NotificationController>().applyLiveNotification(data);
         if (data['type'] == 'LeadAssigned') {
           Get.find<AgentController>().applyLeadAssigned();
         }

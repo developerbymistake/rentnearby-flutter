@@ -36,17 +36,17 @@ class _MyInquiriesScreenState extends State<MyInquiriesScreen> with WidgetsBindi
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _ctrl.loadMyInquiries();
-    // Connected lazily here rather than app-wide (see main_screen.dart) — a
-    // no-op if already connected from a prior visit this session.
+    // InquiryHubService is now connected app-wide from main_screen.dart's initState() — this
+    // call is a harmless redundant no-op once that connection is already live, kept only as
+    // extra insurance in case it quietly died between then and this screen opening.
     InquiryHubService.to.connect();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Mobile OSes can silently suspend a socket while backgrounded without a
-    // clean close event — reconnect on resume while this screen is open,
-    // same as MainScreen already does for Chat/Wallet. connect() no-ops if
-    // the connection is still alive.
+    // clean close event — MainScreen's own resume handler already reconnects this hub
+    // app-wide now; this is a redundant no-op safety net while this screen is active.
     if (state == AppLifecycleState.resumed) InquiryHubService.to.connect();
   }
 

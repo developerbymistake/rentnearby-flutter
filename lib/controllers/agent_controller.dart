@@ -4,7 +4,6 @@ import '../models/agent_stats_model.dart';
 import '../models/inquiry_detail_model.dart';
 import '../models/inquiry_model.dart';
 import '../repositories/agent_repository.dart';
-import '../services/inquiry_hub_service.dart';
 import '../utils/app_toast.dart';
 
 /// Owns "is this account an Agent, and what do they need to see" — checked once per session
@@ -49,12 +48,6 @@ class AgentController extends GetxController {
       isAgent.value = true;
       agentId.value = profile['agentId'] as String?;
       pendingLeadCount.value = (profile['pendingLeadCount'] as num?)?.toInt() ?? 0;
-      // Connect the Inquiry hub only once we actually know this account is an agent — chained
-      // off this call's own completion rather than a synchronous check at app-start, since
-      // isAgent isn't resolved yet at the point MainScreen.initState() runs. Also re-called on
-      // every resume (see main_screen.dart) as a no-op-if-already-connected reconnect, covering
-      // a connection that quietly died while backgrounded.
-      InquiryHubService.to.connect();
     } catch (_) {
       // Best-effort background check — a network hiccup here just means the My Leads row stays
       // hidden this session, not a user-facing error.

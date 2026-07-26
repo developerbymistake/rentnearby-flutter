@@ -109,14 +109,20 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // a Razorpay webhook fallback credit); locally-initiated spends already update instantly via
     // their own REST response regardless of this connection's state.
     WalletHubService.to.connect();
-    // Deliberately NOT connected here, unlike Chat/Wallet above — Inquiry is a niche,
-    // occasionally-visited feature (unlike chat/wallet, nothing outside the Inquiry
-    // screens themselves reads from it), and the FCM half of the dual push pattern
-    // (InquiryStatusPushWorkerService) already covers a backgrounded/killed app. Being
-    // app-wide-connected meant every resume — including returning from the camera while
-    // adding Room/Plot photos — triggered a 3rd concurrent hub reconnect for no benefit
-    // most sessions never need. Connected lazily instead, from my_inquiries_screen.dart /
-    // inquiry_detail_screen.dart's initState() the moment either is actually opened.
+    // Same session-wide-connected shape as Chat/Wallet above — Inquiry now delivers two live
+    // event kinds (InquiryStatusChanged, NotificationReceived) consumed by InquiryController/
+    // AgentController/NotificationController, none of which is scoped to a single screen (a
+    // lead-assignment or bell-notification push should land on whichever tab is open, not only
+    // while My Inquiries/Lead Detail/Inquiry Detail happens to be the active screen). Previously
+    // connected lazily instead — only as a side effect of AgentController.checkAgentStatus()
+    // resolving isAgent, plus each Inquiry screen's own initState() — which meant the
+    // NotificationReceived/InquiryStatusChanged pushes were silently missed for any session
+    // where neither of those ever ran. my_inquiries_screen.dart/inquiry_detail_screen.dart still
+    // also call connect() from their own initState()/resume; those are harmless redundant
+    // no-ops now (SingleFlightHubConnect short-circuits once Connected), kept as extra
+    // insurance against a connection that quietly died between this line and whichever of those
+    // screens' own resume checks runs next.
+    InquiryHubService.to.connect();
     _chatCtrl.loadConversations();
     WidgetsBinding.instance.addObserver(this);
     _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
@@ -182,17 +188,18 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       ChatHubService.to.connect();
       WalletHubService.to.connect();
+      InquiryHubService.to.connect();
       Get.find<NotificationController>().loadUnreadCount();
       // Chat badge's app-resume anchor — pushes may have been missed while backgrounded
       // (the hub reconnect above isn't guaranteed to fire if the connection quietly died).
       _chatCtrl.fetchUnreadCount();
-      // Inquiry's hub itself is still not unconditionally reconnected here — see the comment at
-      // its Get.put()/initial-connect site above; my_inquiries_screen.dart/inquiry_detail_screen.dart
-      // still own their own reconnect while they're the active screen. But the two counts that
-      // silently went stale without either screen ever being opened this session (the consumer
-      // badge and the agent pendingLeadCount, both server-anchored) do need a resume anchor here,
-      // same as Chat/Notifications above. checkAgentStatus() re-resolves isAgent and internally
-      // reconnects InquiryHubService itself if this account is an agent (see its own comment).
+      // Inquiry/Agent counts' own app-resume anchor, same reasoning as Chat's fetchUnreadCount()
+      // above — both are server-anchored (see their own doc comments) and a push can still have
+      // been missed entirely while backgrounded even in a session where the connection itself
+      // never actually dropped (so the reconnect above alone doesn't guarantee it).
+      // checkAgentStatus() is now pure REST status/count resolution — it no longer also
+      // reconnects InquiryHubService as a side effect (that's owned explicitly above now,
+      // alongside Chat/Wallet).
       Get.find<InquiryController>().fetchActiveCount();
       Get.find<AgentController>().checkAgentStatus();
     }
