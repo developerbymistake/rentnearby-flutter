@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
+import '../models/agent_stats_model.dart';
 import '../models/inquiry_detail_model.dart';
 import '../models/inquiry_model.dart';
 import '../repositories/agent_repository.dart';
@@ -20,6 +21,9 @@ class AgentController extends GetxController {
   // design for the same reason — the client doesn't have the per-lead seen-timestamp needed to
   // replicate the formula).
   final pendingLeadCount = 0.obs;
+
+  final Rxn<AgentLeadStatsModel> stats = Rxn<AgentLeadStatsModel>();
+  final isLoadingStats = false.obs;
 
   final myLeads = <InquiryModel>[].obs;
   final isLoadingLeads = false.obs;
@@ -63,6 +67,17 @@ class AgentController extends GetxController {
       await _repo.markLeadSeen(id);
       await checkAgentStatus();
     } catch (_) {}
+  }
+
+  Future<void> loadMyStats() async {
+    isLoadingStats.value = true;
+    try {
+      stats.value = await _repo.getMyStats();
+    } catch (_) {
+      AppToast.error('Could not load your dashboard stats.');
+    } finally {
+      isLoadingStats.value = false;
+    }
   }
 
   Future<void> loadMyLeads() async {

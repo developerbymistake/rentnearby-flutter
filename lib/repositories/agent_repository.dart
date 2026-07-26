@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../models/agent_stats_model.dart';
 import '../models/inquiry_detail_model.dart';
 import '../models/inquiry_model.dart';
 import '../services/api_service.dart';
@@ -36,6 +37,16 @@ class AgentRepository {
   }
 
   Future<void> markLeadSeen(String id) async => ApiService.put('/agents/me/leads/$id/seen', {});
+
+  /// Current-year snapshot only — the Agent Dashboard doesn't offer a year switcher (that's the
+  /// admin Agent Stats page's feature), so [year] is always omitted from the call and the backend
+  /// defaults to DateTime.UtcNow.Year itself.
+  Future<AgentLeadStatsModel?> getMyStats() async {
+    final res = await ApiService.get('/agents/me/stats');
+    final data = res['data'];
+    if (data is! Map<String, dynamic>) return null;
+    return AgentLeadStatsModel.fromJson(data);
+  }
 
   Future<InquiryDetailModel?> updateLeadStatus(String id, String status, {String? note}) async {
     final res = await ApiService.put('/agents/me/leads/$id/status', {

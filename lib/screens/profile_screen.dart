@@ -157,19 +157,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _accountVisibilityTile(),
             ]),
 
+            // Agent — only rendered for the small subset of accounts that are also an Agent.
+            // Its own section (not mixed into Activity) since these are a distinct role's tools,
+            // not "things any user has done" — Dashboard (stats overview) leads into My Leads.
+            Obx(() => _agentCtrl.isAgent.value
+                ? _sectionGroup('AGENT', [
+                    _legalTile(icon: Iconsax.chart_2, label: 'Dashboard', onTap: () => Get.toNamed(AppRoutes.agentDashboard)),
+                    Divider(height: 1, indent: 56, color: AppColors.divider),
+                    _leadsTile(),
+                  ])
+                : const SizedBox.shrink()),
+
             // My Activity — every screen that shows "things the user has done/can act on"
-            // (reports, leads if they're an agent, redeem code), grouped together and separate
-            // from the pure app-meta Support section below. My Inquiries moved out to the
-            // Explore tab's own header (its natural hub, since inquiries are submitted from
-            // there) — not duplicated here.
+            // (reports, redeem code), grouped together and separate from the pure app-meta
+            // Support section below. My Inquiries moved out to the Explore tab's own header (its
+            // natural hub, since inquiries are submitted from there) — not duplicated here.
             _sectionGroup('ACTIVITY', [
               _legalTile(icon: Iconsax.flag, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
-              Obx(() => _agentCtrl.isAgent.value
-                  ? Column(children: [
-                      Divider(height: 1, indent: 56, color: AppColors.divider),
-                      _leadsTile(),
-                    ])
-                  : const SizedBox.shrink()),
               Obx(() => Get.find<ConfigController>().paymentEnabled.value
                   ? Column(children: [
                       Divider(height: 1, indent: 56, color: AppColors.divider),
