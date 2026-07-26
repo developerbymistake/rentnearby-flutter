@@ -8,6 +8,7 @@ import '../services/api_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/dio_error_mapper.dart';
 import 'auth_controller.dart';
+import 'config_controller.dart';
 
 /// Single source of truth for "what's my balance right now" — nothing else
 /// in the app caches it separately. Also owns the credit-pack catalog, the
@@ -29,8 +30,28 @@ class WalletController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadBalance();
-    loadCreditPacks();
+    // Neither balance nor credit packs have anywhere to actually show while the Go-Live payment
+    // kill-switch is off — ProfileScreen hides the wallet card AND the Redeem Code tile entirely
+    // in that state (see its own paymentEnabled-gated Obx), so prefetching either here would be a
+    // network call with zero user-visible purpose. ConfigController.paymentEnabled defaults to
+    // false and only flips once its own async load resolves (see its doc comment), so this can't
+    // just check the value once here synchronously — it would always read false at this point
+    // regardless of the real flag. React to it instead, and only once (`once`, not `ever`): this
+    // eager prefetch only needs to happen the first time we learn payment is actually on — it
+    // won't reasonably flip on and off again mid-session.
+    final config = Get.find<ConfigController>();
+    void loadAll() {
+      loadBalance();
+      loadCreditPacks();
+    }
+
+    if (config.paymentEnabled.value) {
+      loadAll();
+    } else {
+      once(config.paymentEnabled, (enabled) {
+        if (enabled) loadAll();
+      });
+    }
   }
 
   Future<void> loadBalance({bool forceRefresh = false}) async {
