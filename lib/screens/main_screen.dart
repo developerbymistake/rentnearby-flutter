@@ -588,7 +588,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             _navItem(AppTabs.home, Iconsax.home, Iconsax.home5, 'Home'),
             KeyedSubtree(
               key: TourKeys.homeRoomsNavIcon,
-              child: _navItem(AppTabs.rooms, Iconsax.map, Iconsax.map5, 'Rooms'),
+              child: _navItem(AppTabs.rooms, Iconsax.house, Iconsax.house5, 'Rooms'),
             ),
             KeyedSubtree(
               key: TourKeys.homePlotsNavIcon,
@@ -596,7 +596,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             ),
             KeyedSubtree(
               key: TourKeys.homeServicesNavIcon,
-              child: _navItem(AppTabs.services, Iconsax.briefcase, Iconsax.briefcase5, 'Services'),
+              child: _navItem(AppTabs.services, Iconsax.global_search, Iconsax.global_search5, 'Services'),
             ),
             KeyedSubtree(
               key: TourKeys.homeProfileNavIcon,
