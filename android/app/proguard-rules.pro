@@ -36,3 +36,15 @@
 -keep interface com.mapbox.mapboxsdk.** { *; }
 -dontwarn org.maplibre.**
 -dontwarn com.mapbox.**
+
+# Razorpay — checkout SDK relies on reflection to invoke the host app's payment
+# callbacks; without this, minification silently breaks the checkout flow instead
+# of throwing a build error.
+-keep class com.razorpay.** {*;}
+-dontwarn com.razorpay.**
+-keepclasseswithmembers class * {
+  public void onPayment*(...);
+}
+-optimizations !method/removal/parameter
+-keepattributes JavascriptInterface
+-keepattributes Signature

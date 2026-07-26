@@ -28,7 +28,10 @@ Future<void> main() async {
     systemNavigationBarIconBrightness: Brightness.dark,
     systemNavigationBarContrastEnforced: false,
   ));
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  // Empty list = no restriction (Android 16+ ignores orientation locks on large
+  // screens anyway; this app has no responsive/tablet layouts yet, so landscape
+  // will render at phone-like proportions rather than a tailored layout).
+  SystemChrome.setPreferredOrientations([]);
 
   Get.put(NotificationService(), permanent: true);
   Get.put(AuthController(), permanent: true);
