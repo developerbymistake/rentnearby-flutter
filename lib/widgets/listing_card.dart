@@ -51,6 +51,37 @@ class ListingCard extends StatelessWidget {
             if (listing.pendingReportCount > 0) _buildReportAlertStrip(),
             _buildPhotoSection(),
             _buildContentSection(),
+            if (listing.isRejected) _buildRejectionStrip(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRejectionStrip() {
+    final reason = listing.rejectionReason;
+    final text = reason != null && reason.isNotEmpty ? 'Rejected: $reason' : 'Rejected';
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+      child: Container(
+        width: double.infinity,
+        color: AppColors.error,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            const Icon(Icons.cancel_rounded, size: 15, color: Colors.white),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -286,7 +317,11 @@ class ListingCard extends StatelessWidget {
   }
 
   Widget _buildActions() {
+    // spaceBetween (not Spacer + a fixed inner gap) so the status↔View gap and the
+    // View↔Delete gap come out identical — both are just "the leftover space split
+    // between however many children are actually showing."
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         if (!listing.isActive && !listing.isPendingReview && !listing.isRejected && onGoLive != null)
           _makeItLiveButton()
@@ -296,26 +331,38 @@ class ListingCard extends StatelessWidget {
           _pendingReviewBadge()
         else if (listing.isRejected)
           _rejectedBadge(),
-        const Spacer(),
-        if (onPreview != null) ...[
-          _previewButton(),
-          const SizedBox(width: 8),
-        ],
+        if (onPreview != null) _previewButton(),
         if (onDelete != null) _deleteButton(),
       ],
     );
   }
 
   Widget _previewButton() {
-    return IconButton(
-      onPressed: onPreview,
-      icon: const Icon(Iconsax.eye, size: 18, color: AppColors.textLight),
-      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-      padding: EdgeInsets.zero,
-      visualDensity: VisualDensity.compact,
-      style: IconButton.styleFrom(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    return GestureDetector(
+      onTap: onPreview,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Iconsax.eye, size: 14, color: AppColors.primary),
+            SizedBox(width: 5),
+            Text(
+              'View',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

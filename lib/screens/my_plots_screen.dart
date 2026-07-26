@@ -696,6 +696,9 @@ class _PlotCard extends StatelessWidget {
                 const SizedBox(height: 10),
 
                 Row(
+                  // spaceBetween (not Spacer + a fixed inner gap) so the status↔View gap
+                  // and the View↔Delete gap come out identical.
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     if (plot.isActive) ...[
                       // Active: show deactivate switch
@@ -806,21 +809,27 @@ class _PlotCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    const Spacer(),
-                    if (onPreview != null) ...[
-                      IconButton(
-                        onPressed: onPreview,
-                        icon: const Icon(Iconsax.eye, size: 18, color: AppColors.textLight),
-                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                        padding: EdgeInsets.zero,
-                        visualDensity: VisualDensity.compact,
-                        style: IconButton.styleFrom(
-                          backgroundColor: AppColors.surface,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    if (onPreview != null)
+                      GestureDetector(
+                        onTap: onPreview,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Iconsax.eye, size: 14, color: AppColors.primary),
+                              SizedBox(width: 5),
+                              Text('View',
+                                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                    ],
                     // Delete button
                     GestureDetector(
                       onTap: onDelete,
@@ -847,7 +856,38 @@ class _PlotCard extends StatelessWidget {
               ],
             ),
           ),
+          if (plot.isRejected) _buildRejectionStrip(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRejectionStrip() {
+    final reason = plot.rejectionReason;
+    final text = reason != null && reason.isNotEmpty ? 'Rejected: $reason' : 'Rejected';
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+      child: Container(
+        width: double.infinity,
+        color: AppColors.error,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            const Icon(Icons.cancel_rounded, size: 15, color: Colors.white),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
