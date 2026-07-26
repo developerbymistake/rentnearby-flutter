@@ -46,7 +46,7 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             _buildServiceRails(),
           ],
         ),
@@ -151,7 +151,7 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
                     : null,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
           ],
         ],
       );
