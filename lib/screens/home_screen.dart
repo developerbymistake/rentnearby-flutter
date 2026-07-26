@@ -14,6 +14,7 @@ import '../controllers/service_catalog_controller.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
 import '../widgets/category_card.dart';
+import '../widgets/home_banner_carousel.dart';
 import '../widgets/service_zone.dart';
 import '../widgets/sliding_chip_toggle.dart';
 
@@ -52,7 +53,11 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildHero(context),
               _buildToggle(),
-              const SizedBox(height: 2),
+              Transform.translate(
+                offset: const Offset(0, -4),
+                child: HomeBannerCarousel(onTap: () => _auth.tabIndex.value = AppTabs.services),
+              ),
+              const SizedBox(height: 14),
               _buildListingsSection(),
               const SizedBox(height: 15),
               _buildManageListingsCard(),
@@ -84,170 +89,130 @@ class _HomeScreenState extends State<HomeScreen> {
         20,
         AppInsets.topViewPadding(context) + 14,
         20,
-        40,
+        52,
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Obx(() {
-                  final name = _auth.profileName.value;
-                  final firstName = name.trim().isNotEmpty
-                      ? name.trim().split(' ').first
-                      : 'there';
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Hi, $firstName 👋',
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 21,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        "Let's find your perfect space",
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ],
-                  );
-                }),
-              ),
-            ],
+          Expanded(
+            child: Obx(() {
+              final name = _auth.profileName.value;
+              final firstName = name.trim().isNotEmpty
+                  ? name.trim().split(' ').first
+                  : 'there';
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hi, $firstName 👋',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    "Let's find your perfect space",
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              );
+            }),
           ),
-          const SizedBox(height: 16),
-          _buildActionMenu(),
+          const SizedBox(width: 12),
+          _buildHeaderIcons(),
         ],
       ),
     );
   }
 
-  Widget _buildActionMenu() {
+  Widget _buildHeaderIcons() {
     return Row(
       key: TourKeys.homeActionMenu,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: _menuOption(
-            icon: Iconsax.notification,
-            label: 'Notifications',
-            unreadCount: Get.find<NotificationController>().unreadCount,
-            onTap: () => Get.toNamed(AppRoutes.notifications),
-          ),
+        _headerIconButton(
+          icon: Iconsax.notification,
+          unreadCount: Get.find<NotificationController>().unreadCount,
+          onTap: () => Get.toNamed(AppRoutes.notifications),
         ),
         const SizedBox(width: 10),
-        Expanded(
-          child: _menuOption(
-            icon: Iconsax.message,
-            label: 'Messages',
-            unreadCount: Get.find<ChatController>().unreadCount,
-            onTap: () => Get.toNamed(AppRoutes.chatsList),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _menuOption(
-            icon: Iconsax.home,
-            label: 'Find Room',
-            onTap: () => _auth.tabIndex.value = AppTabs.rooms,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _menuOption(
-            icon: Icons.landscape_rounded,
-            label: 'Find Plot',
-            onTap: () => _auth.tabIndex.value = AppTabs.plots,
-          ),
+        _headerIconButton(
+          icon: Iconsax.message,
+          unreadCount: Get.find<ChatController>().unreadCount,
+          onTap: () => Get.toNamed(AppRoutes.chatsList),
         ),
       ],
     );
   }
 
-  // Background stays a barely-there glass circle (same fill/border alpha this
-  // file already used for the old bell/chat icon buttons) — only the icon
-  // glyph itself is solid white, so it reads clearly against the circle
-  // instead of the fill competing with it for "white."
-  Widget _menuOption({
+  // Solid white circle (was translucent-on-gradient) so the icon glyph reads
+  // as AppColors.primary instead of white — badge Positioned/Obx logic below
+  // is untouched, still the real unread count, not simplified to a dot.
+  Widget _headerIconButton({
     required IconData icon,
-    required String label,
     required VoidCallback onTap,
     RxInt? unreadCount,
   }) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.18),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                ),
-                child: Icon(icon, color: Colors.white, size: 17),
-              ),
-              if (unreadCount != null)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Obx(() {
-                    final count = unreadCount.value;
-                    if (count <= 0) return const SizedBox.shrink();
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1,
-                      ),
-                      constraints: const BoxConstraints(minWidth: 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        count > 99 ? '99+' : '$count',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 7.5,
-              fontWeight: FontWeight.w700,
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
               color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
+            child: Icon(icon, color: AppColors.primary, size: 17),
           ),
+          if (unreadCount != null)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Obx(() {
+                final count = unreadCount.value;
+                if (count <= 0) return const SizedBox.shrink();
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1,
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.error,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    count > 99 ? '99+' : '$count',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                );
+              }),
+            ),
         ],
       ),
     );
