@@ -59,6 +59,10 @@ class TourController extends GetxController {
     _locationCtrl = Get.find<LocationController>();
 
     _tabIndexWorker = ever<int>(_auth.tabIndex, rxSafe('tour.tabIndex', (_) {
+      // Unconditional, synchronous — invalidates any in-flight pre-render retry for the tab
+      // being left the instant the tab changes, without waiting a frame for
+      // attemptShowTourForCurrentTab's own bump below (harmless double-bump when both fire).
+      _generation++;
       if (tourInProgress.value) _teardown(markSeen: false);
       WidgetsBinding.instance.addPostFrameCallback((_) => attemptShowTourForCurrentTab());
     }));
@@ -100,6 +104,13 @@ class TourController extends GetxController {
   }
 
   void attemptShowTourForCurrentTab() {
+    // Bumped unconditionally, before any early return — mirrors NotificationController's
+    // "_requestId bumped first, always" pattern. If this didn't bump here, switching to a
+    // tab with no registry entry (or an already-seen tour) would early-return below without
+    // invalidating whatever retry chain the PREVIOUS tab's attempt is still running.
+    _generation++;
+    _retryAttempt = 0;
+
     if (tourInProgress.value) return;
     final tour = tourRegistry[_auth.tabIndex.value];
     if (tour == null) return;
@@ -109,8 +120,6 @@ class TourController extends GetxController {
     // _activeTour is deliberately NOT set here — it's only assigned once
     // _beginTourAttempt actually re-validates after the pause, so there's no
     // window where _activeTour is set but nothing is guaranteed to happen.
-    _retryAttempt = 0;
-    _generation++;
     final generation = _generation;
     Future.delayed(_preTourPause, () => _beginTourAttempt(tour, generation));
   }
@@ -213,6 +222,14 @@ class TourController extends GetxController {
       _teardown(markSeen: false);
       return;
     }
+    // Same re-validation _beginTourAttempt does once after its pre-pause — this retry loop
+    // can span ~1s across postFrame/delayed retries, and the user may have switched tabs
+    // mid-retry. IndexedStack keeps the old tab's target mounted/"ready", so without this
+    // the loop would happily render on top of whatever tab is now active.
+    if (_auth.tabIndex.value != tour.tabIndex) {
+      _teardown(markSeen: false);
+      return;
+    }
 
     for (var i = fromIndex; i < tour.steps.length; i++) {
       if (isTourTargetReady(tour.steps[i].key)) {
@@ -238,6 +255,10 @@ class TourController extends GetxController {
   void _showStepAt(int idx) {
     final tour = _activeTour;
     if (tour == null) return;
+    // Last-line-of-defense: never paint a step against the wrong tab, even if some future
+    // call path to _showStepAt forgets to check tab match upstream (see _searchForReadyStep's
+    // identical check above, which is currently this function's only caller).
+    if (_auth.tabIndex.value != tour.tabIndex) return;
     tourDialogContent.value = null; // dialog and spotlight are mutually exclusive
     tourStepIndex.value = idx;
     currentTourStep.value = tour.steps[idx];
