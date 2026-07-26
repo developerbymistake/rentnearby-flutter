@@ -226,9 +226,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // Delete Account
+            // Delete Account — last item now that the footer is gone, so its own bottom padding
+            // carries the safe-area/gesture-nav inset the footer used to provide.
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 24 + AppInsets.bottomViewPadding(context)),
               child: Obx(() => TextButton(
                 onPressed: _auth.isLoading.value ? null : _confirmDeleteAccount,
                 child: const Text(
@@ -242,17 +243,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               )),
-            ),
-
-            // Footer
-            Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 36 + AppInsets.bottomViewPadding(context)),
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Text('Made with ', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-                const Icon(Icons.favorite_rounded, color: Color(0xFFE53935), size: 14),
-                const Text(' by ', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-                const Text('Dev', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primaryLight)),
-              ]),
             ),
           ],
         ),
