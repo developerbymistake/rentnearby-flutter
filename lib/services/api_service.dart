@@ -6,7 +6,6 @@ import 'storage_service.dart';
 
 class ApiService {
   static late Dio _dio;
-  static late Dio _nominatimDio;
   static Future<void>? _logoutInFlight;
 
   // Shared single-flight guard for every logout trigger (explicit logout, account deletion, a
@@ -41,25 +40,6 @@ class ApiService {
         handler.next(error);
       },
     ));
-
-    _nominatimDio = Dio(BaseOptions(
-      baseUrl: AppConstants.nominatimUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 8),
-      headers: {'User-Agent': 'Bakhli/1.0 (support@bakhli.in)'},
-    ));
-  }
-
-  static Future<Map<String, dynamic>?> reverseGeocode(double lat, double lng) async {
-    final res = await _nominatimDio.get<Map<String, dynamic>>(
-      '/reverse',
-      queryParameters: {
-        'format': 'jsonv2',
-        'lat': lat.toStringAsFixed(6),
-        'lon': lng.toStringAsFixed(6),
-      },
-    );
-    return res.data;
   }
 
   // A 204 No Content response (e.g. block/unblock) has no Content-Type header, so Dio's

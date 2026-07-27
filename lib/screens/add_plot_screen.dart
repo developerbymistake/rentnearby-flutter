@@ -9,7 +9,6 @@ import '../controllers/location_controller.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../services/api_service.dart';
 import 'dart:io';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
@@ -280,8 +279,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     }
     void fire() {
       if (!mounted) return;
-      if (includeAddress) _reverseGeocodeAddress(pos, myGeneration);
-      _resolveDistrictForPin(pos, myGeneration);
+      _resolveDistrictForPin(pos, myGeneration, includeAddress: includeAddress);
     }
     if (immediate) {
       fire();
@@ -290,18 +288,23 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     }
   }
 
-  // `generation`-guarded the same way as `_resolveDistrictForPin` — without
-  // it, an older in-flight lookup landing after a newer one could silently
-  // overwrite the address field (and thus the submitted address) with a
-  // stale value for a position the pin has already moved away from.
-  Future<void> _reverseGeocodeAddress(LatLng pos, int generation) async {
+  // Side-effect-free coordinate -> district/city resolve for the exact pin
+  // position (same primitive the location-search flow uses) — this is what
+  // guarantees the submitted district always matches where the pin actually
+  // is, never a stale snapshot or the user's raw (possibly browsed) district.
+  Future<void> _resolveDistrictForPin(LatLng pos, int generation, {required bool includeAddress}) async {
     if (!mounted) return;
-    setState(() => _isGeocoding = true);
+    setState(() => _isResolvingDistrict = true);
     try {
-      final res = await ApiService.reverseGeocode(pos.latitude, pos.longitude);
+      final ctx = await _locationCtrl.resolveDistrictAt(pos.latitude, pos.longitude, includeAddress: includeAddress);
       if (!mounted || generation != _districtResolveGeneration) return;
-      final displayName = res?['display_name'] as String? ?? '';
-      if (displayName.isNotEmpty) {
+      setState(() {
+        _resolvedDistrict = ctx.district;
+        _resolvedCity = ctx.nearestCity;
+        _isResolvingDistrict = false;
+      });
+      final displayName = ctx.address;
+      if (displayName != null && displayName.isNotEmpty) {
         final parts = displayName
             .split(',')
             .map((s) => s.trim())
@@ -309,27 +312,9 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
             .toList();
         _addressCtrl.text = parts.take(3).join(', ');
       }
-    } catch (_) {
-    } finally {
-      if (mounted) setState(() => _isGeocoding = false);
-    }
-  }
-
-  // Side-effect-free coordinate -> district/city resolve for the exact pin
-  // position (same primitive the location-search flow uses) — this is what
-  // guarantees the submitted district always matches where the pin actually
-  // is, never a stale snapshot or the user's raw (possibly browsed) district.
-  Future<void> _resolveDistrictForPin(LatLng pos, int generation) async {
-    if (!mounted) return;
-    setState(() => _isResolvingDistrict = true);
-    try {
-      final ctx = await _locationCtrl.resolveDistrictAt(pos.latitude, pos.longitude);
-      if (!mounted || generation != _districtResolveGeneration) return;
-      setState(() {
-        _resolvedDistrict = ctx.district;
-        _resolvedCity = ctx.nearestCity;
-        _isResolvingDistrict = false;
-      });
+      if (ctx.nearestCity != null) {
+        _locationCtrl.loadCitiesForDistrict(ctx.district.id, forceRefresh: true);
+      }
     } on DistrictNotFoundException {
       if (!mounted || generation != _districtResolveGeneration) return;
       setState(() => _isResolvingDistrict = false);

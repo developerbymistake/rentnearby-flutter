@@ -6,11 +6,13 @@ class LocationContext {
   final DistrictModel district;
   final CityModel? nearestCity;
   final List<CityModel> citiesInDistrict;
+  final String? address;
 
   const LocationContext({
     required this.district,
     this.nearestCity,
     this.citiesInDistrict = const [],
+    this.address,
   });
 }
 

@@ -435,11 +435,16 @@ class LocationController extends GetxController {
   /// effects on any controller state. Throws [DistrictNotFoundException] on a
   /// confirmed 404 (point outside every active district's boundary);
   /// rethrows anything else (network/parse failures) as-is.
-  Future<LocationContext> _fetchLocationContext(double lat, double lng) async {
+  Future<LocationContext> _fetchLocationContext(double lat, double lng,
+      {bool includeAddress = false}) async {
     try {
       final res = await ApiService.get(
         '/listings/context',
-        params: {'lat': lat, 'lng': lng},
+        params: {
+          'lat': lat,
+          'lng': lng,
+          if (includeAddress) 'includeAddress': true,
+        },
       );
       final data = res['data'];
       final district =
@@ -452,7 +457,10 @@ class LocationController extends GetxController {
           ? cities.firstWhereOrNull((c) => c.id == nearestCityId)
           : cities.firstOrNull;
       return LocationContext(
-          district: district, nearestCity: nearestCity, citiesInDistrict: cities);
+          district: district,
+          nearestCity: nearestCity,
+          citiesInDistrict: cities,
+          address: data['address'] as String?);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) throw const DistrictNotFoundException();
       rethrow;
@@ -493,8 +501,9 @@ class LocationController extends GetxController {
   /// propagates as-is — callers should catch broadly for a generic error and
   /// catch [DistrictNotFoundException] specifically for a precise
   /// "not serviceable here" message.
-  Future<LocationContext> resolveDistrictAt(double lat, double lng) =>
-      _fetchLocationContext(lat, lng);
+  Future<LocationContext> resolveDistrictAt(double lat, double lng,
+          {bool includeAddress = false}) =>
+      _fetchLocationContext(lat, lng, includeAddress: includeAddress);
 
   // ── Resume handler (called by both explore screens on app foreground) ───────
 
