@@ -12,6 +12,8 @@ class AppConstants {
   static const String notifPromptDismissedKey = 'notif_prompt_dismissed_at';
   static const String subscribedDistrictTopicKey = 'subscribed_district_topic';
 
+  static const String introCarouselSeenKey = 'intro_carousel_seen';
+
   static const String tourHomeSeenKey = 'tour_home_seen';
   static const String tourRoomsSeenKey = 'tour_rooms_seen';
   static const String tourPlotsSeenKey = 'tour_plots_seen';

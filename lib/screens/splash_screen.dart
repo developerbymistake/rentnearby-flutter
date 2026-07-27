@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import '../config/app_colors.dart';
+import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../services/storage_service.dart';
 
@@ -39,7 +40,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
   }
 
   Future<void> _start() async {
-    await Future.delayed(const Duration(milliseconds: 1200));
+    await Future.delayed(const Duration(milliseconds: 1000));
     _navigate();
   }
 
@@ -55,6 +56,8 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
 
     if (StorageService.isLoggedIn) {
       Get.offAllNamed(AppRoutes.main);
+    } else if (!StorageService.getTourSeen(AppConstants.introCarouselSeenKey)) {
+      Get.offAllNamed(AppRoutes.intro);
     } else {
       Get.offAllNamed(AppRoutes.login);
     }

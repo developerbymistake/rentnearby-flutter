@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../screens/splash_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/onboarding_screen.dart';
+import '../screens/app_intro_screen.dart';
 import '../screens/phone_verify_screen.dart';
 import '../screens/main_screen.dart';
 import '../screens/listing_detail_screen.dart';
@@ -34,6 +35,7 @@ import '../controllers/view_all_controller.dart' show ViewAllListingType;
 class AppRoutes {
   static const String splash = '/';
   static const String login = '/login';
+  static const String intro = '/intro';
   static const String onboarding = '/onboarding';
   static const String phoneVerify = '/phone-verify';
   // keep /otp as alias for phone-verify (backward compat for any deep links)
@@ -81,6 +83,12 @@ class AppRoutes {
     GetPage(
       name: login,
       page: () => const LoginScreen(),
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 400),
+    ),
+    GetPage(
+      name: intro,
+      page: () => const AppIntroScreen(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 400),
     ),
