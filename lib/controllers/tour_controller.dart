@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../config/app_routes.dart';
 import '../config/app_tour_state.dart';
 import '../config/tour_registry.dart';
 import '../controllers/auth_controller.dart';
@@ -71,9 +72,9 @@ class TourController extends GetxController {
       if (u == null && tourInProgress.value) _teardown(markSeen: false);
     }));
 
-    _offlineWorker = ever(_locationCtrl.isOffline, rxSafe('tour.isOffline', (_) => _checkGatesAndDismiss()));
-    _gpsWorker = ever(_locationCtrl.gpsEnabled, rxSafe('tour.gpsEnabled', (_) => _checkGatesAndDismiss()));
-    _districtWorker = ever(_locationCtrl.districtUnavailable, rxSafe('tour.districtUnavailable', (_) => _checkGatesAndDismiss()));
+    _offlineWorker = ever(_locationCtrl.isOffline, rxSafe('tour.isOffline', (_) => _reconcile()));
+    _gpsWorker = ever(_locationCtrl.gpsEnabled, rxSafe('tour.gpsEnabled', (_) => _reconcile()));
+    _districtWorker = ever(_locationCtrl.districtUnavailable, rxSafe('tour.districtUnavailable', (_) => _reconcile()));
 
     WidgetsBinding.instance.addPostFrameCallback((_) => attemptShowTourForCurrentTab());
   }
@@ -91,10 +92,25 @@ class TourController extends GetxController {
     super.onClose();
   }
 
-  void _checkGatesAndDismiss() {
-    if (tourInProgress.value && _locationCtrl.hasActiveGate) {
-      _teardown(markSeen: false);
+  /// Symmetric gate reconciliation, run every time isOffline/gpsEnabled/
+  /// districtUnavailable changes. Two directions:
+  ///  - gate goes active while a tour is showing: tear it down (this is the
+  ///    entirety of what the old _checkGatesAndDismiss did).
+  ///  - gate clears while nothing is showing: re-attempt via the existing,
+  ///    fully self-validating attemptShowTourForCurrentTab() entry point.
+  ///    This closes the kill-path where a single hasActiveGate check at
+  ///    attemptShowTourForCurrentTab/_beginTourAttempt's one instant killed
+  ///    the whole session's only attempt, with nothing ever re-triggering it.
+  /// Deliberately never calls attemptShowTourForCurrentTab() while
+  /// tourInProgress is true — the first branch owns that state exclusively,
+  /// so a tour actively showing a step or dialog never has its generation
+  /// bumped by this path.
+  void _reconcile() {
+    if (tourInProgress.value) {
+      if (_locationCtrl.hasActiveGate) _teardown(markSeen: false);
+      return;
     }
+    if (!_locationCtrl.hasActiveGate) attemptShowTourForCurrentTab();
   }
 
   /// Called by TourDismissObserver.didPush — any route pushed on the root
@@ -116,6 +132,13 @@ class TourController extends GetxController {
     if (tour == null) return;
     if (StorageService.getTourSeen(tour.storageKey)) return;
     if (_locationCtrl.hasActiveGate) return;
+    // TourHost is mounted above the ENTIRE routed app (main.dart), not just
+    // MainScreen — so without this, a resume/reconcile-triggered attempt while
+    // the user has a detail screen (listing, chat, checkout) pushed on top
+    // would eventually paint the tour over that unrelated screen. Same
+    // `Get.currentRoute == AppRoutes.main` check NotificationService already
+    // uses to detect "am I sitting on MainScreen right now".
+    if (Get.currentRoute != AppRoutes.main) return;
 
     // _activeTour is deliberately NOT set here — it's only assigned once
     // _beginTourAttempt actually re-validates after the pause, so there's no
@@ -139,6 +162,10 @@ class TourController extends GetxController {
     if (_locationCtrl.hasActiveGate) return;
     if (_auth.user.value == null) return;
     if (_auth.tabIndex.value != tour.tabIndex) return;
+    // Re-check same as attemptShowTourForCurrentTab's own check — up to
+    // _preTourPause has elapsed since that check, long enough for a route
+    // push (notification tap, deep link) to have happened in between.
+    if (Get.currentRoute != AppRoutes.main) return;
 
     _activeTour = tour;
     final intro = tour.introContent;
@@ -227,6 +254,14 @@ class TourController extends GetxController {
     // mid-retry. IndexedStack keeps the old tab's target mounted/"ready", so without this
     // the loop would happily render on top of whatever tab is now active.
     if (_auth.tabIndex.value != tour.tabIndex) {
+      _teardown(markSeen: false);
+      return;
+    }
+    // Same re-validation, for the same reason — this retry loop can span
+    // close to a second on its own, on top of everything before it, and a
+    // route push during that window doesn't change tabIndex so the check
+    // above wouldn't catch it.
+    if (Get.currentRoute != AppRoutes.main) {
       _teardown(markSeen: false);
       return;
     }

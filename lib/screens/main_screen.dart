@@ -202,6 +202,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       // alongside Chat/Wallet).
       Get.find<InquiryController>().fetchActiveCount();
       Get.find<AgentController>().checkAgentStatus();
+      // Tour re-attempt anchor for app resume — Future.delayed timers inside
+      // TourController's bounded retry (_searchForReadyStep) keep firing even
+      // while the app is backgrounded (e.g. during a native location-permission
+      // dialog), so its ~2s retry budget can silently exhaust without a single
+      // frame ever being produced, wasting the only attempt for nothing.
+      // attemptShowTourForCurrentTab() is fully self-validating (tourInProgress,
+      // seen-flag, hasActiveGate, its own generation bump) so it's safe to call
+      // unconditionally here, same as every other call in this block.
+      Get.find<TourController>().attemptShowTourForCurrentTab();
     }
   }
 
