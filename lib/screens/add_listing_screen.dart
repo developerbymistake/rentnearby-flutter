@@ -45,6 +45,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
   CityModel? _resolvedCity;
   String? get _selectedDistrictId => _resolvedDistrict?.id;
   bool _isResolvingDistrict = false;
+  // Scoped separately from _isResolvingDistrict, which stays a general "any resolve in flight"
+  // signal (drives the Next-button disable check and the "Detecting…" labels for ANY resolve,
+  // passive or not). This one is only ever set true by the user's own Next-click into the Address
+  // step, so the "Please wait…" overlay can't reappear from an unrelated background GPS resync
+  // (e.g. resume-triggered refresh from a still-mounted sibling Explore tab) while typing.
+  bool _showAddressResolveOverlay = false;
   bool _pinManuallyPlaced = false;
   int _districtResolveGeneration = 0;
   Worker? _userLocationWorker;
@@ -262,7 +268,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
   // dragging the map only fires one round of network calls per pause —
   // `immediate: true` (GPS-driven updates, not a drag) skips the wait since
   // those aren't rapid-fire like dragging is.
-  Future<void> _resolvePinDetails(LatLng pos, {bool immediate = false, bool includeAddress = true}) async {
+  Future<void> _resolvePinDetails(LatLng pos, {bool immediate = false, bool includeAddress = true, bool userInitiated = false}) async {
     if (!mounted) return;
     _pinResolveTimer?.cancel();
     final myGeneration = ++_districtResolveGeneration;
@@ -274,7 +280,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     }
     void fire() {
       if (!mounted) return;
-      _resolveDistrictForPin(pos, myGeneration, includeAddress: includeAddress);
+      _resolveDistrictForPin(pos, myGeneration, includeAddress: includeAddress, userInitiated: userInitiated);
     }
     if (immediate) {
       fire();
@@ -287,9 +293,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
   // position (same primitive the location-search flow uses) — this is what
   // guarantees the submitted district always matches where the pin actually
   // is, never a stale snapshot or the user's raw (possibly browsed) district.
-  Future<void> _resolveDistrictForPin(LatLng pos, int generation, {required bool includeAddress}) async {
+  Future<void> _resolveDistrictForPin(LatLng pos, int generation, {required bool includeAddress, bool userInitiated = false}) async {
     if (!mounted) return;
-    setState(() => _isResolvingDistrict = true);
+    setState(() {
+      _isResolvingDistrict = true;
+      if (userInitiated) _showAddressResolveOverlay = true;
+    });
     try {
       final ctx = await _locationCtrl.resolveDistrictAt(pos.latitude, pos.longitude, includeAddress: includeAddress);
       if (!mounted || generation != _districtResolveGeneration) return;
@@ -297,6 +306,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
         _resolvedDistrict = ctx.district;
         _resolvedCity = ctx.nearestCity;
         _isResolvingDistrict = false;
+        _showAddressResolveOverlay = false;
       });
       final displayName = ctx.address;
       if (displayName != null && displayName.isNotEmpty) {
@@ -308,11 +318,17 @@ class _AddListingScreenState extends State<AddListingScreen> {
       }
     } on DistrictNotFoundException {
       if (!mounted || generation != _districtResolveGeneration) return;
-      setState(() => _isResolvingDistrict = false);
+      setState(() {
+        _isResolvingDistrict = false;
+        _showAddressResolveOverlay = false;
+      });
       AppToast.error("This area isn't in a serviceable location yet.");
     } catch (_) {
       if (!mounted || generation != _districtResolveGeneration) return;
-      setState(() => _isResolvingDistrict = false);
+      setState(() {
+        _isResolvingDistrict = false;
+        _showAddressResolveOverlay = false;
+      });
       AppToast.error('Could not verify the district for this location. Please try again.');
     }
   }
@@ -508,7 +524,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     if (_step < 3) {
       setState(() => _step++);
       if (_step == 2 && _addressCtrl.text.trim().isEmpty && _selectedLocation != null) {
-        _resolvePinDetails(_selectedLocation!);
+        _resolvePinDetails(_selectedLocation!, userInitiated: true);
       }
     } else {
       _submit();
@@ -874,6 +890,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
               ? AppLoadingOverlay.stackChild(message: 'Creating listing...')
               : const SizedBox.shrink()),
           if (_isFinalizing) AppLoadingOverlay.stackChild(message: 'Saving your listing...'),
+          if (_step == 2 && _showAddressResolveOverlay) AppLoadingOverlay.stackChild(message: 'Please wait...'),
         ],
       ),
     );
