@@ -33,6 +33,7 @@ import '../services/chat_hub_service.dart';
 import '../services/inquiry_hub_service.dart';
 import '../services/notification_service.dart';
 import '../services/wallet_hub_service.dart';
+import '../widgets/app_loading_overlay.dart';
 import '../widgets/district_banner_overlay.dart';
 import '../widgets/gradient_button.dart';
 import '../navigation/tab_router.dart';
@@ -486,6 +487,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
+        // This is the app's only back-handling (tabs live under one
+        // IndexedStack, none independently poppable) — block it outright
+        // while a logout is in flight so the user can't tab-switch away
+        // from (and lose sight of) the non-dismissible logout overlay.
+        if (_auth.isLoggingOut.value) return;
         if (_auth.tabIndex.value != AppTabs.home) {
           _auth.tabIndex.value = AppTabs.home;
         } else {
@@ -524,6 +530,17 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                   _locationCtrl.locationLoading.value &&
                   _locationCtrl.userLocation.value == null
               ? _buildLocationLoadingOverlay()
+              : const SizedBox.shrink()),
+          // Sits above the Scaffold's body AND its bottomNavigationBar (both
+          // are children of this same top-level Stack), so it blocks tab
+          // switching too — a body-level overlay inside one tab screen can't
+          // cover a sibling bottomNavigationBar living in a different
+          // Scaffold. Non-dismissible by construction: a plain painted
+          // overlay, not a Dialog/route push, so there's no barrier-tap or
+          // Navigator entry to dismiss. System back is separately blocked by
+          // this screen's own root PopScope while isLoggingOut is true.
+          Obx(() => _auth.isLoggingOut.value
+              ? AppLoadingOverlay.stackChild(message: 'Logging out...')
               : const SizedBox.shrink()),
         ],
       ),

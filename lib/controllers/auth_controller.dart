@@ -18,6 +18,12 @@ enum LogoutReason { explicitLogout, accountDeleted, sessionExpired }
 
 class AuthController extends GetxController {
   final isLoading = false.obs;
+  // Deliberately separate from isLoading, which is already shared/overloaded
+  // across login-OTP send/verify/resend, profile update, and delete-account
+  // — piling explicit logout onto that same flag risks some unrelated screen
+  // reacting to it. Drives the Profile screen's non-dismissible "Logging
+  // out..." overlay and blocks MainScreen's root back-handling while true.
+  final isLoggingOut = false.obs;
   final user = Rxn<UserModel>();
   final tabIndex = AppTabs.home.obs;
   final profileTabTrigger = 0.obs;
@@ -216,7 +222,14 @@ class AuthController extends GetxController {
 
   Future<void> logout() {
     isLoading.value = false;
-    return forceLogout(reason: LogoutReason.explicitLogout);
+    // Scoped to explicit logout only (not the shared _performLogoutCleanup)
+    // — a forced session-expiry logout can fire from any screen, where a
+    // Profile-tied overlay wouldn't even be visible, and already has its
+    // own toast; account deletion already has its own isLoading-driven UI.
+    isLoggingOut.value = true;
+    return forceLogout(reason: LogoutReason.explicitLogout).whenComplete(() {
+      isLoggingOut.value = false;
+    });
   }
 
   Future<void> deleteAccount() async {
