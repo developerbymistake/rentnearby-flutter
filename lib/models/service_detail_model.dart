@@ -18,6 +18,12 @@ class ServiceDetailModel {
   final bool isFeatured;
   final bool isActive;
   final List<ServicePackagePreviewModel> packages;
+  final String? terrainType;
+  final String? pickupDropLocation;
+  final String? nightsBreakdown;
+  final String? mealsNote;
+  final String? itineraryDisclaimer;
+  final List<ItineraryDayModel> itineraryDays;
 
   ServiceDetailModel({
     required this.id,
@@ -32,6 +38,12 @@ class ServiceDetailModel {
     required this.isFeatured,
     required this.isActive,
     required this.packages,
+    required this.terrainType,
+    required this.pickupDropLocation,
+    required this.nightsBreakdown,
+    required this.mealsNote,
+    required this.itineraryDisclaimer,
+    required this.itineraryDays,
   });
 
   factory ServiceDetailModel.fromJson(Map<String, dynamic> json) => ServiceDetailModel(
@@ -49,5 +61,33 @@ class ServiceDetailModel {
         packages: (json['packages'] as List? ?? [])
             .map((e) => ServicePackagePreviewModel.fromJson(e as Map<String, dynamic>))
             .toList(),
+        terrainType: json['terrainType'] as String?,
+        pickupDropLocation: json['pickupDropLocation'] as String?,
+        nightsBreakdown: json['nightsBreakdown'] as String?,
+        mealsNote: json['mealsNote'] as String?,
+        itineraryDisclaimer: json['itineraryDisclaimer'] as String?,
+        itineraryDays: (json['itineraryDays'] as List? ?? [])
+            .map((e) => ItineraryDayModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+/// One day's entry in a service's "See Your Journey" itinerary — GET
+/// /services/{id} embeds these under itineraryDays, ordered by dayNumber.
+class ItineraryDayModel {
+  final int dayNumber;
+  final String title;
+  final String description;
+
+  ItineraryDayModel({
+    required this.dayNumber,
+    required this.title,
+    required this.description,
+  });
+
+  factory ItineraryDayModel.fromJson(Map<String, dynamic> json) => ItineraryDayModel(
+        dayNumber: (json['dayNumber'] as num?)?.toInt() ?? 0,
+        title: json['title'] as String? ?? '',
+        description: json['description'] as String? ?? '',
       );
 }

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
@@ -12,6 +13,7 @@ import '../models/service_package_model.dart';
 import '../utils/inquiry_form_fields.dart';
 import '../utils/service_icons.dart';
 import '../widgets/service_package_card.dart';
+import 'service_itinerary_screen.dart';
 
 /// Service Detail — the one screen in this feature whose hero cover photo
 /// is deliberately edge-to-edge. The back button overlaying it uses
@@ -240,6 +242,30 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     height: 1.6,
                   ),
                 ),
+                if (s.itineraryDays.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Get.to(
+                        () => ServiceItineraryScreen(service: s),
+                        transition: Transition.rightToLeft,
+                        duration: const Duration(milliseconds: 300),
+                      ),
+                      icon: const Icon(Iconsax.route_square, size: 18, color: AppColors.primary),
+                      label: const Text(
+                        'See Your Journey',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.primary),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: AppColors.surface,
+                        side: const BorderSide(color: AppColors.primaryLight, width: 1.2),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
                 if (_packages.isNotEmpty) ...[
                   const SizedBox(height: 24),
                   Row(
