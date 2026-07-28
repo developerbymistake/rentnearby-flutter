@@ -321,6 +321,13 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(agent.name, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                    if (agent.companyName != null && agent.companyName!.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        agent.companyName!,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+                      ),
+                    ],
                     const SizedBox(height: 2),
                     Text('Your assigned $roleLabel', style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
                   ],
