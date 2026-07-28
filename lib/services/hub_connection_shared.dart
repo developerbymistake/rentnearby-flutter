@@ -26,7 +26,8 @@ mixin SingleFlightHubConnect {
   Future<void> performConnect();
 
   Future<void> connect() {
-    if (currentConnection?.state == HubConnectionState.Connected) return Future.value();
+    final state = currentConnection?.state;
+    if (state != null && state != HubConnectionState.Disconnected) return Future.value();
     return _connecting ??= performConnect().whenComplete(() => _connecting = null);
   }
 

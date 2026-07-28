@@ -31,6 +31,12 @@ class WalletHubService extends GetxService with SingleFlightHubConnect {
   Future<void> performConnect() async {
     if (StorageService.getToken() == null || isHubSessionLoggingOut) return;
 
+    if (_connection != null) {
+      try {
+        await _connection!.stop();
+      } catch (_) {}
+    }
+
     _connection = HubConnectionBuilder()
         .withUrl(
           '${AppConstants.serverUrl}/hubs/wallet',

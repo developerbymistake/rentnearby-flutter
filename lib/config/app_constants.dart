@@ -34,6 +34,8 @@ class AppConstants {
   // invocation already showed (flutter_local_notifications has no API to read back an
   // already-shown notification's stacked lines).
   static const String chatStackedLinesKeyPrefix = 'chat_stacked_lines_';
+  static const Duration chatStackedLinesMaxAge = Duration(days: 7);
+  static const int chatStackedLinesMaxConversations = 100;
 
   static const double defaultRadius = 5.0; // km
   static const int maxPhotos = 5;

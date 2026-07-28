@@ -13,6 +13,7 @@ class StorageService {
 
   static Future<void> init() async {
     _cachedToken = await _secureStorage.read(key: AppConstants.tokenKey);
+    pruneStaleChatStackedLines();
   }
 
   static String? getToken() => _cachedToken;
@@ -153,6 +154,42 @@ class StorageService {
         (k) => k is String && k.startsWith(AppConstants.chatStackedLinesKeyPrefix));
     for (final key in keys.toList()) {
       _box.remove(key as String);
+    }
+  }
+
+  /// Bounds the chat-stacked-lines buffers so a long-lived login session cannot accumulate one entry per
+  /// distinct conversation forever for conversations that receive pushes but are never opened (the only
+  /// other removal paths are opening that conversation, or logout). Two layers: age (a conversation gone
+  /// quiet for a week has nothing useful left to stack) and a hard count cap as a backstop. Called once per
+  /// cold start from init() -- this is a slow-accumulation problem across app lifetime, not a within-session
+  /// one, so a per-launch sweep is enough.
+  static void pruneStaleChatStackedLines() {
+    final prefix = AppConstants.chatStackedLinesKeyPrefix;
+    final entries = _box.getKeys()
+        .where((k) => k is String && k.startsWith(prefix))
+        .map((k) => k as String)
+        .map((key) {
+          final messages = _box.read<List>(key) ?? const [];
+          final newest = messages.fold<int>(0, (acc, e) {
+            final ts = (Map<String, dynamic>.from(e as Map)['timestamp'] as num?)?.toInt() ?? 0;
+            return ts > acc ? ts : acc;
+          });
+          return MapEntry(key, newest);
+        })
+        .toList();
+
+    final cutoff = DateTime.now().subtract(AppConstants.chatStackedLinesMaxAge).millisecondsSinceEpoch;
+    final stale = entries.where((e) => e.value < cutoff).map((e) => e.key);
+    for (final key in stale) {
+      _box.remove(key);
+    }
+
+    final remaining = entries.where((e) => e.value >= cutoff).toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    if (remaining.length > AppConstants.chatStackedLinesMaxConversations) {
+      for (final e in remaining.skip(AppConstants.chatStackedLinesMaxConversations)) {
+        _box.remove(e.key);
+      }
     }
   }
 }
