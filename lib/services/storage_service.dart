@@ -165,26 +165,35 @@ class StorageService {
   /// one, so a per-launch sweep is enough.
   static void pruneStaleChatStackedLines() {
     final prefix = AppConstants.chatStackedLinesKeyPrefix;
-    final entries = _box.getKeys()
+    final List<String> keys = _box.getKeys()
         .where((k) => k is String && k.startsWith(prefix))
         .map((k) => k as String)
-        .map((key) {
-          final messages = _box.read<List>(key) ?? const [];
-          final newest = messages.fold<int>(0, (acc, e) {
-            final ts = (Map<String, dynamic>.from(e as Map)['timestamp'] as num?)?.toInt() ?? 0;
-            return ts > acc ? ts : acc;
-          });
-          return MapEntry(key, newest);
-        })
         .toList();
 
+    // Explicit MapEntry<String, int> here (and on both .where closures below) deliberately —
+    // this used to be one long inferred .map().map().toList() chain, and the closure type Dart
+    // inferred for it (dynamic Function(dynamic) instead of bool Function(MapEntry<String,int>))
+    // only surfaced as a crash in release/AOT builds, not debug/JIT: every cold start threw
+    // "type '(dynamic) => dynamic' is not a subtype of type '(dynamic) => bool' of 'test'" out of
+    // main()'s `await StorageService.init()`, before runApp() ever ran — the whole app hung on the
+    // native splash forever in release only. Keep every type here explicit, don't re-collapse this
+    // back into an inferred chain.
+    final List<MapEntry<String, int>> entries = keys.map((key) {
+      final messages = _box.read<List>(key) ?? const [];
+      final newest = messages.fold<int>(0, (acc, e) {
+        final ts = (Map<String, dynamic>.from(e as Map)['timestamp'] as num?)?.toInt() ?? 0;
+        return ts > acc ? ts : acc;
+      });
+      return MapEntry<String, int>(key, newest);
+    }).toList();
+
     final cutoff = DateTime.now().subtract(AppConstants.chatStackedLinesMaxAge).millisecondsSinceEpoch;
-    final stale = entries.where((e) => e.value < cutoff).map((e) => e.key);
+    final stale = entries.where((MapEntry<String, int> e) => e.value < cutoff).map((e) => e.key);
     for (final key in stale) {
       _box.remove(key);
     }
 
-    final remaining = entries.where((e) => e.value >= cutoff).toList()
+    final remaining = entries.where((MapEntry<String, int> e) => e.value >= cutoff).toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     if (remaining.length > AppConstants.chatStackedLinesMaxConversations) {
       for (final e in remaining.skip(AppConstants.chatStackedLinesMaxConversations)) {
