@@ -48,3 +48,15 @@
 -optimizations !method/removal/parameter
 -keepattributes JavascriptInterface
 -keepattributes Signature
+
+# Geolocator — its Android implementation lives under com.baseflow.geolocator (not
+# io.flutter.plugins.**, so the broad Flutter-plugin rule above never covered it),
+# including a permission/ subpackage that handles the
+# ActivityCompat.OnRequestPermissionsResultCallback used by SplashScreen's location
+# permission flow. Without this, R8 can strip/rename that callback class under
+# minification (enabled for release since the v36 Play Console fixes commit, which
+# never added a rule for this plugin) — the permission-request Future then never
+# completes, hanging the splash screen forever in release builds only (debug never
+# runs R8, so this was invisible until a real release build was tested).
+-keep class com.baseflow.geolocator.** { *; }
+-dontwarn com.baseflow.geolocator.**
