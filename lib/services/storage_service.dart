@@ -165,19 +165,21 @@ class StorageService {
   /// one, so a per-launch sweep is enough.
   static void pruneStaleChatStackedLines() {
     final prefix = AppConstants.chatStackedLinesKeyPrefix;
-    final List<String> keys = _box.getKeys()
-        .where((k) => k is String && k.startsWith(prefix))
-        .map((k) => k as String)
-        .toList();
 
-    // Explicit MapEntry<String, int> here (and on both .where closures below) deliberately —
-    // this used to be one long inferred .map().map().toList() chain, and the closure type Dart
-    // inferred for it (dynamic Function(dynamic) instead of bool Function(MapEntry<String,int>))
-    // only surfaced as a crash in release/AOT builds, not debug/JIT: every cold start threw
-    // "type '(dynamic) => dynamic' is not a subtype of type '(dynamic) => bool' of 'test'" out of
-    // main()'s `await StorageService.init()`, before runApp() ever ran — the whole app hung on the
-    // native splash forever in release only. Keep every type here explicit, don't re-collapse this
-    // back into an inferred chain.
+    // GetStorage's `getKeys<T>()` is `T getKeys<T>() => subject.value.keys as T;` — an unconstrained
+    // generic with an internal unsafe cast. Call it with no explicit type argument (as a bare
+    // `_box.getKeys()` piped straight into `.where()`) and Dart can't find a concrete T from context,
+    // so the whole call — and every `.where()`/`.map()`/`.toList()` chained onto it — resolves via
+    // dynamic dispatch instead of a statically-known Iterable<String>. That's invisible in debug/JIT,
+    // but AOT release compilation reifies the chain's actual result as List<dynamic> regardless of
+    // the closures' own return types, so assigning it to a declared List<String> throws instead of
+    // silently coercing. Pinning T explicitly to Iterable up front, then building the list with a
+    // plain typed loop instead of chained generics, removes every inference step AOT could get wrong.
+    final Iterable rawKeys = _box.getKeys<Iterable>();
+    final List<String> keys = [];
+    for (final k in rawKeys) {
+      if (k is String && k.startsWith(prefix)) keys.add(k);
+    }
     final List<MapEntry<String, int>> entries = keys.map((key) {
       final messages = _box.read<List>(key) ?? const [];
       final newest = messages.fold<int>(0, (acc, e) {
