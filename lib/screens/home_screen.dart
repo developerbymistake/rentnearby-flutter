@@ -55,16 +55,16 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildToggle(),
               _buildListingsSection(),
               const SizedBox(height: 15),
-              Transform.translate(
-                offset: const Offset(0, -4),
-                child: HomeBannerCarousel(onTap: () => _auth.tabIndex.value = AppTabs.services),
-              ),
-              const SizedBox(height: 14),
               _buildManageListingsCard(),
               const SizedBox(height: 15),
               _buildCategoryCards(),
               const SizedBox(height: 15),
               _buildRecentlyAddedSection(),
+              const SizedBox(height: 14),
+              Transform.translate(
+                offset: const Offset(0, -4),
+                child: HomeBannerCarousel(onTap: () => _auth.tabIndex.value = AppTabs.services),
+              ),
               const SizedBox(height: 20),
             ],
           ),
@@ -711,7 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final loading = isRooms
           ? _home.recentlyAddedRoomsLoading.value
           : _home.recentlyAddedPlotsLoading.value;
-      final title = isRooms ? 'Recently added Rooms' : 'Recently added Plots';
+      final title = isRooms ? 'Rooms for Rent across India' : 'Plots for Sale across India';
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
