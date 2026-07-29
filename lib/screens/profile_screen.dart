@@ -170,8 +170,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // My Activity — every screen that shows "things the user has done/can act on"
             // (reports, redeem code), grouped together and separate from the pure app-meta
-            // Support section below. My Inquiries moved out to the Explore tab's own header (its
-            // natural hub, since inquiries are submitted from there) — not duplicated here.
+            // Support section below. My Enquiries moved out to the Explore tab's own header (its
+            // natural hub, since enquiries are submitted from there) — not duplicated here.
             _sectionGroup('ACTIVITY', [
               _legalTile(icon: Iconsax.flag, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
               Obx(() => Get.find<ConfigController>().paymentEnabled.value

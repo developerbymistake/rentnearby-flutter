@@ -1,11 +1,11 @@
-/// Row shape for "My Inquiries" (GET /inquiries/mine) — a flat, un-paginated
+/// Row shape for "My Enquiries" (GET /enquiries/mine) — a flat, un-paginated
 /// list (the whole catalog/lead-volume for one consumer is small, unlike the
 /// admin-side paged list). Mirrors
-/// RentNearBy.Core.DTOs.Responses.InquiryListItemDto field-for-field.
-/// ServiceCategoryName is what the "My Inquiries" row's small category badge
+/// RentNearBy.Core.DTOs.Responses.EnquiryListItemDto field-for-field.
+/// ServiceCategoryName is what the "My Enquiries" row's small category badge
 /// (e.g. "Char Dham Yatra" vs "Yoga & Diet") is derived from — this is a
 /// SHARED list across all categories, no per-category tab split.
-class InquiryModel {
+class EnquiryModel {
   final String id;
   final String serviceId;
   final String serviceName;
@@ -20,15 +20,15 @@ class InquiryModel {
   final String mobile;
   final String status;
   // Multiple Agents can be assigned simultaneously — 0 means unassigned. Full names only live on
-  // the Detail shape (InquiryDetailModel.assignedAgents).
+  // the Detail shape (EnquiryDetailModel.assignedAgents).
   final int assignedAgentCount;
   // True while a "report an issue with my agent" is awaiting Admin review. Drives the "Report
-  // under review" chip on the consumer's own My Inquiries row (see my_inquiries_screen.dart).
+  // under review" chip on the consumer's own My Enquiries row (see my_enquiries_screen.dart).
   final bool hasPendingEscalation;
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  InquiryModel({
+  EnquiryModel({
     required this.id,
     required this.serviceId,
     required this.serviceName,
@@ -46,15 +46,15 @@ class InquiryModel {
     required this.updatedAt,
   });
 
-  /// Used only by InquiryController.applyStatusUpdate() to patch a single
+  /// Used only by EnquiryController.applyStatusUpdate() to patch a single
   /// already-loaded row in place — never constructed directly by a screen.
-  InquiryModel copyWith({
+  EnquiryModel copyWith({
     String? status,
     int? assignedAgentCount,
     bool? hasPendingEscalation,
     DateTime? updatedAt,
   }) =>
-      InquiryModel(
+      EnquiryModel(
         id: id,
         serviceId: serviceId,
         serviceName: serviceName,
@@ -72,7 +72,7 @@ class InquiryModel {
         updatedAt: updatedAt ?? this.updatedAt,
       );
 
-  factory InquiryModel.fromJson(Map<String, dynamic> json) => InquiryModel(
+  factory EnquiryModel.fromJson(Map<String, dynamic> json) => EnquiryModel(
         id: json['id'] as String,
         serviceId: json['serviceId'] as String? ?? '',
         serviceName: json['serviceName'] as String? ?? '',

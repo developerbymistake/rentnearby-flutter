@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 
-/// Single source of truth for the Inquiry pipeline's 3 states
-/// (Submitted|Contacted|Closed) — status pill color/icon on My Inquiries
-/// rows, and the vertical stepper on Inquiry Detail. Mirrors
+/// Single source of truth for the Enquiry pipeline's 3 states
+/// (Submitted|Contacted|Closed) — status pill color/icon on My Enquiries
+/// rows, and the vertical stepper on Enquiry Detail. Mirrors
 /// CreditTransactionModel.label()/icon()'s switch-on-raw-backend-string
 /// convention rather than a separate enum, so an unrecognized/future status
 /// degrades to a neutral pill instead of crashing.
-abstract final class InquiryStatus {
+abstract final class EnquiryStatus {
   static const submitted = 'Submitted';
   static const contacted = 'Contacted';
   static const closed = 'Closed';

@@ -1,11 +1,11 @@
 import 'package:dio/dio.dart';
 import '../models/agent_stats_model.dart';
-import '../models/inquiry_detail_model.dart';
-import '../models/inquiry_model.dart';
+import '../models/enquiry_detail_model.dart';
+import '../models/enquiry_model.dart';
 import '../services/api_service.dart';
 
 /// Thin wrapper around the consumer-facing agent endpoints (`/agents/me/...`) — deliberately
-/// uncached, mirrors InquiryRepository exactly. An Agent is a role on the logged-in account, not a
+/// uncached, mirrors EnquiryRepository exactly. An Agent is a role on the logged-in account, not a
 /// separate identity, so every call here is scoped server-side to the caller's own JWT; nothing in
 /// this class ever sends an agent/user id itself.
 class AgentRepository {
@@ -21,19 +21,19 @@ class AgentRepository {
     }
   }
 
-  /// Flat, un-paginated — mirrors InquiryRepository.getMyInquiries()'s reasoning: one agent's own
+  /// Flat, un-paginated — mirrors EnquiryRepository.getMyEnquiries()'s reasoning: one agent's own
   /// lead volume is small enough that infinite-scroll pagination isn't worth the added complexity.
-  Future<List<InquiryModel>> getMyLeads() async {
+  Future<List<EnquiryModel>> getMyLeads() async {
     final res = await ApiService.get('/agents/me/leads', params: {'page': 1, 'pageSize': 50});
     final items = (res['data']?['items'] as List?) ?? [];
-    return items.map((e) => InquiryModel.fromJson(e as Map<String, dynamic>)).toList();
+    return items.map((e) => EnquiryModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<InquiryDetailModel?> getLeadDetail(String id) async {
+  Future<EnquiryDetailModel?> getLeadDetail(String id) async {
     final res = await ApiService.get('/agents/me/leads/$id');
     final data = res['data'];
     if (data is! Map<String, dynamic>) return null;
-    return InquiryDetailModel.fromJson(data);
+    return EnquiryDetailModel.fromJson(data);
   }
 
   Future<void> markLeadSeen(String id) async => ApiService.put('/agents/me/leads/$id/seen', {});
@@ -48,13 +48,13 @@ class AgentRepository {
     return AgentLeadStatsModel.fromJson(data);
   }
 
-  Future<InquiryDetailModel?> updateLeadStatus(String id, String status, {String? note}) async {
+  Future<EnquiryDetailModel?> updateLeadStatus(String id, String status, {String? note}) async {
     final res = await ApiService.put('/agents/me/leads/$id/status', {
       'status': status,
       if (note != null && note.isNotEmpty) 'note': note,
     });
     final data = res['data'];
     if (data is! Map<String, dynamic>) return null;
-    return InquiryDetailModel.fromJson(data);
+    return EnquiryDetailModel.fromJson(data);
   }
 }

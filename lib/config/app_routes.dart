@@ -22,10 +22,10 @@ import '../screens/redeem_code_screen.dart';
 import '../screens/wallet_ledger_screen.dart';
 import '../screens/service_category_grid_screen.dart';
 import '../screens/service_detail_screen.dart';
-import '../screens/inquiry_form_screen.dart';
-import '../screens/inquiry_confirmation_screen.dart';
-import '../screens/my_inquiries_screen.dart';
-import '../screens/inquiry_detail_screen.dart';
+import '../screens/enquiry_form_screen.dart';
+import '../screens/enquiry_confirmation_screen.dart';
+import '../screens/my_enquiries_screen.dart';
+import '../screens/enquiry_detail_screen.dart';
 import '../screens/my_leads_screen.dart';
 import '../screens/lead_detail_screen.dart';
 import '../screens/agent_dashboard_screen.dart';
@@ -58,16 +58,16 @@ class AppRoutes {
   static const String redeemCode = '/redeem-code';
   static const String walletLedger = '/wallet-ledger';
 
-  // Local Services Marketplace — Consumer catalog + Inquiry submission flow.
+  // Local Services Marketplace — Consumer catalog + Enquiry submission flow.
   // Categories are the top level: rail card -> Service Detail directly, and
   // "View all" -> the card grid (no intermediate list screens). Service
   // Detail renders every package/plan inline (no separate Package List route).
   static const String serviceCategoryGrid = '/service-category-grid';
   static const String serviceDetail = '/service-detail';
-  static const String inquiryForm = '/inquiry-form';
-  static const String inquiryConfirmation = '/inquiry-confirmation';
-  static const String myInquiries = '/my-inquiries';
-  static const String inquiryDetail = '/inquiry-detail';
+  static const String enquiryForm = '/enquiry-form';
+  static const String enquiryConfirmation = '/enquiry-confirmation';
+  static const String myEnquiries = '/my-enquiries';
+  static const String enquiryDetail = '/enquiry-detail';
 
   // Agent-as-User — conditional "My Leads" section in Profile, only visible when
   // the logged-in account is linked to an Agent.
@@ -225,26 +225,26 @@ class AppRoutes {
       transitionDuration: const Duration(milliseconds: 350),
     ),
     GetPage(
-      name: inquiryForm,
-      page: () => const InquiryFormScreen(),
+      name: enquiryForm,
+      page: () => const EnquiryFormScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
-      name: inquiryConfirmation,
-      page: () => const InquiryConfirmationScreen(),
+      name: enquiryConfirmation,
+      page: () => const EnquiryConfirmationScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
-      name: myInquiries,
-      page: () => const MyInquiriesScreen(),
+      name: myEnquiries,
+      page: () => const MyEnquiriesScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
-      name: inquiryDetail,
-      page: () => const InquiryDetailScreen(),
+      name: enquiryDetail,
+      page: () => const EnquiryDetailScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

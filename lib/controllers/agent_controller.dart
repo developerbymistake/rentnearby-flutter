@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../models/agent_stats_model.dart';
-import '../models/inquiry_detail_model.dart';
-import '../models/inquiry_model.dart';
+import '../models/enquiry_detail_model.dart';
+import '../models/enquiry_model.dart';
 import '../repositories/agent_repository.dart';
 import '../utils/app_toast.dart';
 
@@ -16,7 +16,7 @@ class AgentController extends GetxController {
   // Server-computed count of this agent's assigned, not-Closed leads that have changed since the
   // agent last viewed them ("unseen") — the "something new landed" badge count, not every open
   // lead. Entirely server-anchored via checkAgentStatus()/markLeadSeen(); never derived or
-  // decremented locally (mirrors InquiryController.activeInquiryCount's equivalent consumer-side
+  // decremented locally (mirrors EnquiryController.activeEnquiryCount's equivalent consumer-side
   // design for the same reason — the client doesn't have the per-lead seen-timestamp needed to
   // replicate the formula).
   final pendingLeadCount = 0.obs;
@@ -24,9 +24,9 @@ class AgentController extends GetxController {
   final Rxn<AgentLeadStatsModel> stats = Rxn<AgentLeadStatsModel>();
   final isLoadingStats = false.obs;
 
-  final myLeads = <InquiryModel>[].obs;
+  final myLeads = <EnquiryModel>[].obs;
   final isLoadingLeads = false.obs;
-  final Rxn<InquiryDetailModel> currentLeadDetail = Rxn<InquiryDetailModel>();
+  final Rxn<EnquiryDetailModel> currentLeadDetail = Rxn<EnquiryDetailModel>();
   final isLoadingLeadDetail = false.obs;
   final isUpdatingStatus = false.obs;
 
@@ -122,7 +122,7 @@ class AgentController extends GetxController {
     }
   }
 
-  // Mirrors InquiryController._errorMessage's shape — surfaces the server's own message for an
+  // Mirrors EnquiryController._errorMessage's shape — surfaces the server's own message for an
   // expected 4xx (an invalid status transition, or the CONCURRENT_UPDATE 409 a co-assigned agent/
   // admin race can now produce) instead of collapsing every failure into one generic string, same
   // as ListingController/PlotController already do for their own CONCURRENT_UPDATE case.
@@ -138,12 +138,12 @@ class AgentController extends GetxController {
   }
 
   /// Called when leaving Lead Detail so a stale lead isn't silently reused if a different one is
-  /// opened next — mirrors InquiryController.clearCurrentDetail().
+  /// opened next — mirrors EnquiryController.clearCurrentDetail().
   void clearCurrentLeadDetail() => currentLeadDetail.value = null;
 
-  /// Driven by InquiryHubService's live "NotificationReceived" (type == LeadAssigned) push — a new
+  /// Driven by EnquiryHubService's live "NotificationReceived" (type == LeadAssigned) push — a new
   /// auto/manual assignment landed for this agent. The push payload only carries
-  /// id/type/title/body/actionRoute (no inquiry fields), so unlike InquiryController
+  /// id/type/title/body/actionRoute (no enquiry fields), so unlike EnquiryController
   /// .applyStatusUpdate's in-place patch, this can't construct the new row locally.
   ///
   /// Deliberately does NOT locally increment pendingLeadCount: the count is entirely server-anchored
@@ -157,20 +157,20 @@ class AgentController extends GetxController {
     if (myLeads.isNotEmpty) loadMyLeads();
   }
 
-  /// Driven by InquiryHubService's live "InquiryStatusChanged" push when a co-assigned agent or
-  /// Admin changes a lead's status (see InquiryHandlers.NotifyCoAssignedAgentsOfStatusChangeAsync)
-  /// — mirrors InquiryController.applyStatusUpdate's minimal-patch branch exactly, just scoped to
-  /// myLeads/currentLeadDetail instead of myInquiries/currentDetail. A no-op for a lead not
+  /// Driven by EnquiryHubService's live "EnquiryStatusChanged" push when a co-assigned agent or
+  /// Admin changes a lead's status (see EnquiryHandlers.NotifyCoAssignedAgentsOfStatusChangeAsync)
+  /// — mirrors EnquiryController.applyStatusUpdate's minimal-patch branch exactly, just scoped to
+  /// myLeads/currentLeadDetail instead of myEnquiries/currentDetail. A no-op for a lead not
   /// currently held in either (nothing to patch — the next screen visit picks up the real value),
   /// same as the consumer-side method.
-  void applyLeadStatusUpdate(String inquiryId, String status) {
+  void applyLeadStatusUpdate(String enquiryId, String status) {
     final ts = DateTime.now();
-    final idx = myLeads.indexWhere((l) => l.id == inquiryId);
+    final idx = myLeads.indexWhere((l) => l.id == enquiryId);
     if (idx != -1) {
       myLeads[idx] = myLeads[idx].copyWith(status: status, updatedAt: ts);
     }
     final open = currentLeadDetail.value;
-    if (open != null && open.id == inquiryId) {
+    if (open != null && open.id == enquiryId) {
       currentLeadDetail.value = open.copyWith(status: status, updatedAt: ts);
     }
     if (idx != -1) checkAgentStatus();

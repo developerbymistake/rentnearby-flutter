@@ -4,18 +4,18 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
-import '../models/inquiry_detail_model.dart';
+import '../models/enquiry_detail_model.dart';
 import '../widgets/gradient_button.dart';
 
-/// Success state after InquiryFormScreen submits — reached via
+/// Success state after EnquiryFormScreen submits — reached via
 /// Get.offNamed so the filled form is never left on the back stack.
-class InquiryConfirmationScreen extends StatelessWidget {
-  const InquiryConfirmationScreen({super.key});
+class EnquiryConfirmationScreen extends StatelessWidget {
+  const EnquiryConfirmationScreen({super.key});
 
-  InquiryDetailModel? get _detail {
+  EnquiryDetailModel? get _detail {
     final args = (Get.arguments as Map?) ?? const {};
     final d = args['detail'];
-    return d is InquiryDetailModel ? d : null;
+    return d is EnquiryDetailModel ? d : null;
   }
 
   @override
@@ -45,7 +45,7 @@ class InquiryConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               const Text(
-                'Inquiry Submitted!',
+                'Enquiry Submitted!',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 21,
@@ -72,8 +72,8 @@ class InquiryConfirmationScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: GradientButton(
-                  label: 'View My Inquiries',
-                  onPressed: () => Get.offNamed(AppRoutes.myInquiries),
+                  label: 'View My Enquiries',
+                  onPressed: () => Get.offNamed(AppRoutes.myEnquiries),
                 ),
               ),
               const SizedBox(height: 12),
@@ -109,7 +109,7 @@ class InquiryConfirmationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryCard(InquiryDetailModel detail) {
+  Widget _buildSummaryCard(EnquiryDetailModel detail) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),

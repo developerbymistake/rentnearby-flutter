@@ -195,36 +195,36 @@ category needs no app release). Card tap goes straight to Service Detail (packag
 "View all" opens `ServiceCategoryGridScreen` — a 2-column grid of the same cards sliced client-side
 from the already-loaded catalog (`servicesForCategory`), no intermediate list screens exist anymore.
 Detail's "Plan" vs "Package" noun switches on `serviceCategoryFormType == kFormTypeConsultation`
-(`utils/inquiry_form_fields.dart`). `InquiryModel` (`serviceName`/`serviceCategoryName`/
-`servicePackageName`) powers the category badge on inquiry/lead rows. A consumer submits an `Inquiry`
-(a "lead") against a `Service`/`ServicePackage` via `InquiryController.submitInquiry()`, which has
-**no credit/wallet parameter** — this is a free lead-generation flow, unrelated to the credit economy
-below; every Consultation (Yoga & Diet) package renders "Get Custom Quote" (the team quotes offline).
-`InquiryContactSheet` lets a consumer submit under a different name/mobile (e.g. booking for someone
-else).
+(`utils/enquiry_form_fields.dart`). `EnquiryModel` (`serviceName`/`serviceCategoryName`/
+`servicePackageName`) powers the category badge on enquiry/lead rows. A consumer submits an `Enquiry`
+(a "lead") against a `Service`/`ServicePackage` via `EnquiryController.submitEnquiry()`
+(`/api/v1/enquiries`), which has **no credit/wallet parameter** — this is a free lead-generation flow,
+unrelated to the credit economy below; every Consultation (Yoga & Diet) package renders "Get Custom
+Quote" (the team quotes offline). `EnquiryContactSheet` lets a consumer submit under a different
+name/mobile (e.g. booking for someone else).
 - **`AgentController`** (`lib/controllers/agent_controller.dart`) checks `isAgent` once per session via
   `GET /agents/me` — false for ~all consumer users, never surfaced as an error. `AgentModel` is
   identity-only (id/name/photo, deliberately no phone — contact is one-directional, agent reaches
-  customer, never the reverse). `MyLeadsScreen`/`LeadDetailScreen` mirror `MyInquiriesScreen`/
-  `InquiryDetailScreen` but scoped server-side to `GET /agents/me/leads`, with a status-update action.
+  customer, never the reverse). `MyLeadsScreen`/`LeadDetailScreen` mirror `MyEnquiriesScreen`/
+  `EnquiryDetailScreen` but scoped server-side to `GET /agents/me/leads`, with a status-update action.
   Profile screen has an agent-only "My Leads" tile, badge-counted.
-- **`EscalateInquirySheet`**/`InquiryEscalationModel` let a **consumer** (not the agent) report an issue
+- **`EscalateEnquirySheet`**/`EnquiryEscalationModel` let a **consumer** (not the agent) report an issue
   with their assigned agent (Not responding/Unhelpful/Wrong info/Other) — visible only to that consumer
   and Admin, never the agent.
-- **`InquiryHubService`** (`lib/services/inquiry_hub_service.dart`) is a push-only, session-lifetime
-  SignalR connection connected unconditionally from `MainScreen.initState()`/app-resume (same shape as
-  Chat/Wallet, not lazily via a screen or business check), delivering live `InquiryStatusChanged` events
-  and a generic `NotificationReceived` envelope (today's only producer is Agent lead-assignment, but the
-  event is meant to be reused by future producers); falls back silently to pull-to-refresh if it never
-  connects. `hub_session_manager.dart` added a single teardown point, `disconnectAllHubs()`, concurrently
-  disconnecting all four hubs (Banner/Chat/Wallet/Inquiry) on logout or a forced 401 — a revoked session
-  previously left hubs retrying forever with an empty token.
+- **`EnquiryHubService`** (`lib/services/enquiry_hub_service.dart`, `/hubs/enquiry`) is a push-only,
+  session-lifetime SignalR connection connected unconditionally from `MainScreen.initState()`/app-resume
+  (same shape as Chat/Wallet, not lazily via a screen or business check), delivering live
+  `EnquiryStatusChanged` events and a generic `NotificationReceived` envelope (today's only producer is
+  Agent lead-assignment, but the event is meant to be reused by future producers); falls back silently
+  to pull-to-refresh if it never connects. `hub_session_manager.dart` added a single teardown point,
+  `disconnectAllHubs()`, concurrently disconnecting all four hubs (Banner/Chat/Wallet/Enquiry) on logout
+  or a forced 401 — a revoked session previously left hubs retrying forever with an empty token.
 
 **Notification inbox**: `NotificationController` (`lib/controllers/notification_controller.dart`) fetches
 `unreadCount` once at `onInit` and again on app resume (the REST anchor that keeps cold-start/reopen
 correct) and exposes a paginated list (`GET /notifications`) with a `_requestId` guard against
 refresh/load-more races. `NotificationModel` carries generic `actionRoute`/`actionArguments` so
-tap-routing is generic, not a per-type switch. `InquiryHubService`'s `NotificationReceived` push also
+tap-routing is generic, not a per-type switch. `EnquiryHubService`'s `NotificationReceived` push also
 reaches this controller live (`applyLiveNotification` — increments `unreadCount` and prepends into
 `notifications` if already loaded), so the bell updates immediately in foreground instead of only on the
 next resume/pull-to-refresh.

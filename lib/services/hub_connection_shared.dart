@@ -15,7 +15,7 @@ class HubReconnectPolicy implements IRetryPolicy {
   }
 }
 
-/// Single-flight connect() guard shared by every session-lifetime hub (chat/wallet/inquiry) —
+/// Single-flight connect() guard shared by every session-lifetime hub (chat/wallet/enquiry) —
 /// previously hand-copied identically into each. Concurrent connect() callers (e.g.
 /// MainScreen.initState() racing a fast-tapped screen open) await the same in-flight attempt
 /// instead of each independently building and starting a HubConnection.

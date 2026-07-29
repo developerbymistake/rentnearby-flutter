@@ -118,7 +118,7 @@ List<TourStep> _buildHomeSteps() {
 /// genuinely dynamic — admin-configurable, no fixed app-compile-time count
 /// (see CLAUDE.md: "an admin-added category needs no app release"). So its
 /// tour can't be a fixed step list like the other 3 — this builds one step
-/// per currently-active category, plus the static Inquiries step, evaluated
+/// per currently-active category, plus the static Enquiries step, evaluated
 /// fresh each time TourController reads TourDefinition.steps.
 ///
 /// Accepted edge case: if the live category list changes between one
@@ -133,10 +133,10 @@ List<TourStep> _buildServicesSteps() {
   final categories = Get.find<ServiceCatalogController>().activeCategories;
   return [
     TourStep(
-      key: TourKeys.servicesInquiriesButton,
+      key: TourKeys.servicesEnquiriesButton,
       icon: Iconsax.clipboard_text,
       title: 'Track your requests here',
-      body: "Every enquiry you've submitted — and its status — lives in Inquiries, with a live count.",
+      body: "Every enquiry you've submitted — and its status — lives in Enquiries, with a live count.",
     ),
     for (final category in categories)
       TourStep(

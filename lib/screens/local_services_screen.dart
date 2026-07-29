@@ -4,7 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
-import '../controllers/inquiry_controller.dart';
+import '../controllers/enquiry_controller.dart';
 import '../controllers/service_catalog_controller.dart';
 import '../navigation/tour_keys.dart';
 import '../widgets/service_category_rail.dart';
@@ -22,16 +22,16 @@ class LocalServicesScreen extends StatefulWidget {
 
 class _LocalServicesScreenState extends State<LocalServicesScreen> {
   final _serviceCatalog = Get.find<ServiceCatalogController>();
-  final _inquiryCtrl = Get.find<InquiryController>();
+  final _enquiryCtrl = Get.find<EnquiryController>();
 
   @override
   void initState() {
     super.initState();
     // IndexedStack builds every tab child at MainScreen mount, so this fires effectively at
     // app start — same eager-load convention ChatController/ServiceCatalogController already
-    // use — giving the Inquiries badge real data quickly rather than staying at 0 until the
-    // user happens to open My Inquiries directly.
-    _inquiryCtrl.loadMyInquiries();
+    // use — giving the Enquiries badge real data quickly rather than staying at 0 until the
+    // user happens to open My Enquiries directly.
+    _enquiryCtrl.loadMyEnquiries();
     _serviceCatalog.ensureServicesLoaded();
   }
 
@@ -54,7 +54,7 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
     );
   }
 
-  // ── Header: title + Inquiries button (live count) + tagline ────────────────
+  // ── Header: title + Enquiries button (live count) + tagline ────────────────
 
   Widget _buildHeader() {
     return Container(
@@ -76,9 +76,9 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => Get.toNamed(AppRoutes.myInquiries),
+                    onTap: () => Get.toNamed(AppRoutes.myEnquiries),
                     child: Container(
-                      key: TourKeys.servicesInquiriesButton,
+                      key: TourKeys.servicesEnquiriesButton,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -88,10 +88,10 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         const Icon(Iconsax.receipt_text, size: 14, color: AppColors.primary),
                         const SizedBox(width: 6),
-                        const Text('Inquiries',
+                        const Text('Enquiries',
                             style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
                         Obx(() {
-                          final count = _inquiryCtrl.activeInquiryCount.value;
+                          final count = _enquiryCtrl.activeEnquiryCount.value;
                           if (count <= 0) return const SizedBox.shrink();
                           return Padding(
                             padding: const EdgeInsets.only(left: 6),

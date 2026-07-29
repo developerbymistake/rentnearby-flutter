@@ -16,21 +16,21 @@ import '../controllers/report_controller.dart';
 import '../repositories/agent_repository.dart';
 import '../repositories/config_repository.dart';
 import '../repositories/notification_repository.dart';
-import '../repositories/inquiry_repository.dart';
+import '../repositories/enquiry_repository.dart';
 import '../repositories/listing_repository.dart';
 import '../repositories/plot_repository.dart';
 import '../repositories/service_catalog_repository.dart';
 import '../repositories/user_repository.dart';
 import '../repositories/wallet_repository.dart';
 import '../controllers/config_controller.dart';
-import '../controllers/inquiry_controller.dart';
+import '../controllers/enquiry_controller.dart';
 import '../controllers/service_catalog_controller.dart';
 import '../controllers/wallet_controller.dart';
 import '../controllers/banner_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../services/banner_hub_service.dart';
 import '../services/chat_hub_service.dart';
-import '../services/inquiry_hub_service.dart';
+import '../services/enquiry_hub_service.dart';
 import '../services/notification_service.dart';
 import '../services/wallet_hub_service.dart';
 import '../widgets/app_loading_overlay.dart';
@@ -78,13 +78,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     Get.put(WalletHubService());
     Get.put(ServiceCatalogRepository());
     Get.put(ServiceCatalogController());
-    Get.put(InquiryRepository());
-    Get.put(InquiryController());
-    Get.put(InquiryHubService());
+    Get.put(EnquiryRepository());
+    Get.put(EnquiryController());
+    Get.put(EnquiryHubService());
     Get.put(AgentRepository());
     // Checks "am I an agent" once per session in its own onInit() — see AgentController's doc
-    // comment. Put after InquiryRepository/InquiryController since AgentRepository reuses their
-    // same InquiryModel/InquiryDetailModel shapes (no hard dependency, just logical grouping).
+    // comment. Put after EnquiryRepository/EnquiryController since AgentRepository reuses their
+    // same EnquiryModel/EnquiryDetailModel shapes (no hard dependency, just logical grouping).
     Get.put(AgentController());
     Get.put(NotificationRepository());
     // Fetches the Home bell's unread count once per session in its own onInit() (mirrors
@@ -110,20 +110,20 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // a Razorpay webhook fallback credit); locally-initiated spends already update instantly via
     // their own REST response regardless of this connection's state.
     WalletHubService.to.connect();
-    // Same session-wide-connected shape as Chat/Wallet above — Inquiry now delivers two live
-    // event kinds (InquiryStatusChanged, NotificationReceived) consumed by InquiryController/
+    // Same session-wide-connected shape as Chat/Wallet above — Enquiry now delivers two live
+    // event kinds (EnquiryStatusChanged, NotificationReceived) consumed by EnquiryController/
     // AgentController/NotificationController, none of which is scoped to a single screen (a
     // lead-assignment or bell-notification push should land on whichever tab is open, not only
-    // while My Inquiries/Lead Detail/Inquiry Detail happens to be the active screen). Previously
+    // while My Enquiries/Lead Detail/Enquiry Detail happens to be the active screen). Previously
     // connected lazily instead — only as a side effect of AgentController.checkAgentStatus()
-    // resolving isAgent, plus each Inquiry screen's own initState() — which meant the
-    // NotificationReceived/InquiryStatusChanged pushes were silently missed for any session
-    // where neither of those ever ran. my_inquiries_screen.dart/inquiry_detail_screen.dart still
+    // resolving isAgent, plus each Enquiry screen's own initState() — which meant the
+    // NotificationReceived/EnquiryStatusChanged pushes were silently missed for any session
+    // where neither of those ever ran. my_enquiries_screen.dart/enquiry_detail_screen.dart still
     // also call connect() from their own initState()/resume; those are harmless redundant
     // no-ops now (SingleFlightHubConnect short-circuits once Connected), kept as extra
     // insurance against a connection that quietly died between this line and whichever of those
     // screens' own resume checks runs next.
-    InquiryHubService.to.connect();
+    EnquiryHubService.to.connect();
     _chatCtrl.loadConversations();
     WidgetsBinding.instance.addObserver(this);
     _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
@@ -189,19 +189,19 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       ChatHubService.to.connect();
       WalletHubService.to.connect();
-      InquiryHubService.to.connect();
+      EnquiryHubService.to.connect();
       Get.find<NotificationController>().loadUnreadCount();
       // Chat badge's app-resume anchor — pushes may have been missed while backgrounded
       // (the hub reconnect above isn't guaranteed to fire if the connection quietly died).
       _chatCtrl.fetchUnreadCount();
-      // Inquiry/Agent counts' own app-resume anchor, same reasoning as Chat's fetchUnreadCount()
+      // Enquiry/Agent counts' own app-resume anchor, same reasoning as Chat's fetchUnreadCount()
       // above — both are server-anchored (see their own doc comments) and a push can still have
       // been missed entirely while backgrounded even in a session where the connection itself
       // never actually dropped (so the reconnect above alone doesn't guarantee it).
       // checkAgentStatus() is now pure REST status/count resolution — it no longer also
-      // reconnects InquiryHubService as a side effect (that's owned explicitly above now,
+      // reconnects EnquiryHubService as a side effect (that's owned explicitly above now,
       // alongside Chat/Wallet).
-      Get.find<InquiryController>().fetchActiveCount();
+      Get.find<EnquiryController>().fetchActiveCount();
       Get.find<AgentController>().checkAgentStatus();
       // Tour re-attempt anchor for app resume — Future.delayed timers inside
       // TourController's bounded retry (_searchForReadyStep) keep firing even

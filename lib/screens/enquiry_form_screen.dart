@@ -7,30 +7,30 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
-import '../controllers/inquiry_controller.dart';
+import '../controllers/enquiry_controller.dart';
 import '../models/service_package_model.dart';
 import '../utils/app_date_format.dart';
 import '../utils/app_toast.dart';
-import '../utils/inquiry_form_fields.dart';
+import '../utils/enquiry_form_fields.dart';
 import '../utils/input_formatters.dart';
 import '../widgets/gradient_button.dart';
-import '../widgets/inquiry_contact_sheet.dart';
+import '../widgets/enquiry_contact_sheet.dart';
 import '../widgets/service_package_price.dart';
 
-/// Full pushed screen (per AppRoutes.inquiryForm), pre-filled with the
+/// Full pushed screen (per AppRoutes.enquiryForm), pre-filled with the
 /// selected Service+Package header from the Package List tap. Submitting
-/// funnels the create response through InquiryController.applyStatusUpdate
-/// (see submitInquiry) and replaces this screen with Confirmation — never
+/// funnels the create response through EnquiryController.applyStatusUpdate
+/// (see submitEnquiry) and replaces this screen with Confirmation — never
 /// leaves a submitted form on the back stack.
-class InquiryFormScreen extends StatefulWidget {
-  const InquiryFormScreen({super.key});
+class EnquiryFormScreen extends StatefulWidget {
+  const EnquiryFormScreen({super.key});
 
   @override
-  State<InquiryFormScreen> createState() => _InquiryFormScreenState();
+  State<EnquiryFormScreen> createState() => _EnquiryFormScreenState();
 }
 
-class _InquiryFormScreenState extends State<InquiryFormScreen> {
-  final _inquiryCtrl = Get.find<InquiryController>();
+class _EnquiryFormScreenState extends State<EnquiryFormScreen> {
+  final _enquiryCtrl = Get.find<EnquiryController>();
   final _auth = Get.find<AuthController>();
   final _formKey = GlobalKey<FormState>();
 
@@ -38,12 +38,12 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
   String _serviceName = '';
   ServicePackageModel? _package;
   // Which of Preferred-Date/Number-of-People to show and how to label them — driven by the
-  // category's FormType (see inquiry_form_fields.dart). Falls back to Travel's shape if missing.
-  InquiryFormFieldConfig _fieldConfig = inquiryFormFieldConfigFor(null);
+  // category's FormType (see enquiry_form_fields.dart). Falls back to Travel's shape if missing.
+  EnquiryFormFieldConfig _fieldConfig = enquiryFormFieldConfigFor(null);
 
   // Full Name/Mobile are no longer typed — they come from the account by default, or from this
-  // override once the user taps "Not you?" and saves an alternate contact for this one inquiry.
-  InquiryContact? _contactOverride;
+  // override once the user taps "Not you?" and saves an alternate contact for this one enquiry.
+  EnquiryContact? _contactOverride;
 
   final _peopleCtrl = TextEditingController();
   final _messageCtrl = TextEditingController();
@@ -62,7 +62,7 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
     final args = (Get.arguments as Map?) ?? const {};
     _serviceId = args['serviceId'] as String? ?? '';
     _serviceName = args['serviceName'] as String? ?? '';
-    _fieldConfig = inquiryFormFieldConfigFor(args['formType'] as String?);
+    _fieldConfig = enquiryFormFieldConfigFor(args['formType'] as String?);
     final package = args['package'];
     if (package is ServicePackageModel) _package = package;
   }
@@ -76,7 +76,7 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
   }
 
   Future<void> _openContactSheet() async {
-    final result = await InquiryContactSheet.show(
+    final result = await EnquiryContactSheet.show(
       context,
       initialName: _effectiveName,
       initialMobile: _effectiveMobile,
@@ -126,7 +126,7 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
 
   // Same rounded Dialog + icon-circle + Row-of-two-Expanded-buttons shape as
   // ProfileScreen._confirmLogout(), re-themed to primary (not destructive) since
-  // submitting an inquiry isn't a destructive action.
+  // submitting an enquiry isn't a destructive action.
   Future<bool?> _confirmSubmitDialog() {
     return showDialog<bool>(
       context: context,
@@ -154,7 +154,7 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Submit Inquiry?',
+                'Submit Enquiry?',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 18,
@@ -234,7 +234,7 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
     final peopleText = _peopleCtrl.text.trim();
     final numberOfPeople = peopleText.isEmpty ? null : int.tryParse(peopleText);
 
-    final detail = await _inquiryCtrl.submitInquiry(
+    final detail = await _enquiryCtrl.submitEnquiry(
       serviceId: _serviceId,
       servicePackageId: package.id,
       fullName: _effectiveName,
@@ -248,7 +248,7 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
     );
     if (detail != null && mounted) {
       Get.offNamed(
-        AppRoutes.inquiryConfirmation,
+        AppRoutes.enquiryConfirmation,
         arguments: {'detail': detail},
       );
     }
@@ -299,7 +299,7 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
             const Expanded(
               child: Center(
                 child: Text(
-                  'This inquiry link is invalid.',
+                  'This enquiry link is invalid.',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 13,
@@ -458,7 +458,7 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
               ),
               const Expanded(
                 child: Text(
-                  'Submit an Inquiry',
+                  'Submit an Enquiry',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -736,7 +736,7 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
           child: GestureDetector(
             onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
             child: const Text(
-              'I agree to be contacted regarding this inquiry and confirm the details above are correct.',
+              'I agree to be contacted regarding this enquiry and confirm the details above are correct.',
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 12,
@@ -761,11 +761,11 @@ class _InquiryFormScreenState extends State<InquiryFormScreen> {
       ),
       child: Obx(
         () => GradientButton(
-          onPressed: (_inquiryCtrl.isSubmitting.value || !_agreedToTerms)
+          onPressed: (_enquiryCtrl.isSubmitting.value || !_agreedToTerms)
               ? null
               : _onSubmitPressed,
-          isLoading: _inquiryCtrl.isSubmitting.value,
-          label: 'Submit Inquiry',
+          isLoading: _enquiryCtrl.isSubmitting.value,
+          label: 'Submit Enquiry',
         ),
       ),
     );

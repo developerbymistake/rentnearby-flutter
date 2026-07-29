@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/app_colors.dart';
-import '../controllers/inquiry_controller.dart';
+import '../controllers/enquiry_controller.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
 import 'gradient_button.dart';
@@ -13,17 +13,17 @@ const _reasons = <(String value, String label)>[
   ('Other', 'Other'),
 ];
 
-/// "Report an issue with my agent" — visual shape mirrors InquiryContactSheet (gradient header,
+/// "Report an issue with my agent" — visual shape mirrors EnquiryContactSheet (gradient header,
 /// rounded-top, drag handle, keyboard-avoiding), but unlike that sheet's pure-local-form precedent
-/// this one has real submit plumbing: it calls InquiryController.submitEscalation directly and
+/// this one has real submit plumbing: it calls EnquiryController.submitEscalation directly and
 /// reacts to its own isSubmittingEscalation flag, since the result (whether a Pending report
 /// already exists, 409) can only be known from the server.
-class EscalateInquirySheet extends StatefulWidget {
-  final String inquiryId;
+class EscalateEnquirySheet extends StatefulWidget {
+  final String enquiryId;
   final String roleLabel;
-  const EscalateInquirySheet({super.key, required this.inquiryId, this.roleLabel = 'Agent'});
+  const EscalateEnquirySheet({super.key, required this.enquiryId, this.roleLabel = 'Agent'});
 
-  static Future<bool?> show(BuildContext context, {required String inquiryId, String roleLabel = 'Agent'}) {
+  static Future<bool?> show(BuildContext context, {required String enquiryId, String roleLabel = 'Agent'}) {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -33,17 +33,17 @@ class EscalateInquirySheet extends StatefulWidget {
       ),
       builder: (_) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: EscalateInquirySheet(inquiryId: inquiryId, roleLabel: roleLabel),
+        child: EscalateEnquirySheet(enquiryId: enquiryId, roleLabel: roleLabel),
       ),
     );
   }
 
   @override
-  State<EscalateInquirySheet> createState() => _EscalateInquirySheetState();
+  State<EscalateEnquirySheet> createState() => _EscalateEnquirySheetState();
 }
 
-class _EscalateInquirySheetState extends State<EscalateInquirySheet> {
-  final _ctrl = Get.find<InquiryController>();
+class _EscalateEnquirySheetState extends State<EscalateEnquirySheet> {
+  final _ctrl = Get.find<EnquiryController>();
   late final _noteCtrl = TextEditingController();
   String? _selectedReason;
 
@@ -59,7 +59,7 @@ class _EscalateInquirySheetState extends State<EscalateInquirySheet> {
       AppToast.error('Please select a reason.');
       return;
     }
-    final ok = await _ctrl.submitEscalation(widget.inquiryId, reason, note: _noteCtrl.text);
+    final ok = await _ctrl.submitEscalation(widget.enquiryId, reason, note: _noteCtrl.text);
     if (!mounted) return;
     if (ok) {
       AppToast.success("Reported. We'll notify you once it's reviewed.");

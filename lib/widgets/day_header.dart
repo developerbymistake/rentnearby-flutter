@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 
 /// Shared date-group section header ("TODAY" / "YESTERDAY" / "22 JUL 2026") — used by
-/// NotificationsScreen and MyInquiriesScreen above their [groupByDay]-bucketed rows.
+/// NotificationsScreen and MyEnquiriesScreen above their [groupByDay]-bucketed rows.
 class DayHeader extends StatelessWidget {
   final String label;
   const DayHeader(this.label, {super.key});

@@ -6,15 +6,15 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../controllers/agent_controller.dart';
-import '../models/inquiry_detail_model.dart';
-import '../models/inquiry_status_history_model.dart';
+import '../models/enquiry_detail_model.dart';
+import '../models/enquiry_status_history_model.dart';
 import '../utils/app_date_format.dart';
-import '../utils/inquiry_status.dart';
+import '../utils/enquiry_status.dart';
 
 enum _StepState { completed, active, pending }
 
-/// The Agent-facing mirror of InquiryDetailScreen — same summary card and
-/// status stepper (InquiryStatus/_StepTile reused as-is, generic over
+/// The Agent-facing mirror of EnquiryDetailScreen — same summary card and
+/// status stepper (EnquiryStatus/_StepTile reused as-is, generic over
 /// status+history already), same "Your Details" card (which is exactly what
 /// an agent needs: the customer's name/mobile/message), but swaps the
 /// consumer's read-only "Assigned Agent" card for a Contact Customer card
@@ -104,7 +104,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                       _buildSectionTitle('Contact Customer'),
                       const SizedBox(height: 10),
                       _buildContactCard(detail),
-                      if (detail.status != InquiryStatus.closed) ...[
+                      if (detail.status != EnquiryStatus.closed) ...[
                         const SizedBox(height: 20),
                         _buildSectionTitle('Update Status'),
                         const SizedBox(height: 10),
@@ -152,8 +152,8 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
   Widget _buildSectionTitle(String title) =>
       Text(title, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark));
 
-  Widget _buildSummaryCard(InquiryDetailModel detail) {
-    final statusColor = InquiryStatus.color(detail.status);
+  Widget _buildSummaryCard(EnquiryDetailModel detail) {
+    final statusColor = EnquiryStatus.color(detail.status);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -204,15 +204,15 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     );
   }
 
-  InquiryStatusHistoryModel? _historyFor(InquiryDetailModel detail, String status) {
+  EnquiryStatusHistoryModel? _historyFor(EnquiryDetailModel detail, String status) {
     for (final h in detail.statusHistory.reversed) {
       if (h.status == status) return h;
     }
     return null;
   }
 
-  Widget _buildStatusTimeline(InquiryDetailModel detail) {
-    final steps = InquiryStatus.steps;
+  Widget _buildStatusTimeline(EnquiryDetailModel detail) {
+    final steps = EnquiryStatus.steps;
     final currentIndex = steps.indexOf(detail.status);
     final reached = detail.statusHistory.map((h) => h.status).toSet();
 
@@ -239,7 +239,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     );
   }
 
-  Widget _buildDetailsCard(InquiryDetailModel detail) {
+  Widget _buildDetailsCard(EnquiryDetailModel detail) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -283,7 +283,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
     );
   }
 
-  Widget _buildContactCard(InquiryDetailModel detail) {
+  Widget _buildContactCard(EnquiryDetailModel detail) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -292,7 +292,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
       ),
-      // Same two-genuinely-separate-buttons treatment as InquiryDetailScreen's
+      // Same two-genuinely-separate-buttons treatment as EnquiryDetailScreen's
       // agent card — here both point at detail.mobile since a lead only has
       // one phone number on file, not agent.phone vs agent.whatsAppNumber.
       child: Row(
@@ -336,20 +336,20 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
   // to Closed. Cancel/Reject were dropped entirely — the lead pipeline no longer distinguishes why a
   // lead ended, just that it's Closed.
   List<(String label, String status, Color color)> _nextStatusOptions(String current) {
-    if (current == InquiryStatus.submitted) {
+    if (current == EnquiryStatus.submitted) {
       return [
-        ('Mark Contacted', InquiryStatus.contacted, AppColors.warning),
+        ('Mark Contacted', EnquiryStatus.contacted, AppColors.warning),
       ];
     }
-    if (current == InquiryStatus.contacted) {
+    if (current == EnquiryStatus.contacted) {
       return [
-        ('Mark Closed', InquiryStatus.closed, AppColors.success),
+        ('Mark Closed', EnquiryStatus.closed, AppColors.success),
       ];
     }
     return const [];
   }
 
-  Widget _buildUpdateStatusCard(InquiryDetailModel detail) {
+  Widget _buildUpdateStatusCard(EnquiryDetailModel detail) {
     final options = _nextStatusOptions(detail.status);
     if (options.isEmpty) return const SizedBox.shrink();
     return Container(
@@ -420,7 +420,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
   }
 
   ({String title, String message, String confirmLabel})? _confirmationCopy(String status) {
-    if (status == InquiryStatus.closed) {
+    if (status == EnquiryStatus.closed) {
       return (
         title: 'Mark as Closed?',
         message: 'Are you sure you want to mark this lead as Closed?',
@@ -452,7 +452,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
               width: 60,
               height: 60,
               decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-              child: Icon(InquiryStatus.icon(status), size: 28, color: color),
+              child: Icon(EnquiryStatus.icon(status), size: 28, color: color),
             ),
             const SizedBox(height: 16),
             Text(copy.title, style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),

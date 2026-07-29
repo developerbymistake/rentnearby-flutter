@@ -7,7 +7,7 @@ import 'service_package_preview_model.dart';
 class ServiceDetailModel {
   final String id;
   final String serviceCategoryId;
-  // RentNearBy.Core.Models.ServiceCategoryFormTypes.* — decides which Inquiry Form fields to show.
+  // RentNearBy.Core.Models.ServiceCategoryFormTypes.* — decides which Enquiry Form fields to show.
   final String serviceCategoryFormType;
   final String name;
   final String iconName;

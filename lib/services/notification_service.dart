@@ -191,7 +191,7 @@ class NotificationService extends GetxService {
         return;
       }
 
-      // Every other push (inquiry status, Agent lead-assignment/admin broadcast, report-filed)
+      // Every other push (enquiry status, Agent lead-assignment/admin broadcast, report-filed)
       // is a combined Notification+data payload — the OS auto-renders it while
       // backgrounded/killed, but NOT while foregrounded, and onMessage is the only delivery
       // path in that state. Without this branch the user gets zero signal at all.
@@ -328,7 +328,7 @@ class NotificationService extends GetxService {
     AppRoutes.listingReports,
     AppRoutes.reportDetail,
     AppRoutes.myFiledReports,
-    AppRoutes.inquiryDetail,
+    AppRoutes.enquiryDetail,
     AppRoutes.myLeads,
     AppRoutes.leadDetail,
     AppRoutes.notifications,
@@ -401,7 +401,7 @@ class NotificationService extends GetxService {
     // and what Get.arguments to pass, so no per-type branch is needed here or ever again for a
     // future notification category built on that system. Checked first; falls through to the
     // legacy per-type branches below only for pushes that predate this system (chat, reports,
-    // inquiry_status, broadcast, room/plot membership).
+    // enquiry_status, broadcast, room/plot membership).
     final actionRoute = data['action_route'];
     if (actionRoute != null) {
       Map<String, dynamic>? actionArguments;
@@ -423,16 +423,16 @@ class NotificationService extends GetxService {
         'listingType': reportListingType ?? 'Room',
         'title': data['listing_title'] ?? 'your listing',
       });
-    } else if (notificationType == 'inquiry_status') {
-      // Normal FCM notification block (see InquiryStatusPushWorkerService/FcmService.SendAsync)
+    } else if (notificationType == 'enquiry_status') {
+      // Normal FCM notification block (see EnquiryStatusPushWorkerService/FcmService.SendAsync)
       // — unlike chat, no data-only custom rendering needed here. 'id' matches the argument key
-      // InquiryDetailScreen itself reads (see my_inquiries_screen.dart's own Get.toNamed call).
-      Get.toNamed(AppRoutes.inquiryDetail, arguments: {'id': data['inquiry_id']});
+      // EnquiryDetailScreen itself reads (see my_enquiries_screen.dart's own Get.toNamed call).
+      Get.toNamed(AppRoutes.enquiryDetail, arguments: {'id': data['enquiry_id']});
     } else if (notificationType == 'agent_lead_status') {
-      // Same payload shape as inquiry_status above, but the recipient is a co-assigned agent, not
-      // the submitting consumer — GetInquiryDetail would 403 them, so this routes to their own
+      // Same payload shape as enquiry_status above, but the recipient is a co-assigned agent, not
+      // the submitting consumer — GetEnquiryDetail would 403 them, so this routes to their own
       // Lead Detail screen instead (same route LeadAssigned's action_route already uses).
-      Get.toNamed(AppRoutes.leadDetail, arguments: {'id': data['inquiry_id']});
+      Get.toNamed(AppRoutes.leadDetail, arguments: {'id': data['enquiry_id']});
     } else if (notificationType == 'broadcast') {
       Get.find<AuthController>().tabIndex.value = AppTabs.rooms;
     } else {

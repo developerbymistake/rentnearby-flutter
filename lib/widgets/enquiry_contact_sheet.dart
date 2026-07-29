@@ -5,33 +5,33 @@ import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
 import 'gradient_button.dart';
 
-/// The result of [InquiryContactSheet] — a contact to submit an Inquiry under, distinct from the
+/// The result of [EnquiryContactSheet] — a contact to submit an Enquiry under, distinct from the
 /// logged-in account (e.g. booking on behalf of someone else).
-class InquiryContact {
+class EnquiryContact {
   final String name;
   final String mobile;
-  const InquiryContact({required this.name, required this.mobile});
+  const EnquiryContact({required this.name, required this.mobile});
 }
 
-/// Bottom sheet for overriding who an Inquiry submission contacts, pre-filled with whatever the
+/// Bottom sheet for overriding who an Enquiry submission contacts, pre-filled with whatever the
 /// form is currently showing (the account's own details, or a previously-saved override) so this
 /// is always a quick edit, never a blank form. Mirrors ReportListingSheet's exact shape.
-class InquiryContactSheet extends StatefulWidget {
+class EnquiryContactSheet extends StatefulWidget {
   final String initialName;
   final String initialMobile;
 
-  const InquiryContactSheet({
+  const EnquiryContactSheet({
     super.key,
     required this.initialName,
     required this.initialMobile,
   });
 
-  static Future<InquiryContact?> show(
+  static Future<EnquiryContact?> show(
     BuildContext context, {
     required String initialName,
     required String initialMobile,
   }) {
-    return showModalBottomSheet<InquiryContact>(
+    return showModalBottomSheet<EnquiryContact>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
@@ -40,16 +40,16 @@ class InquiryContactSheet extends StatefulWidget {
       ),
       builder: (_) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: InquiryContactSheet(initialName: initialName, initialMobile: initialMobile),
+        child: EnquiryContactSheet(initialName: initialName, initialMobile: initialMobile),
       ),
     );
   }
 
   @override
-  State<InquiryContactSheet> createState() => _InquiryContactSheetState();
+  State<EnquiryContactSheet> createState() => _EnquiryContactSheetState();
 }
 
-class _InquiryContactSheetState extends State<InquiryContactSheet> {
+class _EnquiryContactSheetState extends State<EnquiryContactSheet> {
   final _formKey = GlobalKey<FormState>();
   late final _nameCtrl = TextEditingController(text: widget.initialName);
   late final _mobileCtrl = TextEditingController(text: widget.initialMobile);
@@ -82,7 +82,7 @@ class _InquiryContactSheetState extends State<InquiryContactSheet> {
       AppToast.error('Please enter a valid name and 10-digit mobile number.');
       return;
     }
-    Navigator.pop(context, InquiryContact(name: name, mobile: mobile));
+    Navigator.pop(context, EnquiryContact(name: name, mobile: mobile));
   }
 
   @override
@@ -123,7 +123,7 @@ class _InquiryContactSheetState extends State<InquiryContactSheet> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    "We'll reach out about this one inquiry using the details below instead of your account.",
+                    "We'll reach out about this one enquiry using the details below instead of your account.",
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textLight, height: 1.5),
                   ),
                   const SizedBox(height: 18),

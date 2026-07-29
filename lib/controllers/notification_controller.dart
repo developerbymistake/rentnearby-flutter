@@ -6,7 +6,7 @@ import '../repositories/notification_repository.dart';
 /// fetched once per session at onInit() (mirrors AgentController.checkAgentStatus's own
 /// onInit()-fetches-once pattern) and again on app resume (see main_screen.dart) — that REST
 /// anchor alone already covers cold-start/reopen-after-close correctly and is unchanged.
-/// [applyLiveNotification] is the separate foreground-live path: InquiryHubService's
+/// [applyLiveNotification] is the separate foreground-live path: EnquiryHubService's
 /// session-wide "NotificationReceived" push now reaches this controller unconditionally for
 /// every event (not just Agent lead-assignment), so the badge/list update immediately instead
 /// of waiting for the next resume or a manual pull-to-refresh.
@@ -101,8 +101,8 @@ class NotificationController extends GetxController {
     } catch (_) {}
   }
 
-  /// Driven by InquiryHubService's live "NotificationReceived" push — called unconditionally for
-  /// every event regardless of [Map] `type` (see InquiryHubService's own comment on why this
+  /// Driven by EnquiryHubService's live "NotificationReceived" push — called unconditionally for
+  /// every event regardless of [Map] `type` (see EnquiryHubService's own comment on why this
   /// differs from AgentController.applyLeadAssigned's type-gated call from the same handler).
   /// unreadCount is incremented unconditionally — the badge should always reflect a genuinely
   /// new push — but the row is only prepended into [notifications] when the list is both already

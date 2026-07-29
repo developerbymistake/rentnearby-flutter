@@ -1,16 +1,16 @@
 import 'agent_model.dart';
-import 'inquiry_escalation_model.dart';
-import 'inquiry_status_history_model.dart';
+import 'enquiry_escalation_model.dart';
+import 'enquiry_status_history_model.dart';
 
-/// Full Inquiry Detail shape — GET /inquiries/{id}, and the response body of
-/// POST /inquiries (create). Mirrors
-/// RentNearBy.Core.DTOs.Responses.InquiryDetailDto field-for-field, including
-/// the embedded AssignedAgents (identity-only cards — an Inquiry can have
+/// Full Enquiry Detail shape — GET /enquiries/{id}, and the response body of
+/// POST /enquiries (create). Mirrors
+/// RentNearBy.Core.DTOs.Responses.EnquiryDetailDto field-for-field, including
+/// the embedded AssignedAgents (identity-only cards — an Enquiry can have
 /// multiple simultaneous Agents, see AgentModel's own doc comment for why
 /// there's no Call/WhatsApp here) and the full append-only StatusHistory
 /// ledger (for the vertical status stepper — Submitted -> Contacted ->
 /// Confirmed, with Cancelled/Rejected as terminal red states).
-class InquiryDetailModel {
+class EnquiryDetailModel {
   final String id;
   final String userId;
   final String serviceId;
@@ -29,18 +29,18 @@ class InquiryDetailModel {
   final int? numberOfPeople;
   final String? message;
   final String status;
-  // Every Agent currently assigned — never null, empty when unassigned. An Inquiry can have
+  // Every Agent currently assigned — never null, empty when unassigned. An Enquiry can have
   // multiple simultaneous Agents.
   final List<AgentModel> assignedAgents;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final List<InquiryStatusHistoryModel> statusHistory;
+  final List<EnquiryStatusHistoryModel> statusHistory;
   // Newest first, never null — this consumer's own "report an issue with my agent" history.
-  final List<InquiryEscalationModel> escalations;
+  final List<EnquiryEscalationModel> escalations;
 
   bool get hasPendingEscalation => escalations.any((e) => e.status == 'Pending');
 
-  InquiryDetailModel({
+  EnquiryDetailModel({
     required this.id,
     required this.userId,
     required this.serviceId,
@@ -64,11 +64,11 @@ class InquiryDetailModel {
     this.escalations = const [],
   });
 
-  /// Used only by InquiryController.applyStatusUpdate() to patch the
+  /// Used only by EnquiryController.applyStatusUpdate() to patch the
   /// currently-open detail screen's state from a minimal push payload
   /// (status only — the push event doesn't carry agent details/history, so
   /// those stay as last-fetched until the next explicit reload).
-  InquiryDetailModel copyWith({String? status, DateTime? updatedAt}) => InquiryDetailModel(
+  EnquiryDetailModel copyWith({String? status, DateTime? updatedAt}) => EnquiryDetailModel(
         id: id,
         userId: userId,
         serviceId: serviceId,
@@ -92,7 +92,7 @@ class InquiryDetailModel {
         escalations: escalations,
       );
 
-  factory InquiryDetailModel.fromJson(Map<String, dynamic> json) => InquiryDetailModel(
+  factory EnquiryDetailModel.fromJson(Map<String, dynamic> json) => EnquiryDetailModel(
         id: json['id'] as String,
         userId: json['userId'] as String? ?? '',
         serviceId: json['serviceId'] as String? ?? '',
@@ -117,10 +117,10 @@ class InquiryDetailModel {
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
         statusHistory: (json['statusHistory'] as List? ?? [])
-            .map((e) => InquiryStatusHistoryModel.fromJson(e as Map<String, dynamic>))
+            .map((e) => EnquiryStatusHistoryModel.fromJson(e as Map<String, dynamic>))
             .toList(),
         escalations: (json['escalations'] as List? ?? [])
-            .map((e) => InquiryEscalationModel.fromJson(e as Map<String, dynamic>))
+            .map((e) => EnquiryEscalationModel.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
 }

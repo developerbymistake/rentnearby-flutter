@@ -5,48 +5,48 @@ import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
-import '../controllers/inquiry_controller.dart';
+import '../controllers/enquiry_controller.dart';
 import '../models/agent_model.dart';
-import '../models/inquiry_detail_model.dart';
-import '../models/inquiry_status_history_model.dart';
-import '../services/inquiry_hub_service.dart';
+import '../models/enquiry_detail_model.dart';
+import '../models/enquiry_status_history_model.dart';
+import '../services/enquiry_hub_service.dart';
 import '../utils/app_date_format.dart';
-import '../utils/inquiry_status.dart';
+import '../utils/enquiry_status.dart';
 import '../utils/role_label_format.dart';
-import '../widgets/escalate_inquiry_sheet.dart';
+import '../widgets/escalate_enquiry_sheet.dart';
 
 enum _StepState { completed, active, pending }
 
-/// Full Inquiry Detail — a vertical status stepper (Submitted -> Contacted
+/// Full Enquiry Detail — a vertical status stepper (Submitted -> Contacted
 /// -> Closed) plus an assigned-Agent card with two genuinely separate
 /// Call/WhatsApp buttons (agent.phone vs agent.whatsAppNumber are
 /// confirmed-separate fields — never one combined button).
-class InquiryDetailScreen extends StatefulWidget {
-  const InquiryDetailScreen({super.key});
+class EnquiryDetailScreen extends StatefulWidget {
+  const EnquiryDetailScreen({super.key});
 
   @override
-  State<InquiryDetailScreen> createState() => _InquiryDetailScreenState();
+  State<EnquiryDetailScreen> createState() => _EnquiryDetailScreenState();
 }
 
-class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsBindingObserver {
-  final _ctrl = Get.find<InquiryController>();
-  late final String _inquiryId;
+class _EnquiryDetailScreenState extends State<EnquiryDetailScreen> with WidgetsBindingObserver {
+  final _ctrl = Get.find<EnquiryController>();
+  late final String _enquiryId;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     final args = (Get.arguments as Map?) ?? const {};
-    _inquiryId = args['id'] as String? ?? '';
-    if (_inquiryId.isNotEmpty) {
-      _ctrl.loadInquiryDetail(_inquiryId);
-      _ctrl.markSeen(_inquiryId);
+    _enquiryId = args['id'] as String? ?? '';
+    if (_enquiryId.isNotEmpty) {
+      _ctrl.loadEnquiryDetail(_enquiryId);
+      _ctrl.markSeen(_enquiryId);
     }
-    // InquiryHubService is now connected app-wide from main_screen.dart's initState() — this
+    // EnquiryHubService is now connected app-wide from main_screen.dart's initState() — this
     // call is a harmless redundant no-op once that connection is already live, kept as extra
     // insurance since this screen can be reached directly from a push notification tap before
     // MainScreen has necessarily finished its own initial connect.
-    InquiryHubService.to.connect();
+    EnquiryHubService.to.connect();
   }
 
   @override
@@ -54,16 +54,16 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
     // Mobile OSes can silently suspend a socket while backgrounded without a
     // clean close event — MainScreen's own resume handler already reconnects this hub
     // app-wide now; this is a redundant no-op safety net while this screen is active.
-    if (state == AppLifecycleState.resumed) InquiryHubService.to.connect();
+    if (state == AppLifecycleState.resumed) EnquiryHubService.to.connect();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    // Prevents a late-arriving loadInquiryDetail() response for THIS inquiry from silently
-    // clobbering currentDetail after the user has already navigated to a different inquiry's
+    // Prevents a late-arriving loadEnquiryDetail() response for THIS enquiry from silently
+    // clobbering currentDetail after the user has already navigated to a different enquiry's
     // detail screen (out-of-order network responses) — currentDetail must never point at an
-    // inquiry no screen is actually showing.
+    // enquiry no screen is actually showing.
     _ctrl.clearCurrentDetail();
     super.dispose();
   }
@@ -79,11 +79,11 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
             child: Obx(() {
               final loading = _ctrl.isLoadingDetail.value;
               final detail = _ctrl.currentDetail.value;
-              if (loading && (detail == null || detail.id != _inquiryId)) return _buildShimmer();
-              if (detail == null || detail.id != _inquiryId) return _buildNotFound();
+              if (loading && (detail == null || detail.id != _enquiryId)) return _buildShimmer();
+              if (detail == null || detail.id != _enquiryId) return _buildNotFound();
               return RefreshIndicator(
                 color: AppColors.primary,
-                onRefresh: () => _ctrl.loadInquiryDetail(_inquiryId),
+                onRefresh: () => _ctrl.loadEnquiryDetail(_enquiryId),
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
@@ -139,7 +139,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
               ),
               const Expanded(
                 child: Text(
-                  'Inquiry Details',
+                  'Enquiry Details',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white),
@@ -155,8 +155,8 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
   Widget _buildSectionTitle(String title) =>
       Text(title, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark));
 
-  Widget _buildSummaryCard(InquiryDetailModel detail) {
-    final statusColor = InquiryStatus.color(detail.status);
+  Widget _buildSummaryCard(EnquiryDetailModel detail) {
+    final statusColor = EnquiryStatus.color(detail.status);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -207,15 +207,15 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
     );
   }
 
-  InquiryStatusHistoryModel? _historyFor(InquiryDetailModel detail, String status) {
+  EnquiryStatusHistoryModel? _historyFor(EnquiryDetailModel detail, String status) {
     for (final h in detail.statusHistory.reversed) {
       if (h.status == status) return h;
     }
     return null;
   }
 
-  Widget _buildStatusTimeline(InquiryDetailModel detail) {
-    final steps = InquiryStatus.steps;
+  Widget _buildStatusTimeline(EnquiryDetailModel detail) {
+    final steps = EnquiryStatus.steps;
     final currentIndex = steps.indexOf(detail.status);
     final reached = detail.statusHistory.map((h) => h.status).toSet();
 
@@ -242,7 +242,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
     );
   }
 
-  Widget _buildDetailsCard(InquiryDetailModel detail) {
+  Widget _buildDetailsCard(EnquiryDetailModel detail) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -360,7 +360,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  "They'll reach out to you shortly regarding your inquiry.",
+                  "They'll reach out to you shortly regarding your enquiry.",
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
                 ),
               ),
@@ -386,7 +386,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '${RoleLabelFormat.withIndefiniteArticle(roleLabel)} will be assigned to your inquiry shortly.',
+              '${RoleLabelFormat.withIndefiniteArticle(roleLabel)} will be assigned to your enquiry shortly.',
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textLight),
             ),
           ),
@@ -399,7 +399,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
   // "report an issue" affordance before anyone is handling the lead wouldn't make sense. Once a
   // report is Pending, the row becomes a disabled confirmation chip instead of staying tappable —
   // it isn't meant to be spammable, and the agent themselves is never notified, only Admin.
-  Widget _buildEscalateSection(InquiryDetailModel detail) {
+  Widget _buildEscalateSection(EnquiryDetailModel detail) {
     if (detail.hasPendingEscalation) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
@@ -429,7 +429,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
     }
 
     return InkWell(
-      onTap: () => EscalateInquirySheet.show(context, inquiryId: detail.id, roleLabel: detail.agentRoleLabel),
+      onTap: () => EscalateEnquirySheet.show(context, enquiryId: detail.id, roleLabel: detail.agentRoleLabel),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
@@ -466,7 +466,7 @@ class _InquiryDetailScreenState extends State<InquiryDetailScreen> with WidgetsB
   }
 
   Widget _buildNotFound() => Center(
-        child: Text('Inquiry not found', style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+        child: Text('Enquiry not found', style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
       );
 
   Widget _buildShimmer() {

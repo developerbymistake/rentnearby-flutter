@@ -53,13 +53,13 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildHero(context),
               _buildToggle(),
+              _buildListingsSection(),
+              const SizedBox(height: 15),
               Transform.translate(
                 offset: const Offset(0, -4),
                 child: HomeBannerCarousel(onTap: () => _auth.tabIndex.value = AppTabs.services),
               ),
               const SizedBox(height: 14),
-              _buildListingsSection(),
-              const SizedBox(height: 15),
               _buildManageListingsCard(),
               const SizedBox(height: 15),
               _buildCategoryCards(),
@@ -253,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── "Rooms for you" / "Plots for you" — one visible rail at a time ─────────
+  // ── "Rooms for Rent near you" / "Plots for Sale near you" — one visible rail at a time ─
 
   Widget _buildListingsSection() {
     return Obx(() {
@@ -261,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final loading = isRooms
           ? _home.roomsLoading.value
           : _home.plotsLoading.value;
-      final title = isRooms ? 'Rooms for you' : 'Plots for you';
+      final title = isRooms ? 'Rooms for Rent near you' : 'Plots for Sale near you';
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,7 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // "Rooms/Plots for you" — the only remaining callers of these two, both
+  // "Rooms for Rent near you"/"Plots for Sale near you" — the only remaining callers of these two, both
   // always clickable and never NEW-tagged. Recently added has its own
   // vertical list builders below instead.
   Widget _buildRoomsRail(List<HomeRoomModel> items) {
@@ -650,7 +650,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-              'Services for you',
+              'Enquiry Service & Tour',
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 15,
@@ -701,7 +701,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ── "Recently added Rooms"/"Recently added Plots" — toggle-aware like
-  // "Rooms for you"/"Plots for you" above, but sorted newest-first, and
+  // "Rooms for Rent near you"/"Plots for Sale near you" above, but sorted newest-first, and
   // district-free (see HomeController.recentlyAddedRooms/Plots and the
   // dedicated /home/{rooms|plots}/recent endpoints).
 

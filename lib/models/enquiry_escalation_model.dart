@@ -1,7 +1,7 @@
 /// A consumer's self-service "report an issue with my agent" record — mirrors
-/// RentNearBy.Core.DTOs.Responses.InquiryEscalationDto field-for-field. Never seen by the assigned
-/// agent(s), only the reporting consumer (their own inquiry) and Admin.
-class InquiryEscalationModel {
+/// RentNearBy.Core.DTOs.Responses.EnquiryEscalationDto field-for-field. Never seen by the assigned
+/// agent(s), only the reporting consumer (their own enquiry) and Admin.
+class EnquiryEscalationModel {
   final String id;
   final String reason;
   final String? note;
@@ -9,7 +9,7 @@ class InquiryEscalationModel {
   final DateTime createdAt;
   final DateTime? resolvedAt;
 
-  InquiryEscalationModel({
+  EnquiryEscalationModel({
     required this.id,
     required this.reason,
     required this.note,
@@ -18,7 +18,7 @@ class InquiryEscalationModel {
     required this.resolvedAt,
   });
 
-  factory InquiryEscalationModel.fromJson(Map<String, dynamic> json) => InquiryEscalationModel(
+  factory EnquiryEscalationModel.fromJson(Map<String, dynamic> json) => EnquiryEscalationModel(
         id: json['id'] as String,
         reason: json['reason'] as String? ?? '',
         note: json['note'] as String?,

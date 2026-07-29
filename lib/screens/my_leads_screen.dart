@@ -5,16 +5,16 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/agent_controller.dart';
-import '../models/inquiry_model.dart';
+import '../models/enquiry_model.dart';
 import '../utils/app_date_format.dart';
-import '../utils/inquiry_status.dart';
+import '../utils/enquiry_status.dart';
 
-/// The Agent-facing mirror of MyInquiriesScreen — same shared, un-paginated,
+/// The Agent-facing mirror of MyEnquiriesScreen — same shared, un-paginated,
 /// always-fresh-on-open list shape, but scoped server-side to the caller's
 /// own linked Agent (GET /agents/me/leads) instead of their own submissions.
 /// Row layout additionally surfaces the customer's name/mobile, which an
 /// Agent needs to actually work the lead but a consumer viewing their own
-/// inquiry never does.
+/// enquiry never does.
 class MyLeadsScreen extends StatefulWidget {
   const MyLeadsScreen({super.key});
 
@@ -31,7 +31,7 @@ class _MyLeadsScreenState extends State<MyLeadsScreen> {
     _ctrl.loadMyLeads();
   }
 
-  void _openDetail(InquiryModel lead) {
+  void _openDetail(EnquiryModel lead) {
     Get.toNamed(AppRoutes.leadDetail, arguments: {'id': lead.id});
   }
 
@@ -111,7 +111,7 @@ class _MyLeadsScreenState extends State<MyLeadsScreen> {
             const Text('No leads yet',
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
             const SizedBox(height: 8),
-            const Text('Inquiries assigned to you will show up here.',
+            const Text('Enquiries assigned to you will show up here.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
           ]),
@@ -134,7 +134,7 @@ class _MyLeadsScreenState extends State<MyLeadsScreen> {
 }
 
 class _LeadRow extends StatelessWidget {
-  final InquiryModel lead;
+  final EnquiryModel lead;
   final String dateText;
   final VoidCallback onTap;
 
@@ -142,7 +142,7 @@ class _LeadRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = InquiryStatus.color(lead.status);
+    final statusColor = EnquiryStatus.color(lead.status);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),

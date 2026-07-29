@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import 'banner_hub_service.dart';
 import 'chat_hub_service.dart';
-import 'inquiry_hub_service.dart';
+import 'enquiry_hub_service.dart';
 import 'wallet_hub_service.dart';
 
 bool _loggingOut = false;
@@ -31,7 +31,7 @@ Future<void> disconnectAllHubs() async {
     _safeDisconnect(() => Get.find<BannerHubService>().disconnect()),
     _safeDisconnect(() => Get.find<ChatHubService>().disconnect()),
     _safeDisconnect(() => Get.find<WalletHubService>().disconnect()),
-    _safeDisconnect(() => Get.find<InquiryHubService>().disconnect()),
+    _safeDisconnect(() => Get.find<EnquiryHubService>().disconnect()),
   ]);
   _loggingOut = false;
 }

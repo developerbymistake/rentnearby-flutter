@@ -29,7 +29,7 @@ class TourKeys {
   static final plotsAddShortcut = GlobalKey();
 
   // Services
-  static final servicesInquiriesButton = GlobalKey();
+  static final servicesEnquiriesButton = GlobalKey();
 
   // One stable GlobalKey per service category, lazily created and cached —
   // the category list is genuinely dynamic (admin-configurable, no fixed

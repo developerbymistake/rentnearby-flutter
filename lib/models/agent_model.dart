@@ -1,6 +1,6 @@
-/// Identity-only view of the Agent assigned to an Inquiry — GET /inquiries/{id}'s AssignedAgent.
+/// Identity-only view of the Agent assigned to an Enquiry — GET /enquiries/{id}'s AssignedAgent.
 /// Deliberately has no phone/WhatsApp fields: contact is one-directional (the agent reaches out to
-/// the customer, never the other way around), so Inquiry Detail only ever needs to show who the
+/// the customer, never the other way around), so Enquiry Detail only ever needs to show who the
 /// agent is, not how to reach them. Mirrors RentNearBy.Core.DTOs.Responses.AssignedAgentDto.
 class AgentModel {
   final String id;

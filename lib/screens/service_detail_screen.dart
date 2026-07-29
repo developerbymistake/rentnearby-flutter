@@ -10,7 +10,7 @@ import '../config/app_routes.dart';
 import '../controllers/service_catalog_controller.dart';
 import '../models/service_detail_model.dart';
 import '../models/service_package_model.dart';
-import '../utils/inquiry_form_fields.dart';
+import '../utils/enquiry_form_fields.dart';
 import '../utils/service_icons.dart';
 import '../widgets/service_package_card.dart';
 import 'service_itinerary_screen.dart';
@@ -80,7 +80,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     final s = _service;
     if (s == null) return;
     Get.toNamed(
-      AppRoutes.inquiryForm,
+      AppRoutes.enquiryForm,
       arguments: {
         'serviceId': s.id,
         'serviceName': s.name,
