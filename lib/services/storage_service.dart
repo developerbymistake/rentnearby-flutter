@@ -150,10 +150,17 @@ class StorageService {
   /// ever pruned by actually opening that specific conversation) and so a stale buffer can't
   /// leak into a notification shown after a different account logs in on the same device.
   static void clearAllChatStackedLines() {
-    final keys = _box.getKeys().where(
-        (k) => k is String && k.startsWith(AppConstants.chatStackedLinesKeyPrefix));
-    for (final key in keys.toList()) {
-      _box.remove(key as String);
+    // Same unconstrained-`getKeys<T>()`-into-chained-generics hazard documented in detail on
+    // pruneStaleChatStackedLines below (AOT-only, invisible in debug) — pin T explicitly and use a
+    // plain typed loop instead of piping the bare call into `.where()`.
+    final prefix = AppConstants.chatStackedLinesKeyPrefix;
+    final Iterable rawKeys = _box.getKeys<Iterable>();
+    final List<String> keys = [];
+    for (final k in rawKeys) {
+      if (k is String && k.startsWith(prefix)) keys.add(k);
+    }
+    for (final key in keys) {
+      _box.remove(key);
     }
   }
 
