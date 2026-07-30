@@ -124,7 +124,7 @@ wraps the whole app above the `IndexedStack`, regardless of tab count/order.
 **Pin/radius mechanics** (client-side only — the backend does not currently re-validate either of these,
 see the Backend repo's CLAUDE.md "Known gap" note): new-listing pin placement is capped to 500m from the
 user's live GPS fix, enforced in `add_listing_screen.dart`/`add_plot_screen.dart` against a client-computed
-distance. Explore radius is a fixed 3-value chip selector, `AppConstants.radiusOptions = [1.0, 5.0, 10.0]`
+distance. Explore radius is a fixed 3-value chip selector, `AppConstants.radiusOptions = [1.0, 6.0, 12.0]`
 (km) — not a slider — used identically by `explore_screen.dart`/`explore_plots_screen.dart`.
 
 **Maps**: `maplibre_gl` (not Google Maps) using a custom style at `assets/map_style.json`. Map-related

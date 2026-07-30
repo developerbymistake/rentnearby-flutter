@@ -67,6 +67,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   List<_MapMarkerData> _markerData = [];
   double _radius = 1.0;
+  double? _preSearchRadius; // non-null while a search-triggered widen is active
   double _lastClusterZoom = 0;
   bool _mapReady = false;
   bool _checkingPermission = false;
@@ -125,6 +126,13 @@ class _ExploreScreenState extends State<ExploreScreen>
     // searchPinOverride still holding its PREVIOUS value mid-transition,
     // since a search applies both fields in sequence.
     _locationSelectionWorker = ever(_locationCtrl.locationSelectionChanged, (_) {
+      if (isSearchActive && _preSearchRadius == null) {
+        _preSearchRadius = _radius;
+        setState(() => _radius = AppConstants.radiusOptions.last);
+      } else if (!isSearchActive && _preSearchRadius != null) {
+        setState(() => _radius = _preSearchRadius!);
+        _preSearchRadius = null;
+      }
       if (_auth.tabIndex.value == AppTabs.rooms && !mapShouldPause.value) {
         _precomputeCircleCache();
         _loadNearby();
@@ -401,7 +409,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         earthCircumference * cos(lat * pi / 180) / tileSize;
     final targetMetersPerPx = (radiusKm * 1000 * 2) / (usablePx * 0.93);
     final zoom = log(metersPerPxAtZ0 / targetMetersPerPx) / log(2);
-    return zoom.clamp(10.0, 17.0);
+    return zoom.clamp(9.0, 17.0);
   }
 
   void _animateTo(LatLng target, double zoom) {
@@ -1025,7 +1033,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         padding: const EdgeInsets.symmetric(horizontal: 13),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isSearchActive ? AppColors.error : Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -1042,23 +1050,30 @@ class _ExploreScreenState extends State<ExploreScreen>
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: AppColors.primary),
               )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isSearchActive ? Icons.close_rounded : Icons.search_rounded,
-                    color: AppColors.primary,
-                    size: 15,
-                  ),
-                  const SizedBox(width: 5),
-                  const Text('Search',
-                      style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary)),
-                ],
-              ),
+            : (isSearchActive
+                ? const Text('Cancel',
+                    style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white))
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.search_rounded,
+                        color: AppColors.primary,
+                        size: 15,
+                      ),
+                      const SizedBox(width: 5),
+                      const Text('Search',
+                          style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary)),
+                    ],
+                  )),
       ),
     ));
   }
@@ -1088,6 +1103,7 @@ class _ExploreScreenState extends State<ExploreScreen>
               onTap: () {
                 _listingCtrl.nearbyListings.clear();
                 setState(() => _radius = r);
+                if (isSearchActive) _preSearchRadius = r;
                 _loadNearby();
                 if (_mapReady) _fitToRadius();
               },

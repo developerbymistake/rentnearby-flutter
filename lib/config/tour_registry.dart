@@ -185,7 +185,7 @@ final Map<int, TourDefinition> tourRegistry = {
         key: TourKeys.roomsRadiusChips,
         icon: Iconsax.radar,
         title: 'Search by radius',
-        body: 'Pick 1, 5 or 10 km — the map redraws instantly around your location.',
+        body: 'Pick 1, 6 or 12 km — the map redraws instantly around your location.',
       ),
       TourStep(
         key: TourKeys.roomsSearchToggle,

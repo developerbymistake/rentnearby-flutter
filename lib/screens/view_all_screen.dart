@@ -264,7 +264,7 @@ class _ViewAllScreenState extends State<ViewAllScreen>
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isSearchActive ? AppColors.error : Colors.white,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
@@ -282,7 +282,7 @@ class _ViewAllScreenState extends State<ViewAllScreen>
               )
             : Icon(
                 isSearchActive ? Icons.close_rounded : Icons.search_rounded,
-                color: accentColor,
+                color: isSearchActive ? Colors.white : accentColor,
                 size: 20,
               ),
       ),
