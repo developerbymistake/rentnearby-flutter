@@ -12,6 +12,7 @@ import '../models/service_detail_model.dart';
 import '../models/service_package_model.dart';
 import '../utils/enquiry_form_fields.dart';
 import '../utils/service_icons.dart';
+import '../widgets/pulse_once.dart';
 import '../widgets/service_package_card.dart';
 import 'service_itinerary_screen.dart';
 
@@ -141,7 +142,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                height: 300 + AppInsets.topViewPadding(context),
+                height: _heroHeight(context),
                 color: Colors.white,
               ),
               Padding(
@@ -246,22 +247,40 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                   const SizedBox(height: 18),
                   SizedBox(
                     width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => Get.to(
-                        () => ServiceItineraryScreen(service: s),
-                        transition: Transition.rightToLeft,
-                        duration: const Duration(milliseconds: 300),
-                      ),
-                      icon: const Icon(Iconsax.route_square, size: 18, color: AppColors.primary),
-                      label: const Text(
-                        'See Your Journey',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.primary),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: AppColors.surface,
-                        side: const BorderSide(color: AppColors.primaryLight, width: 1.2),
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: PulseOnce(
+                      child: GestureDetector(
+                        onTap: () => Get.to(
+                          () => ServiceItineraryScreen(service: s),
+                          transition: Transition.rightToLeft,
+                          duration: const Duration(milliseconds: 300),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFF97316), Color(0xFFEA580C)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFF97316).withValues(alpha: 0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Iconsax.route_square, size: 18, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text(
+                                'See Your Journey',
+                                style: TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -327,11 +346,16 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     );
   }
 
+  double _heroHeight(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    return width * 9 / 16 + AppInsets.topViewPadding(context);
+  }
+
   Widget _buildHero(ServiceDetailModel s) {
     return Stack(
       children: [
         SizedBox(
-          height: 300 + AppInsets.topViewPadding(context),
+          height: _heroHeight(context),
           width: double.infinity,
           child: s.coverPhotoUrl.isEmpty
               ? _heroPlaceholder(s)
