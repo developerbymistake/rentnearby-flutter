@@ -10,19 +10,13 @@ import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/notification_controller.dart';
-import '../controllers/service_catalog_controller.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
-import '../widgets/category_card.dart';
-import '../widgets/home_banner_carousel.dart';
-import '../widgets/service_zone.dart';
 import '../widgets/sliding_chip_toggle.dart';
 
 const _kPlotColor = AppColors.plot;
-const _kPlotColorDark = AppColors.plotDark;
 const _kPlotGradient = AppColors.plotGradient;
-const _kRoomsAccentLight = Color(0xFFFDBA74);
-const _kRoomsAccentDark = Color(0xFFB45309);
+const _kQuickActionGreen = Color(0xFF22C55E);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,7 +28,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _home = Get.find<HomeController>();
   final _auth = Get.find<AuthController>();
-  final _serviceCatalog = Get.find<ServiceCatalogController>();
 
   @override
   Widget build(BuildContext context) {
@@ -53,18 +46,13 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildHero(context),
               _buildToggle(),
+              _buildOwnerCtaBanner(),
+              const SizedBox(height: 12),
+              _buildOwnerQuickActions(),
+              const SizedBox(height: 15),
               _buildListingsSection(),
               const SizedBox(height: 15),
-              _buildManageListingsCard(),
-              const SizedBox(height: 15),
-              _buildCategoryCards(),
-              const SizedBox(height: 15),
               _buildRecentlyAddedSection(),
-              const SizedBox(height: 14),
-              Transform.translate(
-                offset: const Offset(0, -4),
-                child: HomeBannerCarousel(onTap: () => _auth.tabIndex.value = AppTabs.services),
-              ),
               const SizedBox(height: 20),
             ],
           ),
@@ -405,297 +393,328 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
   );
 
-  // ── Manage your listings ────────────────────────────────────────────────
+  // ── Owner CTA banner — mode-aware, illustration bleeds off the right edge ──
 
-  Widget _buildManageListingsCard() {
-    return Padding(
+  Widget _buildOwnerCtaBanner() {
+    return Transform.translate(
+      offset: const Offset(0, -6),
+      child: Padding(
       key: TourKeys.homeManageListingsCard,
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 16, 14, 15),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFF6EC), Color(0xFFFDEFEF)],
+      child: Obx(() {
+        final isRooms = _home.activeTab.value == 'rooms';
+        return Container(
+          height: 160,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isRooms
+                  ? const [Color(0xFFEFF6FF), Color(0xFFDBEAFE)]
+                  : const [Color(0xFFEAFBF0), Color(0xFFF0FDF4)],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: _kPlotColor.withValues(alpha: 0.12),
-              blurRadius: 22,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        // Clip.antiAlias (not hardEdge) — hardEdge cut these glow circles
-        // off with a jagged edge exactly at the card's rounded corner,
-        // which read as a second, harder-edged shadow next to the real
-        // BoxShadow above. The circles are also sized/positioned so their
-        // own gradient fully fades to transparent before crossing the
-        // card boundary, instead of getting clipped mid-fade.
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            // Two soft abstract glows — purely decorative, matching the approved
-            // mock's "richness without an illustration/clutter" design.
-            Positioned(
-              top: -20,
-              right: -16,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.warning.withValues(alpha: 0.16),
-                      Colors.transparent,
+          clipBehavior: Clip.antiAlias,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 0, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (isRooms
+                                  ? AppColors.primary
+                                  : AppColors.success)
+                              .withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Are you an Owner?',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            color: isRooms
+                                ? AppColors.primary
+                                : AppColors.success,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        isRooms ? 'List your room' : 'List your plot',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: isRooms
+                              ? AppColors.primary
+                              : const Color(0xFF166534),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      const Text(
+                        'Grow your reach',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textLight,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      GestureDetector(
+                        onTap: () => Get.toNamed(
+                          isRooms ? AppRoutes.myListings : AppRoutes.myPlots,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isRooms
+                                ? AppColors.primary
+                                : AppColors.success,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Add Your Listing',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              bottom: -24,
-              left: 64,
-              child: Container(
-                width: 84,
-                height: 84,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      _kPlotColor.withValues(alpha: 0.12),
-                      Colors.transparent,
-                    ],
-                  ),
+              SizedBox(
+                width: 165,
+                child: Image.asset(
+                  isRooms
+                      ? 'assets/images/owner_cta/house.png'
+                      : 'assets/images/owner_cta/plot.png',
+                  fit: BoxFit.contain,
+                  alignment: Alignment.centerRight,
                 ),
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Manage your listings',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Quick access to your listed properties',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF92706A),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _manageListingRow(
-                        label: 'My Rooms',
-                        icon: Iconsax.home,
-                        bg: AppColors.warning.withValues(alpha: 0.14),
-                        border: AppColors.warning.withValues(alpha: 0.22),
-                        iconGradient: const LinearGradient(
-                          colors: [_kRoomsAccentLight, AppColors.warning],
-                        ),
-                        subtitleColor: _kRoomsAccentDark,
-                        chevronColor: _kRoomsAccentDark,
-                        onTap: () => Get.toNamed(AppRoutes.myListings),
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: _manageListingRow(
-                        label: 'My Plots',
-                        icon: Icons.landscape_rounded,
-                        bg: _kPlotColor.withValues(alpha: 0.14),
-                        border: _kPlotColor.withValues(alpha: 0.22),
-                        iconGradient: const LinearGradient(
-                          colors: [Color(0xFFC2825F), _kPlotColor],
-                        ),
-                        subtitleColor: _kPlotColorDark,
-                        chevronColor: _kPlotColorDark,
-                        onTap: () => Get.toNamed(AppRoutes.myPlots),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
+            ],
+          ),
+        );
+      }),
       ),
     );
   }
 
-  Widget _manageListingRow({
-    required String label,
+  // ── Owner quick actions — unified card, 3 tiles ─────────────────────────
+
+  Widget _buildOwnerQuickActions() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Obx(() {
+        final isRooms = _home.activeTab.value == 'rooms';
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _ownerQuickActionTile(
+                  icon: Icons.add_rounded,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF60A5FA), AppColors.primaryLight],
+                  ),
+                  shadowColor: AppColors.primaryLight,
+                  label: isRooms ? 'Add Room' : 'Add Plot',
+                  subtitle: 'List in 2 min',
+                  onTap: () => Get.toNamed(
+                    isRooms ? AppRoutes.addListing : AppRoutes.addPlot,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _ownerQuickActionTile(
+                  icon: Icons.search_rounded,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF4ADE80), _kQuickActionGreen],
+                  ),
+                  shadowColor: _kQuickActionGreen,
+                  label: isRooms ? 'Find Room' : 'Find Plot',
+                  subtitle: 'Browse listings',
+                  onTap: () => _auth.tabIndex.value =
+                      isRooms ? AppTabs.rooms : AppTabs.plots,
+                ),
+              ),
+              Expanded(
+                child: _ownerQuickActionTile(
+                  icon: Icons.bar_chart_rounded,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFBBF24), AppColors.warning],
+                  ),
+                  shadowColor: AppColors.warning,
+                  label: 'Views & Leads',
+                  subtitle: 'Track activity',
+                  badge: 'Soon',
+                  onTap: null,
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _ownerQuickActionTile({
     required IconData icon,
-    required Color bg,
-    required Color border,
-    required Gradient iconGradient,
-    required Color subtitleColor,
-    required Color chevronColor,
-    required VoidCallback onTap,
+    required Gradient gradient,
+    required Color shadowColor,
+    required String label,
+    required String subtitle,
+    required VoidCallback? onTap,
+    String? badge,
   }) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 7),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 26,
-              height: 26,
-              decoration: BoxDecoration(
-                gradient: iconGradient,
-                borderRadius: BorderRadius.circular(9),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Icon(icon, size: 13, color: Colors.white),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  Text(
-                    'View & manage',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 7.5,
-                      fontWeight: FontWeight.w600,
-                      color: subtitleColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Icon(
-                Icons.chevron_right_rounded,
-                size: 12,
-                color: chevronColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Category cards — one per active ServiceCategory, tap jumps straight to
-  // that category's service grid. Never hardcoded, so a new admin-added
-  // Category needs zero app code to show up here.
-
-  Widget _buildCategoryCards() {
-    return Obx(() {
-      final loading =
-          _serviceCatalog.categoriesLoading.value &&
-          _serviceCatalog.categories.isEmpty;
-      final cats = _serviceCatalog.activeCategories;
-      if (!loading && cats.isEmpty) return const SizedBox.shrink();
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'Enquiry Service & Tour',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textDark,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          loading
-              ? _buildCategoryCardShimmerRow()
-              : SizedBox(
-                  height: 135,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: cats.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (_, i) => CategoryCard(
-                      category: cats[i],
-                      zone: serviceZoneForIndex(i),
-                      onTap: () => Get.toNamed(
-                        AppRoutes.serviceCategoryGrid,
-                        arguments: {
-                          'categoryId': cats[i].id,
-                          'title': cats[i].name,
-                        },
-                      ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: gradient,
+                  borderRadius: BorderRadius.circular(13),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: shadowColor.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
                     ),
+                  ],
+                ),
+                child: Icon(icon, size: 19, color: Colors.white),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textLight,
+                ),
+              ),
+            ],
+          ),
+          if (badge != null)
+            Positioned(
+              top: -4,
+              right: 18,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 5,
+                  vertical: 1.5,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.warning,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  badge,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 7,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
                   ),
                 ),
+              ),
+            ),
         ],
-      );
-    });
-  }
-
-  Widget _buildCategoryCardShimmerRow() {
-    return SizedBox(
-      height: 135,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: 3,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (_, __) => const CategoryCardShimmer(),
       ),
     );
   }

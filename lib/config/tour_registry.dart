@@ -79,7 +79,7 @@ List<TourStep> _buildHomeSteps() {
       key: TourKeys.homeManageListingsCard,
       icon: Iconsax.building,
       title: 'List your own place',
-      body: "Got a room or plot to rent out? Manage everything you've listed right here.",
+      body: 'Got a room or plot to rent out? List it here and reach genuine tenants in minutes.',
     ),
     TourStep(
       key: TourKeys.homeActionMenu,

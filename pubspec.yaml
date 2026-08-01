@@ -91,6 +91,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/home_carousel/
+    - assets/images/owner_cta/
     - assets/sounds/
     - assets/map_style.json
     - assets/sprites/
