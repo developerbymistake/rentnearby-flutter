@@ -222,23 +222,31 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
       if (loading) return const ServiceCategoryPeekCardShimmer();
       final cats = _serviceCatalog.activeCategories;
       if (cats.isEmpty) return const SizedBox.shrink();
+      const spacing = 14.0;
+      const columns = 2;
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Wrap(
-          spacing: 18,
-          runSpacing: 18,
-          children: [
-            for (var i = 0; i < cats.length; i++)
-              KeyedSubtree(
-                key: TourKeys.serviceCategoryKey(cats[i].id),
-                child: ServiceCategoryPeekCard(
-                  category: cats[i],
-                  zone: serviceZoneForIndex(i),
-                  serviceCount: _serviceCatalog.servicesForCategory(cats[i].id).length,
-                  onTap: () => _openCategoryGrid(cats[i]),
-                ),
-              ),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final cardWidth = (constraints.maxWidth - spacing * (columns - 1)) / columns;
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: [
+                for (var i = 0; i < cats.length; i++)
+                  KeyedSubtree(
+                    key: TourKeys.serviceCategoryKey(cats[i].id),
+                    child: ServiceCategoryPeekCard(
+                      category: cats[i],
+                      zone: serviceZoneForIndex(i),
+                      serviceCount: _serviceCatalog.servicesForCategory(cats[i].id).length,
+                      onTap: () => _openCategoryGrid(cats[i]),
+                      cardWidth: cardWidth,
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       );
     });

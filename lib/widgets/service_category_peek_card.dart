@@ -7,11 +7,15 @@ import '../models/service_category_model.dart';
 import '../utils/service_icons.dart';
 import 'service_zone.dart';
 
+const _kAspectRatio = 168 / 140;
+const _kPeekInsetRatio = 14 / 140;
+
 class ServiceCategoryPeekCard extends StatelessWidget {
   final ServiceCategoryModel category;
   final ServiceZone zone;
   final int serviceCount;
   final VoidCallback onTap;
+  final double cardWidth;
 
   const ServiceCategoryPeekCard({
     super.key,
@@ -19,28 +23,29 @@ class ServiceCategoryPeekCard extends StatelessWidget {
     required this.zone,
     required this.serviceCount,
     required this.onTap,
+    required this.cardWidth,
   });
 
-  static const _cardWidth = 140.0;
-  static const _cardHeight = 168.0;
+  double get _cardHeight => cardWidth * _kAspectRatio;
+  double get _peekInset => cardWidth * _kPeekInsetRatio;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: _cardWidth + 14,
-        height: _cardHeight + 14,
+        width: cardWidth + _peekInset,
+        height: _cardHeight + _peekInset,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Positioned(top: 14, left: 14, child: _peekLayer(angle: 0.07, alpha: 0.08, blur: 6)),
-            Positioned(top: 7, left: 7, child: _peekLayer(angle: 0.035, alpha: 0.10, blur: 8)),
+            Positioned(top: _peekInset, left: _peekInset, child: _peekLayer(angle: 0.07, alpha: 0.08, blur: 6)),
+            Positioned(top: _peekInset / 2, left: _peekInset / 2, child: _peekLayer(angle: 0.035, alpha: 0.10, blur: 8)),
             Positioned(
               top: 0,
               left: 0,
               child: Container(
-                width: _cardWidth,
+                width: cardWidth,
                 height: _cardHeight,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
@@ -107,7 +112,7 @@ class ServiceCategoryPeekCard extends StatelessWidget {
     return Transform.rotate(
       angle: angle,
       child: Container(
-        width: _cardWidth,
+        width: cardWidth,
         height: _cardHeight,
         decoration: BoxDecoration(
           color: Colors.white,
@@ -120,32 +125,40 @@ class ServiceCategoryPeekCard extends StatelessWidget {
 
   Widget _placeholder() => Container(
         color: zone.imgBg,
-        child: Center(child: Icon(serviceIconFor(category.iconName), size: 26, color: zone.accent)),
+        child: Center(child: Icon(serviceIconFor(category.iconName), size: cardWidth * 0.19, color: zone.accent)),
       );
 }
 
 class ServiceCategoryPeekCardShimmer extends StatelessWidget {
   const ServiceCategoryPeekCardShimmer({super.key});
 
+  static const _spacing = 14.0;
+  static const _columns = 2;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Wrap(
-        spacing: 18,
-        runSpacing: 18,
-        children: List.generate(
-          6,
-          (_) => Shimmer.fromColors(
-            baseColor: AppColors.shimmerBase,
-            highlightColor: AppColors.shimmerHighlight,
-            child: Container(
-              width: ServiceCategoryPeekCard._cardWidth,
-              height: ServiceCategoryPeekCard._cardHeight,
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final cardWidth = (constraints.maxWidth - _spacing * (_columns - 1)) / _columns;
+          return Wrap(
+            spacing: _spacing,
+            runSpacing: _spacing,
+            children: List.generate(
+              6,
+              (_) => Shimmer.fromColors(
+                baseColor: AppColors.shimmerBase,
+                highlightColor: AppColors.shimmerHighlight,
+                child: Container(
+                  width: cardWidth,
+                  height: cardWidth * _kAspectRatio,
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
