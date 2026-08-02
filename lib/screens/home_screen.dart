@@ -586,7 +586,7 @@ class _HomeScreenState extends State<HomeScreen> {
               end: Alignment.bottomRight,
               colors: isRooms
                   ? const [Color(0xFFEFF6FF), Color(0xFFDBEAFE)]
-                  : const [Color(0xFFEAFBF0), Color(0xFFF0FDF4)],
+                  : const [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
             ),
             borderRadius: BorderRadius.circular(20),
             boxShadow: AppShadows.premium(
