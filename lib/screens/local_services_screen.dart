@@ -37,7 +37,6 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
   @override
   void initState() {
     super.initState();
-    _enquiryCtrl.loadMyEnquiries();
     _serviceCatalog.ensureServicesLoaded();
   }
 
@@ -46,11 +45,7 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
         arguments: {'categoryId': category.id, 'title': category.name},
       );
 
-  void _openFirstCategoryGrid() {
-    final cats = _serviceCatalog.activeCategories;
-    if (cats.isEmpty) return;
-    _openCategoryGrid(cats.first);
-  }
+  void _openServiceCategoriesOverview() => Get.toNamed(AppRoutes.serviceCategoriesOverview);
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +64,7 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
             FadeInUp(
               duration: const Duration(milliseconds: 260),
               from: 14,
-              child: HomeBannerCarousel(onTap: _openFirstCategoryGrid),
+              child: HomeBannerCarousel(onTap: _openServiceCategoriesOverview),
             ),
             const SizedBox(height: 18),
             FadeInUp(
@@ -228,7 +223,8 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final cardWidth = (constraints.maxWidth - spacing * (columns - 1)) / columns;
+            final footprint = (constraints.maxWidth - spacing * (columns - 1)) / columns;
+            final cardWidth = ServiceCategoryPeekCard.cardWidthForFootprint(footprint);
             return Wrap(
               spacing: spacing,
               runSpacing: spacing,
@@ -239,7 +235,7 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
                     child: ServiceCategoryPeekCard(
                       category: cats[i],
                       zone: serviceZoneForIndex(i),
-                      serviceCount: _serviceCatalog.servicesForCategory(cats[i].id).length,
+                      serviceCount: cats[i].serviceCount,
                       onTap: () => _openCategoryGrid(cats[i]),
                       cardWidth: cardWidth,
                     ),
@@ -284,36 +280,29 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
             style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w500, color: AppColors.textMedium, height: 1.45),
           ),
           const SizedBox(height: 12),
-          Obx(() {
-            final cats = _serviceCatalog.activeCategories;
-            final target = cats.isEmpty ? null : cats.first;
-            return GestureDetector(
-              onTap: target == null ? null : () => _openCategoryGrid(target),
-              child: Opacity(
-                opacity: target == null ? 0.5 : 1,
-                child: PulseOnce(
-                  child: SweepHighlight(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                      decoration: BoxDecoration(color: _kPromoAccent, borderRadius: BorderRadius.circular(10)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'Send Inquiry Now',
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white),
-                          ),
-                          const SizedBox(width: 6),
-                          const Icon(Icons.arrow_forward_rounded, size: 11, color: Colors.white),
-                        ],
+          GestureDetector(
+            onTap: _openServiceCategoriesOverview,
+            child: PulseOnce(
+              child: SweepHighlight(
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  decoration: BoxDecoration(color: _kPromoAccent, borderRadius: BorderRadius.circular(10)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Send Inquiry Now',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white),
                       ),
-                    ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.arrow_forward_rounded, size: 11, color: Colors.white),
+                    ],
                   ),
                 ),
               ),
-            );
-          }),
+            ),
+          ),
         ],
       ),
     );

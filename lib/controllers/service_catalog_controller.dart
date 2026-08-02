@@ -37,9 +37,9 @@ class ServiceCatalogController extends GetxController {
     }
   }
 
-  // Caches the in-flight Future rather than a bare boolean re-check — Services tab and the
-  // category grid screen can both call this around the same time, and a bare boolean would let
-  // both fire a duplicate GET before either completes.
+  // Caches the in-flight Future rather than a bare boolean re-check — the Services tab's own
+  // background prefetch and the rail-overview screen's load can both fire around the same time,
+  // and a bare boolean would let both issue a duplicate GET before either completes.
   Future<void> ensureServicesLoaded({bool forceRefresh = false}) {
     if (_servicesLoadedOnce && !forceRefresh) return Future.value();
     return _servicesLoadFuture ??= _loadServices(forceRefresh).whenComplete(() => _servicesLoadFuture = null);
@@ -70,10 +70,18 @@ class ServiceCatalogController extends GetxController {
     return list;
   }
 
-  List<ServiceListItemModel> servicesForCategory(String categoryId) {
-    final list = services.where((s) => s.isActive && s.serviceCategoryId == categoryId).toList();
-    list.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    return list;
+  List<ServiceListItemModel> servicesForCategory(String categoryId) =>
+      _sortedActive(services.where((s) => s.serviceCategoryId == categoryId));
+
+  List<ServiceListItemModel> _sortedActive(Iterable<ServiceListItemModel> list) =>
+      list.where((s) => s.isActive).toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+  Future<List<ServiceListItemModel>> loadServicesForCategory(String categoryId, {bool forceRefresh = false}) async {
+    if (!forceRefresh && _repo.isServicesCacheFresh) {
+      return servicesForCategory(categoryId);
+    }
+    final raw = await _repo.getServicesByCategory(categoryId, forceRefresh: forceRefresh);
+    return _sortedActive(raw);
   }
 
   ServiceCategoryModel? categoryById(String id) {

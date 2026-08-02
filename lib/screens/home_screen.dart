@@ -71,7 +71,14 @@ class _HomeScreenState extends State<HomeScreen> {
           case ListingNeedsDistrict():
             AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
           case ListingLimitReached():
-            ListingLimitReachedSheet.show(context, cap: result.cap, unitSingular: 'room', unitPlural: 'rooms', accent: AppColors.primary);
+            ListingLimitReachedSheet.show(
+              context,
+              cap: result.cap,
+              unitSingular: 'room',
+              unitPlural: 'rooms',
+              accent: AppColors.primary,
+              onManage: () => Get.toNamed(AppRoutes.myListings),
+            );
         }
       } else {
         if (!_plotCtrl.hasLoadedMyPlots) {
@@ -90,7 +97,14 @@ class _HomeScreenState extends State<HomeScreen> {
           case PlotNeedsDistrict():
             AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
           case PlotLimitReached():
-            ListingLimitReachedSheet.show(context, cap: result.cap, unitSingular: 'plot', unitPlural: 'plots', accent: AppColors.plot);
+            ListingLimitReachedSheet.show(
+              context,
+              cap: result.cap,
+              unitSingular: 'plot',
+              unitPlural: 'plots',
+              accent: AppColors.plot,
+              onManage: () => Get.toNamed(AppRoutes.myPlots),
+            );
         }
       }
     } catch (_) {
@@ -563,7 +577,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Obx(() {
         final isRooms = _home.activeTab.value == 'rooms';
-        final accent = isRooms ? AppColors.primary : AppColors.success;
+        final accent = isRooms ? AppColors.primary : AppColors.plot;
         return Container(
           height: 160,
           decoration: BoxDecoration(
@@ -642,10 +656,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: (isRooms
-                                  ? AppColors.primary
-                                  : AppColors.success)
-                              .withValues(alpha: 0.14),
+                          color: accent.withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -669,9 +680,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontFamily: 'Poppins',
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
-                          color: isRooms
-                              ? AppColors.primary
-                              : const Color(0xFF166534),
+                          color: accent,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -751,50 +760,55 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: _ownerQuickActionTile(
-                icon: Icons.add_rounded,
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF60A5FA), AppColors.primaryLight],
+              child: KeyedSubtree(
+                key: TourKeys.homeQuickActionAdd,
+                child: _ownerQuickActionTile(
+                  icon: Icons.add_rounded,
+                  gradient: isRooms ? AppColors.primaryGradient : AppColors.plotGradient,
+                  shadowColor: isRooms ? AppColors.primaryLight : AppColors.plotDark,
+                  label: isRooms ? 'Add Room' : 'Add Plot',
+                  motion: IconMotionStyle.pulse,
+                  isLoading: _isCheckingAddLimit,
+                  onTap: _isCheckingAddLimit ? null : () => _onAddTap(isRooms),
                 ),
-                shadowColor: AppColors.primaryLight,
-                label: isRooms ? 'Add Room' : 'Add Plot',
-                motion: IconMotionStyle.pulse,
-                isLoading: _isCheckingAddLimit,
-                onTap: _isCheckingAddLimit ? null : () => _onAddTap(isRooms),
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: _ownerQuickActionTile(
-                icon: Icons.search_rounded,
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF4ADE80), _kQuickActionGreen],
+              child: KeyedSubtree(
+                key: TourKeys.homeQuickActionFind,
+                child: _ownerQuickActionTile(
+                  icon: Icons.search_rounded,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF4ADE80), _kQuickActionGreen],
+                  ),
+                  shadowColor: _kQuickActionGreen,
+                  label: isRooms ? 'Find Room' : 'Find Plot',
+                  motion: IconMotionStyle.scan,
+                  onTap: () => _auth.tabIndex.value =
+                      isRooms ? AppTabs.rooms : AppTabs.plots,
                 ),
-                shadowColor: _kQuickActionGreen,
-                label: isRooms ? 'Find Room' : 'Find Plot',
-                motion: IconMotionStyle.scan,
-                onTap: () => _auth.tabIndex.value =
-                    isRooms ? AppTabs.rooms : AppTabs.plots,
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: _ownerQuickActionTile(
-                icon: Icons.bar_chart_rounded,
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFFBBF24), AppColors.warning],
+              child: KeyedSubtree(
+                key: TourKeys.homeQuickActionLeads,
+                child: _ownerQuickActionTile(
+                  icon: Icons.bar_chart_rounded,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFBBF24), AppColors.warning],
+                  ),
+                  shadowColor: AppColors.warning,
+                  label: 'Views & Leads',
+                  badge: 'Soon',
+                  motion: IconMotionStyle.grow,
+                  onTap: null,
                 ),
-                shadowColor: AppColors.warning,
-                label: 'Views & Leads',
-                badge: 'Soon',
-                motion: IconMotionStyle.grow,
-                onTap: null,
               ),
             ),
           ],

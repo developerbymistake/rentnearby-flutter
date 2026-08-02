@@ -26,6 +26,9 @@ class ServiceCategoryPeekCard extends StatelessWidget {
     required this.cardWidth,
   });
 
+  static const footprintRatio = 1 + _kPeekInsetRatio;
+  static double cardWidthForFootprint(double footprint) => footprint / footprintRatio;
+
   double get _cardHeight => cardWidth * _kAspectRatio;
   double get _peekInset => cardWidth * _kPeekInsetRatio;
 

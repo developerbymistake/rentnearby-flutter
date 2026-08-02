@@ -4,6 +4,7 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../controllers/service_catalog_controller.dart';
+import '../models/service_list_item_model.dart';
 import '../widgets/service_rail_card.dart';
 import '../widgets/service_zone.dart';
 
@@ -12,10 +13,6 @@ import '../widgets/service_zone.dart';
 /// full 2-column grid. No grouping, no intermediate text lists: card tap goes
 /// straight to Service Detail. Replaces the old two-hop
 /// ServiceCatalogListScreen (Section -> Categories list -> Services list).
-///
-/// Stateless over [ServiceCatalogController]'s already-loaded catalog —
-/// `servicesForCategory` is a client-side slice, so opening this screen costs
-/// zero network requests. Expects `Get.arguments`: {categoryId, title}.
 class ServiceCategoryGridScreen extends StatefulWidget {
   const ServiceCategoryGridScreen({super.key});
 
@@ -25,6 +22,11 @@ class ServiceCategoryGridScreen extends StatefulWidget {
 
 class _ServiceCategoryGridScreenState extends State<ServiceCategoryGridScreen> {
   final _catalog = Get.find<ServiceCatalogController>();
+  late final String _categoryId;
+  late final String _title;
+
+  List<ServiceListItemModel> _services = [];
+  bool _loading = true;
 
   // Mirrors ViewAllScreen's grid geometry; slightly taller aspect than the
   // rooms/plots grid (0.80 vs 0.72) since ServiceRailCard's text block is
@@ -39,49 +41,57 @@ class _ServiceCategoryGridScreenState extends State<ServiceCategoryGridScreen> {
   @override
   void initState() {
     super.initState();
-    _catalog.ensureServicesLoaded();
+    final args = (Get.arguments as Map?) ?? const {};
+    _categoryId = args['categoryId'] as String? ?? '';
+    _title = args['title'] as String? ?? 'Services';
+    _catalog.loadServicesForCategory(_categoryId).then((list) {
+      if (!mounted) return;
+      setState(() {
+        _services = list;
+        _loading = false;
+      });
+    }).catchError((_) {
+      if (mounted) setState(() => _loading = false);
+    });
   }
+
+  Future<void> _onRefresh() => _catalog.loadServicesForCategory(_categoryId, forceRefresh: true).then((list) {
+        if (mounted) setState(() => _services = list);
+      });
 
   @override
   Widget build(BuildContext context) {
-    final catalog = _catalog;
-    final args = (Get.arguments as Map?) ?? const {};
-    final categoryId = args['categoryId'] as String? ?? '';
-    final title = args['title'] as String? ?? 'Services';
+    // Zone matches the rail this category renders as elsewhere in the app —
+    // same index-rotation, so the grid inherits the exact colors the user
+    // just tapped through.
+    final zoneIndex = _catalog.activeCategories.indexWhere((c) => c.id == _categoryId);
+    final zone = serviceZoneForIndex(zoneIndex);
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: Column(
         children: [
-          _buildHeader(title),
+          _buildHeader(_title),
           Expanded(
             child: RefreshIndicator(
               color: AppColors.primary,
-              onRefresh: () => catalog.refreshAll(),
-              child: Obx(() {
-                final services = catalog.servicesForCategory(categoryId);
-                if (catalog.servicesLoading.value && services.isEmpty) {
-                  return _buildGridShimmer(context);
-                }
-                if (services.isEmpty) return _buildEmpty(context);
-                // Zone matches the rail this category renders as on Home/the
-                // Services tab — same index-rotation, so the grid inherits
-                // the exact colors the user just tapped through.
-                final zoneIndex = catalog.activeCategories.indexWhere((c) => c.id == categoryId);
-                final zone = serviceZoneForIndex(zoneIndex);
-                return GridView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
-                  gridDelegate: _gridDelegate,
-                  itemCount: services.length,
-                  itemBuilder: (_, i) => ServiceRailCard(
-                    service: services[i],
-                    zone: zone,
-                    width: null,
-                    imageHeight: 110,
-                  ),
-                );
-              }),
+              onRefresh: _onRefresh,
+              child: _loading
+                  ? _buildGridShimmer(context)
+                  : _services.isEmpty
+                      ? _buildEmpty(context)
+                      : GridView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
+                          gridDelegate: _gridDelegate,
+                          itemCount: _services.length,
+                          itemBuilder: (_, i) => ServiceRailCard(
+                            service: _services[i],
+                            zone: zone,
+                            width: null,
+                            imageHeight: 110,
+                          ),
+                        ),
             ),
           ),
         ],
@@ -123,7 +133,7 @@ class _ServiceCategoryGridScreenState extends State<ServiceCategoryGridScreen> {
       padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
       gridDelegate: _gridDelegate,
       itemCount: 6,
-      itemBuilder: (_, __) => Shimmer.fromColors(
+      itemBuilder: (_, _) => Shimmer.fromColors(
         baseColor: AppColors.shimmerBase,
         highlightColor: AppColors.shimmerHighlight,
         child: Container(

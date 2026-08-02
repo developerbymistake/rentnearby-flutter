@@ -82,6 +82,24 @@ List<TourStep> _buildHomeSteps() {
       body: 'Got a room or plot to rent out? List it here and reach genuine tenants in minutes.',
     ),
     TourStep(
+      key: TourKeys.homeQuickActionAdd,
+      icon: Icons.add_rounded,
+      title: 'Post in one tap',
+      body: "Quickly add a new room or plot listing — this always matches whichever tab you're on.",
+    ),
+    TourStep(
+      key: TourKeys.homeQuickActionFind,
+      icon: Icons.search_rounded,
+      title: 'Jump to search',
+      body: 'Straight to the Rooms or Plots map, whichever matches this toggle.',
+    ),
+    TourStep(
+      key: TourKeys.homeQuickActionLeads,
+      icon: Icons.bar_chart_rounded,
+      title: 'Views & Leads',
+      body: 'See how many people viewed and enquired about your listings — coming soon.',
+    ),
+    TourStep(
       key: TourKeys.homeActionMenu,
       icon: Iconsax.notification_bing,
       title: 'Notifications & Messages',
@@ -114,21 +132,6 @@ List<TourStep> _buildHomeSteps() {
   ];
 }
 
-/// Services' category catalog (ServiceCatalogController.activeCategories) is
-/// genuinely dynamic — admin-configurable, no fixed app-compile-time count
-/// (see CLAUDE.md: "an admin-added category needs no app release"). So its
-/// tour can't be a fixed step list like the other 3 — this builds one step
-/// per currently-active category, plus the static Enquiries step, evaluated
-/// fresh each time TourController reads TourDefinition.steps.
-///
-/// Accepted edge case: if the live category list changes between one
-/// TourController retry attempt and a later one (spanning a real delay),
-/// the tour could end a step early or show a briefly-stale step count —
-/// never a crash or stuck spotlight, since every index TourController uses
-/// is validated against a freshly-read length in the same synchronous
-/// statement that uses it. Requires an admin catalog edit landing in the
-/// same ~1s window as one specific user's step transition — rare enough not
-/// to warrant a second frozen-snapshot source of truth.
 List<TourStep> _buildServicesSteps() {
   final categories = Get.find<ServiceCatalogController>().activeCategories;
   return [
@@ -138,12 +141,12 @@ List<TourStep> _buildServicesSteps() {
       title: 'Track your requests here',
       body: "Every enquiry you've submitted — and its status — lives in Enquiries, with a live count.",
     ),
-    for (final category in categories)
+    if (categories.isNotEmpty)
       TourStep(
-        key: TourKeys.serviceCategoryKey(category.id),
+        key: TourKeys.serviceCategoryKey(categories.first.id),
         icon: Iconsax.call,
-        title: category.name,
-        body: "Tap to talk to a local expert about ${category.name} — submit a request and they'll reach out to you.",
+        title: categories.first.name,
+        body: "Tap to talk to a local expert about ${categories.first.name} — submit a request and they'll reach out to you.",
       ),
   ];
 }

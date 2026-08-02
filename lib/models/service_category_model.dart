@@ -7,6 +7,7 @@ class ServiceCategoryModel {
   final String coverPhotoUrl;
   final int sortOrder;
   final bool isActive;
+  final int serviceCount;
 
   ServiceCategoryModel({
     required this.id,
@@ -15,6 +16,7 @@ class ServiceCategoryModel {
     required this.coverPhotoUrl,
     required this.sortOrder,
     required this.isActive,
+    required this.serviceCount,
   });
 
   factory ServiceCategoryModel.fromJson(Map<String, dynamic> json) => ServiceCategoryModel(
@@ -24,5 +26,6 @@ class ServiceCategoryModel {
         coverPhotoUrl: json['coverPhotoUrl'] as String? ?? '',
         sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
         isActive: json['isActive'] == true,
+        serviceCount: (json['serviceCount'] as num?)?.toInt() ?? 0,
       );
 }

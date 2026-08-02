@@ -20,6 +20,7 @@ import '../screens/view_all_screen.dart';
 import '../screens/credit_packs_screen.dart';
 import '../screens/redeem_code_screen.dart';
 import '../screens/wallet_ledger_screen.dart';
+import '../screens/service_categories_overview_screen.dart';
 import '../screens/service_category_grid_screen.dart';
 import '../screens/service_detail_screen.dart';
 import '../screens/enquiry_form_screen.dart';
@@ -63,6 +64,7 @@ class AppRoutes {
   // "View all" -> the card grid (no intermediate list screens). Service
   // Detail renders every package/plan inline (no separate Package List route).
   static const String serviceCategoryGrid = '/service-category-grid';
+  static const String serviceCategoriesOverview = '/service-categories-overview';
   static const String serviceDetail = '/service-detail';
   static const String enquiryForm = '/enquiry-form';
   static const String enquiryConfirmation = '/enquiry-confirmation';
@@ -215,6 +217,12 @@ class AppRoutes {
     GetPage(
       name: serviceCategoryGrid,
       page: () => const ServiceCategoryGridScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: serviceCategoriesOverview,
+      page: () => const ServiceCategoriesOverviewScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

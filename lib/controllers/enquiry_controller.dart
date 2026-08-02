@@ -81,8 +81,11 @@ class EnquiryController extends GetxController {
   Future<void> loadMyEnquiries() async {
     isLoadingMyEnquiries.value = true;
     try {
-      myEnquiries.value = await withRetry(() => _repo.getMyEnquiries());
-      await fetchActiveCount();
+      final results = await Future.wait([
+        withRetry(() => _repo.getMyEnquiries()),
+        fetchActiveCount(),
+      ]);
+      myEnquiries.value = results[0] as List<EnquiryModel>;
     } catch (e) {
       // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown
       // its own toast + redirected — this call fires unconditionally at app start (IndexedStack

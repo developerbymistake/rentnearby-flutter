@@ -8,6 +8,7 @@ class ListingLimitReachedSheet {
     required String unitSingular,
     required String unitPlural,
     required Color accent,
+    VoidCallback? onManage,
   }) {
     showModalBottomSheet(
       context: context,
@@ -39,7 +40,10 @@ class ListingLimitReachedSheet {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  Navigator.pop(context);
+                  onManage?.call();
+                },
                 icon: const Icon(Icons.list_alt_rounded, size: 16),
                 label: Text('Manage ${_cap(unitPlural)}', style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                 style: OutlinedButton.styleFrom(

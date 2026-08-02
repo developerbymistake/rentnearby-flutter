@@ -6,20 +6,8 @@ import '../models/service_package_model.dart';
 import '../services/api_service.dart';
 import '../utils/ttl_cache.dart';
 
-/// Thin TTL-caching wrapper around the read-only Service Catalog endpoints
-/// (mounted at `/services/...` — the same handlers the admin CRUD group
-/// hits, no active-only filtering server-side, mirrors GetDistricts/
-/// GetCities being dual-mounted). Mirrors ListingRepository's/
-/// WalletRepository's style: simple in-memory caches keyed only by time.
-///
-/// The whole catalog is small (3 categories, 15 services, ~26 packages for
-/// the seeded data) and admin-managed, so categories/services/inclusions are
-/// fetched unfiltered and cached for 5 minutes — callers
-/// (ServiceCatalogController) do the parent-scoping client-side rather than
-/// issuing a fresh request per category. Package detail reads (by service, or
-/// by id — needed once a specific package's Inclusions are shown) are never
-/// cached: they're only read once per screen visit and admin package edits
-/// (price/discount) should be visible immediately.
+// No active-only filtering server-side on /services (dual-mounted for admin) — callers must
+// filter isActive themselves.
 class ServiceCatalogRepository {
   List<ServiceCategoryModel>? _categoriesCache;
   DateTime? _categoriesCacheTime;
@@ -27,12 +15,17 @@ class ServiceCatalogRepository {
   List<ServiceListItemModel>? _servicesCache;
   DateTime? _servicesCacheTime;
 
+  final Map<String, List<ServiceListItemModel>> _servicesByCategoryCache = {};
+  final Map<String, DateTime> _servicesByCategoryCacheTime = {};
+
   List<InclusionModel>? _inclusionsCache;
   DateTime? _inclusionsCacheTime;
 
   static const _ttl = Duration(minutes: 5);
 
   bool _isValid(DateTime? time) => isCacheValid(time, _ttl);
+
+  bool get isServicesCacheFresh => _servicesCache != null && _isValid(_servicesCacheTime);
 
   Future<List<ServiceCategoryModel>> getCategories({bool forceRefresh = false}) async {
     if (!forceRefresh && _categoriesCache != null && _isValid(_categoriesCacheTime)) {
@@ -57,6 +50,21 @@ class ServiceCatalogRepository {
         .toList();
     _servicesCache = list;
     _servicesCacheTime = DateTime.now();
+    return list;
+  }
+
+  Future<List<ServiceListItemModel>> getServicesByCategory(String categoryId, {bool forceRefresh = false}) async {
+    if (!forceRefresh &&
+        _servicesByCategoryCache.containsKey(categoryId) &&
+        _isValid(_servicesByCategoryCacheTime[categoryId])) {
+      return _servicesByCategoryCache[categoryId]!;
+    }
+    final res = await ApiService.get('/services', params: {'serviceCategoryId': categoryId});
+    final list = (res['data'] as List? ?? [])
+        .map((e) => ServiceListItemModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+    _servicesByCategoryCache[categoryId] = list;
+    _servicesByCategoryCacheTime[categoryId] = DateTime.now();
     return list;
   }
 
@@ -103,6 +111,8 @@ class ServiceCatalogRepository {
     _categoriesCacheTime = null;
     _servicesCache = null;
     _servicesCacheTime = null;
+    _servicesByCategoryCache.clear();
+    _servicesByCategoryCacheTime.clear();
     _inclusionsCache = null;
     _inclusionsCacheTime = null;
   }
