@@ -12,14 +12,18 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
+import '../controllers/config_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../models/city_model.dart';
+import '../models/go_live_result.dart';
 import '../models/location_context.dart';
+import '../services/plot_permission_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/concurrency.dart';
 import '../utils/input_formatters.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/gradient_button.dart';
+import '../widgets/listing_limit_reached_sheet.dart';
 
 // Per-unit config: hint text and whether decimal input is allowed
 const _unitConfig = {
@@ -40,6 +44,8 @@ class AddPlotScreen extends StatefulWidget {
 
 class _AddPlotScreenState extends State<AddPlotScreen> {
   final _ctrl = Get.find<PlotController>();
+  late final _permissionService = PlotPermissionService(_ctrl, _locationCtrl);
+  bool _permissionChecked = false;
   MapLibreMapController? _mapController;
   Symbol? _nativePin;
   double  _currentZoom = 14.0;
@@ -71,7 +77,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   final _locationCtrl = Get.find<LocationController>();
   bool _mapReady = false;
   bool _cameraInitialized = false;
-  bool _isGeocoding = false;
+  final bool _isGeocoding = false;
   bool _isUploading = false;
   bool _isFinalizing = false;
   Set<int> _uploadDone = {};
@@ -98,6 +104,29 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     _selectedLocation = _locationCtrl.userLocation.value;
     _userLocationWorker = ever<LatLng?>(_locationCtrl.userLocation, _onUserLocationChanged);
     if (_userLocation != null) _onUserLocationChanged(_userLocation);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _verifyPermission());
+  }
+
+  Future<void> _verifyPermission() async {
+    final loaded = await _ctrl.loadMyPlots(reset: true);
+    if (!mounted) return;
+    if (!loaded) {
+      Get.back();
+      AppToast.error('Could not verify your listing limit. Please try again.');
+      return;
+    }
+    final result = await _permissionService.check();
+    if (!mounted) return;
+    switch (result) {
+      case PlotAllowed():
+        setState(() => _permissionChecked = true);
+      case PlotNeedsDistrict():
+        Get.back();
+        AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+      case PlotLimitReached():
+        Get.back();
+        ListingLimitReachedSheet.show(context, cap: result.cap, unitSingular: 'plot', unitPlural: 'plots', accent: AppColors.plot);
+    }
   }
 
   // Keeps district/city (and the pin/camera, until the user manually places
@@ -714,13 +743,33 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
     if (mounted) setState(() => _isFinalizing = true);
     try {
-      // A newly created plot is always inactive (server-enforced) — Go Live
-      // (spending credits or a free reactivation) happens later from My Plots,
-      // never automatically here.
-      await _ctrl.loadMyPlots(reset: true);
+      // A newly created plot is always inactive (server-enforced). When the
+      // payment feature is off, going live is free/instant with no plan choice
+      // needed, so we take it live automatically here instead of making the
+      // user do a separate "Make it Live" step later. When payment is on, that
+      // manual step (spending credits, picking a plan) still happens later
+      // from My Plots, exactly as before.
+      var successMessage = 'Plot listed successfully!';
+      var listReloaded = false;
+      final config = Get.find<ConfigController>();
+      await config.ensureLoaded();
+      if (config.paymentEnabled.value == false) {
+        final result = await _ctrl.goLivePlot(plotId);
+        switch (result) {
+          case GoLiveSuccess():
+            successMessage = 'Plot listed & live!';
+            listReloaded = true; // goLivePlot() already reloaded myPlots on this path
+          case GoLiveSubmittedForReview():
+            successMessage = 'Plot listed — submitted for review!';
+            listReloaded = true; // goLivePlot() already reloaded myPlots on this path
+          default:
+            successMessage = 'Plot listed successfully!';
+        }
+      }
+      if (!listReloaded) await _ctrl.loadMyPlots(reset: true);
       if (mounted) Get.back();
       Future.delayed(const Duration(milliseconds: 400), _ctrl.notifyPlotPosted);
-      AppToast.success('Plot listed successfully!');
+      AppToast.success(successMessage);
     } catch (_) {
       if (mounted) Get.back();
     }
@@ -880,6 +929,14 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_permissionChecked) {
+      return const Scaffold(
+        backgroundColor: AppColors.scaffoldBg,
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.plot),
+        ),
+      );
+    }
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {

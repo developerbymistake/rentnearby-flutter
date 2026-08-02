@@ -9,6 +9,7 @@ import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/dio_error_mapper.dart';
+import '../utils/network_retry.dart';
 
 class PlotController extends GetxController {
   final nearbyPlots = <NearbyPlotModel>[].obs;
@@ -46,12 +47,12 @@ class PlotController extends GetxController {
   Future<void> loadNearby(double lat, double lng, double radius, String districtId) async {
     try {
       isLoading.value = true;
-      final res = await ApiService.get('/plots/nearby', params: {
+      final res = await withRetry(() => ApiService.get('/plots/nearby', params: {
         'latitude': lat,
         'longitude': lng,
         'radius': radius,
         'districtId': districtId,
-      });
+      }));
       nearbyPlots.value =
           (res['data']['items'] as List).map((e) => NearbyPlotModel.fromJson(e)).toList();
     } catch (e) {
@@ -64,7 +65,7 @@ class PlotController extends GetxController {
     }
   }
 
-  Future<void> loadMyPlots({bool reset = false}) async {
+  Future<bool> loadMyPlots({bool reset = false}) async {
     try {
       if (reset) {
         _myPlotsPage = 1;
@@ -72,7 +73,7 @@ class PlotController extends GetxController {
         hasMorePlots.value = false;
       }
       isLoading.value = true;
-      final res = await ApiService.get('/plots/my', params: {'page': _myPlotsPage, 'pageSize': 10});
+      final res = await withRetry(() => ApiService.get('/plots/my', params: {'page': _myPlotsPage, 'pageSize': 10}));
       final items = (res['data']['items'] as List).map((e) => PlotModel.fromJson(e)).toList();
       if (_myPlotsPage == 1) {
         myPlots.value = items;
@@ -80,7 +81,9 @@ class PlotController extends GetxController {
         myPlots.addAll(items);
       }
       hasMorePlots.value = res['data']['hasMore'] == true;
+      return true;
     } catch (_) {
+      return false;
     } finally {
       isLoading.value = false;
     }

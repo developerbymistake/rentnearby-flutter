@@ -19,6 +19,7 @@ import '../widgets/go_live_plan_sheet.dart';
 import '../widgets/go_live_submitted_dialog.dart';
 import '../widgets/go_live_success_dialog.dart';
 import '../widgets/insufficient_balance_sheet.dart';
+import '../widgets/listing_limit_reached_sheet.dart';
 import '../widgets/pulse_once.dart';
 
 const _kBrown = AppColors.plot;
@@ -45,7 +46,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _dataReady = _ctrl.loadMyPlots(reset: true).catchError((_) {});
+    _dataReady = _ctrl.loadMyPlots(reset: true).catchError((_) => false);
     _scrollCtrl.addListener(_onScroll);
   }
 
@@ -63,7 +64,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     // resident IndexedStack tab), so "app resumed while this screen is on
     // top" is itself the correct condition for a refresh.
     if (state == AppLifecycleState.resumed) {
-      _dataReady = _ctrl.loadMyPlots(reset: true).catchError((_) {});
+      _dataReady = _ctrl.loadMyPlots(reset: true).catchError((_) => false);
       Get.find<WalletController>().loadBalance();
     }
   }
@@ -92,7 +93,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         case PlotNeedsDistrict():
           AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
         case PlotLimitReached():
-          _showPlotLimitDialog(cap: result.cap);
+          ListingLimitReachedSheet.show(context, cap: result.cap, unitSingular: 'plot', unitPlural: 'plots', accent: AppColors.plot);
       }
     } catch (_) {
       AppToast.error('Could not verify your listing limit. Please try again.');
@@ -201,63 +202,6 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         AppToast.error(g.message);
         return false;
     }
-  }
-
-  void _showPlotLimitDialog({required int cap}) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              width: 60, height: 60,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(Icons.lock_outline_rounded, size: 30, color: Color(0xFFF59E0B)),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Plot Limit Reached',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'You can list up to $cap plot${cap > 1 ? 's' : ''}. Delete an existing plot to add a new one.',
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.list_alt_rounded, size: 16),
-                label: const Text('Manage Plots',
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _kBrown,
-                  side: const BorderSide(color: _kBrown),
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   /// Each plot already carries its own validUntil/isActive (see _PlotCard's
@@ -522,7 +466,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   Widget _buildShimmer() => ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: 4,
-        itemBuilder: (_, __) => Shimmer.fromColors(
+        itemBuilder: (_, _) => Shimmer.fromColors(
           baseColor: AppColors.shimmerBase,
           highlightColor: AppColors.shimmerHighlight,
           child: Container(

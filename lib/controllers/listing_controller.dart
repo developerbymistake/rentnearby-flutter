@@ -9,6 +9,7 @@ import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/dio_error_mapper.dart';
+import '../utils/network_retry.dart';
 
 class ListingController extends GetxController {
   final myListings = <ListingModel>[].obs;
@@ -45,12 +46,12 @@ class ListingController extends GetxController {
   Future<void> loadNearby(double lat, double lng, double radius, String districtId) async {
     try {
       isLoading.value = true;
-      final res = await ApiService.get('/listings/nearby', params: {
+      final res = await withRetry(() => ApiService.get('/listings/nearby', params: {
         'latitude': lat,
         'longitude': lng,
         'radius': radius,
         'districtId': districtId,
-      });
+      }));
       nearbyListings.value = (res['data']['items'] as List).map((e) => NearbyListingModel.fromJson(e)).toList();
     } catch (e) {
       // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown
@@ -62,11 +63,11 @@ class ListingController extends GetxController {
     }
   }
 
-  Future<void> loadMyListings({int page = 1}) async {
+  Future<bool> loadMyListings({int page = 1}) async {
     try {
       if (page == 1) myListings.clear();
       isLoading.value = true;
-      final res = await ApiService.get('/listings/my', params: {'page': page, 'pageSize': 10});
+      final res = await withRetry(() => ApiService.get('/listings/my', params: {'page': page, 'pageSize': 10}));
       final items = (res['data']['items'] as List).map((e) => ListingModel.fromJson(e)).toList();
       if (page == 1) {
         myListings.value = items;
@@ -74,9 +75,11 @@ class ListingController extends GetxController {
         myListings.addAll(items);
       }
       hasMoreMyListings.value = res['data']['hasMore'] == true;
+      return true;
     } catch (e) {
-      if (e is DioException && e.response?.statusCode == 401) return;
+      if (e is DioException && e.response?.statusCode == 401) return false;
       AppToast.error('Could not load your rooms. Pull to refresh.');
+      return false;
     } finally {
       isLoading.value = false;
     }
