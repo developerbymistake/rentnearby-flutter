@@ -4,6 +4,7 @@ import '../models/enquiry_detail_model.dart';
 import '../models/enquiry_model.dart';
 import '../repositories/enquiry_repository.dart';
 import '../utils/app_toast.dart';
+import '../utils/network_retry.dart';
 
 /// Owns the consumer's own Enquiry state — the shared "My Enquiries" list
 /// (both verticals together, no per-vertical split) and whichever single
@@ -80,7 +81,7 @@ class EnquiryController extends GetxController {
   Future<void> loadMyEnquiries() async {
     isLoadingMyEnquiries.value = true;
     try {
-      myEnquiries.value = await _repo.getMyEnquiries();
+      myEnquiries.value = await withRetry(() => _repo.getMyEnquiries());
       await fetchActiveCount();
     } catch (e) {
       // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown

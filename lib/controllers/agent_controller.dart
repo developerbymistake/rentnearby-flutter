@@ -5,6 +5,7 @@ import '../models/enquiry_detail_model.dart';
 import '../models/enquiry_model.dart';
 import '../repositories/agent_repository.dart';
 import '../utils/app_toast.dart';
+import '../utils/network_retry.dart';
 
 /// Owns "is this account an Agent, and what do they need to see" — checked once per session
 /// (mirrors WalletController's onInit()-fetches-once pattern, not a live push), read reactively
@@ -65,7 +66,7 @@ class AgentController extends GetxController {
   Future<void> loadMyStats() async {
     isLoadingStats.value = true;
     try {
-      stats.value = await _repo.getMyStats();
+      stats.value = await withRetry(() => _repo.getMyStats());
     } catch (_) {
       AppToast.error('Could not load your dashboard stats.');
     } finally {
@@ -76,7 +77,7 @@ class AgentController extends GetxController {
   Future<void> loadMyLeads() async {
     isLoadingLeads.value = true;
     try {
-      myLeads.value = await _repo.getMyLeads();
+      myLeads.value = await withRetry(() => _repo.getMyLeads());
     } catch (_) {
       AppToast.error('Could not load your leads. Pull to refresh.');
     } finally {

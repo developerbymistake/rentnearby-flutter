@@ -7,6 +7,7 @@ import '../repositories/wallet_repository.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/dio_error_mapper.dart';
+import '../utils/network_retry.dart';
 import 'auth_controller.dart';
 import 'config_controller.dart';
 
@@ -92,7 +93,7 @@ class WalletController extends GetxController {
   Future<void> loadCreditPacks() async {
     isLoadingPacks.value = true;
     try {
-      creditPacks.value = await Get.find<WalletRepository>().getCreditPacks();
+      creditPacks.value = await withRetry(() => Get.find<WalletRepository>().getCreditPacks());
     } catch (e) {
       // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown
       // its own toast + redirected — see EnquiryController.loadMyEnquiries for the same guard.
@@ -111,8 +112,8 @@ class WalletController extends GetxController {
         hasMoreTransactions.value = false;
       }
       isLoadingTransactions.value = true;
-      final result = await Get.find<WalletRepository>()
-          .getTransactions(page: _transactionsPage, reason: reason);
+      final result = await withRetry(() => Get.find<WalletRepository>()
+          .getTransactions(page: _transactionsPage, reason: reason));
       if (_transactionsPage == 1) {
         transactions.value = result.items;
       } else {
