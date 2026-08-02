@@ -13,11 +13,18 @@ import '../config/app_shadows.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
+import '../controllers/listing_controller.dart';
+import '../controllers/location_controller.dart';
 import '../controllers/notification_controller.dart';
+import '../controllers/plot_controller.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
+import '../services/listing_permission_service.dart';
+import '../services/plot_permission_service.dart';
+import '../utils/app_toast.dart';
 import '../widgets/floating_loop.dart';
 import '../widgets/icon_motion.dart';
+import '../widgets/listing_limit_reached_sheet.dart';
 import '../widgets/pulse_once.dart';
 import '../widgets/sliding_chip_toggle.dart';
 import '../widgets/sweep_highlight.dart';
@@ -36,6 +43,62 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _home = Get.find<HomeController>();
   final _auth = Get.find<AuthController>();
+  final _listingCtrl = Get.find<ListingController>();
+  final _plotCtrl = Get.find<PlotController>();
+  final _locationCtrl = Get.find<LocationController>();
+  late final _listingPermissionService = ListingPermissionService(_listingCtrl, _locationCtrl);
+  late final _plotPermissionService = PlotPermissionService(_plotCtrl, _locationCtrl);
+  bool _isCheckingAddLimit = false;
+
+  void _onAddTap(bool isRooms) async {
+    if (_isCheckingAddLimit) return;
+    setState(() => _isCheckingAddLimit = true);
+    try {
+      if (isRooms) {
+        if (!_listingCtrl.hasLoadedMyListings) {
+          final loaded = await _listingCtrl.loadMyListings();
+          if (!mounted) return;
+          if (!loaded) {
+            AppToast.error('Could not verify your listing limit. Please try again.');
+            return;
+          }
+        }
+        final result = await _listingPermissionService.check();
+        if (!mounted) return;
+        switch (result) {
+          case ListingAllowed():
+            Get.toNamed(AppRoutes.addListing);
+          case ListingNeedsDistrict():
+            AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+          case ListingLimitReached():
+            ListingLimitReachedSheet.show(context, cap: result.cap, unitSingular: 'room', unitPlural: 'rooms', accent: AppColors.primary);
+        }
+      } else {
+        if (!_plotCtrl.hasLoadedMyPlots) {
+          final loaded = await _plotCtrl.loadMyPlots(reset: true);
+          if (!mounted) return;
+          if (!loaded) {
+            AppToast.error('Could not verify your listing limit. Please try again.');
+            return;
+          }
+        }
+        final result = await _plotPermissionService.check();
+        if (!mounted) return;
+        switch (result) {
+          case PlotAllowed():
+            Get.toNamed(AppRoutes.addPlot);
+          case PlotNeedsDistrict():
+            AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+          case PlotLimitReached():
+            ListingLimitReachedSheet.show(context, cap: result.cap, unitSingular: 'plot', unitPlural: 'plots', accent: AppColors.plot);
+        }
+      }
+    } catch (_) {
+      AppToast.error('Could not verify your listing limit. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isCheckingAddLimit = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -698,9 +761,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 shadowColor: AppColors.primaryLight,
                 label: isRooms ? 'Add Room' : 'Add Plot',
                 motion: IconMotionStyle.pulse,
-                onTap: () => Get.toNamed(
-                  isRooms ? AppRoutes.addListing : AppRoutes.addPlot,
-                ),
+                isLoading: _isCheckingAddLimit,
+                onTap: _isCheckingAddLimit ? null : () => _onAddTap(isRooms),
               ),
             ),
             const SizedBox(width: 10),
@@ -749,8 +811,15 @@ class _HomeScreenState extends State<HomeScreen> {
     required VoidCallback? onTap,
     String? badge,
     IconMotionStyle? motion,
+    bool isLoading = false,
   }) {
-    final iconGlyph = Icon(icon, size: 26, color: Colors.white);
+    final iconGlyph = isLoading
+        ? const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+          )
+        : Icon(icon, size: 26, color: Colors.white);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -791,7 +860,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   child: Center(
-                    child: motion == null
+                    child: motion == null || isLoading
                         ? iconGlyph
                         : IconMotion(style: motion, child: iconGlyph),
                   ),

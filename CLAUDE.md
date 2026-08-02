@@ -259,10 +259,13 @@ Poppins font family declared in `pubspec.yaml`. No dark mode, no localization/i1
 strings are hard-coded English inline in widgets.
 
 **Conventions worth matching**:
-- Long, precise "why" comments are the norm in controllers/services, especially around ordering,
-  race conditions, and state-invalidation subtleties (`AuthController`, `LocationController`,
-  `NotificationService`, `StorageService` are dense with these) — read them before changing adjacent
-  logic, and preserve that style in new code touching the same areas.
+- Older controllers/services (`AuthController`, `LocationController`, `NotificationService`,
+  `StorageService`) are dense with long "why" comments around ordering, race conditions, and
+  state-invalidation subtleties — read them before changing adjacent logic, they still explain real
+  non-obvious constraints. But for new code and edits anywhere in this repo (UI or not), the project
+  owner has repeatedly asked for minimal comments — do not add multi-line rationale blocks or explain
+  what a change does; at most one short line, only for a genuinely non-obvious hidden constraint. Do
+  not extend the old dense-comment style into new work.
 - Error handling in controllers typically translates `DioException` status codes into user-facing
   strings via small private static `_xxxError`/`_dioMessage` helpers (see `AuthController`) rather
   than surfacing raw exceptions.

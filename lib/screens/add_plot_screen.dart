@@ -17,13 +17,11 @@ import '../controllers/plot_controller.dart';
 import '../models/city_model.dart';
 import '../models/go_live_result.dart';
 import '../models/location_context.dart';
-import '../services/plot_permission_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/concurrency.dart';
 import '../utils/input_formatters.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/gradient_button.dart';
-import '../widgets/listing_limit_reached_sheet.dart';
 
 // Per-unit config: hint text and whether decimal input is allowed
 const _unitConfig = {
@@ -44,8 +42,6 @@ class AddPlotScreen extends StatefulWidget {
 
 class _AddPlotScreenState extends State<AddPlotScreen> {
   final _ctrl = Get.find<PlotController>();
-  late final _permissionService = PlotPermissionService(_ctrl, _locationCtrl);
-  bool _permissionChecked = false;
   MapLibreMapController? _mapController;
   Symbol? _nativePin;
   double  _currentZoom = 14.0;
@@ -104,29 +100,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     _selectedLocation = _locationCtrl.userLocation.value;
     _userLocationWorker = ever<LatLng?>(_locationCtrl.userLocation, _onUserLocationChanged);
     if (_userLocation != null) _onUserLocationChanged(_userLocation);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _verifyPermission());
-  }
-
-  Future<void> _verifyPermission() async {
-    final loaded = await _ctrl.loadMyPlots(reset: true);
-    if (!mounted) return;
-    if (!loaded) {
-      Get.back();
-      AppToast.error('Could not verify your listing limit. Please try again.');
-      return;
-    }
-    final result = await _permissionService.check();
-    if (!mounted) return;
-    switch (result) {
-      case PlotAllowed():
-        setState(() => _permissionChecked = true);
-      case PlotNeedsDistrict():
-        Get.back();
-        AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
-      case PlotLimitReached():
-        Get.back();
-        ListingLimitReachedSheet.show(context, cap: result.cap, unitSingular: 'plot', unitPlural: 'plots', accent: AppColors.plot);
-    }
   }
 
   // Keeps district/city (and the pin/camera, until the user manually places
@@ -743,12 +716,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
     if (mounted) setState(() => _isFinalizing = true);
     try {
-      // A newly created plot is always inactive (server-enforced). When the
-      // payment feature is off, going live is free/instant with no plan choice
-      // needed, so we take it live automatically here instead of making the
-      // user do a separate "Make it Live" step later. When payment is on, that
-      // manual step (spending credits, picking a plan) still happens later
-      // from My Plots, exactly as before.
       var successMessage = 'Plot listed successfully!';
       var listReloaded = false;
       final config = Get.find<ConfigController>();
@@ -758,10 +725,10 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
         switch (result) {
           case GoLiveSuccess():
             successMessage = 'Plot listed & live!';
-            listReloaded = true; // goLivePlot() already reloaded myPlots on this path
+            listReloaded = true;
           case GoLiveSubmittedForReview():
             successMessage = 'Plot listed — submitted for review!';
-            listReloaded = true; // goLivePlot() already reloaded myPlots on this path
+            listReloaded = true;
           default:
             successMessage = 'Plot listed successfully!';
         }
@@ -929,14 +896,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_permissionChecked) {
-      return const Scaffold(
-        backgroundColor: AppColors.scaffoldBg,
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.plot),
-        ),
-      );
-    }
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -1144,6 +1103,32 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
             title: 'Plot Type *',
             child: Obx(() {
               final types = _ctrl.plotTypes;
+              if (types.isEmpty && _ctrl.plotTypesLoading.value) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.plot),
+                    ),
+                  ),
+                );
+              }
+              if (types.isEmpty) {
+                return GestureDetector(
+                  onTap: _ctrl.loadPlotTypes,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: Text(
+                        "Couldn't load plot types. Tap to retry.",
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.plot),
+                      ),
+                    ),
+                  ),
+                );
+              }
               return GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),

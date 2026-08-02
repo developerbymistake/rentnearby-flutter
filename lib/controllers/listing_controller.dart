@@ -12,9 +12,12 @@ import '../utils/dio_error_mapper.dart';
 import '../utils/network_retry.dart';
 
 class ListingController extends GetxController {
+  bool hasLoadedMyListings = false;
+
   final myListings = <ListingModel>[].obs;
   final nearbyListings = <NearbyListingModel>[].obs;
   final roomTypes = <RoomTypeModel>[].obs;
+  final roomTypesLoading = false.obs;
   final isLoading = false.obs;
   final isDeleting = false.obs;
   final isUploading = false.obs;
@@ -33,14 +36,19 @@ class ListingController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _loadRoomTypes();
+    loadRoomTypes();
+    loadMyListings();
   }
 
-  Future<void> _loadRoomTypes() async {
+  Future<void> loadRoomTypes() async {
     try {
-      final res = await ApiService.get('/admin/room-types');
+      roomTypesLoading.value = true;
+      final res = await withRetry(() => ApiService.get('/admin/room-types'));
       roomTypes.value = (res['data'] as List).map((e) => RoomTypeModel.fromJson(e)).toList();
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      roomTypesLoading.value = false;
+    }
   }
 
   Future<void> loadNearby(double lat, double lng, double radius, String districtId) async {
@@ -75,6 +83,7 @@ class ListingController extends GetxController {
         myListings.addAll(items);
       }
       hasMoreMyListings.value = res['data']['hasMore'] == true;
+      hasLoadedMyListings = true;
       return true;
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) return false;

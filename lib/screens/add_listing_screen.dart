@@ -18,13 +18,11 @@ import '../controllers/listing_controller.dart';
 import '../models/city_model.dart';
 import '../models/go_live_result.dart';
 import '../models/location_context.dart';
-import '../services/listing_permission_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/concurrency.dart';
 import '../utils/input_formatters.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/gradient_button.dart';
-import '../widgets/listing_limit_reached_sheet.dart';
 
 class AddListingScreen extends StatefulWidget {
   const AddListingScreen({super.key});
@@ -63,8 +61,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
   LatLng? _selectedLocation;
   LatLng? _userLocation;
   final _locationCtrl = Get.find<LocationController>();
-  late final _permissionService = ListingPermissionService(_ctrl, _locationCtrl);
-  bool _permissionChecked = false;
   bool _mapReady = false;
   bool _cameraInitialized = false;
   final bool _isGeocoding = false;
@@ -95,29 +91,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
     _selectedLocation = _locationCtrl.userLocation.value;
     _userLocationWorker = ever<LatLng?>(_locationCtrl.userLocation, _onUserLocationChanged);
     if (_userLocation != null) _onUserLocationChanged(_userLocation);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _verifyPermission());
-  }
-
-  Future<void> _verifyPermission() async {
-    final loaded = await _ctrl.loadMyListings();
-    if (!mounted) return;
-    if (!loaded) {
-      Get.back();
-      AppToast.error('Could not verify your listing limit. Please try again.');
-      return;
-    }
-    final result = await _permissionService.check();
-    if (!mounted) return;
-    switch (result) {
-      case ListingAllowed():
-        setState(() => _permissionChecked = true);
-      case ListingNeedsDistrict():
-        Get.back();
-        AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
-      case ListingLimitReached():
-        Get.back();
-        ListingLimitReachedSheet.show(context, cap: result.cap, unitSingular: 'room', unitPlural: 'rooms', accent: AppColors.primary);
-    }
   }
 
   // Keeps district/city (and the pin/camera, until the user manually places
@@ -686,12 +659,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
     if (mounted) setState(() => _isFinalizing = true);
     try {
-      // A newly created listing is always inactive (server-enforced). When the
-      // payment feature is off, going live is free/instant with no plan choice
-      // needed, so we take it live automatically here instead of making the
-      // user do a separate "Make it Live" step later. When payment is on, that
-      // manual step (spending credits, picking a plan) still happens later
-      // from My Rooms, exactly as before.
       var successMessage = 'Room listed successfully!';
       var listReloaded = false;
       final config = Get.find<ConfigController>();
@@ -701,10 +668,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
         switch (result) {
           case GoLiveSuccess():
             successMessage = 'Room listed & live!';
-            listReloaded = true; // goLive() already reloaded myListings on this path
+            listReloaded = true;
           case GoLiveSubmittedForReview():
             successMessage = 'Room listed — submitted for review!';
-            listReloaded = true; // goLive() already reloaded myListings on this path
+            listReloaded = true;
           default:
             successMessage = 'Room listed successfully!';
         }
@@ -836,12 +803,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_permissionChecked) {
-      return Scaffold(
-        backgroundColor: AppColors.scaffoldBg,
-        body: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-      );
-    }
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -1000,6 +961,32 @@ class _AddListingScreenState extends State<AddListingScreen> {
         title: 'Room Type *',
         child: Obx(() {
           final types = _ctrl.roomTypes;
+          if (types.isEmpty && _ctrl.roomTypesLoading.value) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                ),
+              ),
+            );
+          }
+          if (types.isEmpty) {
+            return GestureDetector(
+              onTap: _ctrl.loadRoomTypes,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: Text(
+                    "Couldn't load room types. Tap to retry.",
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  ),
+                ),
+              ),
+            );
+          }
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),

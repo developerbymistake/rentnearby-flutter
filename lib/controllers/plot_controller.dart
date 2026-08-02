@@ -12,9 +12,12 @@ import '../utils/dio_error_mapper.dart';
 import '../utils/network_retry.dart';
 
 class PlotController extends GetxController {
+  bool hasLoadedMyPlots = false;
+
   final nearbyPlots = <NearbyPlotModel>[].obs;
   final myPlots = <PlotModel>[].obs;
   final plotTypes = <PlotTypeModel>[].obs;
+  final plotTypesLoading = false.obs;
   final isLoading = false.obs;
   final isDeleting = false.obs;
   final isUploading = false.obs;
@@ -35,13 +38,18 @@ class PlotController extends GetxController {
   void onInit() {
     super.onInit();
     loadPlotTypes();
+    loadMyPlots();
   }
 
   Future<void> loadPlotTypes() async {
     try {
-      final res = await ApiService.get('/admin/plot-types');
+      plotTypesLoading.value = true;
+      final res = await withRetry(() => ApiService.get('/admin/plot-types'));
       plotTypes.value = (res['data'] as List).map((e) => PlotTypeModel.fromJson(e)).toList();
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      plotTypesLoading.value = false;
+    }
   }
 
   Future<void> loadNearby(double lat, double lng, double radius, String districtId) async {
@@ -81,6 +89,7 @@ class PlotController extends GetxController {
         myPlots.addAll(items);
       }
       hasMorePlots.value = res['data']['hasMore'] == true;
+      hasLoadedMyPlots = true;
       return true;
     } catch (_) {
       return false;
