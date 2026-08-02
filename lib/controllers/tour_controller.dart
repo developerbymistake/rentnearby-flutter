@@ -52,6 +52,7 @@ class TourController extends GetxController {
   Worker? _offlineWorker;
   Worker? _gpsWorker;
   Worker? _districtWorker;
+  Worker? _permissionWorker;
 
   @override
   void onInit() {
@@ -75,6 +76,7 @@ class TourController extends GetxController {
     _offlineWorker = ever(_locationCtrl.isOffline, rxSafe('tour.isOffline', (_) => _reconcile()));
     _gpsWorker = ever(_locationCtrl.gpsEnabled, rxSafe('tour.gpsEnabled', (_) => _reconcile()));
     _districtWorker = ever(_locationCtrl.districtUnavailable, rxSafe('tour.districtUnavailable', (_) => _reconcile()));
+    _permissionWorker = ever(_locationCtrl.locationPermissionGranted, rxSafe('tour.locationPermissionGranted', (_) => _reconcile()));
 
     WidgetsBinding.instance.addPostFrameCallback((_) => attemptShowTourForCurrentTab());
   }
@@ -86,6 +88,7 @@ class TourController extends GetxController {
     _offlineWorker?.dispose();
     _gpsWorker?.dispose();
     _districtWorker?.dispose();
+    _permissionWorker?.dispose();
     try {
       _teardown(markSeen: false);
     } catch (_) {}

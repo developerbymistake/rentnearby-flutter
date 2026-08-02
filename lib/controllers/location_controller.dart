@@ -28,10 +28,18 @@ class LocationController extends GetxController {
   final nearbyCities        = <CityModel>[].obs;
   final districtUnavailable = false.obs;
   final gpsEnabled               = true.obs;
+  final locationPermissionGranted = true.obs;
   final isOffline                = false.obs;
   // Incremented each time a fresh GPS position is obtained — explore screens
   // watch this to fit camera and reload data without depending on locationLoading.
   final locationRefreshedTrigger = 0.obs;
+  // Incremented only when refreshOnResume() actually re-fetches GPS (i.e. the
+  // app was genuinely backgrounded long enough, or a manual "Check Again") —
+  // Add Room/Plot watch this specifically to know when it's safe to override
+  // a manually-placed pin, as opposed to any userLocation change in general
+  // (cold-start's second high-accuracy fix, a GPS on/off toggle) which should
+  // never move a pin the user already placed.
+  final resumeLocationRefreshedTrigger = 0.obs;
 
   // ── Manual district/city browsing (district-switch feature) ────────────────
   // A user-initiated, TEMPORARY override for exploring a district other than
@@ -83,7 +91,8 @@ class LocationController extends GetxController {
   /// gates (offline / GPS-disabled / district-unavailable) — the same formula
   /// MainScreen.build() computes inline; read this getter instead of
   /// re-deriving it so the formula exists in exactly one place.
-  bool get hasActiveGate => isOffline.value || !gpsEnabled.value || districtUnavailable.value;
+  bool get hasActiveGate =>
+      isOffline.value || !gpsEnabled.value || !locationPermissionGranted.value || districtUnavailable.value;
 
   /// Map/radius center for the explore screens: precise search pin (if any)
   /// > browsed city's stored coordinate > live GPS > GPS-nearest city >
@@ -244,6 +253,9 @@ class LocationController extends GetxController {
   bool _autoLoading        = false;
   bool _refreshing         = false;
   bool _initRunning        = false;
+  bool _pendingResumeRefresh = false;
+  DateTime? _pausedAt;
+  static const _minBackgroundForRefresh = Duration(minutes: 2);
   StreamSubscription<ServiceStatus>? _serviceStatusSub;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
@@ -293,7 +305,10 @@ class LocationController extends GetxController {
     _refreshing = true;
     try {
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 20),
+        ),
       );
       userLocation.value = LatLng(pos.latitude, pos.longitude);
       // Do NOT fire locationRefreshedTrigger here — it already fired immediately
@@ -313,6 +328,10 @@ class LocationController extends GetxController {
     } catch (_) {
     } finally {
       _refreshing = false;
+      if (_pendingResumeRefresh) {
+        _pendingResumeRefresh = false;
+        unawaited(refreshOnResume(force: true));
+      }
     }
   }
 
@@ -333,6 +352,14 @@ class LocationController extends GetxController {
     gpsEnabled.value = await Geolocator.isLocationServiceEnabled();
   }
 
+  Future<void> recheckLocationPermission() async {
+    final permission = await Geolocator.checkPermission();
+    final granted = permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
+    locationPermissionGranted.value = granted;
+    if (granted) refreshOnResume(force: true);
+  }
+
   // ── Location initialization ────────────────────────────────────────────────
 
   Future<void> _initLocation() async {
@@ -351,16 +378,19 @@ class LocationController extends GetxController {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
+          locationPermissionGranted.value = false;
           locationLoading.value = false;
           _tryAutoLoad();
           return;
         }
       }
       if (permission == LocationPermission.deniedForever) {
+        locationPermissionGranted.value = false;
         locationLoading.value = false;
         _tryAutoLoad();
         return;
       }
+      locationPermissionGranted.value = true;
 
       // Last-known fix renders the map immediately without waiting for GPS.
       final lastKnown = await Geolocator.getLastKnownPosition();
@@ -375,7 +405,10 @@ class LocationController extends GetxController {
 
       // High-accuracy fix — refines position after last-known render.
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 20),
+        ),
       );
       userLocation.value = LatLng(pos.latitude, pos.longitude);
       // Only fire the trigger here if the last-known fix never fired it —
@@ -505,16 +538,73 @@ class LocationController extends GetxController {
           {bool includeAddress = false}) =>
       _fetchLocationContext(lat, lng, includeAddress: includeAddress);
 
-  // ── Resume handler (called by both explore screens on app foreground) ───────
+  // Applies a freshly-resolved district/city, then bumps
+  // resumeLocationRefreshedTrigger — kept as one function, not two loose
+  // statements at the refreshOnResume() call site, specifically so the
+  // district/city can never end up set AFTER the trigger fires: Add
+  // Room/Plot's resume-worker reads selectedDistrict/autoCity straight off
+  // this controller instead of re-resolving the same coordinates itself
+  // (avoiding a duplicate /listings/context hit), which only stays correct
+  // if those fields are already current by the time the trigger fires.
+  void _publishResolvedContext(_LoadContextResult ctx) {
+    // Only update if user moved to a different district.
+    if (selectedDistrict.value == null ||
+        selectedDistrict.value!.id != ctx.district.id) {
+      autoCity.value = ctx.nearestCity;
+      selectedDistrict.value = ctx.district;  // fires screen worker after autoCity is set
+    }
+    resumeLocationRefreshedTrigger.value++;
+  }
 
-  Future<void> refreshOnResume() async {
+  // ── Pause/resume handlers (called from MainScreen on every lifecycle change) ──
+
+  // Stamps when the app actually left the foreground, so refreshOnResume()
+  // can tell a genuine background trip (possible travel) apart from a quick
+  // round trip (e.g. the camera/gallery picker during Add Room/Plot) that
+  // shouldn't cost a GPS fix + network call every time.
+  void appPaused() {
+    _pausedAt = DateTime.now();
+  }
+
+  // Consumes _pausedAt unconditionally (so a stale timestamp can never leak
+  // into a later, unrelated resume) and decides in one place whether the
+  // GPS/network round trip below is worth it: a null _pausedAt (no genuine
+  // paused state was ever recorded — e.g. an inactive-only lifecycle blip
+  // with no real backgrounding) or a too-recent one both skip, same as each
+  // other; only a confirmed real background trip of at least
+  // _minBackgroundForRefresh should ever pass. force: true (a user-visible
+  // retry tap) always bypasses this — silently no-op-ing a tap the user can
+  // see would look broken.
+  bool _shouldSkipResumeRefresh(bool force) {
+    final pausedAt = _pausedAt;
+    _pausedAt = null;
+    if (force) return false;
+    return pausedAt == null ||
+        DateTime.now().difference(pausedAt) < _minBackgroundForRefresh;
+  }
+
+  // Uses checkPermission() only — never requestPermission() — so a denied
+  // user isn't re-prompted by the OS dialog on every throttled resume.
+  Future<void> refreshOnResume({bool force = false}) async {
     // Manual browsing is temporary — always discard it on resume/cold start,
     // regardless of what happens with the GPS refresh below. Unconditional
     // and placed before the guard so it fires on every resume call.
     resetBrowsing();
 
+    if (_shouldSkipResumeRefresh(force)) return;
+
     // Guard: one refresh at a time, skip if location init is in progress.
-    if (locationLoading.value || _refreshing) return;
+    if (locationLoading.value || _refreshing) {
+      // Only queue a retry when a refreshOnResume() call is actually blocked
+      // by the shared _refreshing flag — a locationLoading-only block (cold
+      // start / GPS just turned on, routed through _initLocation()) has no
+      // in-flight call holding _refreshing to ever drain this later. Whichever
+      // of refreshOnResume()'s or _refreshLocation()'s own finally block runs
+      // next (both share _refreshing, so either could be the one holding it)
+      // drains the flag and fires the queued retry — see both finally blocks.
+      if (_refreshing) _pendingResumeRefresh = true;
+      return;
+    }
     _refreshing = true;
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -522,6 +612,16 @@ class LocationController extends GetxController {
         // GPS is off — keep userLocation at last-known, just return.
         return;
       }
+
+      // Silent read only — see refreshOnResume()'s doc comment for why this
+      // never calls requestPermission().
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        locationPermissionGranted.value = false;
+        return;
+      }
+      locationPermissionGranted.value = true;
 
       if (userLocation.value == null) {
         // No fix ever obtained (fresh install) — run full init.
@@ -532,22 +632,24 @@ class LocationController extends GetxController {
       }
 
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 20),
+        ),
       );
       userLocation.value = LatLng(pos.latitude, pos.longitude);
       locationRefreshedTrigger.value++;
 
       final ctx = await _loadContext(pos.latitude, pos.longitude);
       if (ctx == null) return;
-      // Only update if user moved to a different district.
-      if (selectedDistrict.value == null ||
-          selectedDistrict.value!.id != ctx.district.id) {
-        autoCity.value = ctx.nearestCity;
-        selectedDistrict.value = ctx.district;  // fires screen worker after autoCity is set
-      }
+      _publishResolvedContext(ctx);
     } catch (_) {
     } finally {
       _refreshing = false;
+      if (_pendingResumeRefresh) {
+        _pendingResumeRefresh = false;
+        unawaited(refreshOnResume(force: true));
+      }
     }
   }
 }

@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
@@ -70,7 +69,6 @@ class _ExploreScreenState extends State<ExploreScreen>
   double? _preSearchRadius; // non-null while a search-triggered widen is active
   double _lastClusterZoom = 0;
   bool _mapReady = false;
-  bool _checkingPermission = false;
   Timer? _loadNearbyDebounceTimer;
   String? _selectedRoomType;
   bool _loadingNearby = false;
@@ -284,61 +282,10 @@ class _ExploreScreenState extends State<ExploreScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _checkPermissionOnResume();
-      // Search pin is temporary, same spirit as browsingCity — resetBrowsing()
-      // inside refreshOnResume() already clears both, no separate call needed.
-      _locationCtrl.refreshOnResume();
       if (!_listingCtrl.isLoading.value && _radarController.isAnimating) {
         _radarController.stop();
         _radarController.reset();
       }
-    }
-  }
-
-  // ── Permission ────────────────────────────────────────────────────────────
-
-  Future<void> _checkPermissionOnResume() async {
-    if (_checkingPermission) return;
-    _checkingPermission = true;
-    try {
-      final permission = await Geolocator.checkPermission();
-      if (!mounted) return;
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        return;
-      }
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => PopScope(
-          canPop: false,
-          child: AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('Location Required',
-                style: TextStyle(
-                    fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-            content: const Text(
-                'Bakhli needs location access to show rooms near you. Please enable it in Settings.',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Geolocator.openAppSettings();
-                },
-                child: const Text('Open Settings',
-                    style: TextStyle(
-                        fontFamily: 'Poppins',
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-        ),
-      );
-    } finally {
-      _checkingPermission = false;
     }
   }
 

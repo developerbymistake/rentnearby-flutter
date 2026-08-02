@@ -183,6 +183,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _locationCtrl.refreshOnResume();
       final district = _locationCtrl.selectedDistrict.value;
       if (district != null) {
         BannerHubService.to.connectForDistrict(district.id.toString());
@@ -203,6 +204,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       // alongside Chat/Wallet).
       Get.find<EnquiryController>().fetchActiveCount();
       Get.find<AgentController>().checkAgentStatus();
+      Get.find<ServiceCatalogController>().loadCategories();
       // Tour re-attempt anchor for app resume — Future.delayed timers inside
       // TourController's bounded retry (_searchForReadyStep) keep firing even
       // while the app is backgrounded (e.g. during a native location-permission
@@ -212,6 +214,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       // seen-flag, hasActiveGate, its own generation bump) so it's safe to call
       // unconditionally here, same as every other call in this block.
       Get.find<TourController>().attemptShowTourForCurrentTab();
+    } else if (state == AppLifecycleState.paused) {
+      _locationCtrl.appPaused();
     }
   }
 
@@ -303,7 +307,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 40),
                 TextButton(
-                  onPressed: () => _locationCtrl.refreshOnResume(),
+                  onPressed: () => _locationCtrl.refreshOnResume(force: true),
                   child: const Text(
                     'Check Again',
                     style: TextStyle(
@@ -323,6 +327,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildGpsGate() {
+    final permissionIssue = _locationCtrl.gpsEnabled.value && !_locationCtrl.locationPermissionGranted.value;
     return Positioned.fill(
       child: Material(
         color: Colors.white,
@@ -338,12 +343,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                     gradient: AppColors.primaryGradient,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.location_off_rounded, color: Colors.white, size: 46),
+                  child: Icon(
+                    permissionIssue ? Icons.location_disabled_rounded : Icons.location_off_rounded,
+                    color: Colors.white, size: 46,
+                  ),
                 ),
                 const SizedBox(height: 32),
-                const Text(
-                  'Location Required',
-                  style: TextStyle(
+                Text(
+                  permissionIssue ? 'Location Permission Required' : 'Location Required',
+                  style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -351,10 +359,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Bakhli uses your location to show rooms near you. Please enable GPS to continue.',
+                Text(
+                  permissionIssue
+                      ? 'Bakhli needs permission to access your location to show rooms near you. Please allow location access in Settings.'
+                      : 'Bakhli uses your location to show rooms near you. Please enable GPS to continue.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 14,
                     color: AppColors.textMedium,
@@ -363,12 +373,16 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 40),
                 GradientButton(
-                  label: 'Enable Location',
-                  onPressed: () => Geolocator.openLocationSettings(),
+                  label: permissionIssue ? 'Open Settings' : 'Enable Location',
+                  onPressed: () => permissionIssue
+                      ? Geolocator.openAppSettings()
+                      : Geolocator.openLocationSettings(),
                 ),
                 const SizedBox(height: 12),
                 TextButton(
-                  onPressed: () => _locationCtrl.recheckGps(),
+                  onPressed: () => permissionIssue
+                      ? _locationCtrl.recheckLocationPermission()
+                      : _locationCtrl.recheckGps(),
                   child: const Text(
                     'Check Again',
                     style: TextStyle(
@@ -523,10 +537,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           Obx(() => !_locationCtrl.isOffline.value && _locationCtrl.districtUnavailable.value
               ? _buildDistrictGate()
               : const SizedBox.shrink()),
-          Obx(() => !_locationCtrl.gpsEnabled.value
+          Obx(() => !_locationCtrl.isOffline.value &&
+                  (!_locationCtrl.gpsEnabled.value || !_locationCtrl.locationPermissionGranted.value)
               ? _buildGpsGate()
               : const SizedBox.shrink()),
           Obx(() => _locationCtrl.gpsEnabled.value &&
+                  _locationCtrl.locationPermissionGranted.value &&
                   _locationCtrl.locationLoading.value &&
                   _locationCtrl.userLocation.value == null
               ? _buildLocationLoadingOverlay()

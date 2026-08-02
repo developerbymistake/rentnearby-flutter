@@ -1,27 +1,20 @@
-import 'dart:async';
-import 'dart:math';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:get/get.dart';
-import '../controllers/location_controller.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../controllers/config_controller.dart';
 import '../controllers/plot_controller.dart';
-import '../models/city_model.dart';
 import '../models/go_live_result.dart';
-import '../models/location_context.dart';
 import '../utils/app_toast.dart';
 import '../utils/concurrency.dart';
 import '../utils/input_formatters.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/gradient_button.dart';
+import 'add_listing_location_mixin.dart';
 
 // Per-unit config: hint text and whether decimal input is allowed
 const _unitConfig = {
@@ -40,40 +33,14 @@ class AddPlotScreen extends StatefulWidget {
   State<AddPlotScreen> createState() => _AddPlotScreenState();
 }
 
-class _AddPlotScreenState extends State<AddPlotScreen> {
+class _AddPlotScreenState extends State<AddPlotScreen> with AddListingLocationMixin<AddPlotScreen> {
   final _ctrl = Get.find<PlotController>();
-  MapLibreMapController? _mapController;
-  Symbol? _nativePin;
-  double  _currentZoom = 14.0;
-  Size    _mapSize = Size.zero;
-  double  _minZoom = 13.0;
   final _areaCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
-  final _addressCtrl = TextEditingController();
   final _areaFocusNode = FocusNode();
-  final _addressFocusNode = FocusNode();
 
   String? _selectedPlotType;
   String _selectedUnit = 'sqft';
-  DistrictModel? _resolvedDistrict;
-  CityModel? _resolvedCity;
-  String? get _selectedDistrictId => _resolvedDistrict?.id;
-  bool _isResolvingDistrict = false;
-  // Scoped separately from _isResolvingDistrict, which stays a general "any resolve in flight"
-  // signal (drives the Next-button disable check and the "Detecting…" labels for ANY resolve,
-  // passive or not). This one is only ever set true by the user's own Next-click into the Address
-  // step, so the "Please wait…" overlay can't reappear from an unrelated background GPS resync
-  // (e.g. resume-triggered refresh from a still-mounted sibling Explore tab) while typing.
-  bool _showAddressResolveOverlay = false;
-  bool _pinManuallyPlaced = false;
-  int _districtResolveGeneration = 0;
-  Worker? _userLocationWorker;
-  LatLng? _selectedLocation;
-  LatLng? _userLocation;
-  final _locationCtrl = Get.find<LocationController>();
-  bool _mapReady = false;
-  bool _cameraInitialized = false;
-  final bool _isGeocoding = false;
   bool _isUploading = false;
   bool _isFinalizing = false;
   Set<int> _uploadDone = {};
@@ -82,266 +49,43 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
   final List<File> _photos = [];
   final _picker = ImagePicker();
   int _step = 0;
-  Timer? _pinResolveTimer;
+
+  static const _locationStyle = LocationStepStyle(
+    circleColorHex: '#92400E',
+    userDotColorHex: '#E53935',
+    accentColor: AppColors.plot,
+    addressSpinnerColor: AppColors.plot,
+    addressPrefixIcon: Icons.terrain_rounded,
+    pinStepTitle: 'Pin Your Plot Location *',
+    pinHintNoun: 'plot',
+  );
 
   bool get _hasChanges =>
       _selectedPlotType != null ||
       _areaCtrl.text.isNotEmpty ||
       _descCtrl.text.isNotEmpty ||
       _photos.isNotEmpty ||
-      _addressCtrl.text.isNotEmpty ||
-      _selectedLocation != null;
+      hasLocationOrAddressChanges;
 
   @override
   void initState() {
     super.initState();
-    _addressCtrl.addListener(_onAddressChanged);
-    _userLocation = _locationCtrl.userLocation.value;
-    _selectedLocation = _locationCtrl.userLocation.value;
-    _userLocationWorker = ever<LatLng?>(_locationCtrl.userLocation, _onUserLocationChanged);
-    if (_userLocation != null) _onUserLocationChanged(_userLocation);
-  }
-
-  // Keeps district/city (and the pin/camera, until the user manually places
-  // one) tied to the CURRENT GPS fix — not a one-time snapshot. Starts firing
-  // from Step 1 (Details), before the map even exists, so resolution has the
-  // most possible lead time before the user reaches the district review step.
-  // Deliberately skips the address lookup (includeAddress: false) — only
-  // resolving the district here keeps `_hasChanges`/the discard-confirmation
-  // dialog from firing off background GPS activity the user never asked for;
-  // the address still auto-fills once the map is actually shown (see below).
-  void _onUserLocationChanged(LatLng? newLoc) {
-    if (!mounted || newLoc == null || _pinManuallyPlaced) return;
-    _userLocation = newLoc;
-    setState(() => _selectedLocation = newLoc);
-    _setNativePin(newLoc);
-    _animateTo(newLoc, _currentZoom);
-    _resolvePinDetails(newLoc, immediate: true, includeAddress: false);
-  }
-
-  void _onAddressChanged() {
-    if (mounted) setState(() {});
-  }
-
-  void _animateTo(LatLng target, double zoom) {
-    if (!_mapReady || _mapController == null || !mounted) return;
-    _mapController!.animateCamera(CameraUpdate.newLatLngZoom(target, zoom));
-  }
-
-  Future<void> _onStyleLoaded() async {
-    _mapReady = true;
-    if (!mounted) return;
-    final ctrl = _mapController;
-    if (ctrl == null) return;
-    if (_userLocation != null && _mapSize.width > 0) {
-      _minZoom = _calcMinZoom(0.5, _userLocation!.latitude, _mapSize.width);
-    }
-    final pinBytes = await _buildPinImage();
-    await ctrl.addImage('location_pin', pinBytes);
-    _initNativeCircle();
-    _initNativeUserDot();
-    if (_selectedLocation != null) await _setNativePin(_selectedLocation!);
-    if (_userLocation != null && !_cameraInitialized) {
-      _cameraInitialized = true;
-      _animateTo(_userLocation!, 14.0);
-    }
-    if (_userLocation != null && _addressCtrl.text.trim().isEmpty) {
-      _resolvePinDetails(_selectedLocation ?? _userLocation!);
-    }
-  }
-
-  static Future<Uint8List> _buildPinImage() async {
-    const double w = 40, h = 52, cx = w / 2, cy = 18, r = 16;
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, w, h));
-
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, h - 2), width: 14, height: 5),
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.22)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
-    );
-
-    final body = Paint()..color = const Color(0xFFE53935);
-    final path = Path()
-      ..addOval(Rect.fromCircle(center: const Offset(cx, cy), radius: r))
-      ..moveTo(cx - 8, cy + r - 4)
-      ..quadraticBezierTo(cx - 5, h - 6, cx, h)
-      ..quadraticBezierTo(cx + 5, h - 6, cx + 8, cy + r - 4)
-      ..close();
-    canvas.drawPath(path, body);
-
-    canvas.drawCircle(
-        const Offset(cx, cy), 6.5, Paint()..color = Colors.white);
-
-    final img = await recorder.endRecording().toImage(w.toInt(), h.toInt());
-    final bytes = (await img.toByteData(format: ui.ImageByteFormat.png))!;
-    return bytes.buffer.asUint8List();
-  }
-
-  Future<void> _initNativeCircle() async {
-    final ctrl = _mapController;
-    final loc = _userLocation;
-    if (ctrl == null || loc == null || !mounted) return;
-    final points = _circlePolygonPoints(loc, 0.5);
-    await ctrl.addLine(LineOptions(
-      geometry: points,
-      lineColor: '#92400E',
-      lineWidth: 10.0,
-      lineOpacity: 0.20,
-      lineBlur: 4.0,
-    ));
-    await ctrl.addLine(LineOptions(
-      geometry: points,
-      lineColor: '#92400E',
-      lineWidth: 2.5,
-      lineOpacity: 0.90,
-    ));
-  }
-
-  Future<void> _initNativeUserDot() async {
-    final ctrl = _mapController;
-    final loc = _userLocation;
-    if (ctrl == null || loc == null || !mounted) return;
-    await ctrl.addCircle(CircleOptions(
-      geometry: loc,
-      circleRadius: 8.0,
-      circleColor: '#E53935',
-      circleOpacity: 1.0,
-      circleStrokeColor: '#FFFFFF',
-      circleStrokeWidth: 2.5,
-    ));
-  }
-
-  double _calcMinZoom(double radiusKm, double lat, double screenWidthPx) {
-    const earthCircumference = 2 * pi * 6378137.0;
-    const tileSize = 512.0;
-    final metersPerPxAtZ0 = earthCircumference * cos(lat * pi / 180) / tileSize;
-    final targetMetersPerPx = (radiusKm * 1000 * 2) / (screenWidthPx * 0.85);
-    final zoom = log(metersPerPxAtZ0 / targetMetersPerPx) / log(2);
-    return zoom.clamp(11.0, 15.0);
-  }
-
-  Future<void> _setNativePin(LatLng latLng) async {
-    final ctrl = _mapController;
-    if (ctrl == null || !mounted) return;
-    if (_nativePin != null) {
-      await ctrl.updateSymbol(_nativePin!, SymbolOptions(geometry: latLng));
-    } else {
-      _nativePin = await ctrl.addSymbol(SymbolOptions(
-        geometry: latLng,
-        iconImage: 'location_pin',
-        iconSize: 1.5,
-        iconAnchor: 'bottom',
-      ));
-    }
-  }
-
-  static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
-    const steps = 128;
-    const earthRadius = 6378137.0;
-    final latRad = center.latitude * pi / 180;
-    return List.generate(steps + 1, (i) {
-      final angle = 2 * pi * i / steps;
-      final dLat = (radiusKm * 1000 * cos(angle)) / earthRadius * (180 / pi);
-      final dLng = (radiusKm * 1000 * sin(angle)) / (earthRadius * cos(latRad)) * (180 / pi);
-      return LatLng(center.latitude + dLat, center.longitude + dLng);
-    });
-  }
-
-  static double _distanceBetween(double lat1, double lon1, double lat2, double lon2) {
-    const R = 6378137.0;
-    final dLat = (lat2 - lat1) * pi / 180;
-    final dLon = (lon2 - lon1) * pi / 180;
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) * sin(dLon / 2) * sin(dLon / 2);
-    return R * 2 * atan2(sqrt(a), sqrt(1 - a));
+    initLocationTracking(style: _locationStyle, onLocationStale: _handleLocationStale);
   }
 
   @override
   void dispose() {
-    _pinResolveTimer?.cancel();
-    _userLocationWorker?.dispose();
-    _addressCtrl.removeListener(_onAddressChanged);
+    disposeLocationTracking();
     _areaCtrl.dispose();
     _descCtrl.dispose();
-    _addressCtrl.dispose();
     _areaFocusNode.dispose();
-    _addressFocusNode.dispose();
     super.dispose();
   }
 
-  // Debounces address + district resolution together for a pin move, so
-  // dragging the map only fires one round of network calls per pause —
-  // `immediate: true` (GPS-driven updates, not a drag) skips the wait since
-  // those aren't rapid-fire like dragging is.
-  Future<void> _resolvePinDetails(LatLng pos, {bool immediate = false, bool includeAddress = true, bool userInitiated = false}) async {
-    if (!mounted) return;
-    _pinResolveTimer?.cancel();
-    final myGeneration = ++_districtResolveGeneration;
-    if (_resolvedDistrict != null || _resolvedCity != null) {
-      setState(() {
-        _resolvedDistrict = null;
-        _resolvedCity = null;
-      });
-    }
-    void fire() {
-      if (!mounted) return;
-      _resolveDistrictForPin(pos, myGeneration, includeAddress: includeAddress, userInitiated: userInitiated);
-    }
-    if (immediate) {
-      fire();
-    } else {
-      _pinResolveTimer = Timer(const Duration(milliseconds: 600), fire);
-    }
-  }
-
-  // Side-effect-free coordinate -> district/city resolve for the exact pin
-  // position (same primitive the location-search flow uses) — this is what
-  // guarantees the submitted district always matches where the pin actually
-  // is, never a stale snapshot or the user's raw (possibly browsed) district.
-  Future<void> _resolveDistrictForPin(LatLng pos, int generation, {required bool includeAddress, bool userInitiated = false}) async {
-    if (!mounted) return;
-    setState(() {
-      _isResolvingDistrict = true;
-      if (userInitiated) _showAddressResolveOverlay = true;
-    });
-    try {
-      final ctx = await _locationCtrl.resolveDistrictAt(pos.latitude, pos.longitude, includeAddress: includeAddress);
-      if (!mounted || generation != _districtResolveGeneration) return;
-      setState(() {
-        _resolvedDistrict = ctx.district;
-        _resolvedCity = ctx.nearestCity;
-        _isResolvingDistrict = false;
-        _showAddressResolveOverlay = false;
-      });
-      final displayName = ctx.address;
-      if (displayName != null && displayName.isNotEmpty) {
-        final parts = displayName
-            .split(',')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
-        _addressCtrl.text = parts.take(3).join(', ');
-      }
-      if (ctx.nearestCity != null) {
-        _locationCtrl.loadCitiesForDistrict(ctx.district.id, forceRefresh: true);
-      }
-    } on DistrictNotFoundException {
-      if (!mounted || generation != _districtResolveGeneration) return;
-      setState(() {
-        _isResolvingDistrict = false;
-        _showAddressResolveOverlay = false;
-      });
-      AppToast.error("This area isn't in a serviceable location yet.");
-    } catch (_) {
-      if (!mounted || generation != _districtResolveGeneration) return;
-      setState(() {
-        _isResolvingDistrict = false;
-        _showAddressResolveOverlay = false;
-      });
-      AppToast.error('Could not verify the district for this location. Please try again.');
-    }
+  void _handleLocationStale() {
+    if (!mounted || _step <= 1) return;
+    setState(() => _step = 1);
+    AppToast.info('Your location may have changed — please recheck your pin.');
   }
 
   void _confirmDiscard() {
@@ -547,21 +291,21 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       }
     }
     if (_step == 1) {
-      final loc = _selectedLocation ?? _userLocation;
-      if (loc == null) {
+      if (pinnedOrLiveLocation == null) {
         AppToast.error('Waiting for GPS location. Please enable location and try again.');
         return;
       }
-      if (_selectedLocation == null) setState(() => _selectedLocation = _userLocation);
+      snapLocationToUserIfUnset();
+      setLocationStepActive(false);
     }
     if (_step == 2) {
-      if (_selectedDistrictId == null) {
+      if (selectedDistrictId == null) {
         AppToast.error('Please select a district to continue');
         return;
       }
-      if (_addressCtrl.text.trim().isEmpty) {
+      if (!hasAddressText) {
         AppToast.error('Address is required');
-        _addressFocusNode.requestFocus();
+        focusAddressField();
         return;
       }
     }
@@ -573,9 +317,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
     }
     if (_step < 3) {
       setState(() => _step++);
-      if (_step == 2 && _addressCtrl.text.trim().isEmpty && _selectedLocation != null) {
-        _resolvePinDetails(_selectedLocation!, userInitiated: true);
-      }
+      if (_step == 2) resolveAddressIfNeeded();
     } else {
       _submit();
     }
@@ -590,17 +332,17 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       AppToast.error('Please select a plot type');
       return;
     }
-    if (_selectedDistrictId == null) {
+    if (selectedDistrictId == null) {
       AppToast.error('Please select a district');
       return;
     }
-    if (_addressCtrl.text.trim().isEmpty) {
+    if (!hasAddressText) {
       AppToast.error('Address is required');
-      _addressFocusNode.requestFocus();
+      focusAddressField();
       return;
     }
 
-    final pinLocation = _selectedLocation ?? _userLocation;
+    final pinLocation = pinnedOrLiveLocation;
     if (pinLocation == null) {
       AppToast.error('Please pin your location on the map');
       return;
@@ -612,7 +354,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
       return;
     }
 
-    final cityId = _resolvedCity?.id;
+    final cityId = resolvedCityId;
     if (cityId == null) {
       AppToast.error('City not detected. Please enable GPS and try again.');
       return;
@@ -626,8 +368,8 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
           _descCtrl.text.trim().isNotEmpty ? _descCtrl.text.trim() : null,
       'latitude': pinLocation.latitude,
       'longitude': pinLocation.longitude,
-      'address': _addressCtrl.text.trim(),
-      'districtId': _selectedDistrictId,
+      'address': trimmedAddress,
+      'districtId': selectedDistrictId,
       'cityId': cityId,
     };
 
@@ -968,7 +710,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                         .animate(anim),
                     child: FadeTransition(opacity: anim, child: child),
                   ),
-                  child: _step == 0 ? _detailsStep() : _step == 1 ? _locationStep() : _step == 2 ? _addressStep() : _photosStep(),
+                  child: _step == 0 ? _detailsStep() : _step == 1 ? locationStepWidget() : _step == 2 ? addressStepWidget() : _photosStep(),
                 ),
               ),
 
@@ -980,7 +722,10 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                   if (_step > 0) ...[
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => setState(() => _step--),
+                        onPressed: () {
+                          if (_step == 1) setLocationStepActive(false);
+                          setState(() => _step--);
+                        },
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(0, 52),
                           side: const BorderSide(color: AppColors.plot),
@@ -1000,7 +745,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
                     flex: 2,
                     child: Obx(() {
                       final isButtonDisabled = _ctrl.isLoading.value || _isFinalizing ||
-                          (_step == 2 && (_isGeocoding || _isResolvingDistrict || _selectedDistrictId == null || _addressCtrl.text.trim().isEmpty));
+                          (_step == 2 && (isResolvingDistrict || selectedDistrictId == null || !hasAddressText));
                       return GradientButton(
                         onPressed: isButtonDisabled ? null : _handleNext,
                         isLoading: _ctrl.isLoading.value || _isFinalizing,
@@ -1025,7 +770,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
             message: 'Saving your plot...',
             indicatorColor: AppColors.plot,
           ),
-          if (_step == 2 && _showAddressResolveOverlay) AppLoadingOverlay.stackChild(
+          if (_step == 2 && showAddressResolveOverlay) AppLoadingOverlay.stackChild(
             message: 'Please wait...',
             indicatorColor: AppColors.plot,
           ),
@@ -1259,194 +1004,6 @@ class _AddPlotScreenState extends State<AddPlotScreen> {
               decoration: _inputDec('Describe the plot, access road, nearby landmarks...'),
             ),
           ),
-        ]),
-      );
-
-  Widget _locationStep() => Padding(
-    key: const ValueKey(1),
-    padding: const EdgeInsets.all(16),
-    child: _sectionCard(
-      title: 'Pin Your Plot Location *',
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Icon(Icons.info_outline_rounded, color: AppColors.primaryLight, size: 15),
-          const SizedBox(width: 6),
-          Expanded(child: Text(
-            _userLocation != null
-                ? (_selectedLocation != null
-                    ? 'Pinned — tap inside the circle to adjust'
-                    : 'Tap inside the 500 m circle to pin your plot')
-                : 'Waiting for your GPS location...',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-          )),
-        ]),
-        const SizedBox(height: 12),
-        if (_userLocation == null) ...[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              height: 340,
-              color: AppColors.surface,
-              child: const Center(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  CircularProgressIndicator(color: AppColors.plot, strokeWidth: 2),
-                  SizedBox(height: 14),
-                  Text('Getting your location...', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-                ]),
-              ),
-            ),
-          ),
-        ] else
-        ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              _mapSize = Size(constraints.maxWidth, 340);
-              return SizedBox(
-                height: 340,
-                child: Stack(children: [
-                  MapLibreMap(
-                    styleString: 'assets/map_style.json',
-                    initialCameraPosition: CameraPosition(
-                      target: _userLocation ?? const LatLng(30.3165, 78.0322),
-                      zoom: 14.0,
-                    ),
-                    compassEnabled: false,
-                    rotateGesturesEnabled: false,
-                    tiltGesturesEnabled: false,
-                    myLocationEnabled: false,
-                    trackCameraPosition: true,
-                    attributionButtonMargins: const Point(-200.0, 0.0),
-                    onMapCreated: (ctrl) => _mapController = ctrl,
-                    onStyleLoadedCallback: _onStyleLoaded,
-                    onCameraMove: (pos) { _currentZoom = pos.zoom; },
-                    onCameraIdle: () {
-                      if (_currentZoom < _minZoom && _mapController != null && mounted) {
-                        _mapController!.animateCamera(CameraUpdate.zoomTo(_minZoom));
-                      }
-                    },
-                    onMapClick: (_, latLng) {
-                      if (_userLocation != null) {
-                        final distM = _distanceBetween(
-                          _userLocation!.latitude, _userLocation!.longitude,
-                          latLng.latitude, latLng.longitude,
-                        );
-                        if (distM > 500) {
-                          AppToast.warning('You can only pin within 500 m of your current location');
-                          return;
-                        }
-                      }
-                      _pinManuallyPlaced = true;
-                      setState(() => _selectedLocation = latLng);
-                      _setNativePin(latLng);
-                      _resolvePinDetails(latLng);
-                    },
-                  ),
-                  Positioned(
-                    bottom: 10, right: 10,
-                    child: GestureDetector(
-                      onTap: () { if (_userLocation != null) _animateTo(_userLocation!, 15.0); },
-                      child: Container(
-                        width: 38, height: 38,
-                        decoration: BoxDecoration(
-                          color: Colors.white, shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
-                        ),
-                        child: const Icon(Iconsax.location, color: AppColors.plot, size: 18),
-                      ),
-                    ),
-                  ),
-                ]),
-              );
-            },
-          ),
-        ),
-        if (_selectedLocation != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Row(children: [
-              const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                '${_selectedLocation!.latitude.toStringAsFixed(5)}, ${_selectedLocation!.longitude.toStringAsFixed(5)}',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w500),
-              ),
-              const Spacer(),
-              const Text(
-                '© OpenStreetMap contributors',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 9, color: AppColors.textLight),
-              ),
-            ]),
-          ),
-      ]),
-    ),
-  );
-
-  Widget _addressStep() => SingleChildScrollView(
-    key: const ValueKey(2),
-    padding: const EdgeInsets.all(16),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _sectionCard(
-        title: 'District & City',
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('District *', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
-          const SizedBox(height: 6),
-          _readOnlyField(
-            Iconsax.location,
-            _resolvedDistrict?.name ?? (_isResolvingDistrict ? 'Detecting…' : '—'),
-          ),
-          const SizedBox(height: 16),
-          const Text('City / Area (Optional)', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
-          const SizedBox(height: 6),
-          _readOnlyField(
-            Iconsax.map,
-            _resolvedCity?.name ?? (_isResolvingDistrict ? 'Detecting…' : '—'),
-          ),
-        ]),
-      ),
-
-      _sectionCard(
-        title: 'Address *',
-        child: TextFormField(
-          controller: _addressCtrl,
-          focusNode: _addressFocusNode,
-          inputFormatters: noEmojiInputFormatters,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-          decoration: _inputDec(
-            'Street, landmark, nearby place...',
-            prefixIcon: const Icon(Icons.terrain_rounded, color: AppColors.primaryLight, size: 18),
-          ).copyWith(
-            suffixIcon: _isGeocoding
-                ? const Padding(
-                    padding: EdgeInsets.all(14),
-                    child: SizedBox(width: 16, height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.plot)),
-                  )
-                : null,
-          ),
-        ),
-      ),
-    ]),
-  );
-
-  Widget _readOnlyField(IconData icon, String value) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: Row(children: [
-          Icon(icon, color: AppColors.primaryLight, size: 18),
-          const SizedBox(width: 10),
-          Text(value,
-              style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 14,
-                  color: AppColors.textDark)),
-          const Spacer(),
-          const Icon(Icons.gps_fixed_rounded, color: AppColors.success, size: 14),
         ]),
       );
 
