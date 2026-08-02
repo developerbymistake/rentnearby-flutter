@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
+import '../config/app_shadows.dart';
 import '../models/service_list_item_model.dart';
 import '../utils/service_icons.dart';
 import 'service_zone.dart';
 
-/// Rich card for one Service — cover photo + name + 2-line short description.
+/// Rich card for one Service — cover photo + name (wraps to 2 lines rather
+/// than truncating, so longer service names stay fully readable).
 /// Tapping goes straight to Service Detail (there are no intermediate list
 /// screens in the catalog anymore). Used at a fixed [width] inside the
 /// horizontal category rails and with `width: null` (cell-sized) inside the
@@ -38,9 +40,7 @@ class ServiceRailCard extends StatelessWidget {
           color: zone.cardBg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.divider.withValues(alpha: 0.6)),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 6)),
-          ],
+          boxShadow: AppShadows.premium(zone.accent, alpha: 0.06, blur: 14, offset: const Offset(0, 6)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,25 +83,22 @@ class ServiceRailCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(serviceIconFor(service.iconName), size: 12, color: zone.accent),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Icon(serviceIconFor(service.iconName), size: 12, color: zone.accent),
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           service.name,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    service.shortDescription,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 9.5, color: AppColors.textLight, fontWeight: FontWeight.w500, height: 1.3),
                   ),
                 ],
               ),

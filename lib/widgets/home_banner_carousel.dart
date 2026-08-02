@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import '../config/app_shadows.dart';
 
 /// Static, local-asset image strip shown on Home right below the Rooms/Plots
 /// toggle — a rounded card like every other section here (CategoryCard/
@@ -80,9 +81,7 @@ class _HomeBannerCarouselState extends State<HomeBannerCarousel> {
           width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 6)),
-            ],
+            boxShadow: AppShadows.premium(AppColors.primary, alpha: 0.06, blur: 14, offset: const Offset(0, 6)),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),

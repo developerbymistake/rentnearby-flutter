@@ -1202,6 +1202,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
 
   Widget _buildLocationFab() {
     return GestureDetector(
+      key: TourKeys.plotsLocationFab,
       onTap: () {
         // Ends any manual district/city browsing and any active location
         // search in one call — "recenter" and "return to my real location"
@@ -1233,6 +1234,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   Widget _buildViewListButton() {
     final count = _filteredPlots.length;
     return GestureDetector(
+      key: TourKeys.plotsViewListButton,
       onTap: _showListSheet,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

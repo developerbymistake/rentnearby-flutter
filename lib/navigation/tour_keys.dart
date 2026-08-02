@@ -20,6 +20,8 @@ class TourKeys {
   static final roomsSearchToggle = GlobalKey();
   static final roomsFilterPanel = GlobalKey();
   static final roomsAddShortcut = GlobalKey();
+  static final roomsViewListButton = GlobalKey();
+  static final roomsLocationFab = GlobalKey();
 
   // Plots
   static final plotsLocationPill = GlobalKey();
@@ -27,6 +29,8 @@ class TourKeys {
   static final plotsSearchToggle = GlobalKey();
   static final plotsFilterPanel = GlobalKey();
   static final plotsAddShortcut = GlobalKey();
+  static final plotsViewListButton = GlobalKey();
+  static final plotsLocationFab = GlobalKey();
 
   // Services
   static final servicesEnquiriesButton = GlobalKey();

@@ -1272,6 +1272,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Widget _buildLocationFab() {
     return GestureDetector(
+      key: TourKeys.roomsLocationFab,
       onTap: () {
         // Ends any manual district/city browsing and any active location
         // search in one call — "recenter" and "return to my real location"
@@ -1307,6 +1308,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Widget _buildViewListButton() {
     final count = _filteredListings.length;
     return GestureDetector(
+      key: TourKeys.roomsViewListButton,
       onTap: _showListSheet,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

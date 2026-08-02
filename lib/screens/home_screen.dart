@@ -1,3 +1,6 @@
+import 'dart:ui' as ui;
+
+import 'package:animate_do/animate_do.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -6,13 +9,18 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
+import '../config/app_shadows.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
+import '../widgets/floating_loop.dart';
+import '../widgets/icon_motion.dart';
+import '../widgets/pulse_once.dart';
 import '../widgets/sliding_chip_toggle.dart';
+import '../widgets/sweep_highlight.dart';
 
 const _kPlotColor = AppColors.plot;
 const _kPlotGradient = AppColors.plotGradient;
@@ -45,14 +53,38 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHero(context),
-              _buildToggle(),
-              _buildOwnerCtaBanner(),
+              FadeInDown(
+                duration: const Duration(milliseconds: 260),
+                from: 10,
+                child: _buildToggle(),
+              ),
+              FadeInUp(
+                duration: const Duration(milliseconds: 260),
+                delay: const Duration(milliseconds: 60),
+                from: 14,
+                child: _buildOwnerCtaBanner(),
+              ),
               const SizedBox(height: 12),
-              _buildOwnerQuickActions(),
+              FadeInUp(
+                duration: const Duration(milliseconds: 260),
+                delay: const Duration(milliseconds: 120),
+                from: 14,
+                child: _buildOwnerQuickActions(),
+              ),
               const SizedBox(height: 15),
-              _buildListingsSection(),
+              FadeInUp(
+                duration: const Duration(milliseconds: 260),
+                delay: const Duration(milliseconds: 180),
+                from: 14,
+                child: _buildListingsSection(),
+              ),
               const SizedBox(height: 15),
-              _buildRecentlyAddedSection(),
+              FadeInUp(
+                duration: const Duration(milliseconds: 260),
+                delay: const Duration(milliseconds: 240),
+                from: 14,
+                child: _buildRecentlyAddedSection(),
+              ),
               const SizedBox(height: 20),
             ],
           ),
@@ -161,13 +193,12 @@ class _HomeScreenState extends State<HomeScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+              boxShadow: AppShadows.premium(
+                Colors.black,
+                alpha: 0.12,
+                blur: 8,
+                offset: const Offset(0, 3),
+              ),
             ),
             child: Icon(icon, color: AppColors.primary, size: 17),
           ),
@@ -371,24 +402,90 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // No fixed height — inside the near-you rail's SizedBox(height: 150)
+  // parent it gets stretched tight to fill that space (unchanged from
+  // before); inside Recently Added's plain Column it sizes to content.
   Widget _emptyRailMessage(String text) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 20),
     child: Container(
-      height: 100,
       width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.divider),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontFamily: 'Poppins',
-          fontSize: 12,
-          color: AppColors.textLight,
+        boxShadow: AppShadows.premium(
+          AppColors.primary,
+          alpha: 0.06,
+          blur: 16,
+          offset: const Offset(0, 6),
         ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            right: -8,
+            bottom: -12,
+            child: Icon(
+              Icons.search_rounded,
+              size: 60,
+              color: AppColors.primaryLight.withValues(alpha: 0.08),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.home_rounded,
+                  color: AppColors.primaryLight,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Nothing here yet',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11,
+                        color: AppColors.textLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     ),
   );
@@ -403,6 +500,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Obx(() {
         final isRooms = _home.activeTab.value == 'rooms';
+        final accent = isRooms ? AppColors.primary : AppColors.success;
         return Container(
           height: 160,
           decoration: BoxDecoration(
@@ -414,21 +512,62 @@ class _HomeScreenState extends State<HomeScreen> {
                   : const [Color(0xFFEAFBF0), Color(0xFFF0FDF4)],
             ),
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            boxShadow: AppShadows.premium(
+              accent,
+              alpha: 0.16,
+              blur: 20,
+              offset: const Offset(0, 8),
+            ),
           ),
           clipBehavior: Clip.antiAlias,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 0, 14),
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                width: 185,
+                child: SizedBox.expand(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Positioned(
+                        bottom: 14,
+                        left: 0,
+                        right: 0,
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: ImageFiltered(
+                            imageFilter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 8),
+                            child: Container(
+                              width: 84,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.35),
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      FloatingLoop(
+                        child: SizedBox.expand(
+                          child: Image.asset(
+                            isRooms
+                                ? 'assets/images/owner_cta/house.png'
+                                : 'assets/images/owner_cta/plot.png',
+                            fit: BoxFit.contain,
+                            alignment: Alignment.centerRight,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 70, 14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -454,9 +593,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontFamily: 'Poppins',
                             fontSize: 9.5,
                             fontWeight: FontWeight.w700,
-                            color: isRooms
-                                ? AppColors.primary
-                                : AppColors.success,
+                            color: accent,
                           ),
                         ),
                       ),
@@ -491,55 +628,47 @@ class _HomeScreenState extends State<HomeScreen> {
                         onTap: () => Get.toNamed(
                           isRooms ? AppRoutes.myListings : AppRoutes.myPlots,
                         ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isRooms
-                                ? AppColors.primary
-                                : AppColors.success,
+                        child: PulseOnce(
+                          child: SweepHighlight(
                             borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text(
-                                'Add Your Listing',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.arrow_forward_rounded,
-                                size: 12,
-                                color: Colors.white,
+                              decoration: BoxDecoration(
+                                color: accent,
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            ],
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Add Your Listing',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.arrow_forward_rounded,
+                                    size: 12,
+                                    color: Colors.white,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-              SizedBox(
-                width: 165,
-                child: Image.asset(
-                  isRooms
-                      ? 'assets/images/owner_cta/house.png'
-                      : 'assets/images/owner_cta/plot.png',
-                  fit: BoxFit.contain,
-                  alignment: Alignment.centerRight,
-                ),
-              ),
             ],
           ),
         );
@@ -548,76 +677,65 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Owner quick actions — unified card, 3 tiles ─────────────────────────
+  // ── Owner quick actions — 3 tiles ───────────────────────────────────────
 
   Widget _buildOwnerQuickActions() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Obx(() {
         final isRooms = _home.activeTab.value == 'rooms';
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: _ownerQuickActionTile(
-                  icon: Icons.add_rounded,
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF60A5FA), AppColors.primaryLight],
-                  ),
-                  shadowColor: AppColors.primaryLight,
-                  label: isRooms ? 'Add Room' : 'Add Plot',
-                  subtitle: 'List in 2 min',
-                  onTap: () => Get.toNamed(
-                    isRooms ? AppRoutes.addListing : AppRoutes.addPlot,
-                  ),
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _ownerQuickActionTile(
+                icon: Icons.add_rounded,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF60A5FA), AppColors.primaryLight],
+                ),
+                shadowColor: AppColors.primaryLight,
+                label: isRooms ? 'Add Room' : 'Add Plot',
+                motion: IconMotionStyle.pulse,
+                onTap: () => Get.toNamed(
+                  isRooms ? AppRoutes.addListing : AppRoutes.addPlot,
                 ),
               ),
-              Expanded(
-                child: _ownerQuickActionTile(
-                  icon: Icons.search_rounded,
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF4ADE80), _kQuickActionGreen],
-                  ),
-                  shadowColor: _kQuickActionGreen,
-                  label: isRooms ? 'Find Room' : 'Find Plot',
-                  subtitle: 'Browse listings',
-                  onTap: () => _auth.tabIndex.value =
-                      isRooms ? AppTabs.rooms : AppTabs.plots,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _ownerQuickActionTile(
+                icon: Icons.search_rounded,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF4ADE80), _kQuickActionGreen],
                 ),
+                shadowColor: _kQuickActionGreen,
+                label: isRooms ? 'Find Room' : 'Find Plot',
+                motion: IconMotionStyle.scan,
+                onTap: () => _auth.tabIndex.value =
+                    isRooms ? AppTabs.rooms : AppTabs.plots,
               ),
-              Expanded(
-                child: _ownerQuickActionTile(
-                  icon: Icons.bar_chart_rounded,
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFFBBF24), AppColors.warning],
-                  ),
-                  shadowColor: AppColors.warning,
-                  label: 'Views & Leads',
-                  subtitle: 'Track activity',
-                  badge: 'Soon',
-                  onTap: null,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _ownerQuickActionTile(
+                icon: Icons.bar_chart_rounded,
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFBBF24), AppColors.warning],
                 ),
+                shadowColor: AppColors.warning,
+                label: 'Views & Leads',
+                badge: 'Soon',
+                motion: IconMotionStyle.grow,
+                onTap: null,
               ),
-            ],
-          ),
+            ),
+          ],
         );
       }),
     );
@@ -628,93 +746,97 @@ class _HomeScreenState extends State<HomeScreen> {
     required Gradient gradient,
     required Color shadowColor,
     required String label,
-    required String subtitle,
     required VoidCallback? onTap,
     String? badge,
+    IconMotionStyle? motion,
   }) {
+    final iconGlyph = Icon(icon, size: 26, color: Colors.white);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: gradient,
-                  borderRadius: BorderRadius.circular(13),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: shadowColor.withValues(alpha: 0.3),
-                      blurRadius: 4,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppShadows.premium(
+            shadowColor,
+            alpha: 0.14,
+            blur: 12,
+            offset: const Offset(0, 5),
+          ),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    gradient: gradient,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      width: 1,
+                    ),
+                    boxShadow: AppShadows.premium(
+                      shadowColor,
+                      alpha: 0.3,
+                      blur: 4,
                       offset: const Offset(0, 2),
                     ),
-                  ],
+                  ),
+                  child: Center(
+                    child: motion == null
+                        ? iconGlyph
+                        : IconMotion(style: motion, child: iconGlyph),
+                  ),
                 ),
-                child: Icon(icon, size: 19, color: Colors.white),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 1),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 8.5,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textLight,
-                ),
-              ),
-            ],
-          ),
-          if (badge != null)
-            Positioned(
-              top: -4,
-              right: 18,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 5,
-                  vertical: 1.5,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.warning,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  badge,
+                const SizedBox(height: 6),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 7,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                ),
+              ],
+            ),
+            if (badge != null)
+              Positioned(
+                top: -4,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1.5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    badge,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 7,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -857,14 +979,12 @@ class _HomeListingCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider.withValues(alpha: 0.6)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          boxShadow: AppShadows.premium(
+            AppColors.primary,
+            alpha: 0.10,
+            blur: 16,
+            offset: const Offset(0, 6),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1003,13 +1123,12 @@ class _HomeListingRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: AppShadows.premium(
+          AppColors.primary,
+          alpha: 0.10,
+          blur: 12,
+          offset: const Offset(0, 4),
+        ),
       ),
       child: Row(
         children: [

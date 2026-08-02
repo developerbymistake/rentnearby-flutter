@@ -1,16 +1,20 @@
+import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
+import '../config/app_shadows.dart';
 import '../controllers/enquiry_controller.dart';
 import '../controllers/service_catalog_controller.dart';
 import '../models/service_category_model.dart';
 import '../navigation/tour_keys.dart';
 import '../widgets/home_banner_carousel.dart';
+import '../widgets/pulse_once.dart';
 import '../widgets/service_category_rail.dart';
 import '../widgets/service_zone.dart';
+import '../widgets/sweep_highlight.dart';
 
 const _kHeroHighlight = Color(0xFFFDBA74);
 const _kPromoAccent = Color(0xFF15803D);
@@ -57,13 +61,32 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
             const SizedBox(height: 16),
             // HomeBannerCarousel already carries its own horizontal:20 padding
             // internally — no extra Padding wrapper needed here.
-            HomeBannerCarousel(onTap: () {}),
+            FadeInUp(
+              duration: const Duration(milliseconds: 260),
+              from: 14,
+              child: HomeBannerCarousel(onTap: () {}),
+            ),
             const SizedBox(height: 18),
-            _buildHowItWorksCard(),
+            FadeInUp(
+              duration: const Duration(milliseconds: 260),
+              delay: const Duration(milliseconds: 60),
+              from: 14,
+              child: _buildHowItWorksCard(),
+            ),
             const SizedBox(height: 18),
-            _buildServiceRails(),
+            FadeInUp(
+              duration: const Duration(milliseconds: 260),
+              delay: const Duration(milliseconds: 120),
+              from: 14,
+              child: _buildServiceRails(),
+            ),
             const SizedBox(height: 4),
-            _buildPromoBanner(),
+            FadeInUp(
+              duration: const Duration(milliseconds: 260),
+              delay: const Duration(milliseconds: 180),
+              from: 14,
+              child: _buildPromoBanner(),
+            ),
             const SizedBox(height: 8),
           ],
         ),
@@ -100,37 +123,39 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
                   ),
                   GestureDetector(
                     onTap: () => Get.toNamed(AppRoutes.myEnquiries),
-                    child: Container(
-                      key: TourKeys.servicesEnquiriesButton,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 3))],
-                      ),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Iconsax.receipt_text, size: 14, color: AppColors.primary),
-                        const SizedBox(width: 6),
-                        const Text('Enquiries',
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                        Obx(() {
-                          final count = _enquiryCtrl.activeEnquiryCount.value;
-                          if (count <= 0) return const SizedBox.shrink();
-                          return Padding(
-                            padding: const EdgeInsets.only(left: 6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                              constraints: const BoxConstraints(minWidth: 18),
-                              decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
-                              child: Text(
-                                count > 99 ? '99+' : '$count',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white),
+                    child: PulseOnce(
+                      child: Container(
+                        key: TourKeys.servicesEnquiriesButton,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: AppShadows.premium(AppColors.primary, alpha: 0.15, blur: 8, offset: const Offset(0, 3)),
+                        ),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          const Icon(Iconsax.receipt_text, size: 14, color: AppColors.primary),
+                          const SizedBox(width: 6),
+                          const Text('Enquiries',
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                          Obx(() {
+                            final count = _enquiryCtrl.activeEnquiryCount.value;
+                            if (count <= 0) return const SizedBox.shrink();
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                constraints: const BoxConstraints(minWidth: 18),
+                                decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
+                                child: Text(
+                                  count > 99 ? '99+' : '$count',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white),
+                                ),
                               ),
-                            ),
-                          );
-                        }),
-                      ]),
+                            );
+                          }),
+                        ]),
+                      ),
                     ),
                   ),
                 ],
@@ -163,7 +188,7 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
     ];
     return Row(
       children: [
-        for (final f in feats)
+        for (var i = 0; i < feats.length; i++)
           Expanded(
             child: Column(
               children: [
@@ -175,16 +200,16 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
                     color: Colors.white.withValues(alpha: 0.14),
                     border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
                   ),
-                  child: Icon(f.$1, size: 16, color: Colors.white),
+                  child: Icon(feats[i].$1, size: 16, color: Colors.white),
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  f.$2,
+                  feats[i].$2,
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
                 ),
                 Text(
-                  f.$3,
+                  feats[i].$3,
                   textAlign: TextAlign.center,
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 7.5, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.6)),
                 ),
@@ -212,7 +237,7 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, 6))],
+          boxShadow: AppShadows.premium(AppColors.primary, alpha: 0.06, blur: 16, offset: const Offset(0, 6)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,7 +271,7 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: AppColors.success,
-                                boxShadow: [BoxShadow(color: AppColors.success.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
+                                boxShadow: AppShadows.premium(AppColors.success, alpha: 0.3, blur: 10, offset: const Offset(0, 4)),
                               ),
                               alignment: Alignment.center,
                               child: Text(
@@ -338,19 +363,24 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
               onTap: target == null ? null : () => _openCategoryGrid(target),
               child: Opacity(
                 opacity: target == null ? 0.5 : 1,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                  decoration: BoxDecoration(color: _kPromoAccent, borderRadius: BorderRadius.circular(10)),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Send Inquiry Now',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white),
+                child: PulseOnce(
+                  child: SweepHighlight(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                      decoration: BoxDecoration(color: _kPromoAccent, borderRadius: BorderRadius.circular(10)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Send Inquiry Now',
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.arrow_forward_rounded, size: 11, color: Colors.white),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.arrow_forward_rounded, size: 11, color: Colors.white),
-                    ],
+                    ),
                   ),
                 ),
               ),
