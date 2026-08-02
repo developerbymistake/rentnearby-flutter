@@ -578,6 +578,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Obx(() {
         final isRooms = _home.activeTab.value == 'rooms';
         final accent = isRooms ? AppColors.primary : AppColors.plot;
+        // plot.png is green — its ground-shadow blob stays green, independent of accent.
+        final imageGlowColor = isRooms ? AppColors.primary : AppColors.success;
         return Container(
           height: 160,
           decoration: BoxDecoration(
@@ -621,7 +623,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               width: 84,
                               height: 16,
                               decoration: BoxDecoration(
-                                color: accent.withValues(alpha: 0.35),
+                                color: imageGlowColor.withValues(alpha: 0.35),
                                 borderRadius: BorderRadius.circular(50),
                               ),
                             ),
