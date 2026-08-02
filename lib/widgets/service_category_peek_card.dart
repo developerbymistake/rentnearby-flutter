@@ -21,21 +21,21 @@ class ServiceCategoryPeekCard extends StatelessWidget {
     required this.onTap,
   });
 
-  static const _cardWidth = 104.0;
-  static const _cardHeight = 118.0;
+  static const _cardWidth = 140.0;
+  static const _cardHeight = 168.0;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: _cardWidth + 8,
-        height: _cardHeight + 8,
+        width: _cardWidth + 14,
+        height: _cardHeight + 14,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Positioned(top: 8, left: 8, child: _peekLayer(angle: 0.07, alpha: 0.08, blur: 6)),
-            Positioned(top: 4, left: 4, child: _peekLayer(angle: 0.035, alpha: 0.10, blur: 8)),
+            Positioned(top: 14, left: 14, child: _peekLayer(angle: 0.07, alpha: 0.08, blur: 6)),
+            Positioned(top: 7, left: 7, child: _peekLayer(angle: 0.035, alpha: 0.10, blur: 8)),
             Positioned(
               top: 0,
               left: 0,
@@ -140,8 +140,8 @@ class ServiceCategoryPeekCardShimmer extends StatelessWidget {
             baseColor: AppColors.shimmerBase,
             highlightColor: AppColors.shimmerHighlight,
             child: Container(
-              width: 104,
-              height: 118,
+              width: ServiceCategoryPeekCard._cardWidth,
+              height: ServiceCategoryPeekCard._cardHeight,
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
             ),
           ),
