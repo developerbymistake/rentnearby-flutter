@@ -217,8 +217,9 @@ class _ChatsListScreenState extends State<ChatsListScreen>
                           ),
                           itemCount: filtered.length + (loadingMore ? 1 : 0),
                           itemBuilder: (_, i) {
-                            if (i >= filtered.length)
+                            if (i >= filtered.length) {
                               return _buildLoadMoreSpinner();
+                            }
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 10),
                               child: _conversationCard(filtered[i]),
@@ -534,7 +535,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
     child: ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       itemCount: 6,
-      itemBuilder: (_, __) => Padding(
+      itemBuilder: (_, _) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

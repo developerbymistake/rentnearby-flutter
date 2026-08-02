@@ -12,7 +12,7 @@ import '../models/service_category_model.dart';
 import '../navigation/tour_keys.dart';
 import '../widgets/home_banner_carousel.dart';
 import '../widgets/pulse_once.dart';
-import '../widgets/service_category_rail.dart';
+import '../widgets/service_category_peek_card.dart';
 import '../widgets/service_zone.dart';
 import '../widgets/sweep_highlight.dart';
 
@@ -20,10 +20,9 @@ const _kHeroHighlight = Color(0xFFFDBA74);
 const _kPromoAccent = Color(0xFF15803D);
 const _kPromoBg = Color(0xFFF0FDF4);
 
-// Local-expert redesign: "book direct, skip the middleman" pitch + trust
-// badges in the hero, banner carousel right below it, a "How it works?" card,
-// then every active category's own rail stacked below (same shape as the
-// original screen — ServiceCategoryRail/service_zone.dart reused verbatim).
+// Local-expert redesign: "book direct, skip the middleman" pitch in the hero,
+// banner carousel right below it, a feature-highlights card (trust badges),
+// then every category as a ServiceCategoryPeekCard, wrapped into rows below.
 class LocalServicesScreen extends StatefulWidget {
   const LocalServicesScreen({super.key});
 
@@ -47,10 +46,16 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
         arguments: {'categoryId': category.id, 'title': category.name},
       );
 
+  void _openFirstCategoryGrid() {
+    final cats = _serviceCatalog.activeCategories;
+    if (cats.isEmpty) return;
+    _openCategoryGrid(cats.first);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.servicesScaffoldBg,
       body: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(bottom: 24 + AppInsets.bottomViewPadding(context)),
@@ -64,21 +69,21 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
             FadeInUp(
               duration: const Duration(milliseconds: 260),
               from: 14,
-              child: HomeBannerCarousel(onTap: () {}),
+              child: HomeBannerCarousel(onTap: _openFirstCategoryGrid),
             ),
             const SizedBox(height: 18),
             FadeInUp(
               duration: const Duration(milliseconds: 260),
               delay: const Duration(milliseconds: 60),
               from: 14,
-              child: _buildHowItWorksCard(),
+              child: _buildFeatureHighlightsCard(),
             ),
             const SizedBox(height: 18),
             FadeInUp(
               duration: const Duration(milliseconds: 260),
               delay: const Duration(milliseconds: 120),
               from: 14,
-              child: _buildServiceRails(),
+              child: _buildServiceCategories(),
             ),
             const SizedBox(height: 4),
             FadeInUp(
@@ -94,7 +99,7 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
     );
   }
 
-  // ── Header: title + Enquiries button (live count) + trust subtitle + badges ─
+  // ── Header: title + Enquiries button (live count) + trust subtitle ──────────
 
   Widget _buildHeader() {
     return Container(
@@ -170,8 +175,6 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              _buildFeatureBadges(),
             ],
           ),
         ),
@@ -179,147 +182,64 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
     );
   }
 
-  Widget _buildFeatureBadges() {
-    const feats = [
-      (Iconsax.profile_remove, 'No Middleman', 'Save More'),
-      (Iconsax.medal_star, 'Local Experts', 'Better Experience'),
-      (Iconsax.tag, 'Best Price', 'Transparent Pricing'),
-      (Iconsax.headphone, '24x7 Support', 'Always with You'),
-    ];
-    return Row(
-      children: [
-        for (var i = 0; i < feats.length; i++)
-          Expanded(
-            child: Column(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.14),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-                  ),
-                  child: Icon(feats[i].$1, size: 16, color: Colors.white),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  feats[i].$2,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-                Text(
-                  feats[i].$3,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 7.5, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.6)),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
+  static const _featureHighlights = [
+    (Iconsax.profile_remove, 'No Middleman', 'Save More'),
+    (Iconsax.tag, 'Best Price', 'Transparent Pricing'),
+    (Iconsax.headphone, '24x7 Support', 'Always with You'),
+  ];
 
-  // ── "How it works?" card — static 4-step numbered strip with a dashed connector ─
+  // ── Feature-highlights card — trust badges on a tinted gradient panel ───────
 
-  Widget _buildHowItWorksCard() {
-    const steps = [
-      ('1', 'Search & Explore'),
-      ('2', 'Send Inquiry'),
-      ('3', 'Connect with Expert'),
-      ('4', 'Book & Enjoy'),
-    ];
+  Widget _buildFeatureHighlightsCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          gradient: AppColors.servicesFeatureGradient,
           borderRadius: BorderRadius.circular(20),
           boxShadow: AppShadows.premium(AppColors.primary, alpha: 0.06, blur: 16, offset: const Offset(0, 6)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            const Text(
-              'How it works?',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textDark),
-            ),
-            const SizedBox(height: 18),
-            Stack(
-              children: [
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  right: 16,
-                  child: SizedBox(
-                    height: 1.5,
-                    width: double.infinity,
-                    child: CustomPaint(painter: _DashedLine(color: AppColors.divider)),
-                  ),
-                ),
-                Row(
-                  children: [
-                    for (final s in steps)
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.success,
-                                boxShadow: AppShadows.premium(AppColors.success, alpha: 0.3, blur: 10, offset: const Offset(0, 4)),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                s.$1,
-                                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              s.$2,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+            for (final feat in _featureHighlights)
+              Expanded(child: _FeatureHighlight(icon: feat.$1, title: feat.$2, subtitle: feat.$3)),
           ],
         ),
       ),
     );
   }
 
-  // ── Every active category's own rail, stacked — same shape as the original
-  // screen (ServiceCategoryRail/categoryPreviews), just placed below the new
-  // hero/carousel/how-it-works pieces instead of being the entire body.
+  // ── Every active category as a peek card, wrapped into rows so all categories
+  // stay visible without needing a horizontal swipe — placed below the new
+  // hero/carousel/feature-highlights pieces instead of being the entire body,
+  // unlike the pre-redesign screen (ServiceCategoryRail/service_zone.dart).
 
-  Widget _buildServiceRails() {
+  Widget _buildServiceCategories() {
     return Obx(() {
       final loading = _serviceCatalog.categoriesLoading.value && _serviceCatalog.categories.isEmpty;
-      if (loading) return const ServiceRailShimmer();
+      if (loading) return const ServiceCategoryPeekCardShimmer();
       final cats = _serviceCatalog.activeCategories;
       if (cats.isEmpty) return const SizedBox.shrink();
-      return Column(
-        children: [
-          for (var i = 0; i < cats.length; i++)
-            KeyedSubtree(
-              key: TourKeys.serviceCategoryKey(cats[i].id),
-              child: ServiceCategoryRail(
-                category: cats[i],
-                zone: serviceZoneForIndex(i),
-                items: _serviceCatalog.categoryPreviews[cats[i].id],
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Wrap(
+          spacing: 18,
+          runSpacing: 18,
+          children: [
+            for (var i = 0; i < cats.length; i++)
+              KeyedSubtree(
+                key: TourKeys.serviceCategoryKey(cats[i].id),
+                child: ServiceCategoryPeekCard(
+                  category: cats[i],
+                  zone: serviceZoneForIndex(i),
+                  serviceCount: _serviceCatalog.servicesForCategory(cats[i].id).length,
+                  onTap: () => _openCategoryGrid(cats[i]),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       );
     });
   }
@@ -392,25 +312,35 @@ class _LocalServicesScreenState extends State<LocalServicesScreen> {
   }
 }
 
-class _DashedLine extends CustomPainter {
-  final Color color;
-  const _DashedLine({required this.color});
+class _FeatureHighlight extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _FeatureHighlight({required this.icon, required this.title, required this.subtitle});
 
   @override
-  void paint(Canvas canvas, Size size) {
-    const dashWidth = 4.0;
-    const gapWidth = 4.0;
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = size.height;
-    final y = size.height / 2;
-    double x = 0;
-    while (x < size.width) {
-      canvas.drawLine(Offset(x, y), Offset(x + dashWidth, y), paint);
-      x += dashWidth + gapWidth;
-    }
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+          child: Icon(icon, size: 17, color: AppColors.primary),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textDark),
+        ),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 8, fontWeight: FontWeight.w500, color: AppColors.textLight),
+        ),
+      ],
+    );
   }
-
-  @override
-  bool shouldRepaint(covariant _DashedLine old) => old.color != color;
 }

@@ -13,11 +13,9 @@ class ServiceCatalogController extends GetxController {
   bool _categoriesLoadedOnce = false;
 
   final services = <ServiceListItemModel>[].obs;
-  final categoryPreviews = <String, List<ServiceListItemModel>>{}.obs;
   final servicesLoading = false.obs;
   bool _servicesLoadedOnce = false;
   Future<void>? _servicesLoadFuture;
-  int _servicesGeneration = 0;
 
   ServiceCatalogRepository get _repo => Get.find<ServiceCatalogRepository>();
 
@@ -48,7 +46,6 @@ class ServiceCatalogController extends GetxController {
   }
 
   Future<void> _loadServices(bool forceRefresh) async {
-    final generation = ++_servicesGeneration;
     servicesLoading.value = true;
     try {
       services.value = await _repo.getServices(forceRefresh: forceRefresh);
@@ -59,7 +56,6 @@ class ServiceCatalogController extends GetxController {
     }
     if (_servicesLoadedOnce) {
       if (!_categoriesLoadedOnce) await loadCategories();
-      unawaited(Future.wait(activeCategories.map((c) => _loadCategoryPreview(c, generation))));
     }
   }
 
@@ -67,17 +63,6 @@ class ServiceCatalogController extends GetxController {
         loadCategories(forceRefresh: true),
         ensureServicesLoaded(forceRefresh: true),
       ]);
-
-  Future<void> _loadCategoryPreview(ServiceCategoryModel category, int generation) async {
-    try {
-      final result = await _repo.getServicesPreview(category.id);
-      if (generation != _servicesGeneration) return;
-      categoryPreviews[category.id] = result;
-    } catch (_) {
-      if (generation != _servicesGeneration) return;
-      categoryPreviews[category.id] = const [];
-    }
-  }
 
   List<ServiceCategoryModel> get activeCategories {
     final list = categories.where((c) => c.isActive).toList();

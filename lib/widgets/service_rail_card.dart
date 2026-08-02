@@ -9,7 +9,8 @@ import '../utils/service_icons.dart';
 import 'service_zone.dart';
 
 /// Rich card for one Service — cover photo + name (wraps to 2 lines rather
-/// than truncating, so longer service names stay fully readable).
+/// than truncating, so longer service names stay fully readable) + 2-line
+/// short description.
 /// Tapping goes straight to Service Detail (there are no intermediate list
 /// screens in the catalog anymore). Used at a fixed [width] inside the
 /// horizontal category rails and with `width: null` (cell-sized) inside the
@@ -99,6 +100,13 @@ class ServiceRailCard extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    service.shortDescription,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 9.5, color: AppColors.textLight, fontWeight: FontWeight.w500, height: 1.3),
                   ),
                 ],
               ),

@@ -11,6 +11,11 @@ class AppColors {
   static const Color plot = Color(0xFF92400E);      // Brown
   static const Color plotDark = Color(0xFF78350F);  // Dark brown
 
+  // Services palette — the Services tab's own scaffold + feature-highlights
+  // tint, distinct from Rooms' blue and Plots' brown above.
+  static const Color servicesFeatureLight = Color(0xFFE3F0DE);
+  static const Color servicesFeatureDark = Color(0xFFBFE0B2);
+
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -22,6 +27,12 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [Color(0xFF92400E), Color(0xFF78350F)],
+  );
+
+  static const LinearGradient servicesFeatureGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFE3F0DE), Color(0xFFBFE0B2)],
   );
 
   static const LinearGradient cardGradient = LinearGradient(
@@ -41,6 +52,7 @@ class AppColors {
   static const Color surface = Color(0xFFEFF6FF);
   static const Color cardBg = Color(0xFFFFFFFF);
   static const Color scaffoldBg = Color(0xFFF8FAFF);
+  static const Color servicesScaffoldBg = Color(0xFFF7F1E8);
   static const Color chatBg = Color(0xFFE7ECF3);
 
   // Text

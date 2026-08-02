@@ -502,8 +502,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
 
   Future<void> _call(String phone) async {
     final url = Uri.parse('tel:+91$phone');
-    if (await canLaunchUrl(url))
+    if (await canLaunchUrl(url)) {
       launchUrl(url, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
@@ -526,12 +527,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                 children: [
                   Expanded(
                     child: Obx(() {
-                      if (_loading.value)
+                      if (_loading.value) {
                         return const Center(
                           child: CircularProgressIndicator(
                             color: AppColors.primary,
                           ),
                         );
+                      }
                       // Built *after* the loading check so a brand-new, empty conversation still gets
                       // the inline "next slot" bubble as its only item — that's the only way to open
                       // the "+" menu now that there's no bar fixed to the bottom.
@@ -624,14 +626,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       );
     }
     for (final m in _messages) {
-      if (answerMessageIds.contains(m.id))
+      if (answerMessageIds.contains(m.id)) {
         continue; // rendered attached to its question below
+      }
       final answer = m.type == 'quick_reply' ? answerByQuestionId[m.id] : null;
       items.add(
         _animatedBubble(m.id, _buildBubble(m, answered: answer != null)),
       );
-      if (answer != null)
+      if (answer != null) {
         items.add(_animatedBubble(answer.id, _buildBubble(answer)));
+      }
     }
     // The "next slot" bubble — the inline replacement for the old fixed composer — goes
     // last, chronologically after every message currently in the thread, for both roles

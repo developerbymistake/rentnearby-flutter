@@ -173,8 +173,11 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (_mapReady) {
         final loc = _locationCtrl.userLocation.value;
         if (loc != null) {
-          if (_nativeUserDot == null) _initNativeUserDot();
-          else _updateNativeUserDot();
+          if (_nativeUserDot == null) {
+            _initNativeUserDot();
+          } else {
+            _updateNativeUserDot();
+          }
           // Keep radius circle centred on user when no city is manually selected.
           if (_locationCtrl.browsingCity.value == null) {
             _precomputeCircleCache();

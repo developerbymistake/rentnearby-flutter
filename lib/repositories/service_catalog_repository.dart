@@ -60,22 +60,6 @@ class ServiceCatalogRepository {
     return list;
   }
 
-  /// Rail preview for one Category — pre-sorted (featured first, then
-  /// SortOrder) and capped server-side (see GetServicesPreview/
-  /// GetPreviewByServiceCategoryIdAsync on the backend). Deliberately
-  /// uncached and parameterized (mirrors getPackages' style, not the
-  /// whole-catalog-then-filter style above) since it's inherently a
-  /// server-computed slice, not something worth replicating client-side.
-  Future<List<ServiceListItemModel>> getServicesPreview(String categoryId, {int limit = 6}) async {
-    final res = await ApiService.get('/services/preview', params: {
-      'serviceCategoryId': categoryId,
-      'limit': '$limit',
-    });
-    return (res['data'] as List? ?? [])
-        .map((e) => ServiceListItemModel.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
   Future<List<InclusionModel>> getInclusions({bool forceRefresh = false}) async {
     if (!forceRefresh && _inclusionsCache != null && _isValid(_inclusionsCacheTime)) {
       return _inclusionsCache!;

@@ -186,14 +186,13 @@ so callers can branch on `GoLiveInsufficientBalance` specifically to open the sh
   alongside `ListingRepository`/`PlotRepository`.
 
 **Local services marketplace, Agents & Leads (separate vertical from Room/Plot)**: `local_services_screen.dart`
-is the `services` tab's content, and Home shows the same rails. **Categories are the catalog's top
+is the `services` tab's content (Home does not duplicate this catalog UI). **Categories are the catalog's top
 level** (the old ServiceSection layer was removed backend-wide): each active `ServiceCategory` renders
-as one color-zoned rail of rich `ServiceRailCard`s via the shared `ServiceCategoryRail` widget
-(`lib/widgets/service_category_rail.dart` + `service_rail_card.dart` + `service_zone.dart` — zones are
-assigned by index rotation over the sorted active list, NEVER by category name, so an admin-added
-category needs no app release). Card tap goes straight to Service Detail (packages/plans inline);
-"View all" opens `ServiceCategoryGridScreen` — a 2-column grid of the same cards sliced client-side
-from the already-loaded catalog (`servicesForCategory`), no intermediate list screens exist anymore.
+as one `ServiceCategoryPeekCard` in a single horizontal, user-slidable row (`lib/widgets/service_category_peek_card.dart`
++ `service_zone.dart` — zones are still assigned by index rotation over the sorted active list, NEVER by
+category name, so an admin-added category needs no app release). Tapping a card opens
+`ServiceCategoryGridScreen` — a 2-column grid of the same cards sliced client-side from the already-loaded
+catalog (`servicesForCategory`), no intermediate list screens exist anymore.
 Detail's "Plan" vs "Package" noun switches on `serviceCategoryFormType == kFormTypeConsultation`
 (`utils/enquiry_form_fields.dart`). `EnquiryModel` (`serviceName`/`serviceCategoryName`/
 `servicePackageName`) powers the category badge on enquiry/lead rows. A consumer submits an `Enquiry`

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// The one and only "is this tour step's target actually showing right now"
-/// check — mounted alone isn't enough (LocationPill/ServiceCategoryRail both
+/// check — mounted alone isn't enough (LocationPill/ServiceCategoryPeekCard both
 /// render zero-size while their data is still resolving).
 bool isTourTargetReady(GlobalKey key) {
   final ctx = key.currentContext;
