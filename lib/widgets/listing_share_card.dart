@@ -63,7 +63,7 @@ class ListingShareCard extends StatelessWidget {
         children: [
           // 1. Branded header band — wordmark + type-specific tagline.
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 26, 20, 50),
+            padding: const EdgeInsets.fromLTRB(20, 31, 20, 52),
             decoration: BoxDecoration(
               gradient: _gradient,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -74,13 +74,13 @@ class ListingShareCard extends StatelessWidget {
                   'Bakhli',
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 27, fontWeight: FontWeight.w800, color: Colors.white),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 1.5),
                 Text(
                   _tagline,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 16.5,
+                    fontSize: 15.5,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                     letterSpacing: 0.4,
@@ -92,8 +92,8 @@ class ListingShareCard extends StatelessWidget {
           // 2 + 3. Inset photo card, floating up into the header band, with a diagonal ribbon
           // clipped to the card's own rounded corner.
           Container(
-            margin: const EdgeInsets.fromLTRB(20, -36, 20, 0),
-            height: 180,
+            margin: const EdgeInsets.fromLTRB(20, -43, 20, 0),
+            height: 220,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
@@ -204,17 +204,18 @@ class ListingShareCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(gradient: _gradient, borderRadius: BorderRadius.circular(17)),
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(gradient: _gradient, borderRadius: BorderRadius.circular(20)),
                       child: Container(
-                        padding: const EdgeInsets.all(7),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                        child: QrImageView(data: qrData, size: 101, backgroundColor: Colors.white, gapless: true),
+                        padding: EdgeInsets.zero,
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+                        child: QrImageView(data: qrData, size: 121, backgroundColor: Colors.white, gapless: true),
                       ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
@@ -227,16 +228,21 @@ class ListingShareCard extends StatelessWidget {
                             textAlign: TextAlign.center,
                             style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _typeColor),
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'No broker · No commission',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, color: AppColors.textLight),
-                          ),
                         ],
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 11),
+                const SizedBox(
+                  width: double.infinity,
+                  child: Text(
+                    'No broker · No commission',
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, color: AppColors.textLight),
+                  ),
                 ),
               ],
             ),

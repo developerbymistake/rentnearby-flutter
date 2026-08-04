@@ -242,9 +242,19 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                 onTap: () => _shareListing(p),
                 child: Container(
                   margin: const EdgeInsets.all(8),
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
-                  child: const Icon(Icons.share_rounded, color: Colors.white, size: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(20)),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.share_rounded, color: Colors.white, size: 18),
+                      SizedBox(width: 6),
+                      Text(
+                        'Share',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             if (_isOwner)

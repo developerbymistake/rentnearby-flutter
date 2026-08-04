@@ -364,7 +364,7 @@ class ListingCard extends StatelessWidget {
   Widget _buildActions() {
     final stateWidget = _stateWidget();
     final cells = <Widget>[
-      if (stateWidget != null) Center(child: stateWidget),
+      if (stateWidget != null) FittedBox(fit: BoxFit.scaleDown, child: stateWidget),
       if (onPreview != null)
         _actionCell(icon: Iconsax.eye, label: 'View', color: AppColors.primary, onTap: onPreview),
       if (onShare != null)
@@ -373,14 +373,16 @@ class ListingCard extends StatelessWidget {
         _actionCell(icon: Iconsax.trash, label: 'Delete', color: AppColors.error, onTap: onDelete),
     ];
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (int i = 0; i < cells.length; i++) ...[
-          if (i > 0) Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 2), color: AppColors.divider),
-          Expanded(child: cells[i]),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (int i = 0; i < cells.length; i++) ...[
+            if (i > 0) Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 2), color: AppColors.divider),
+            Expanded(child: cells[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -483,7 +485,7 @@ class ListingCard extends StatelessWidget {
             'In Review',
             style: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
               color: Color(0xFFD97706),
             ),
@@ -510,7 +512,7 @@ class ListingCard extends StatelessWidget {
             'Rejected',
             style: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
               color: AppColors.error,
             ),
@@ -520,22 +522,15 @@ class ListingCard extends StatelessWidget {
     );
   }
 
+  // Stacked (switch above, label below) to match the other three cells' icon-above-label
+  // shape — a horizontal Text+Switch pair needs more width than an equal 1/4 column has,
+  // which was overflowing into the neighboring View cell.
   Widget _liveToggle() {
-    return Row(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          'Live',
-          style: const TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF10B981),
-          ),
-        ),
-        const SizedBox(width: 4),
         Transform.scale(
-          scale: 0.85,
+          scale: 0.7,
           child: Switch(
             value: listing.isActive,
             onChanged: (_) => onToggleActive?.call(),
@@ -544,6 +539,16 @@ class ListingCard extends StatelessWidget {
             inactiveThumbColor: const Color(0xFFF59E0B),
             inactiveTrackColor: const Color(0xFFFEF3C7),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+        const SizedBox(height: 2),
+        const Text(
+          'Live',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF10B981),
           ),
         ),
       ],

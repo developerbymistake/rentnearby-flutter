@@ -70,38 +70,22 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     super.initState();
     Get.put(ConfigRepository());
     Get.put(ConfigController());
-    Get.put(ListingRepository());
-    Get.put(PlotRepository());
-    Get.put(UserRepository());
-    Get.put(WalletRepository());
-    Get.put(WalletController());
-    Get.put(WalletHubService());
-    Get.put(ServiceCatalogRepository());
-    Get.put(ServiceCatalogController());
-    Get.put(EnquiryRepository());
-    Get.put(EnquiryController());
-    Get.put(EnquiryHubService());
-    Get.put(AgentRepository());
-    // Checks "am I an agent" once per session in its own onInit() — see AgentController's doc
-    // comment. Put after EnquiryRepository/EnquiryController since AgentRepository reuses their
-    // same EnquiryModel/EnquiryDetailModel shapes (no hard dependency, just logical grouping).
-    Get.put(AgentController());
-    Get.put(NotificationRepository());
-    // Fetches the Home bell's unread count once per session in its own onInit() (mirrors
-    // AgentController.checkAgentStatus) — refreshed on resume below, not via a live push.
-    Get.put(NotificationController());
-    Get.put(ListingController());
-    Get.put(PlotController());
-    Get.put(ReportController());
     _locationCtrl = Get.put(LocationController());
     // GlobalLocationGates (main.dart's builder:) sits above the Navigator and
     // only re-evaluates Get.isRegistered<LocationController>() when nudged —
     // see its doc comment.
     GlobalLocationGates.notifyReady();
-    // HomeController.onInit() looks up LocationController — must be put after it.
+    Get.put(ListingRepository());
+    Get.put(ListingController());
+    Get.put(PlotRepository());
+    Get.put(PlotController());
+    // HomeController.onInit() looks up LocationController, PlotController, and
+    // ListingController — must be put after all three.
     Get.put(HomeController());
-    _bannerCtrl = Get.put(BannerController());
-    Get.put(BannerHubService());
+    Get.put(NotificationRepository());
+    // Fetches the Home bell's unread count once per session in its own onInit() (mirrors
+    // AgentController.checkAgentStatus) — refreshed on resume below, not via a live push.
+    Get.put(NotificationController());
     _chatCtrl = Get.put(ChatController());
     Get.put(ChatHubService());
     // Persistent for the whole session (like BannerHubService below) — not scoped to any one
@@ -109,6 +93,20 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // actually true: without this, nothing joins that group until a chat screen has been
     // opened at least once, so the unread badge/new-message live updates were aspirational.
     ChatHubService.to.connect();
+    Get.put(ServiceCatalogRepository());
+    Get.put(ServiceCatalogController());
+    Get.put(AgentRepository());
+    // Checks "am I an agent" once per session in its own onInit() — see AgentController's doc
+    // comment.
+    Get.put(AgentController());
+    Get.put(EnquiryRepository());
+    Get.put(EnquiryController());
+    Get.put(EnquiryHubService());
+    Get.put(ReportController());
+    Get.put(UserRepository());
+    Get.put(WalletRepository());
+    Get.put(WalletController());
+    Get.put(WalletHubService());
     // Same session-wide-connected shape as chat — unconditional, not district-gated. Delivers
     // live balance pushes for changes this device didn't itself initiate (admin credit/debit,
     // a Razorpay webhook fallback credit); locally-initiated spends already update instantly via
@@ -129,6 +127,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // screens' own resume checks runs next.
     EnquiryHubService.to.connect();
     _chatCtrl.loadConversations();
+    _bannerCtrl = Get.put(BannerController());
+    Get.put(BannerHubService());
     WidgetsBinding.instance.addObserver(this);
     _bannerDistrictWorker = ever(_locationCtrl.selectedDistrict, (district) {
       if (district != null) {

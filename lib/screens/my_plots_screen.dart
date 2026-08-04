@@ -708,18 +708,13 @@ class _PlotCard extends StatelessWidget {
   // is an exhaustive chain.
   Widget _stateWidget() {
     if (plot.isActive) {
-      return Row(
+      // Stacked (switch above, label below) to match the other three cells' icon-above-label
+      // shape — a horizontal Text+Switch pair needs more width than an equal 1/4 column has.
+      return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Live',
-              style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF10B981))),
-          const SizedBox(width: 4),
           Transform.scale(
-            scale: 0.85,
+            scale: 0.7,
             child: Switch(
               value: true,
               onChanged: (_) => onToggleActive(),
@@ -728,6 +723,13 @@ class _PlotCard extends StatelessWidget {
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),
+          const SizedBox(height: 2),
+          const Text('Live',
+              style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF10B981))),
         ],
       );
     } else if (!plot.isPendingReview && !plot.isRejected) {
@@ -791,7 +793,7 @@ class _PlotCard extends StatelessWidget {
             Text('In Review',
                 style: TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFFD97706))),
           ],
@@ -813,7 +815,7 @@ class _PlotCard extends StatelessWidget {
             Text('Rejected',
                 style: TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: AppColors.error)),
           ],
@@ -824,7 +826,7 @@ class _PlotCard extends StatelessWidget {
 
   Widget _buildActionsRow() {
     final cells = <Widget>[
-      Center(child: _stateWidget()),
+      FittedBox(fit: BoxFit.scaleDown, child: _stateWidget()),
       if (onPreview != null)
         _actionCell(icon: Iconsax.eye, label: 'View', color: AppColors.primary, onTap: onPreview),
       if (onShare != null)
@@ -832,14 +834,16 @@ class _PlotCard extends StatelessWidget {
       _actionCell(icon: Icons.delete_outline_rounded, label: 'Delete', color: AppColors.error, onTap: onDelete),
     ];
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (int i = 0; i < cells.length; i++) ...[
-          if (i > 0) Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 2), color: AppColors.divider),
-          Expanded(child: cells[i]),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (int i = 0; i < cells.length; i++) ...[
+            if (i > 0) Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 2), color: AppColors.divider),
+            Expanded(child: cells[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 
