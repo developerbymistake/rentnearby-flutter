@@ -91,8 +91,10 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Obx(() => AppLoadingOverlay(
-        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value,
-        message: _ctrl.isTogglingActive.value ? 'Updating...' : 'Deleting...',
+        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value || _ctrl.isSharing.value,
+        message: _ctrl.isSharing.value
+            ? 'Sharing...'
+            : (_ctrl.isTogglingActive.value ? 'Updating...' : 'Deleting...'),
         child: Column(
         children: [
           Container(
@@ -418,17 +420,22 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   bool _hasUnusedPaidWindow(ListingModel listing) =>
       listing.validUntil != null && listing.validUntil!.isAfter(DateTime.now());
 
-  void _shareListing(BuildContext ctx, ListingModel listing) {
-    shareListing(
-      context: ctx,
-      type: 'r',
-      slug: listing.slug!,
-      photoUrl: listing.photos.isNotEmpty ? listing.photos.first : null,
-      priceOrArea: listing.priceDisplay,
-      typeLabel: listing.roomTypeName ?? 'Room for Rent',
-      locality: [listing.districtName, listing.cityName].where((e) => e != null && e.isNotEmpty).join(', '),
-      furnishedStatus: listing.furnishedStatus,
-    );
+  Future<void> _shareListing(BuildContext ctx, ListingModel listing) async {
+    _ctrl.isSharing.value = true;
+    try {
+      await shareListing(
+        context: ctx,
+        type: 'r',
+        slug: listing.slug!,
+        photoUrl: listing.photos.isNotEmpty ? listing.photos.first : null,
+        priceOrArea: listing.priceDisplay,
+        typeLabel: listing.roomTypeName ?? 'Room for Rent',
+        locality: [listing.districtName, listing.cityName].where((e) => e != null && e.isNotEmpty).join(', '),
+        furnishedStatus: listing.furnishedStatus,
+      );
+    } finally {
+      _ctrl.isSharing.value = false;
+    }
   }
 
   void _confirmDelete(String id, bool hasUnusedPaidWindow) {

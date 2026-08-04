@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_tabs.dart';
@@ -36,7 +35,7 @@ import '../services/notification_service.dart';
 import '../services/wallet_hub_service.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/district_banner_overlay.dart';
-import '../widgets/gradient_button.dart';
+import '../widgets/global_location_gates.dart';
 import '../navigation/tab_router.dart';
 import '../navigation/tab_keys.dart';
 import '../navigation/tour_keys.dart';
@@ -95,6 +94,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     Get.put(PlotController());
     Get.put(ReportController());
     _locationCtrl = Get.put(LocationController());
+    // GlobalLocationGates (main.dart's builder:) sits above the Navigator and
+    // only re-evaluates Get.isRegistered<LocationController>() when nudged —
+    // see its doc comment.
+    GlobalLocationGates.notifyReady();
     // HomeController.onInit() looks up LocationController — must be put after it.
     Get.put(HomeController());
     _bannerCtrl = Get.put(BannerController());
@@ -222,188 +225,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.paused) {
       _locationCtrl.appPaused();
     }
-  }
-
-  Widget _buildOfflineGate() {
-    return Positioned.fill(
-      child: Material(
-        color: Colors.white,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 100, height: 100,
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 46),
-                ),
-                const SizedBox(height: 32),
-                const Text(
-                  'No Internet',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Please check your internet connection. App will resume automatically when you\'re back online.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    color: AppColors.textMedium,
-                    height: 1.6,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDistrictGate() {
-    return Positioned.fill(
-      child: Material(
-        color: Colors.white,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 100, height: 100,
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.location_searching_rounded, color: Colors.white, size: 46),
-                ),
-                const SizedBox(height: 32),
-                const Text(
-                  'Area Not Supported Yet',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Bakhli hasn\'t reached your area yet. Contact admin to register your district.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    color: AppColors.textMedium,
-                    height: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                TextButton(
-                  onPressed: () => _locationCtrl.refreshOnResume(force: true),
-                  child: const Text(
-                    'Check Again',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGpsGate() {
-    final permissionIssue = _locationCtrl.gpsEnabled.value && !_locationCtrl.locationPermissionGranted.value;
-    return Positioned.fill(
-      child: Material(
-        color: Colors.white,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 100, height: 100,
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    permissionIssue ? Icons.location_disabled_rounded : Icons.location_off_rounded,
-                    color: Colors.white, size: 46,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  permissionIssue ? 'Location Permission Required' : 'Location Required',
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  permissionIssue
-                      ? 'Bakhli needs permission to access your location to show rooms near you. Please allow location access in Settings.'
-                      : 'Bakhli uses your location to show rooms near you. Please enable GPS to continue.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    color: AppColors.textMedium,
-                    height: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                GradientButton(
-                  label: permissionIssue ? 'Open Settings' : 'Enable Location',
-                  onPressed: () => permissionIssue
-                      ? Geolocator.openAppSettings()
-                      : Geolocator.openLocationSettings(),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => permissionIssue
-                      ? _locationCtrl.recheckLocationPermission()
-                      : _locationCtrl.recheckGps(),
-                  child: const Text(
-                    'Check Again',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   void _showExitConfirmation() {
@@ -536,16 +357,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               onDismiss: () => _bannerCtrl.dismiss(banner.id),
             );
           }),
-          Obx(() => _locationCtrl.isOffline.value
-              ? _buildOfflineGate()
-              : const SizedBox.shrink()),
-          Obx(() => !_locationCtrl.isOffline.value && _locationCtrl.districtUnavailable.value
-              ? _buildDistrictGate()
-              : const SizedBox.shrink()),
-          Obx(() => !_locationCtrl.isOffline.value &&
-                  (!_locationCtrl.gpsEnabled.value || !_locationCtrl.locationPermissionGranted.value)
-              ? _buildGpsGate()
-              : const SizedBox.shrink()),
           Obx(() => _locationCtrl.gpsEnabled.value &&
                   _locationCtrl.locationPermissionGranted.value &&
                   _locationCtrl.locationLoading.value &&

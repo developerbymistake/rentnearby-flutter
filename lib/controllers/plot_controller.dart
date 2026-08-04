@@ -22,6 +22,7 @@ class PlotController extends GetxController {
   final isDeleting = false.obs;
   final isUploading = false.obs;
   final isTogglingActive = false.obs;
+  final isSharing = false.obs;
   final hasMorePlots = false.obs;
   final plotPostedTrigger = 0.obs;
   final exploreRefreshTrigger = 0.obs;

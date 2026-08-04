@@ -22,6 +22,7 @@ class ListingController extends GetxController {
   final isDeleting = false.obs;
   final isUploading = false.obs;
   final isTogglingActive = false.obs;
+  final isSharing = false.obs;
   final hasMoreMyListings = false.obs;
   final listingPostedTrigger = 0.obs;
   final exploreRefreshTrigger = 0.obs;

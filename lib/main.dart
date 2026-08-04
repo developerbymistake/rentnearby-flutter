@@ -14,6 +14,7 @@ import 'services/map_pause_observer.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 import 'services/tour_dismiss_observer.dart';
+import 'widgets/global_location_gates.dart';
 import 'widgets/tour_host.dart';
 
 Future<void> main() async {
@@ -60,11 +61,13 @@ class BakhliApp extends StatelessWidget {
       builder: (context, child) => ToastificationWrapper(
         child: MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
-          child: Stack(
-            children: [
-              Positioned.fill(child: child!),
-              const TourHost(),
-            ],
+          child: GlobalLocationGates(
+            child: Stack(
+              children: [
+                Positioned.fill(child: child!),
+                const TourHost(),
+              ],
+            ),
           ),
         ),
       ),

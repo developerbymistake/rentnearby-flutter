@@ -12,6 +12,7 @@ import '../controllers/plot_controller.dart';
 import '../controllers/report_controller.dart';
 import '../models/plot_model.dart';
 import '../services/listing_share_service.dart';
+import '../widgets/app_loading_overlay.dart';
 import '../widgets/detail_action_bar.dart';
 import '../widgets/report_listing_sheet.dart';
 
@@ -44,16 +45,21 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
     });
   }
 
-  void _shareListing(PlotModel p) {
-    shareListing(
-      context: context,
-      type: 'p',
-      slug: p.slug!,
-      photoUrl: p.photos.isNotEmpty ? p.photos.first : null,
-      priceOrArea: p.areaDisplay,
-      typeLabel: p.plotType,
-      locality: _locationStr(p),
-    );
+  Future<void> _shareListing(PlotModel p) async {
+    _ctrl.isSharing.value = true;
+    try {
+      await shareListing(
+        context: context,
+        type: 'p',
+        slug: p.slug!,
+        photoUrl: p.photos.isNotEmpty ? p.photos.first : null,
+        priceOrArea: p.areaDisplay,
+        typeLabel: p.plotType,
+        locality: _locationStr(p),
+      );
+    } finally {
+      _ctrl.isSharing.value = false;
+    }
   }
 
   void _confirmDelete() {
@@ -145,7 +151,12 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
-      body: _loading ? _buildLoader() : _buildContent(),
+      body: Obx(() => AppLoadingOverlay(
+        isLoading: _ctrl.isSharing.value,
+        message: 'Sharing...',
+        indicatorColor: AppColors.plot,
+        child: _loading ? _buildLoader() : _buildContent(),
+      )),
       bottomNavigationBar: _loading || _plot == null ? null : _buildActionBar(),
     );
   }

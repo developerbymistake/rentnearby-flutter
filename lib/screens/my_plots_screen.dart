@@ -235,16 +235,21 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   bool _hasUnusedPaidWindow(PlotModel plot) =>
       plot.validUntil != null && plot.validUntil!.isAfter(DateTime.now());
 
-  void _shareListing(BuildContext ctx, PlotModel plot) {
-    shareListing(
-      context: ctx,
-      type: 'p',
-      slug: plot.slug!,
-      photoUrl: plot.photos.isNotEmpty ? plot.photos.first : null,
-      priceOrArea: plot.areaDisplay,
-      typeLabel: plot.plotType,
-      locality: [plot.cityName, plot.districtName].whereType<String>().join(', '),
-    );
+  Future<void> _shareListing(BuildContext ctx, PlotModel plot) async {
+    _ctrl.isSharing.value = true;
+    try {
+      await shareListing(
+        context: ctx,
+        type: 'p',
+        slug: plot.slug!,
+        photoUrl: plot.photos.isNotEmpty ? plot.photos.first : null,
+        priceOrArea: plot.areaDisplay,
+        typeLabel: plot.plotType,
+        locality: [plot.cityName, plot.districtName].whereType<String>().join(', '),
+      );
+    } finally {
+      _ctrl.isSharing.value = false;
+    }
   }
 
   void _confirmDelete(String id, bool hasUnusedPaidWindow) {
@@ -343,8 +348,10 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Obx(() => AppLoadingOverlay(
-        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value,
-        message: _ctrl.isTogglingActive.value ? 'Updating...' : 'Deleting...',
+        isLoading: _ctrl.isDeleting.value || _ctrl.isTogglingActive.value || _ctrl.isSharing.value,
+        message: _ctrl.isSharing.value
+            ? 'Sharing...'
+            : (_ctrl.isTogglingActive.value ? 'Updating...' : 'Deleting...'),
         indicatorColor: _kBrown,
         child: Column(
         children: [
@@ -686,149 +693,7 @@ class _PlotCard extends StatelessWidget {
                 const Divider(height: 1),
                 const SizedBox(height: 10),
 
-                Row(
-                  // spaceBetween (not Spacer + a fixed inner gap) so the status↔View gap
-                  // and the View↔Delete gap come out identical.
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    if (plot.isActive) ...[
-                      // Active: show deactivate switch
-                      const Text('Live',
-                          style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF10B981))),
-                      const SizedBox(width: 4),
-                      Transform.scale(
-                        scale: 0.85,
-                        child: Switch(
-                          value: true,
-                          onChanged: (_) => onToggleActive(),
-                          activeThumbColor: const Color(0xFF10B981),
-                          activeTrackColor: const Color(0xFFD1FAE5),
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                    ] else if (!plot.isPendingReview && !plot.isRejected) ...[
-                      // Inactive (and never submitted, or previously approved and now
-                      // expired): show "Make it Live" button. Pending/Rejected must not
-                      // resurrect a request the backend has no resubmit path for.
-                      PulseOnce(
-                        child: GestureDetector(
-                        onTap: isGoLiveLoading ? null : onGoLive,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF10B981), Color(0xFF059669)],
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: isGoLiveLoading
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.rocket_launch_rounded, size: 14, color: Colors.white),
-                                    SizedBox(width: 4),
-                                    Text('Make it Live',
-                                        style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white)),
-                                  ],
-                                ),
-                        ),
-                        ),
-                      ),
-                    ] else if (plot.isPendingReview) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFFDE68A)),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Iconsax.clock, size: 14, color: Color(0xFFD97706)),
-                            SizedBox(width: 6),
-                            Text('In Review',
-                                style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFFD97706))),
-                          ],
-                        ),
-                      ),
-                    ] else if (plot.isRejected) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF2F2),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFFECACA)),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Iconsax.close_circle, size: 14, color: AppColors.error),
-                            SizedBox(width: 6),
-                            Text('Rejected',
-                                style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.error)),
-                          ],
-                        ),
-                      ),
-                    ],
-                    if (onPreview != null)
-                      GestureDetector(
-                        onTap: onPreview,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                          ),
-                          child: const Icon(Iconsax.eye, size: 14, color: AppColors.primary),
-                        ),
-                      ),
-                    if (onShare != null) _shareButton(),
-                    // Delete button
-                    GestureDetector(
-                      onTap: onDelete,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
-                        ),
-                        child: const Icon(Icons.delete_outline_rounded, size: 14, color: AppColors.error),
-                      ),
-                    ),
-                  ],
-                ),
+                _buildActionsRow(),
               ],
             ),
           ),
@@ -838,17 +703,176 @@ class _PlotCard extends StatelessWidget {
     );
   }
 
-  Widget _shareButton() {
-    return GestureDetector(
-      onTap: onShare,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+  // Whichever of these mutually-exclusive Live-state widgets applies becomes the row's
+  // first cell — always exactly one, since isActive/isPendingReview/isRejected/(neither)
+  // is an exhaustive chain.
+  Widget _stateWidget() {
+    if (plot.isActive) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Live',
+              style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF10B981))),
+          const SizedBox(width: 4),
+          Transform.scale(
+            scale: 0.85,
+            child: Switch(
+              value: true,
+              onChanged: (_) => onToggleActive(),
+              activeThumbColor: const Color(0xFF10B981),
+              activeTrackColor: const Color(0xFFD1FAE5),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ],
+      );
+    } else if (!plot.isPendingReview && !plot.isRejected) {
+      // Inactive (and never submitted, or previously approved and now expired): show
+      // "Make it Live" button. Pending/Rejected must not resurrect a request the backend
+      // has no resubmit path for.
+      return PulseOnce(
+        child: GestureDetector(
+          onTap: isGoLiveLoading ? null : onGoLive,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF10B981), Color(0xFF059669)],
+              ),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: isGoLiveLoading
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.rocket_launch_rounded, size: 14, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text('Make it Live',
+                          style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white)),
+                    ],
+                  ),
+          ),
         ),
-        child: const Icon(Icons.share_rounded, size: 14, color: AppColors.primary),
+      );
+    } else if (plot.isPendingReview) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF3C7),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFFDE68A)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Iconsax.clock, size: 14, color: Color(0xFFD97706)),
+            SizedBox(width: 6),
+            Text('In Review',
+                style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFD97706))),
+          ],
+        ),
+      );
+    } else {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFFECACA)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Iconsax.close_circle, size: 14, color: AppColors.error),
+            SizedBox(width: 6),
+            Text('Rejected',
+                style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.error)),
+          ],
+        ),
+      );
+    }
+  }
+
+  Widget _buildActionsRow() {
+    final cells = <Widget>[
+      Center(child: _stateWidget()),
+      if (onPreview != null)
+        _actionCell(icon: Iconsax.eye, label: 'View', color: AppColors.primary, onTap: onPreview),
+      if (onShare != null)
+        _actionCell(icon: Icons.share_rounded, label: 'Share', color: AppColors.primary, onTap: onShare),
+      _actionCell(icon: Icons.delete_outline_rounded, label: 'Delete', color: AppColors.error, onTap: onDelete),
+    ];
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (int i = 0; i < cells.length; i++) ...[
+          if (i > 0) Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 2), color: AppColors.divider),
+          Expanded(child: cells[i]),
+        ],
+      ],
+    );
+  }
+
+  // One equal-width cell of the actions row: icon above a visible text label, whole
+  // cell tappable (not just the icon/text glyphs).
+  Widget _actionCell({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

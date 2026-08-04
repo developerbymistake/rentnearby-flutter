@@ -346,71 +346,74 @@ class ListingCard extends StatelessWidget {
     );
   }
 
+  // Whichever of these mutually-exclusive Live-state widgets applies becomes the row's
+  // first cell; null when none of the conditions match (e.g. onGoLive not supplied).
+  Widget? _stateWidget() {
+    if (!listing.isActive && !listing.isPendingReview && !listing.isRejected && onGoLive != null) {
+      return _makeItLiveButton();
+    } else if (listing.isActive && onToggleActive != null) {
+      return _liveToggle();
+    } else if (listing.isPendingReview) {
+      return _pendingReviewBadge();
+    } else if (listing.isRejected) {
+      return _rejectedBadge();
+    }
+    return null;
+  }
+
   Widget _buildActions() {
-    // spaceBetween (not Spacer + a fixed inner gap) so the status↔View gap and the
-    // View↔Delete gap come out identical — both are just "the leftover space split
-    // between however many children are actually showing."
+    final stateWidget = _stateWidget();
+    final cells = <Widget>[
+      if (stateWidget != null) Center(child: stateWidget),
+      if (onPreview != null)
+        _actionCell(icon: Iconsax.eye, label: 'View', color: AppColors.primary, onTap: onPreview),
+      if (onShare != null)
+        _actionCell(icon: Icons.share_rounded, label: 'Share', color: AppColors.primary, onTap: onShare),
+      if (onDelete != null)
+        _actionCell(icon: Iconsax.trash, label: 'Delete', color: AppColors.error, onTap: onDelete),
+    ];
+
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!listing.isActive && !listing.isPendingReview && !listing.isRejected && onGoLive != null)
-          _makeItLiveButton()
-        else if (listing.isActive && onToggleActive != null)
-          _liveToggle()
-        else if (listing.isPendingReview)
-          _pendingReviewBadge()
-        else if (listing.isRejected)
-          _rejectedBadge(),
-        if (onPreview != null) _previewButton(),
-        if (onShare != null) _shareButton(),
-        if (onDelete != null) _deleteButton(),
+        for (int i = 0; i < cells.length; i++) ...[
+          if (i > 0) Container(width: 1, margin: const EdgeInsets.symmetric(vertical: 2), color: AppColors.divider),
+          Expanded(child: cells[i]),
+        ],
       ],
     );
   }
 
-  // Icon-only — shown only when the listing is Live (parent screen gates by only passing a
-  // non-null onShare callback in that case, same convention as onDelete/onToggleActive/onGoLive).
-  Widget _shareButton() {
+  // One equal-width cell of the actions row: icon above a visible text label, whole
+  // cell tappable (not just the icon/text glyphs).
+  Widget _actionCell({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback? onTap,
+  }) {
     return GestureDetector(
-      onTap: onShare,
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
         ),
-        child: const Icon(Icons.share_rounded, size: 14, color: AppColors.primary),
-      ),
-    );
-  }
-
-  Widget _previewButton() {
-    return GestureDetector(
-      onTap: onPreview,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-        ),
-        child: const Icon(Iconsax.eye, size: 14, color: AppColors.primary),
-      ),
-    );
-  }
-
-  Widget _deleteButton() {
-    return GestureDetector(
-      onTap: onDelete,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFEF2F2),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFFECACA)),
-        ),
-        child: const Icon(Iconsax.trash, size: 14, color: AppColors.error),
       ),
     );
   }

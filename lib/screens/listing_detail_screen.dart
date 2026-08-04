@@ -12,6 +12,7 @@ import '../controllers/listing_controller.dart';
 import '../controllers/report_controller.dart';
 import '../models/listing_model.dart';
 import '../services/listing_share_service.dart';
+import '../widgets/app_loading_overlay.dart';
 import '../widgets/detail_action_bar.dart';
 import '../widgets/report_listing_sheet.dart';
 
@@ -44,17 +45,22 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     });
   }
 
-  void _shareListing(ListingModel l) {
-    shareListing(
-      context: context,
-      type: 'r',
-      slug: l.slug!,
-      photoUrl: l.photos.isNotEmpty ? l.photos.first : null,
-      priceOrArea: l.priceDisplay,
-      typeLabel: l.roomTypeName ?? 'Room for Rent',
-      locality: _locationStr(l),
-      furnishedStatus: l.furnishedStatus,
-    );
+  Future<void> _shareListing(ListingModel l) async {
+    _ctrl.isSharing.value = true;
+    try {
+      await shareListing(
+        context: context,
+        type: 'r',
+        slug: l.slug!,
+        photoUrl: l.photos.isNotEmpty ? l.photos.first : null,
+        priceOrArea: l.priceDisplay,
+        typeLabel: l.roomTypeName ?? 'Room for Rent',
+        locality: _locationStr(l),
+        furnishedStatus: l.furnishedStatus,
+      );
+    } finally {
+      _ctrl.isSharing.value = false;
+    }
   }
 
   void _confirmDelete() {
@@ -146,7 +152,11 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
-      body: _loading ? _buildLoader() : _buildContent(),
+      body: Obx(() => AppLoadingOverlay(
+        isLoading: _ctrl.isSharing.value,
+        message: 'Sharing...',
+        child: _loading ? _buildLoader() : _buildContent(),
+      )),
       bottomNavigationBar: _loading || _listing == null ? null : _buildActionBar(),
     );
   }
