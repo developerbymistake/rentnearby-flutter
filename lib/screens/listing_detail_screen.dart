@@ -53,6 +53,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       priceOrArea: l.priceDisplay,
       typeLabel: l.roomTypeName ?? 'Room for Rent',
       locality: _locationStr(l),
+      furnishedStatus: l.furnishedStatus,
     );
   }
 

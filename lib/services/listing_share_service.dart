@@ -25,6 +25,7 @@ Future<void> shareListing({
   required String priceOrArea,
   required String typeLabel,
   required String locality,
+  String? furnishedStatus,
 }) async {
   // Captured before any `await` below — using `context` after an async gap risks it having
   // been unmounted in between, and everything past this point only needs the Overlay itself.
@@ -50,6 +51,8 @@ Future<void> shareListing({
             typeLabel: typeLabel,
             locality: locality,
             qrData: goLink,
+            type: type == 'p' ? ShareCardType.plot : ShareCardType.room,
+            furnishedStatus: furnishedStatus,
           ),
         ),
       ),

@@ -268,17 +268,62 @@ class ListingCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 5),
-          // Location + expiry (opposite sides)
+          const SizedBox(height: 8),
+          // Two-column info grid: Locality + Expires in, then full-width Address
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Iconsax.location, size: 13, color: AppColors.primaryLight),
-              const SizedBox(width: 4),
               Expanded(
-                child: Text(
-                  [listing.districtName, listing.cityName]
-                      .where((e) => e != null && e.isNotEmpty)
-                      .join(', '),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _fieldLabel('Locality'),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        const Icon(Iconsax.location, size: 13, color: AppColors.primaryLight),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            [listing.districtName, listing.cityName]
+                                .where((e) => e != null && e.isNotEmpty)
+                                .join(', '),
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              color: AppColors.textLight,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (listing.validUntil != null) ...[
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _fieldLabel('Expires in'),
+                    const SizedBox(height: 3),
+                    _expiryLabel(listing.validUntil!),
+                  ],
+                ),
+              ],
+            ],
+          ),
+          if (listing.address != null && listing.address!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _fieldLabel('Address'),
+                const SizedBox(height: 3),
+                Text(
+                  listing.address!,
                   style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 12,
@@ -287,24 +332,7 @@ class ListingCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              if (listing.validUntil != null) ...[
-                const SizedBox(width: 8),
-                _expiryLabel(listing.validUntil!),
               ],
-            ],
-          ),
-          if (listing.address != null && listing.address!.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(
-              listing.address!,
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 12,
-                color: AppColors.textLight,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
           if (onDelete != null || onToggleActive != null || onGoLive != null || onPreview != null || onShare != null) ...[
@@ -526,6 +554,19 @@ class ListingCard extends StatelessWidget {
       decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
       child: const Center(
         child: Icon(Icons.home_rounded, size: 48, color: Colors.white24),
+      ),
+    );
+  }
+
+  Widget _fieldLabel(String text) {
+    return Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        fontFamily: 'Poppins',
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.4,
+        color: AppColors.textHint,
       ),
     );
   }

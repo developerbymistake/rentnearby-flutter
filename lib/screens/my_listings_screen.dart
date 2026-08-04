@@ -427,6 +427,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
       priceOrArea: listing.priceDisplay,
       typeLabel: listing.roomTypeName ?? 'Room for Rent',
       locality: [listing.districtName, listing.cityName].where((e) => e != null && e.isNotEmpty).join(', '),
+      furnishedStatus: listing.furnishedStatus,
     );
   }
 

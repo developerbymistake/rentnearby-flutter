@@ -558,7 +558,7 @@ class _PlotCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final typeColor = _typeColor(plot.plotType);
-    final location = [plot.cityName, plot.districtName].whereType<String>().join(', ');
+    final location = [plot.districtName, plot.cityName].whereType<String>().join(', ');
 
     return Container(
       decoration: BoxDecoration(
@@ -625,32 +625,61 @@ class _PlotCard extends StatelessWidget {
                   ],
                 ),
 
-                if (location.isNotEmpty) ...[
-                  const SizedBox(height: 6),
+                if (location.isNotEmpty || plot.validUntil != null) ...[
+                  const SizedBox(height: 10),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.location_on_rounded, size: 13, color: AppColors.textLight),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: Text(location,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                      ),
+                      if (location.isNotEmpty)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _fieldLabel('Locality'),
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on_rounded, size: 13, color: AppColors.textLight),
+                                  const SizedBox(width: 3),
+                                  Expanded(
+                                    child: Text(location,
+                                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                       if (plot.validUntil != null) ...[
-                        const SizedBox(width: 8),
-                        _expiryLabel(plot.validUntil!),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _fieldLabel('Expires in'),
+                            const SizedBox(height: 3),
+                            _expiryLabel(plot.validUntil!),
+                          ],
+                        ),
                       ],
                     ],
                   ),
                 ],
 
                 if (plot.address != null && plot.address!.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(plot.address!,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _fieldLabel('Address'),
+                      const SizedBox(height: 3),
+                      Text(plot.address!,
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
                 ],
 
                 const SizedBox(height: 12),
@@ -883,6 +912,19 @@ class _PlotCard extends StatelessWidget {
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _fieldLabel(String text) {
+    return Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        fontFamily: 'Poppins',
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.4,
+        color: AppColors.textHint,
       ),
     );
   }
