@@ -361,28 +361,13 @@ class ListingCard extends StatelessWidget {
     return GestureDetector(
       onTap: onPreview,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: AppColors.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
         ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Iconsax.eye, size: 14, color: AppColors.primary),
-            SizedBox(width: 5),
-            Text(
-              'View',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
-            ),
-          ],
-        ),
+        child: const Icon(Iconsax.eye, size: 14, color: AppColors.primary),
       ),
     );
   }
@@ -391,28 +376,13 @@ class ListingCard extends StatelessWidget {
     return GestureDetector(
       onTap: onDelete,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: const Color(0xFFFEF2F2),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: const Color(0xFFFECACA)),
         ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Iconsax.trash, size: 14, color: AppColors.error),
-            SizedBox(width: 5),
-            Text(
-              'Delete',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.error,
-              ),
-            ),
-          ],
-        ),
+        child: const Icon(Iconsax.trash, size: 14, color: AppColors.error),
       ),
     );
   }

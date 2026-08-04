@@ -775,21 +775,13 @@ class _PlotCard extends StatelessWidget {
                       GestureDetector(
                         onTap: onPreview,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
                           ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Iconsax.eye, size: 14, color: AppColors.primary),
-                              SizedBox(width: 5),
-                              Text('View',
-                                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-                            ],
-                          ),
+                          child: const Icon(Iconsax.eye, size: 14, color: AppColors.primary),
                         ),
                       ),
                     if (onShare != null) _shareButton(),
@@ -797,21 +789,13 @@ class _PlotCard extends StatelessWidget {
                     GestureDetector(
                       onTap: onDelete,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: AppColors.error.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.delete_outline_rounded, size: 14, color: AppColors.error),
-                            const SizedBox(width: 4),
-                            Text('Delete',
-                                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error)),
-                          ],
-                        ),
+                        child: const Icon(Icons.delete_outline_rounded, size: 14, color: AppColors.error),
                       ),
                     ),
                   ],
