@@ -3,6 +3,7 @@ import '../config/app_constants.dart';
 class ListingModel {
   final String id;
   final String userId;
+  final String? slug;
   final String? description;
   final int? priceMonthly;
   final double latitude;
@@ -29,6 +30,7 @@ class ListingModel {
   ListingModel({
     required this.id,
     required this.userId,
+    this.slug,
     this.description,
     this.priceMonthly,
     required this.latitude,
@@ -56,6 +58,7 @@ class ListingModel {
   factory ListingModel.fromJson(Map<String, dynamic> json) => ListingModel(
         id: json['id'],
         userId: json['userId'],
+        slug: json['slug'] as String?,
         description: json['description'],
         priceMonthly: json['priceMonthly'],
         latitude: (json['latitude'] as num).toDouble(),

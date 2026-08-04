@@ -12,6 +12,7 @@ import '../controllers/wallet_controller.dart';
 import '../models/go_live_result.dart';
 import '../models/plan_selection_result.dart';
 import '../models/plot_model.dart';
+import '../services/listing_share_service.dart';
 import '../services/plot_permission_service.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
@@ -234,6 +235,18 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
   bool _hasUnusedPaidWindow(PlotModel plot) =>
       plot.validUntil != null && plot.validUntil!.isAfter(DateTime.now());
 
+  void _shareListing(BuildContext ctx, PlotModel plot) {
+    shareListing(
+      context: ctx,
+      type: 'p',
+      slug: plot.slug!,
+      photoUrl: plot.photos.isNotEmpty ? plot.photos.first : null,
+      priceOrArea: plot.areaDisplay,
+      typeLabel: plot.plotType,
+      locality: [plot.cityName, plot.districtName].whereType<String>().join(', '),
+    );
+  }
+
   void _confirmDelete(String id, bool hasUnusedPaidWindow) {
     showDialog(
       context: context,
@@ -374,6 +387,9 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                           'title': plots[i].areaDisplay,
                         }),
                         onPreview: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': plots[i].id}),
+                        onShare: (plots[i].isActive && plots[i].slug != null)
+                            ? () => _shareListing(context, plots[i])
+                            : null,
                       ),
                     );
                   },
@@ -486,6 +502,7 @@ class _PlotCard extends StatelessWidget {
   final bool isGoLiveLoading;
   final VoidCallback? onReportsTap;
   final VoidCallback? onPreview;
+  final VoidCallback? onShare;
 
   const _PlotCard({
     required this.plot,
@@ -495,6 +512,7 @@ class _PlotCard extends StatelessWidget {
     this.isGoLiveLoading = false,
     this.onReportsTap,
     this.onPreview,
+    this.onShare,
   });
 
   Color _typeColor(String type) => switch (type) {
@@ -774,6 +792,7 @@ class _PlotCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                    if (onShare != null) _shareButton(),
                     // Delete button
                     GestureDetector(
                       onTap: onDelete,
@@ -802,6 +821,21 @@ class _PlotCard extends StatelessWidget {
           ),
           if (plot.isRejected) _buildRejectionStrip(),
         ],
+      ),
+    );
+  }
+
+  Widget _shareButton() {
+    return GestureDetector(
+      onTap: onShare,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        ),
+        child: const Icon(Icons.share_rounded, size: 14, color: AppColors.primary),
       ),
     );
   }

@@ -44,6 +44,10 @@
                     android:scheme="https"
                     android:host="developerbymistake.tech"
                     android:pathPrefix="/app"/>
+                <!-- Listing Share feature — QR smart-link payload only (/go/{type}/{slug}),
+                     resolved in-app by DeepLinkService. Same verified host, so no separate
+                     autoVerify/assetlinks.json setup is needed for this path. -->
+                <data android:pathPrefix="/go/"/>
             </intent-filter>
         </activity>
         <meta-data

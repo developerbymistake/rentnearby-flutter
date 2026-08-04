@@ -30,6 +30,7 @@ import '../controllers/banner_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../services/banner_hub_service.dart';
 import '../services/chat_hub_service.dart';
+import '../services/deep_link_service.dart';
 import '../services/enquiry_hub_service.dart';
 import '../services/notification_service.dart';
 import '../services/wallet_hub_service.dart';
@@ -169,6 +170,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // Last, deliberately — needs every controller any tour could reference
     // (LocationController, AuthController) already registered above.
     Get.put(TourController());
+    // Replays any /go/{type}/{slug} deep link caught before main was ever reached this
+    // session (see DeepLinkService's doc comment) — post-frame so this MainScreen build
+    // has fully settled before a detail screen gets pushed on top of it.
+    WidgetsBinding.instance.addPostFrameCallback((_) => DeepLinkService.to.markMainReady());
   }
 
   @override

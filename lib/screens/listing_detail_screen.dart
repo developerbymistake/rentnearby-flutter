@@ -11,6 +11,7 @@ import '../controllers/chat_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/report_controller.dart';
 import '../models/listing_model.dart';
+import '../services/listing_share_service.dart';
 import '../widgets/detail_action_bar.dart';
 import '../widgets/report_listing_sheet.dart';
 
@@ -41,6 +42,18 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     }).catchError((_) {
       if (mounted) setState(() => _loading = false);
     });
+  }
+
+  void _shareListing(ListingModel l) {
+    shareListing(
+      context: context,
+      type: 'r',
+      slug: l.slug!,
+      photoUrl: l.photos.isNotEmpty ? l.photos.first : null,
+      priceOrArea: l.priceDisplay,
+      typeLabel: l.roomTypeName ?? 'Room for Rent',
+      locality: _locationStr(l),
+    );
   }
 
   void _confirmDelete() {
@@ -209,17 +222,31 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
             ),
           ),
-          actions: _isOwner ? [
-            GestureDetector(
-              onTap: _confirmDelete,
-              child: Container(
-                margin: const EdgeInsets.all(8),
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
-                child: const Icon(Icons.delete_rounded, color: Colors.white, size: 20),
+          actions: [
+            // Share is decoupled from ownership but tied to Live status — sharing a
+            // pending/rejected listing's smart link would surface something that isn't
+            // actually visible to the public yet (see the plan's Architecture Decisions).
+            if (l.isActive && l.slug != null)
+              GestureDetector(
+                onTap: () => _shareListing(l),
+                child: Container(
+                  margin: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+                  child: const Icon(Icons.share_rounded, color: Colors.white, size: 18),
+                ),
               ),
-            ),
-          ] : null,
+            if (_isOwner)
+              GestureDetector(
+                onTap: _confirmDelete,
+                child: Container(
+                  margin: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+                  child: const Icon(Icons.delete_rounded, color: Colors.white, size: 20),
+                ),
+              ),
+          ],
           flexibleSpace: FlexibleSpaceBar(
             background: l.photos.isEmpty
                 ? Container(

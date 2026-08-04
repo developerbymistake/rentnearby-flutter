@@ -64,6 +64,7 @@ class NearbyPlotModel {
 class PlotModel {
   final String id;
   final String userId;
+  final String? slug;
   final double areaValue;
   final String areaUnit;
   final double areaSqft;
@@ -90,6 +91,7 @@ class PlotModel {
   PlotModel({
     required this.id,
     required this.userId,
+    this.slug,
     required this.areaValue,
     required this.areaUnit,
     required this.areaSqft,
@@ -117,6 +119,7 @@ class PlotModel {
   factory PlotModel.fromJson(Map<String, dynamic> json) => PlotModel(
         id: json['id'],
         userId: json['userId'],
+        slug: json['slug'] as String?,
         areaValue: (json['areaValue'] as num).toDouble(),
         areaUnit: json['areaUnit'],
         areaSqft: (json['areaSqft'] as num).toDouble(),

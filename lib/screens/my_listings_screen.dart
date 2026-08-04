@@ -13,6 +13,7 @@ import '../models/go_live_result.dart';
 import '../models/listing_model.dart';
 import '../models/plan_selection_result.dart';
 import '../services/listing_permission_service.dart';
+import '../services/listing_share_service.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/go_live_plan_sheet.dart';
@@ -182,7 +183,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                   controller: _scrollCtrl,
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + AppInsets.bottomViewPadding(context)),
                   itemCount: listings.length + (hasMore || isLoading ? 1 : 0),
-                  itemBuilder: (_, i) {
+                  itemBuilder: (ctx, i) {
                     if (i == listings.length) {
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
@@ -207,6 +208,9 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                           'title': listings[i].roomTypeName ?? 'Room for Rent',
                         }),
                         onPreview: () => Get.toNamed(AppRoutes.listingDetail, arguments: {'id': listings[i].id}),
+                        onShare: (listings[i].isActive && listings[i].slug != null)
+                            ? () => _shareListing(ctx, listings[i])
+                            : null,
                       ),
                     );
                   },
@@ -413,6 +417,18 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   // unused paid days that a delete would forfeit. isActive alone would miss that case.
   bool _hasUnusedPaidWindow(ListingModel listing) =>
       listing.validUntil != null && listing.validUntil!.isAfter(DateTime.now());
+
+  void _shareListing(BuildContext ctx, ListingModel listing) {
+    shareListing(
+      context: ctx,
+      type: 'r',
+      slug: listing.slug!,
+      photoUrl: listing.photos.isNotEmpty ? listing.photos.first : null,
+      priceOrArea: listing.priceDisplay,
+      typeLabel: listing.roomTypeName ?? 'Room for Rent',
+      locality: [listing.districtName, listing.cityName].where((e) => e != null && e.isNotEmpty).join(', '),
+    );
+  }
 
   void _confirmDelete(String id, bool hasUnusedPaidWindow) {
     showDialog(

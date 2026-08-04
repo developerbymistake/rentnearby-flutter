@@ -16,6 +16,7 @@ class ListingCard extends StatelessWidget {
   final bool isGoLiveLoading;
   final VoidCallback? onReportsTap;
   final VoidCallback? onPreview;
+  final VoidCallback? onShare;
 
   const ListingCard({
     super.key,
@@ -27,6 +28,7 @@ class ListingCard extends StatelessWidget {
     this.isGoLiveLoading = false,
     this.onReportsTap,
     this.onPreview,
+    this.onShare,
   });
 
   @override
@@ -305,7 +307,7 @@ class ListingCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
-          if (onDelete != null || onToggleActive != null || onGoLive != null || onPreview != null) ...[
+          if (onDelete != null || onToggleActive != null || onGoLive != null || onPreview != null || onShare != null) ...[
             const SizedBox(height: 12),
             const Divider(height: 1, color: AppColors.divider),
             const SizedBox(height: 10),
@@ -332,8 +334,26 @@ class ListingCard extends StatelessWidget {
         else if (listing.isRejected)
           _rejectedBadge(),
         if (onPreview != null) _previewButton(),
+        if (onShare != null) _shareButton(),
         if (onDelete != null) _deleteButton(),
       ],
+    );
+  }
+
+  // Icon-only — shown only when the listing is Live (parent screen gates by only passing a
+  // non-null onShare callback in that case, same convention as onDelete/onToggleActive/onGoLive).
+  Widget _shareButton() {
+    return GestureDetector(
+      onTap: onShare,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        ),
+        child: const Icon(Icons.share_rounded, size: 14, color: AppColors.primary),
+      ),
     );
   }
 

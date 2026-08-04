@@ -44,6 +44,12 @@ dependencies:
   # Native share sheet
   share_plus: ^12.0.2
 
+  # Deep links (developerbymistake.tech/go/{type}/{slug} -> listing detail)
+  app_links: ^6.3.3
+
+  # QR code generation (listing share card)
+  qr_flutter: ^4.1.0
+
   # Toast notifications
   toastification: ^3.2.0
 

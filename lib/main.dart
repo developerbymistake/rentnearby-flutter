@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,7 @@ import 'config/app_theme.dart';
 import 'config/app_routes.dart';
 import 'controllers/auth_controller.dart';
 import 'services/api_service.dart';
+import 'services/deep_link_service.dart';
 import 'services/map_pause_observer.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
@@ -35,6 +37,8 @@ Future<void> main() async {
 
   Get.put(NotificationService(), permanent: true);
   Get.put(AuthController(), permanent: true);
+  Get.put(DeepLinkService(), permanent: true);
+  unawaited(DeepLinkService.to.init());
 
   runApp(const BakhliApp());
 }

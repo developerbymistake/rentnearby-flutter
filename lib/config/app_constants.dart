@@ -3,6 +3,12 @@ class AppConstants {
   static const String baseUrl = '$serverUrl/api/v1';
   static const String nominatimUrl = 'https://nominatim.developerbymistake.tech';
   static const String photonUrl = 'https://photon.developerbymistake.tech';
+
+  // Listing Share feature — two distinct domains, never mixed (see backend Program.cs /go
+  // route + Website's /l/[type]/[slug] page): $serverUrl/go/{type}/{slug} is the QR-only smart
+  // link (opens the app if installed, else Play Store); websiteUrl/l/{type}/{slug} is the plain
+  // text link, always the public website page with a manual Download CTA.
+  static const String websiteUrl = 'https://bakhli.com';
   // static const String baseUrl = 'http://192.168.1.33:5000/api/v1'; // Local dev
   // static const String baseUrl = 'http://10.0.2.2:5000/api/v1'; // Android emulator
 
