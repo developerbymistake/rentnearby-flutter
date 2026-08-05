@@ -13,9 +13,9 @@ import '../models/service_package_model.dart';
 /// 3-way conditional through nearly every visual element instead of staying a straight-line
 /// build method.
 ///
-/// Uses a fixed "Ocean Breeze" brand gradient (deliberately not the rotating
-/// `ServiceZone.accent` tint) so a shared/printed card looks the same regardless of which
-/// category rail the service happens to sit under.
+/// Uses `AppColors.primary`/`primaryGradient` — the same navy theme Room's own share card uses
+/// — rather than a Services-specific tint, so this card reads as consistently "Bakhli" rather
+/// than introducing a fourth brand color.
 ///
 /// [photo] is decoded by the caller via `ui.instantiateImageCodec` before this widget is ever
 /// built — see `ListingShareCard`'s doc comment for why (this widget is always captured
@@ -42,11 +42,14 @@ class ServiceShareCard extends StatelessWidget {
     required this.qrData,
   });
 
+  // "Starting from {pickup}" spells out that pricing starts from that departure point,
+  // rather than the terser "Ex-{pickup}" — which reads as an unfamiliar abbreviation
+  // rather than a clear "trip starts from here, price shown is per unit" signal.
   String? get _metaText {
     final pickup = pickupDropLocation != null && pickupDropLocation!.trim().isNotEmpty ? pickupDropLocation!.trim() : null;
     final unit = priceUnit != null && priceUnit!.trim().isNotEmpty ? priceUnit!.trim() : null;
-    if (pickup != null && unit != null) return 'Ex-$pickup · $unit';
-    if (pickup != null) return 'Ex-$pickup';
+    if (pickup != null && unit != null) return 'Starting from $pickup · $unit';
+    if (pickup != null) return 'Starting from $pickup';
     if (unit != null) return unit;
     return null;
   }
@@ -56,7 +59,7 @@ class ServiceShareCard extends StatelessWidget {
     final meta = _metaText;
 
     return Container(
-      width: 320,
+      width: 300,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -68,29 +71,30 @@ class ServiceShareCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Branded header band — wordmark + fixed tagline.
+          // 1. Branded header band — wordmark + fixed tagline (one line).
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 31, 20, 52),
+            padding: const EdgeInsets.fromLTRB(20, 26, 20, 44),
             decoration: BoxDecoration(
-              gradient: AppColors.oceanBreezeGradient,
+              gradient: AppColors.primaryGradient,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: const Column(
               children: [
                 Text(
                   'Bakhli',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 27, fontWeight: FontWeight.w800, color: Colors.white),
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 23, fontWeight: FontWeight.w800, color: Colors.white),
                 ),
-                SizedBox(height: 1.5),
+                SizedBox(height: 2),
                 Text(
                   'No middleman, same trip. Better price.',
                   textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 15.5,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
-                    letterSpacing: 0.4,
                   ),
                 ),
               ],
@@ -99,8 +103,8 @@ class ServiceShareCard extends StatelessWidget {
           // 2 + 3. Inset photo card, floating up into the header band, with a diagonal ribbon
           // clipped to the card's own rounded corner.
           Container(
-            margin: const EdgeInsets.fromLTRB(20, -43, 20, 0),
-            height: 220,
+            margin: const EdgeInsets.fromLTRB(20, -36, 20, 0),
+            height: 190,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
@@ -117,9 +121,9 @@ class ServiceShareCard extends StatelessWidget {
                     child: photo != null
                         ? RawImage(image: photo, fit: BoxFit.cover)
                         : Container(
-                            decoration: BoxDecoration(gradient: AppColors.oceanBreezeGradient),
+                            decoration: BoxDecoration(gradient: AppColors.primaryGradient),
                             child: const Center(
-                              child: Icon(Icons.map_rounded, size: 48, color: Colors.white38),
+                              child: Icon(Icons.map_rounded, size: 44, color: Colors.white38),
                             ),
                           ),
                   ),
@@ -132,7 +136,7 @@ class ServiceShareCard extends StatelessWidget {
                         width: 170,
                         alignment: Alignment.center,
                         padding: const EdgeInsets.symmetric(vertical: 5),
-                        decoration: BoxDecoration(gradient: AppColors.oceanBreezeGradient),
+                        decoration: BoxDecoration(gradient: AppColors.primaryGradient),
                         child: Text(
                           ribbonText,
                           style: const TextStyle(
@@ -152,7 +156,7 @@ class ServiceShareCard extends StatelessWidget {
           ),
           // 4, 5, 6. Details row, tier list, divider, colored-ring QR footer.
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -165,7 +169,7 @@ class ServiceShareCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark,
+                          fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark,
                         ),
                       ),
                     ),
@@ -173,11 +177,11 @@ class ServiceShareCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(gradient: AppColors.oceanBreezeGradient, borderRadius: BorderRadius.circular(8)),
+                        decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(8)),
                         child: Text(
                           durationLabel!,
                           style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white,
+                            fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white,
                           ),
                         ),
                       ),
@@ -185,73 +189,72 @@ class ServiceShareCard extends StatelessWidget {
                   ],
                 ),
                 if (meta != null) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 7),
                   Row(
                     children: [
-                      const Icon(Icons.access_time_rounded, size: 14, color: AppColors.textLight),
+                      const Icon(Icons.access_time_rounded, size: 13, color: AppColors.textLight),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           meta,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
                         ),
                       ),
                     ],
                   ),
                 ],
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 Column(
                   children: [
                     for (var i = 0; i < tiers.length; i++) ...[
-                      if (i > 0) const SizedBox(height: 7),
+                      if (i > 0) const SizedBox(height: 6),
                       _TierRow(package: tiers[i], isCheapest: i == 0),
                     ],
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 const Divider(height: 1, color: AppColors.divider),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(gradient: AppColors.oceanBreezeGradient, borderRadius: BorderRadius.circular(20)),
+                      decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(20)),
                       child: Container(
                         padding: EdgeInsets.zero,
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-                        child: QrImageView(data: qrData, size: 121, backgroundColor: Colors.white, gapless: true),
+                        child: QrImageView(data: qrData, size: 110, backgroundColor: Colors.white, gapless: true),
                       ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
-                      child: RichText(
-                        text: const TextSpan(
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textMedium, height: 1.4),
-                          children: [
-                            TextSpan(text: 'Connect directly with '),
-                            TextSpan(text: 'local experts', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.oceanBreeze)),
-                            TextSpan(text: ' and save upto '),
-                            TextSpan(text: '20-30%', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.oceanBreeze)),
-                            TextSpan(text: ' on every booking.'),
-                          ],
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RichText(
+                            text: const TextSpan(
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w500, color: AppColors.textMedium, height: 1.4),
+                              children: [
+                                TextSpan(text: 'Connect directly with '),
+                                TextSpan(text: 'local experts', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary)),
+                                TextSpan(text: ' and save upto '),
+                                TextSpan(text: '20-30%', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary)),
+                                TextSpan(text: ' on every booking.'),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            'Scan for more details on Bakhli App',
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 9.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 11),
-                const SizedBox(
-                  width: double.infinity,
-                  child: Text(
-                    'Scan for more details on Bakhli App',
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.textMedium),
-                  ),
                 ),
               ],
             ),
@@ -273,7 +276,7 @@ class _TierRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final priceColor = isCheapest ? AppColors.oceanBreeze : AppColors.textDark;
+    final priceColor = isCheapest ? AppColors.primary : AppColors.textDark;
     return Row(
       children: [
         Container(
@@ -282,7 +285,7 @@ class _TierRow extends StatelessWidget {
           margin: const EdgeInsets.only(right: 7),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isCheapest ? AppColors.oceanBreeze : AppColors.textLight.withValues(alpha: 0.4),
+            color: isCheapest ? AppColors.primary : AppColors.textLight.withValues(alpha: 0.4),
           ),
         ),
         Expanded(

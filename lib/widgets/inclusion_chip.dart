@@ -13,7 +13,7 @@ class InclusionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
@@ -22,11 +22,11 @@ class InclusionChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(serviceIconFor(iconName), size: 12, color: AppColors.primary),
-          const SizedBox(width: 5),
+          Icon(serviceIconFor(iconName), size: 9, color: AppColors.primary),
+          const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.primary),
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.primary),
           ),
         ],
       ),

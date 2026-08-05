@@ -70,16 +70,28 @@ class ServicePackageCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  decoration: BoxDecoration(color: AppColors.oceanBreeze.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+                  decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
                   child: Text(
                     duration,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.oceanBreeze),
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.primary),
                   ),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 10),
+          // "Starting at" moves to its own small line here (between the name row above and
+          // the price row below) instead of sharing the price row with it — that combined
+          // "Starting at ₹X / unit" text was too wide next to the Enquire button, clipping
+          // its label. ServicePackagePrice itself is unchanged (shared elsewhere) — just told
+          // isStartingAtPrice: false here since this label covers that meaning already.
+          if (package.isStartingAtPrice && package.price != null) ...[
+            const SizedBox(height: 6),
+            const Text(
+              'Starting at',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textLight),
+            ),
+          ],
+          const SizedBox(height: 6),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -88,7 +100,7 @@ class ServicePackageCard extends StatelessWidget {
                   price: package.price,
                   originalPrice: package.originalPrice,
                   discountPercent: package.discountPercent,
-                  isStartingAtPrice: package.isStartingAtPrice,
+                  isStartingAtPrice: false,
                   priceUnit: package.priceUnit,
                   priceFontSize: 16,
                 ),
@@ -99,6 +111,12 @@ class ServicePackageCard extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
+                  // Overrides the app-wide ElevatedButtonTheme's minimumSize (Size(double.infinity,
+                  // 54), see app_theme.dart) — without this, this non-Expanded button next to
+                  // Expanded(ServicePackagePrice) in the Row above gets an infinite-width
+                  // constraint, which release builds silently fail to paint (no assert, no error
+                  // box — the whole Row just renders blank).
+                  minimumSize: Size.zero,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   elevation: 0,

@@ -35,16 +35,6 @@ class AppColors {
     colors: [Color(0xFFE3F0DE), Color(0xFFBFE0B2)],
   );
 
-  // Services Share Card — a fixed "Ocean Breeze" brand gradient (deliberately NOT the rotating
-  // ServiceZone.accent tint) so a shared/printed card looks the same regardless of the service's
-  // category rail position.
-  static const Color oceanBreeze = accent; // Color(0xFF0EA5E9) — same value as the cyan highlight above
-  static const LinearGradient oceanBreezeGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [oceanBreeze, Color(0xFF0284C7)],
-  );
-
   // Service Detail "See Your Journey" CTA. Deliberately no begin/end params (matches the exact
   // angle already approved in the mockup, which also omits them).
   static const LinearGradient amberGlowGradient = LinearGradient(
