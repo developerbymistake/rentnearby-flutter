@@ -4,7 +4,8 @@ import 'package:app_links/app_links.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:play_install_referrer/play_install_referrer.dart';
-import '../config/app_routes.dart';
+import '../config/app_tabs.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
@@ -14,14 +15,14 @@ import 'storage_service.dart';
 /// of `_resolveAndNavigate` below.
 class _DeepLinkTypeConfig {
   final String bySlugPath;
-  final String routeName;
+  final int tabIndex;
 
-  const _DeepLinkTypeConfig(this.bySlugPath, this.routeName);
+  const _DeepLinkTypeConfig(this.bySlugPath, this.tabIndex);
 }
 
 const Map<String, _DeepLinkTypeConfig> _deepLinkTypes = {
-  'r': _DeepLinkTypeConfig('/listings/by-slug', AppRoutes.listingDetail),
-  'p': _DeepLinkTypeConfig('/plots/by-slug', AppRoutes.plotDetail),
+  'r': _DeepLinkTypeConfig('/listings/by-slug', AppTabs.rooms),
+  'p': _DeepLinkTypeConfig('/plots/by-slug', AppTabs.plots),
 };
 
 /// Receiver for `developerbymistake.tech/go/{type}/{slug}` smart-link payloads, from two
@@ -45,7 +46,9 @@ const Map<String, _DeepLinkTypeConfig> _deepLinkTypes = {
 /// immediately, and replayed once `MainScreen.initState()` calls [markMainReady] — which only
 /// happens after intro/login have already completed (splash's only route to `main`). A link
 /// caught while `MainScreen` has already mounted at least once this session resolves and
-/// navigates immediately, on top of whatever screen is currently showing. The install-referrer
+/// switches tabs immediately — a background state change, visible right away if `MainScreen`
+/// is the current screen, or as soon as the user returns to it if something else is pushed on
+/// top. The install-referrer
 /// path is only *started* during `init()`, before `runApp()` — its actual plugin call is a
 /// platform-channel round-trip that can resolve after `MainScreen` has already mounted and
 /// called [markMainReady] (e.g. an already-logged-in cold start, which skips intro/login), so
@@ -174,10 +177,14 @@ class DeepLinkService extends GetxService {
       final res = await ApiService.get('${config.bySlugPath}/$slug');
       final data = res['data'];
       if (data is! Map) return;
-      final id = data['id'] as String?;
-      if (id == null) return;
 
-      Get.toNamed(config.routeName, arguments: {'id': id});
+      // "Explore" isn't a pushed route — it's the Rooms/Plots tab-root screen itself, so
+      // opening the right listing means switching to that tab, not navigating anywhere.
+      // Radius chips, nearby-listing refresh, and map centering all follow automatically —
+      // beginSearchOverride() below (via _applySearchPin) already drives the same reactive
+      // workers Explore uses for a manual location search, regardless of how the tab was
+      // reached.
+      Get.find<AuthController>().tabIndex.value = config.tabIndex;
 
       final lat = (data['latitude'] as num?)?.toDouble();
       final lng = (data['longitude'] as num?)?.toDouble();
