@@ -1,3 +1,4 @@
+import 'inclusion_model.dart';
 import 'service_package_preview_model.dart';
 
 /// Full Service Detail — GET /services/{id}. Mirrors
@@ -10,6 +11,10 @@ class ServiceDetailModel {
   // RentNearBy.Core.Models.ServiceCategoryFormTypes.* — decides which Enquiry Form fields to show.
   final String serviceCategoryFormType;
   final String name;
+  // URL-friendly identifiers for the share/QR feature (developerbymistake.tech/go/s/{categorySlug}/{slug}
+  // and the plain-text bakhli.com/services/{categorySlug}/{slug} link) — mirrors ListingModel.slug.
+  final String slug;
+  final String categorySlug;
   final String iconName;
   final String shortDescription;
   final String fullDescription;
@@ -18,6 +23,9 @@ class ServiceDetailModel {
   final bool isFeatured;
   final bool isActive;
   final List<ServicePackagePreviewModel> packages;
+  // Service-scoped "What's Included" — every package/group-size tier shares the same set, so this
+  // lives here, not per-package (see InclusionModel's doc comment).
+  final List<InclusionModel> inclusions;
   final String? terrainType;
   final String? pickupDropLocation;
   final String? nightsBreakdown;
@@ -30,6 +38,8 @@ class ServiceDetailModel {
     required this.serviceCategoryId,
     required this.serviceCategoryFormType,
     required this.name,
+    required this.slug,
+    required this.categorySlug,
     required this.iconName,
     required this.shortDescription,
     required this.fullDescription,
@@ -38,6 +48,7 @@ class ServiceDetailModel {
     required this.isFeatured,
     required this.isActive,
     required this.packages,
+    required this.inclusions,
     required this.terrainType,
     required this.pickupDropLocation,
     required this.nightsBreakdown,
@@ -51,6 +62,8 @@ class ServiceDetailModel {
         serviceCategoryId: json['serviceCategoryId'] as String? ?? '',
         serviceCategoryFormType: json['serviceCategoryFormType'] as String? ?? '',
         name: json['name'] as String? ?? '',
+        slug: json['slug'] as String? ?? '',
+        categorySlug: json['categorySlug'] as String? ?? '',
         iconName: json['iconName'] as String? ?? '',
         shortDescription: json['shortDescription'] as String? ?? '',
         fullDescription: json['fullDescription'] as String? ?? '',
@@ -60,6 +73,9 @@ class ServiceDetailModel {
         isActive: json['isActive'] == true,
         packages: (json['packages'] as List? ?? [])
             .map((e) => ServicePackagePreviewModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        inclusions: (json['inclusions'] as List? ?? [])
+            .map((e) => InclusionModel.fromJson(e as Map<String, dynamic>))
             .toList(),
         terrainType: json['terrainType'] as String?,
         pickupDropLocation: json['pickupDropLocation'] as String?,

@@ -1,8 +1,7 @@
-import 'inclusion_model.dart';
-
-/// Full package shape (with its Inclusion badges) — GET /services/packages
-/// ?serviceId= and GET /services/packages/{id}. Mirrors
-/// RentNearBy.Core.DTOs.Responses.ServicePackageDto field-for-field.
+/// Full package shape — GET /services/packages?serviceId= and GET
+/// /services/packages/{id}. Mirrors RentNearBy.Core.DTOs.Responses.ServicePackageDto
+/// field-for-field. Inclusions are Service-scoped, not carried here — see
+/// ServiceDetailModel.inclusions.
 ///
 /// Pricing semantics (confirmed, copied field-for-field from the entity's
 /// own doc comment — NOT the same role assignment as CreditPlan/
@@ -31,7 +30,6 @@ class ServicePackageModel {
   final int sortOrder;
   final bool isFeatured;
   final bool isActive;
-  final List<InclusionModel> inclusions;
 
   ServicePackageModel({
     required this.id,
@@ -48,8 +46,16 @@ class ServicePackageModel {
     required this.sortOrder,
     required this.isFeatured,
     required this.isActive,
-    required this.inclusions,
   });
+
+  /// e.g. "10D/9N" or "3 days" — null if this package carries no duration data at all
+  /// (some Consultation-category packages).
+  String? get durationLabel {
+    if (durationDays == null) return null;
+    return durationNights != null
+        ? '${durationDays}D/${durationNights}N'
+        : '$durationDays day${durationDays == 1 ? '' : 's'}';
+  }
 
   factory ServicePackageModel.fromJson(Map<String, dynamic> json) => ServicePackageModel(
         id: json['id'] as String,
@@ -66,8 +72,5 @@ class ServicePackageModel {
         sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
         isFeatured: json['isFeatured'] == true,
         isActive: json['isActive'] == true,
-        inclusions: (json['inclusions'] as List? ?? [])
-            .map((e) => InclusionModel.fromJson(e as Map<String, dynamic>))
-            .toList(),
       );
 }

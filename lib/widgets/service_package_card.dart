@@ -1,55 +1,41 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../models/service_package_model.dart';
-import 'inclusion_chip.dart';
 import 'service_package_price.dart';
 
 /// Shared package/plan card — used on Service Detail to render every
 /// available package inline, each with its own Enquire/Get Quote button.
-/// Replaces the old screen-private `_PackageCard` (service_package_list_screen.dart,
-/// now deleted) and `_PackagePreviewCard` (service_detail_screen.dart), fixing
-/// their inconsistencies: the title is bounded to 2 lines, and a featured
-/// package with a real photo gets an overlay "POPULAR" badge on the media
-/// block. The media block itself is conditional on thumbnailUrl actually
-/// being set — no catalog package has a real thumbnail today (every Char
-/// Dham/Tour/Yoga package seeds ThumbnailUrl empty), so rendering a bare
-/// icon-placeholder block for every card added visual bulk with no real
-/// content; a package with a genuine photo still gets the full media
-/// treatment. A featured package with no photo shows "POPULAR" as an inline
-/// pill next to its title instead (see the Row wrapping package.name below)
-/// so the badge is never silently lost.
+/// No media block: no catalog package has a real thumbnail today (every
+/// Char Dham/Tour/Yoga package seeds ThumbnailUrl empty), so a "featured"
+/// package always shows its POPULAR badge as an inline pill next to the
+/// title rather than an overlay on a photo that never exists. Inclusions
+/// are Service-scoped, not rendered per-card — see the single block on
+/// `service_detail_screen.dart` instead (every package/group-size tier of
+/// a Service shares the same inclusion set).
 class ServicePackageCard extends StatelessWidget {
   final ServicePackageModel package;
   final VoidCallback onEnquire;
-  final IconData placeholderIcon;
 
   const ServicePackageCard({
     super.key,
     required this.package,
     required this.onEnquire,
-    required this.placeholderIcon,
   });
 
   @override
   Widget build(BuildContext context) {
-    String? duration;
-    if (package.durationDays != null) {
-      duration = (package.durationNights != null)
-          ? '${package.durationDays}D/${package.durationNights}N'
-          : '${package.durationDays} day${package.durationDays == 1 ? '' : 's'}';
-    }
-
     final featured = package.isFeatured;
+    final duration = package.durationLabel;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: featured ? AppColors.primary : AppColors.divider.withValues(alpha: 0.8),
-          width: featured ? 1.8 : 1,
+          width: featured ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 14, offset: const Offset(0, 6)),
@@ -58,125 +44,74 @@ class ServicePackageCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (package.thumbnailUrl.isNotEmpty)
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
-                  child: SizedBox(
-                    height: 140,
-                    width: double.infinity,
-                    child: CachedNetworkImage(
-                      imageUrl: package.thumbnailUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: AppColors.surface),
-                      errorWidget: (_, __, ___) => _mediaPlaceholder(),
-                    ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  package.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                ),
+              ),
+              if (featured) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
+                  child: const Text(
+                    'POPULAR',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.3),
                   ),
                 ),
-                if (featured)
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
-                      child: const Text(
-                        'POPULAR',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 9.5, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.3),
-                      ),
-                    ),
-                  ),
               ],
-            ),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        package.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                      ),
-                    ),
-                    // Overlay badge above only fires when there's a photo to overlay onto — a
-                    // featured package with no thumbnail still needs SOME "POPULAR" treatment,
-                    // or the flag silently disappears for it.
-                    if (featured && package.thumbnailUrl.isEmpty) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
-                        child: const Text(
-                          'POPULAR',
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.3),
-                        ),
-                      ),
-                    ],
-                  ],
+              if (duration != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(color: AppColors.oceanBreeze.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+                  child: Text(
+                    duration,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.oceanBreeze),
+                  ),
                 ),
-                if (duration != null) ...[
-                  const SizedBox(height: 4),
-                  Text(duration, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, fontWeight: FontWeight.w500)),
-                ],
-                const SizedBox(height: 10),
-                ServicePackagePrice(
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: ServicePackagePrice(
                   price: package.price,
                   originalPrice: package.originalPrice,
                   discountPercent: package.discountPercent,
                   isStartingAtPrice: package.isStartingAtPrice,
                   priceUnit: package.priceUnit,
+                  priceFontSize: 16,
                 ),
-                if (package.inclusions.any((i) => i.isActive)) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    "What's Included",
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.textLight.withValues(alpha: 0.9), letterSpacing: 0.3),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: package.inclusions
-                        .where((i) => i.isActive)
-                        .map((i) => InclusionChip(iconName: i.iconName, label: i.name))
-                        .toList(),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: onEnquire,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      package.price == null ? 'Get Quote' : 'Enquire Now',
-                      style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13.5),
-                    ),
-                  ),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                onPressed: onEnquire,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
                 ),
-              ],
-            ),
+                child: Text(
+                  package.price == null ? 'Get Quote' : 'Enquire Now',
+                  style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 12.5),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
-
-  Widget _mediaPlaceholder() => Container(
-        color: AppColors.primaryLight.withValues(alpha: 0.15),
-        child: Center(child: Icon(placeholderIcon, size: 40, color: AppColors.primaryLight)),
-      );
 }

@@ -1,6 +1,7 @@
 /// A fixed, admin-managed "what's included" master item (e.g. "Hotel Stay",
-/// "Meals Included") — GET /services/inclusions, and embedded per-package
-/// in ServicePackageModel.inclusions.
+/// "Meals Included") — GET /services/inclusions, and embedded per-service
+/// (not per-package — every package/group-size tier shares the same set) in
+/// ServiceDetailModel.inclusions.
 class InclusionModel {
   final String id;
   final String name;

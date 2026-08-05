@@ -10,8 +10,11 @@ import '../config/app_routes.dart';
 import '../controllers/service_catalog_controller.dart';
 import '../models/service_detail_model.dart';
 import '../models/service_package_model.dart';
+import '../services/service_share_service.dart';
 import '../utils/enquiry_form_fields.dart';
 import '../utils/service_icons.dart';
+import '../widgets/app_loading_overlay.dart';
+import '../widgets/inclusion_chip.dart';
 import '../widgets/pulse_once.dart';
 import '../widgets/service_package_card.dart';
 import 'service_itinerary_screen.dart';
@@ -39,6 +42,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   List<ServicePackageModel> _packages = [];
   bool _loading = true;
   bool _notFound = false;
+  bool _sharing = false;
 
   bool get _isPlansVertical =>
       _service?.serviceCategoryFormType == kFormTypeConsultation;
@@ -91,6 +95,26 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     );
   }
 
+  Future<void> _shareService(ServiceDetailModel s) async {
+    setState(() => _sharing = true);
+    try {
+      await shareService(
+        context: context,
+        categorySlug: s.categorySlug,
+        serviceSlug: s.slug,
+        photoUrl: s.coverPhotoUrl.isEmpty ? null : s.coverPhotoUrl,
+        title: s.name,
+        ribbonText: s.serviceCategoryFormType,
+        durationLabel: _packages.isNotEmpty ? _packages.first.durationLabel : null,
+        pickupDropLocation: s.pickupDropLocation,
+        priceUnit: _packages.isNotEmpty ? _packages.first.priceUnit : null,
+        tiers: _packages,
+      );
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,11 +125,15 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           statusBarIconBrightness: Brightness.light,
           statusBarBrightness: Brightness.dark,
         ),
-        child: _loading
-            ? _buildLoader()
-            : (_notFound || _service == null)
-            ? _buildNotFound()
-            : _buildContent(_service!),
+        child: AppLoadingOverlay(
+          isLoading: _sharing,
+          message: 'Sharing...',
+          child: _loading
+              ? _buildLoader()
+              : (_notFound || _service == null)
+              ? _buildNotFound()
+              : _buildContent(_service!),
+        ),
       ),
     );
   }
@@ -257,13 +285,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 13),
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFF97316), Color(0xFFEA580C)],
-                            ),
+                            gradient: AppColors.amberGlowGradient,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFF97316).withValues(alpha: 0.35),
+                                color: const Color(0xFFFBBF24).withValues(alpha: 0.35),
                                 blurRadius: 8,
                                 offset: const Offset(0, 3),
                               ),
@@ -283,6 +309,22 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                         ),
                       ),
                     ),
+                  ),
+                ],
+                if (s.inclusions.any((i) => i.isActive)) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    "What's Included",
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textLight.withValues(alpha: 0.9), letterSpacing: 0.3),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: s.inclusions
+                        .where((i) => i.isActive)
+                        .map((i) => InclusionChip(iconName: i.iconName, label: i.name))
+                        .toList(),
                   ),
                 ],
                 if (_packages.isNotEmpty) ...[
@@ -315,7 +357,6 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                     (p) => ServicePackageCard(
                       package: p,
                       onEnquire: () => _enquire(p),
-                      placeholderIcon: serviceIconFor(s.iconName),
                     ),
                   ),
                 ] else ...[
@@ -402,7 +443,35 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
           ),
         ),
         _buildBackButton(),
+        // Gated on slug + at least one package — nothing shareable to build a tier list around
+        // otherwise, mirroring Room/Plot's own Share gate (l.isActive && l.slug != null).
+        if (s.isActive && s.slug.isNotEmpty && _packages.isNotEmpty) _buildShareButton(s),
       ],
+    );
+  }
+
+  Widget _buildShareButton(ServiceDetailModel s) {
+    return Positioned(
+      top: AppInsets.topViewPadding(context) + 10,
+      right: 12,
+      child: GestureDetector(
+        onTap: () => _shareService(s),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(20)),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.share_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 6),
+              Text(
+                'Share',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
