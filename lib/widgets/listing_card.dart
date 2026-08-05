@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../config/app_shadows.dart';
 import '../config/app_tour_state.dart';
 import '../models/listing_model.dart';
 import 'pulse_once.dart';
@@ -39,13 +40,12 @@ class ListingCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 18,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: AppShadows.premium(
+            AppColors.primary,
+            alpha: 0.10,
+            blur: 16,
+            offset: const Offset(0, 6),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,3 +1,4 @@
+import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
@@ -85,11 +86,18 @@ class _ServiceCategoryGridScreenState extends State<ServiceCategoryGridScreen> {
                           padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + AppInsets.bottomViewPadding(context)),
                           gridDelegate: _gridDelegate,
                           itemCount: _services.length,
-                          itemBuilder: (_, i) => ServiceRailCard(
-                            service: _services[i],
-                            zone: zone,
-                            width: null,
-                            imageHeight: 110,
+                          // Delay is capped at index 9 (max 360ms) so a large category's
+                          // last row doesn't wait over a second to appear.
+                          itemBuilder: (_, i) => FadeInUp(
+                            duration: const Duration(milliseconds: 260),
+                            delay: Duration(milliseconds: (i < 9 ? i : 9) * 40),
+                            from: 14,
+                            child: ServiceRailCard(
+                              service: _services[i],
+                              zone: zone,
+                              width: null,
+                              imageHeight: 110,
+                            ),
                           ),
                         ),
             ),

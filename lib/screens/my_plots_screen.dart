@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
+import '../config/app_shadows.dart';
 import '../controllers/config_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
@@ -571,7 +572,7 @@ class _PlotCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 3))],
+        boxShadow: AppShadows.premium(typeColor, alpha: 0.10, blur: 16, offset: const Offset(0, 6)),
       ),
       child: Column(
         children: [

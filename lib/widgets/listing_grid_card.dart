@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../config/app_shadows.dart';
 
 /// ViewAllScreen's grid card — full-bleed photo, price/area scrim overlay,
 /// eye icon (view details) and a Chat action. Photo/placeholder handling
@@ -15,6 +16,7 @@ class ListingGridCard extends StatelessWidget {
   final String locationLabel;
   final VoidCallback onViewDetails;
   final VoidCallback onChat;
+  final Color tint;
 
   const ListingGridCard({
     super.key,
@@ -25,6 +27,7 @@ class ListingGridCard extends StatelessWidget {
     required this.locationLabel,
     required this.onViewDetails,
     required this.onChat,
+    this.tint = AppColors.primary,
   });
 
   @override
@@ -34,9 +37,7 @@ class ListingGridCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.divider.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 18, offset: const Offset(0, 8)),
-        ],
+        boxShadow: AppShadows.premium(tint, alpha: 0.10, blur: 16, offset: const Offset(0, 6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

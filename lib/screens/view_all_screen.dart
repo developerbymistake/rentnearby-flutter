@@ -242,6 +242,7 @@ class _ViewAllScreenState extends State<ViewAllScreen>
                         onChat: isOwnListing
                             ? () => AppToast.info("You can't chat on your own listing")
                             : () => _chat(item),
+                        tint: isRooms ? AppColors.primary : _kPlotColor,
                       );
                     },
                   );

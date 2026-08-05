@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_insets.dart';
+import '../config/app_shadows.dart';
 import '../models/listing_model.dart';
 import 'bottom_sheet_action_bar.dart';
 
@@ -23,9 +24,18 @@ class ListingBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: AppShadows.premium(
+          // A dark tint (AppColors.primary) at low alpha is invisible against the modal
+          // route's own black54 barrier behind this sheet — a brighter tint reads as a
+          // soft glow against that dark scrim instead of blending into it.
+          AppColors.primaryLight,
+          alpha: 0.28,
+          blur: 20,
+          offset: const Offset(0, -6),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
