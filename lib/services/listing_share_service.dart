@@ -71,7 +71,9 @@ Future<void> shareListing({
       AppToast.error('Could not prepare the share image.');
       return;
     }
-    final image = await boundary.toImage(pixelRatio: 3.0);
+    // 4.0 rather than 3.0 — sharper across the whole card (text, QR) on the denser
+    // (3.5x-4x) screens common now; 3.0 was soft enough to notice at 100% zoom on those.
+    final image = await boundary.toImage(pixelRatio: 4.0);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     final pngBytes = byteData!.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
 
