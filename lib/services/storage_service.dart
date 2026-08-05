@@ -71,6 +71,12 @@ class StorageService {
   static void clearNotifPromptDismissedAt() =>
       _box.remove(AppConstants.notifPromptDismissedKey);
 
+  static void saveInstallReferrerConsumed() =>
+      _box.write(AppConstants.installReferrerConsumedKey, true);
+
+  static bool getInstallReferrerConsumed() =>
+      _box.read<bool>(AppConstants.installReferrerConsumedKey) ?? false;
+
   // Generic pair, not one method per tour — tour_registry.dart already carries
   // each tour's storage key as data, so a hand-written getter/setter per tour
   // here would just relocate that duplication rather than remove it.

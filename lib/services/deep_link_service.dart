@@ -1,14 +1,42 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:app_links/app_links.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:play_install_referrer/play_install_referrer.dart';
 import '../config/app_routes.dart';
 import '../controllers/location_controller.dart';
 import 'api_service.dart';
+import 'storage_service.dart';
 
-/// Receiver for `developerbymistake.tech/go/{type}/{slug}` App Links (the QR smart-link's
-/// payload — see AndroidManifest.xml's `/go/` pathPrefix, added alongside the existing `/app`
-/// one under the same verified host).
+/// `type` -> where to resolve a `/go/{type}/{slug}` payload. Additive by design: a future
+/// vertical (e.g. Services) is a new map entry once it has a by-slug endpoint, not a rewrite
+/// of `_resolveAndNavigate` below.
+class _DeepLinkTypeConfig {
+  final String bySlugPath;
+  final String routeName;
+
+  const _DeepLinkTypeConfig(this.bySlugPath, this.routeName);
+}
+
+const Map<String, _DeepLinkTypeConfig> _deepLinkTypes = {
+  'r': _DeepLinkTypeConfig('/listings/by-slug', AppRoutes.listingDetail),
+  'p': _DeepLinkTypeConfig('/plots/by-slug', AppRoutes.plotDetail),
+};
+
+/// Receiver for `developerbymistake.tech/go/{type}/{slug}` smart-link payloads, from two
+/// distinct sources:
+///
+/// 1. **Android App Links** (`AppLinks`, this class's original purpose) — fires while the app
+///    is already installed and the OS has verified the domain, whether cold-starting the app
+///    or tapping the link while it's already running.
+/// 2. **Google Play Install Referrer** (`_consumeInstallReferrer`) — the deferred-deep-link
+///    case: a user without the app scans the QR, gets bounced to the Play Store (see backend's
+///    `/go/{type}/{slug}` fallback route, which encodes type+slug into the store URL's
+///    `referrer` param), installs, and opens the app for the first time. Play hands that
+///    referrer string back on this very first launch only — everything downstream (queueing,
+///    resolving, navigating) is identical to the App Links path, it just starts from a
+///    different capture point.
 ///
 /// A cold-started, freshly-installed user opens straight into `splash_screen.dart`, which
 /// routes to `main`/`intro`/`login` purely off session state — none of the listing screens
@@ -17,7 +45,12 @@ import 'api_service.dart';
 /// immediately, and replayed once `MainScreen.initState()` calls [markMainReady] — which only
 /// happens after intro/login have already completed (splash's only route to `main`). A link
 /// caught while `MainScreen` has already mounted at least once this session resolves and
-/// navigates immediately, on top of whatever screen is currently showing.
+/// navigates immediately, on top of whatever screen is currently showing. The install-referrer
+/// path is only *started* during `init()`, before `runApp()` — its actual plugin call is a
+/// platform-channel round-trip that can resolve after `MainScreen` has already mounted and
+/// called [markMainReady] (e.g. an already-logged-in cold start, which skips intro/login), so
+/// `_consumeInstallReferrer` mirrors `_handleUri`'s own `_mainReady` check rather than assuming
+/// it always resolves first.
 class DeepLinkService extends GetxService {
   static DeepLinkService get to => Get.find<DeepLinkService>();
 
@@ -34,6 +67,8 @@ class DeepLinkService extends GetxService {
       final initial = await _appLinks.getInitialLink();
       if (initial != null) _handleUri(initial);
     } catch (_) {}
+
+    await _consumeInstallReferrer();
   }
 
   @override
@@ -43,7 +78,8 @@ class DeepLinkService extends GetxService {
   }
 
   /// Called once from `MainScreen.initState()` (post-frame) — flips the ready flag and
-  /// replays anything a `/go/` link cached before `main` was ever reached this session.
+  /// replays anything a `/go/` link (App Link or install referrer) cached before `main` was
+  /// ever reached this session.
   void markMainReady() {
     _mainReady = true;
     final type = _pendingType;
@@ -73,19 +109,75 @@ class DeepLinkService extends GetxService {
     }
   }
 
-  Future<void> _resolveAndNavigate(String type, String slug) async {
-    final isRoom = type == 'r';
+  /// A fresh install's first-ever launch has no App Link intent data (the user tapped the app
+  /// icon after installing, not a link) — so this only ever has something to contribute when
+  /// `_handleUri` above found nothing. Play returns the same referrer on every future cold
+  /// start too (it's tied to the install record, not "first launch"), so the
+  /// `StorageService`-backed one-time guard is what stops this from re-navigating to the same
+  /// install-time listing on every unrelated future open.
+  ///
+  /// The plugin call below is a real platform-channel round-trip — it can resolve well after
+  /// `runApp()` and, on an already-logged-in cold start (splash skips intro/login), even after
+  /// `MainScreen` has already mounted and called [markMainReady] once. So unlike the doc
+  /// comment on this class used to claim, this path is NOT guaranteed to run before
+  /// `_mainReady` flips true — it must handle both cases exactly like `_handleUri` does: resolve
+  /// immediately if main is already ready, otherwise queue.
+  Future<void> _consumeInstallReferrer() async {
+    if (!Platform.isAndroid) return;
+
     try {
-      final res = await ApiService.get(isRoom ? '/listings/by-slug/$slug' : '/plots/by-slug/$slug');
+      if (StorageService.getInstallReferrerConsumed()) return;
+
+      final referrerDetails = await PlayInstallReferrer.installReferrer;
+      final raw = referrerDetails.installReferrer;
+      if (raw == null || raw.isEmpty) {
+        // Organic install, no referrer at all — nothing will ever change here, consume once.
+        StorageService.saveInstallReferrerConsumed();
+        return;
+      }
+
+      final params = Uri.splitQueryString(raw);
+      final type = params['type'];
+      final slug = params['slug'];
+      if (type == null || type.isEmpty || slug == null || slug.isEmpty) {
+        // Foreign/ad-attribution referrer with no type+slug of ours — never changes, consume once.
+        StorageService.saveInstallReferrerConsumed();
+        return;
+      }
+
+      if (_mainReady) {
+        // MainScreen already mounted and drained the pending slot before this plugin call
+        // resolved — resolve directly, exactly like _handleUri does for the same case, instead
+        // of writing into a slot nothing will ever drain again.
+        StorageService.saveInstallReferrerConsumed();
+        unawaited(_resolveAndNavigate(type, slug));
+      } else if (_pendingType == null && _pendingSlug == null) {
+        StorageService.saveInstallReferrerConsumed();
+        _pendingType = type;
+        _pendingSlug = slug;
+      }
+      // else: the pending slot is already occupied by a live App Link caught earlier in this
+      // same init() call (or a racing stream event) — defer to it, and deliberately leave the
+      // consumed flag unset so this referrer gets an uncontested retry on the next cold start
+      // instead of being silently and permanently discarded.
+    } catch (_) {
+      // Play Services unavailable, no install record, or a plugin-internal failure — leave
+      // the consumed flag unset above so this is retried next cold start.
+    }
+  }
+
+  Future<void> _resolveAndNavigate(String type, String slug) async {
+    final config = _deepLinkTypes[type];
+    if (config == null) return; // Unknown/future type this build doesn't understand yet.
+
+    try {
+      final res = await ApiService.get('${config.bySlugPath}/$slug');
       final data = res['data'];
       if (data is! Map) return;
       final id = data['id'] as String?;
       if (id == null) return;
 
-      Get.toNamed(
-        isRoom ? AppRoutes.listingDetail : AppRoutes.plotDetail,
-        arguments: {'id': id},
-      );
+      Get.toNamed(config.routeName, arguments: {'id': id});
 
       final lat = (data['latitude'] as num?)?.toDouble();
       final lng = (data['longitude'] as num?)?.toDouble();

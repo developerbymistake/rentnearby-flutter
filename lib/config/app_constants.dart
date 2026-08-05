@@ -17,6 +17,7 @@ class AppConstants {
   static const String fcmTokenKey = 'fcm_token';
   static const String notifPromptDismissedKey = 'notif_prompt_dismissed_at';
   static const String subscribedDistrictTopicKey = 'subscribed_district_topic';
+  static const String installReferrerConsumedKey = 'install_referrer_consumed';
 
   static const String introCarouselSeenKey = 'intro_carousel_seen';
 

@@ -47,6 +47,11 @@ dependencies:
   # Deep links (developerbymistake.tech/go/{type}/{slug} -> listing detail)
   app_links: ^6.3.3
 
+  # Deferred deep link: reads the Google Play install referrer once on first launch after a
+  # fresh install, so a QR-driven Play Store install lands on the same listing an already-
+  # installed user's App Link would (see DeepLinkService).
+  play_install_referrer: ^0.5.0
+
   # QR code generation (listing share card)
   qr_flutter: ^4.1.0
 
