@@ -1088,17 +1088,30 @@ class _ExploreScreenState extends State<ExploreScreen>
             ),
           ),
 
-          Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
-            child: Obx(() => _listingCtrl.nearestActive.value
-                ? _buildNearestPreviewCard()
-                : KeyedSubtree(
-                    key: TourKeys.roomsFilterPanel,
-                    child: _buildFilterPanel(),
-                  )),
-          ),
+          // Filter panel (normal mode) vs preview card (nearest-carousel mode) —
+          // each mode gets its own Positioned. In nearest mode the preview card
+          // now sits ABOVE the control bar (which moved to the bottom-most,
+          // easiest-to-reach spot since Prev/Next/Cancel are tapped far more
+          // often than the card itself).
+          Obx(() {
+            if (!_listingCtrl.nearestActive.value) {
+              return Positioned(
+                bottom: 20,
+                left: 20,
+                right: 20,
+                child: KeyedSubtree(
+                  key: TourKeys.roomsFilterPanel,
+                  child: _buildFilterPanel(),
+                ),
+              );
+            }
+            return Positioned(
+              bottom: 86,
+              left: 20,
+              right: 20,
+              child: _buildNearestPreviewCard(),
+            );
+          }),
 
           // View List stays a normal rounded pill, aligned to the same
           // left:20 inset as the filter panel below. "Add my room" is still
@@ -1129,7 +1142,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             final total = _listingCtrl.nearestListings.length;
             final idx = _listingCtrl.nearestFocusIndex.value;
             return Positioned(
-              bottom: 106,
+              bottom: 20,
               left: 20,
               right: 0,
               child: Padding(
