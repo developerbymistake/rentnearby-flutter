@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../config/app_constants.dart';
 import '../models/city_model.dart';
@@ -100,7 +101,7 @@ class PlotController extends GetxController {
       final items =
           (res['data']['items'] as List).map((e) => NearbyPlotModel.fromJson(e)).toList();
       if (items.isEmpty) {
-        AppToast.info('Is district me abhi koi plot nahi hai.');
+        AppToast.info('No plots available in this district yet.', alignment: Alignment.center, compact: true);
         return;
       }
       nearestPlots.value = items;

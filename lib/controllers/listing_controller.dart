@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../config/app_constants.dart';
 import '../models/city_model.dart';
@@ -97,7 +98,7 @@ class ListingController extends GetxController {
       final items = (res['data']['items'] as List).map((e) => NearbyListingModel.fromJson(e)).toList();
       if (seq != _nearestRequestSeq) return;
       if (items.isEmpty) {
-        AppToast.info('Is district me abhi koi room nahi hai.');
+        AppToast.info('No rooms available in this district yet.', alignment: Alignment.center, compact: true);
         return;
       }
       nearestListings.value = items;
