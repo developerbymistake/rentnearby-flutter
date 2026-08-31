@@ -21,6 +21,9 @@ import '../widgets/add_listing_shortcut_button.dart';
 import '../widgets/empty_radius_hint.dart';
 import '../widgets/location_pill.dart';
 import '../widgets/nearby_item_row.dart';
+import '../widgets/nearest_confirm_sheet.dart';
+import '../widgets/nearest_control_bar.dart';
+import '../widgets/nearest_fallback_link.dart';
 import 'explore_location_search_mixin.dart';
 
 class ExplorePlotsScreen extends StatefulWidget {
@@ -82,11 +85,19 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   // nearbyPlots is simply empty because nothing has been requested yet, not because a
   // search came back with zero results.
   bool _hasLoadedOnce = false;
+  bool _nearestPromptShown = false;
+  bool _anySheetOpen = false;
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
   late AnimationController _radarController;
 
+  // ── Nearest-N carousel (fallback when radius search returns zero) ──────────
+  late final AnimationController _nearestCircleController;
+  Animation<double>? _nearestCircleAnim;
+  LatLng? _nearestCircleCenter;
+  Worker? _nearestActiveWorker;
+  Worker? _nearestFocusWorker;
 
   @override
   void initState() {
@@ -97,11 +108,23 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       duration: const Duration(milliseconds: 1800),
     );
 
+    _nearestCircleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    )..addListener(() {
+        final anim = _nearestCircleAnim;
+        final ctrl = _mapController;
+        final center = _nearestCircleCenter;
+        if (anim == null || ctrl == null || center == null) return;
+        ctrl.setGeoJsonSource('radius-source', _buildCircleGeojson(center, anim.value));
+      });
+
     WidgetsBinding.instance.addObserver(this);
 
     // Trigger data load whenever LocationController resolves the district.
     _locationWorker = ever(_locationCtrl.selectedDistrict, (_) {
       if (_locationCtrl.selectedDistrict.value != null) {
+        _nearestPromptShown = false;
         if (_auth.tabIndex.value == AppTabs.plots && !mapShouldPause.value) {
           _precomputeCircleCache();
           _loadNearby();
@@ -121,6 +144,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     // searchPinOverride still holding its PREVIOUS value mid-transition,
     // since a search applies both fields in sequence.
     _locationSelectionWorker = ever(_locationCtrl.locationSelectionChanged, (_) {
+      _nearestPromptShown = false;
       if (isSearchActive && _preSearchRadius == null) {
         _preSearchRadius = _radius;
         setState(() => _radius = AppConstants.radiusOptions.last);
@@ -247,7 +271,35 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           _radarController.stop();
           _radarController.reset();
         }
+        if (_radius != AppConstants.radiusOptions.first) {
+          setState(() => _radius = AppConstants.radiusOptions.first);
+          _stale = true;
+        }
       }
+    });
+
+    // nearestActive/nearestFocusIndex live on PlotController (a session-lifetime
+    // singleton) so they persist across tab switches — these workers just keep the
+    // map's circle/camera/pin in sync whenever either changes.
+    _nearestActiveWorker = ever(_plotCtrl.nearestActive, (bool active) {
+      if (!mounted) return;
+      if (active) {
+        _updateNearestFocus();
+        _playTing();
+      } else {
+        _nearestCircleAnim = null;
+        _nearestCircleController.stop();
+        _plotCtrl.clearNearest();
+        if (_mapReady) {
+          _updateNativeRadiusCircle();
+          _fitToRadius();
+        }
+        _buildMarkers(animate: false);
+      }
+    });
+    _nearestFocusWorker = ever(_plotCtrl.nearestFocusIndex, (_) {
+      if (!mounted) return;
+      if (_plotCtrl.nearestActive.value) _updateNearestFocus();
     });
   }
 
@@ -264,7 +316,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _mapPauseWorker?.dispose();
     _tabWorker?.dispose();
     _filterResetWorker?.dispose();
+    _nearestActiveWorker?.dispose();
+    _nearestFocusWorker?.dispose();
     _radarController.dispose();
+    _nearestCircleController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
     _cameraIdleDebounce?.cancel();
@@ -294,6 +349,39 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _precomputeCircleCache();      // always rebuild for current center before drawing
     _animateTo(center, _zoomForRadius(_radius, center.latitude));
     _updateNativeRadiusCircle();
+  }
+
+  void _animateNearestCircle(double targetKm, LatLng center) {
+    final begin = _nearestCircleAnim?.value ?? _radius;
+    _nearestCircleCenter = center;
+    _nearestCircleAnim = Tween<double>(begin: begin, end: targetKm).animate(
+      CurvedAnimation(parent: _nearestCircleController, curve: Curves.easeOut),
+    );
+    _nearestCircleController
+      ..reset()
+      ..forward();
+  }
+
+  void _updateNearestFocus() {
+    final plots = _plotCtrl.nearestPlots;
+    final idx = _plotCtrl.nearestFocusIndex.value;
+    if (idx < 0 || idx >= plots.length) return;
+    final focused = plots[idx];
+    final target = LatLng(focused.latitude, focused.longitude);
+    _animateNearestCircle(AppConstants.nearestFocusRadiusKm, target);
+    _animateTo(target, _zoomForRadius(AppConstants.nearestFocusRadiusKm, target.latitude));
+    _buildMarkers(animate: false);
+  }
+
+  void _openNearestConfirm() {
+    final district = _locationCtrl.effectiveDistrict;
+    if (district == null) return;
+    final center = _searchCenter;
+    NearestConfirmSheet.show(
+      context,
+      itemLabel: 'plots',
+      onConfirm: () => _plotCtrl.loadNearest(center.latitude, center.longitude, district.id),
+    );
   }
 
   double _zoomForRadius(double radiusKm, double lat) {
@@ -329,7 +417,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _mapReady = true;
     setState(() {});
     _buildMarkers(animate: false);
-    _fitToRadius();
+    if (_plotCtrl.nearestActive.value) {
+      _updateNearestFocus();
+    } else {
+      _fitToRadius();
+    }
   }
 
   Future<void> _initNativeCircle() async {
@@ -394,6 +486,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   }
 
   void _loadNearby() {
+    if (_plotCtrl.nearestActive.value) _plotCtrl.nearestActive.value = false;
     _reloadPending = true;
     _loadNearbyDebounceTimer?.cancel();
     _loadNearbyDebounceTimer = Timer(const Duration(milliseconds: 300), () async {
@@ -426,6 +519,15 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       _loadingNearby = false;
       _reloadPending = false;
       _hasLoadedOnce = true;
+      if (_radius == AppConstants.radiusOptions.last &&
+          _filteredPlots.isEmpty &&
+          !_nearestPromptShown &&
+          !_anySheetOpen) {
+        _nearestPromptShown = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _openNearestConfirm();
+        });
+      }
     }
   }
 
@@ -537,6 +639,47 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                     style: const TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ));
+      }
+    }
+
+    if (_plotCtrl.nearestActive.value) {
+      final nearest = _plotCtrl.nearestPlots;
+      final idx = _plotCtrl.nearestFocusIndex.value;
+      if (idx >= 0 && idx < nearest.length) {
+        final focused = nearest[idx];
+        final areaText = focused.areaDisplay;
+        data.add(_MapMarkerData(
+          position: LatLng(focused.latitude, focused.longitude),
+          width: (areaText.length * 8.5 + 28).clamp(60.0, 110.0) + 10,
+          height: 38,
+          widget: GestureDetector(
+            onTap: () => Get.toNamed(AppRoutes.plotDetail,
+                arguments: {'id': focused.id, 'distanceKm': focused.distanceKm}),
+            child: _AnimatedPin(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.plotGradient,
+                  borderRadius: BorderRadius.circular(19),
+                  border: Border.all(color: Colors.white, width: 2.5),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3)),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    areaText,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
@@ -715,12 +858,13 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
 
   void _showDetail(NearbyPlotModel plot) {
     final isAuth = _auth.user.value != null;
+    _anySheetOpen = true;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _PlotBottomSheet(plot: plot, isAuthenticated: isAuth),
-    );
+    ).whenComplete(() { if (mounted) _anySheetOpen = false; });
   }
 
   @override
@@ -796,7 +940,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                           );
                         }),
                         if (_filteredPlots.isEmpty && !_loadingNearby && !_reloadPending && _hasLoadedOnce)
-                          Builder(builder: (_) {
+                          Obx(() {
+                            // Hidden once the nearest-N carousel takes over — that has its
+                            // own control bar + preview card instead of this hint.
+                            if (_plotCtrl.nearestActive.value) return const SizedBox.shrink();
                             // Anchored to the TOP of the radius circle — the chip's tail tip
                             // lands on the boundary when the circle fits on screen, or just
                             // inside it (never outside) when the circle is bigger than the
@@ -810,17 +957,31 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                               constraints.biggest,
                             );
                             final anchor = _radiusTopAnchor(sp, radiusPx, constraints.biggest);
-                            return Positioned(
-                              left: anchor.dx,
-                              top: anchor.dy,
-                              child: FractionalTranslation(
-                                translation: const Offset(-0.5, -1.0),
-                                child: EmptyRadiusHint(
-                                  label: 'No plots in this radius',
-                                  circleRadiusPx: radiusPx,
+                            return Stack(children: [
+                              Positioned(
+                                left: anchor.dx,
+                                top: anchor.dy,
+                                child: FractionalTranslation(
+                                  translation: const Offset(-0.5, -1.0),
+                                  child: EmptyRadiusHint(
+                                    label: 'No plots in this radius',
+                                    circleRadiusPx: radiusPx,
+                                  ),
                                 ),
                               ),
-                            );
+                              if (_radius == AppConstants.radiusOptions.last)
+                                Positioned(
+                                  left: sp.dx,
+                                  top: max(sp.dy - radiusPx * 0.15, anchor.dy + 24),
+                                  child: FractionalTranslation(
+                                    translation: const Offset(-0.5, 0),
+                                    child: NearestFallbackLink(
+                                      label: 'Try 5 nearest in district',
+                                      onTap: _openNearestConfirm,
+                                    ),
+                                  ),
+                                ),
+                            ]);
                           }),
                       ],
                     ),
@@ -878,33 +1039,63 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 bottom: 20,
                 left: 20,
                 right: 20,
-                child: KeyedSubtree(
-                  key: TourKeys.plotsFilterPanel,
-                  child: _buildFilterPanel(),
-                ),
+                child: Obx(() => _plotCtrl.nearestActive.value
+                    ? _buildNearestPreviewCard()
+                    : KeyedSubtree(
+                        key: TourKeys.plotsFilterPanel,
+                        child: _buildFilterPanel(),
+                      )),
               ),
 
               // View List stays a normal rounded pill, aligned to the same
               // left:20 inset as the filter panel below. "Add my plot" is
-              // still the edge tab flush with the screen's right edge (right:0).
-              Positioned(
-                bottom: 130,
-                left: 20,
-                right: 0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _filteredPlots.isNotEmpty ? _buildViewListButton() : const SizedBox.shrink(),
-                    AddListingShortcutButton(
-                      key: TourKeys.plotsAddShortcut,
-                      label: 'Add my plot',
-                      icon: Icons.landscape_rounded,
-                      onTap: () => Get.toNamed(AppRoutes.myPlots),
-                      gradient: AppColors.plotGradient,
+              // still the edge tab flush with the screen's right edge (right:0). In
+              // nearest-carousel mode this slot hosts the Prev/Next control bar
+              // instead — each mode gets its own Positioned (not a shared one)
+              // so repositioning the control bar can never drag this row with it.
+              Obx(() {
+                if (!_plotCtrl.nearestActive.value) {
+                  return Positioned(
+                    bottom: 130,
+                    left: 20,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _filteredPlots.isNotEmpty ? _buildViewListButton() : const SizedBox.shrink(),
+                        AddListingShortcutButton(
+                          key: TourKeys.plotsAddShortcut,
+                          label: 'Add my plot',
+                          icon: Icons.landscape_rounded,
+                          onTap: () => Get.toNamed(AppRoutes.myPlots),
+                          gradient: AppColors.plotGradient,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  );
+                }
+                final total = _plotCtrl.nearestPlots.length;
+                final idx = _plotCtrl.nearestFocusIndex.value;
+                return Positioned(
+                  bottom: 106,
+                  left: 20,
+                  right: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 20),
+                    child: NearestControlBar(
+                      current: idx,
+                      total: total,
+                      onPrev: () {
+                        if (idx > 0) _plotCtrl.nearestFocusIndex.value = idx - 1;
+                      },
+                      onNext: () {
+                        if (idx < total - 1) _plotCtrl.nearestFocusIndex.value = idx + 1;
+                      },
+                      onCancel: () => _plotCtrl.nearestActive.value = false,
+                    ),
+                  ),
+                );
+              }),
 
               const Positioned(
                 bottom: 4,
@@ -1001,6 +1192,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
             child: GestureDetector(
               onTap: () {
                 _plotCtrl.nearbyPlots.clear();
+                _nearestPromptShown = false;
                 setState(() => _radius = r);
                 if (isSearchActive) _preSearchRadius = r;
                 _loadNearby();
@@ -1162,6 +1354,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
         // search in one call — "recenter" and "return to my real location"
         // are the same action for both temporary overrides.
         _locationCtrl.resetBrowsing();
+        _nearestPromptShown = false;
         _precomputeCircleCache();
         _loadNearby();
         if (_mapReady) _fitToRadius();
@@ -1177,6 +1370,78 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           ],
         ),
         child: const Icon(Icons.my_location_rounded, color: AppColors.plot, size: 22),
+      ),
+    );
+  }
+
+  // ── Nearest-N carousel preview card — compact version of the plot bottom
+  // sheet's thumbnail/type/area, showing whichever plot is currently focused. ─
+
+  Widget _buildNearestPreviewCard() {
+    final plots = _plotCtrl.nearestPlots;
+    final idx = _plotCtrl.nearestFocusIndex.value;
+    if (idx < 0 || idx >= plots.length) return const SizedBox.shrink();
+    final p = plots[idx];
+    return GestureDetector(
+      onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id, 'distanceKm': p.distanceKm}),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: p.thumbnailUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: p.thumbnailUrl!,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      width: 56,
+                      height: 56,
+                      decoration: const BoxDecoration(gradient: AppColors.plotGradient),
+                      child: const Icon(Icons.landscape_rounded, color: Colors.white70, size: 24),
+                    ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    p.plotType,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${p.distanceKm.toStringAsFixed(1)} km away',
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.plot.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                p.areaDisplay,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.plot),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1225,6 +1490,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   // _showListSheet for the full reasoning (global-navigator-covers-tab
   // architecture + MainScreen's existing _tabLeaveWorker).
   void _showListSheet() {
+    _anySheetOpen = true;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1308,7 +1574,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
           );
         },
       ),
-    );
+    ).whenComplete(() { if (mounted) _anySheetOpen = false; });
   }
 
   Widget _buildMapShimmer() {

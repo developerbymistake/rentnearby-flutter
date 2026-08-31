@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
+import '../config/app_constants.dart';
 import '../models/city_model.dart';
 import '../models/go_live_result.dart';
 import '../models/listing_model.dart';
@@ -16,6 +17,17 @@ class ListingController extends GetxController {
 
   final myListings = <ListingModel>[].obs;
   final nearbyListings = <NearbyListingModel>[].obs;
+  final nearestListings = <NearbyListingModel>[].obs;
+  final isLoadingNearest = false.obs;
+  final nearestActive = false.obs;
+  final nearestFocusIndex = 0.obs;
+  int _nearestRequestSeq = 0;
+
+  void clearNearest() {
+    nearestListings.value = [];
+    nearestFocusIndex.value = 0;
+  }
+
   final roomTypes = <RoomTypeModel>[].obs;
   final roomTypesLoading = false.obs;
   final isLoading = false.obs;
@@ -69,6 +81,33 @@ class ListingController extends GetxController {
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not load nearby rooms.'));
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> loadNearest(double lat, double lng, String districtId) async {
+    final seq = ++_nearestRequestSeq;
+    try {
+      isLoadingNearest.value = true;
+      final res = await withRetry(() => ApiService.get('/listings/nearest', params: {
+        'latitude': lat,
+        'longitude': lng,
+        'count': AppConstants.nearestFallbackCount,
+        'districtId': districtId,
+      }));
+      final items = (res['data']['items'] as List).map((e) => NearbyListingModel.fromJson(e)).toList();
+      if (seq != _nearestRequestSeq) return;
+      if (items.isEmpty) {
+        AppToast.info('Is district me abhi koi room nahi hai.');
+        return;
+      }
+      nearestListings.value = items;
+      nearestActive.value = true;
+      nearestFocusIndex.value = 0;
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return;
+      AppToast.error(DioErrorMapper.toMessage(e, 'Could not load nearest rooms.'));
+    } finally {
+      isLoadingNearest.value = false;
     }
   }
 
