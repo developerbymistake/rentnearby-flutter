@@ -1045,7 +1045,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         AddListingShortcutButton(
-                          label: 'Try Nearest',
+                          label: 'Find Nearest',
                           icon: Icons.travel_explore_rounded,
                           onTap: _openNearestConfirm,
                           mirrored: true,
