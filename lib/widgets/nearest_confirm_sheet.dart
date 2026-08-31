@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
-import '../config/app_constants.dart';
 import '../config/app_insets.dart';
 import '../config/app_shadows.dart';
 
@@ -86,7 +85,7 @@ class _NearestConfirmSheetState extends State<NearestConfirmSheet> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Search the ${AppConstants.nearestFallbackCount} nearest ${widget.itemLabel} in your district instead?',
+          'Search the nearest ${widget.itemLabel} in your district instead?',
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
           textAlign: TextAlign.center,
         ),

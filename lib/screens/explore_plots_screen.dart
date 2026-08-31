@@ -976,7 +976,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                                   child: FractionalTranslation(
                                     translation: const Offset(-0.5, 0),
                                     child: NearestFallbackLink(
-                                      label: 'Try ${AppConstants.nearestFallbackCount} nearest in district',
+                                      label: 'Try nearest in district',
                                       onTap: _openNearestConfirm,
                                     ),
                                   ),
