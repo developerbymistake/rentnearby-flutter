@@ -332,6 +332,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         // while a logout is in flight so the user can't tab-switch away
         // from (and lose sight of) the non-dismissible logout overlay.
         if (_auth.isLoggingOut.value) return;
+        if (Get.find<ListingController>().isLoadingNearest.value ||
+            Get.find<PlotController>().isLoadingNearest.value) {
+          return;
+        }
         if (_auth.tabIndex.value != AppTabs.home) {
           _auth.tabIndex.value = AppTabs.home;
         } else {
@@ -374,6 +378,17 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           Obx(() => _auth.isLoggingOut.value
               ? AppLoadingOverlay.stackChild(message: 'Logging out...')
               : const SizedBox.shrink()),
+          // Same non-dismissible, tab-blocking overlay pattern as logout above —
+          // covers the Scaffold's body AND bottomNavigationBar since both are
+          // siblings in this Stack, so the user can't switch tabs mid-search.
+          Obx(() {
+            final roomLoading = Get.find<ListingController>().isLoadingNearest.value;
+            final plotLoading = Get.find<PlotController>().isLoadingNearest.value;
+            if (!roomLoading && !plotLoading) return const SizedBox.shrink();
+            return AppLoadingOverlay.stackChild(
+              message: roomLoading ? 'Finding nearest rooms...' : 'Finding nearest plots...',
+            );
+          }),
         ],
       ),
     );

@@ -3,15 +3,15 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_shadows.dart';
 
-class NearestConfirmSheet extends StatefulWidget {
+class NearestConfirmSheet extends StatelessWidget {
   final String itemLabel;
-  final Future<void> Function() onConfirm;
+  final VoidCallback onConfirm;
   const NearestConfirmSheet({super.key, required this.itemLabel, required this.onConfirm});
 
   static Future<void> show(
     BuildContext context, {
     required String itemLabel,
-    required Future<void> Function() onConfirm,
+    required VoidCallback onConfirm,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -22,22 +22,6 @@ class NearestConfirmSheet extends StatefulWidget {
   }
 
   static String _cap(String s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
-
-  @override
-  State<NearestConfirmSheet> createState() => _NearestConfirmSheetState();
-}
-
-class _NearestConfirmSheetState extends State<NearestConfirmSheet> {
-  bool _loading = false;
-
-  Future<void> _confirm() async {
-    setState(() => _loading = true);
-    try {
-      await widget.onConfirm();
-    } finally {
-      if (mounted) Navigator.pop(context);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,76 +46,58 @@ class _NearestConfirmSheetState extends State<NearestConfirmSheet> {
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(24, 4, 24, 24 + AppInsets.bottomViewPadding(context)),
-            child: _loading ? _buildLoading() : _buildConfirm(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 60, height: 60,
+                  decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
+                  child: const Icon(Icons.travel_explore_rounded, size: 30, color: AppColors.primary),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No ${_cap(itemLabel)} Nearby',
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Search the nearest $itemLabel in your district instead?',
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Pop immediately — the actual fetch shows as a full-screen
+                      // AppLoadingOverlay from MainScreen (see isLoadingNearest),
+                      // not a loading state inside this sheet.
+                      Navigator.pop(context);
+                      onConfirm();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Search Nearest', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 15)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Not Now',
+                    style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight, fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildConfirm() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 60, height: 60,
-          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
-          child: const Icon(Icons.travel_explore_rounded, size: 30, color: AppColors.primary),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'No ${NearestConfirmSheet._cap(widget.itemLabel)} Nearby',
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Search the nearest ${widget.itemLabel} in your district instead?',
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.5),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 24),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _confirm,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Search Nearest', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 15)),
-          ),
-        ),
-        const SizedBox(height: 10),
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text(
-            'Not Now',
-            style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight, fontWeight: FontWeight.w600, fontSize: 13),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLoading() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(height: 12),
-        const SizedBox(
-          width: 32, height: 32,
-          child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.primary),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'Finding nearest ${widget.itemLabel}…',
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 12),
-      ],
     );
   }
 }
