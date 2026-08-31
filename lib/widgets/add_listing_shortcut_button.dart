@@ -87,9 +87,7 @@ class AddListingShortcutButton extends StatelessWidget {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: mirrored
-              ? [labelText, const SizedBox(width: 5), iconBadge]
-              : [iconBadge, const SizedBox(width: 5), labelText],
+          children: [iconBadge, const SizedBox(width: 5), labelText],
         ),
       ),
     );
