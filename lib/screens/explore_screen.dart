@@ -25,7 +25,6 @@ import '../widgets/location_pill.dart';
 import '../widgets/nearby_item_row.dart';
 import '../widgets/nearest_confirm_sheet.dart';
 import '../widgets/nearest_control_bar.dart';
-import '../widgets/nearest_fallback_link.dart';
 import 'explore_location_search_mixin.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -88,8 +87,6 @@ class _ExploreScreenState extends State<ExploreScreen>
   // nearbyListings is simply empty because nothing has been requested yet, not because a
   // search came back with zero results.
   bool _hasLoadedOnce = false;
-  bool _nearestPromptShown = false;
-  bool _anySheetOpen = false;
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
@@ -129,7 +126,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     // Trigger data load whenever LocationController resolves the district.
     _locationWorker = ever(_locationCtrl.selectedDistrict, (_) {
       if (_locationCtrl.selectedDistrict.value != null) {
-        _nearestPromptShown = false;
         if (_auth.tabIndex.value == AppTabs.rooms && !mapShouldPause.value) {
           _precomputeCircleCache();
           _loadNearby();
@@ -149,7 +145,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     // searchPinOverride still holding its PREVIOUS value mid-transition,
     // since a search applies both fields in sequence.
     _locationSelectionWorker = ever(_locationCtrl.locationSelectionChanged, (_) {
-      _nearestPromptShown = false;
       if (isSearchActive && _preSearchRadius == null) {
         _preSearchRadius = _radius;
         setState(() => _radius = AppConstants.radiusOptions.last);
@@ -535,15 +530,6 @@ class _ExploreScreenState extends State<ExploreScreen>
       _loadingNearby = false;
       _reloadPending = false;
       _hasLoadedOnce = true;
-      if (_radius == AppConstants.radiusOptions.last &&
-          _filteredListings.isEmpty &&
-          !_nearestPromptShown &&
-          !_anySheetOpen) {
-        _nearestPromptShown = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _openNearestConfirm();
-        });
-      }
     }
   }
 
@@ -909,13 +895,12 @@ class _ExploreScreenState extends State<ExploreScreen>
     final listing =
         _listingCtrl.nearbyListings.firstWhereOrNull((l) => l.id == id);
     if (listing == null) return;
-    _anySheetOpen = true;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => ListingBottomSheet(listing: listing),
-    ).whenComplete(() { if (mounted) _anySheetOpen = false; });
+    );
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -1011,31 +996,17 @@ class _ExploreScreenState extends State<ExploreScreen>
                           constraints.biggest,
                         );
                         final anchor = _radiusTopAnchor(sp, radiusPx, constraints.biggest);
-                        return Stack(children: [
-                          Positioned(
-                            left: anchor.dx,
-                            top: anchor.dy,
-                            child: FractionalTranslation(
-                              translation: const Offset(-0.5, -1.0),
-                              child: EmptyRadiusHint(
-                                label: 'No rooms in this radius',
-                                circleRadiusPx: radiusPx,
-                              ),
+                        return Positioned(
+                          left: anchor.dx,
+                          top: anchor.dy,
+                          child: FractionalTranslation(
+                            translation: const Offset(-0.5, -1.0),
+                            child: EmptyRadiusHint(
+                              label: 'No rooms in this radius — try Nearest',
+                              circleRadiusPx: radiusPx,
                             ),
                           ),
-                          if (_radius == AppConstants.radiusOptions.last)
-                            Positioned(
-                              left: sp.dx,
-                              top: max(sp.dy - radiusPx * 0.15, anchor.dy + 24),
-                              child: FractionalTranslation(
-                                translation: const Offset(-0.5, 0),
-                                child: NearestFallbackLink(
-                                  label: 'Try nearest in district',
-                                  onTap: _openNearestConfirm,
-                                ),
-                              ),
-                            ),
-                        ]);
+                        );
                       }),
                   ],
                 ),
@@ -1113,9 +1084,8 @@ class _ExploreScreenState extends State<ExploreScreen>
             );
           }),
 
-          // View List stays a normal rounded pill, aligned to the same
-          // left:20 inset as the filter panel below. "Add my room" is still
-          // the edge tab flush with the screen's right edge (right:0). In
+          // "Nearest" and "Add my room" are edge tabs flush with the screen's
+          // left/right edges; View List floats between them. In
           // nearest-carousel mode this slot hosts the Prev/Next control bar
           // instead — each mode gets its own Positioned (not a shared one)
           // so repositioning the control bar can never drag this row with it.
@@ -1123,11 +1093,17 @@ class _ExploreScreenState extends State<ExploreScreen>
             if (!_listingCtrl.nearestActive.value) {
               return Positioned(
                 bottom: 130,
-                left: 20,
+                left: 0,
                 right: 0,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    AddListingShortcutButton(
+                      label: 'Nearest',
+                      icon: Icons.travel_explore_rounded,
+                      onTap: _openNearestConfirm,
+                      mirrored: true,
+                    ),
                     _filteredListings.isNotEmpty ? _buildViewListButton() : const SizedBox.shrink(),
                     AddListingShortcutButton(
                       key: TourKeys.roomsAddShortcut,
@@ -1259,7 +1235,6 @@ class _ExploreScreenState extends State<ExploreScreen>
             child: GestureDetector(
               onTap: () {
                 _listingCtrl.nearbyListings.clear();
-                _nearestPromptShown = false;
                 setState(() => _radius = r);
                 if (isSearchActive) _preSearchRadius = r;
                 _loadNearby();
@@ -1436,7 +1411,6 @@ class _ExploreScreenState extends State<ExploreScreen>
         // search in one call — "recenter" and "return to my real location"
         // are the same action for both temporary overrides.
         _locationCtrl.resetBrowsing();
-        _nearestPromptShown = false;
         _precomputeCircleCache();
         _loadNearby();
         if (_mapReady) _fitToRadius();
@@ -1583,7 +1557,6 @@ class _ExploreScreenState extends State<ExploreScreen>
   // switches tabs while it's open, so no extra tab-switch handling is
   // needed here either.
   void _showListSheet() {
-    _anySheetOpen = true;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1667,7 +1640,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           );
         },
       ),
-    ).whenComplete(() { if (mounted) _anySheetOpen = false; });
+    );
   }
 
   Widget _buildMapShimmer() {
