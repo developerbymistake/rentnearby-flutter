@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
+import '../config/app_constants.dart';
 import '../models/city_model.dart';
 import '../models/go_live_result.dart';
 import '../models/plot_model.dart';
@@ -15,6 +16,16 @@ class PlotController extends GetxController {
   bool hasLoadedMyPlots = false;
 
   final nearbyPlots = <NearbyPlotModel>[].obs;
+  final nearestPlots = <NearbyPlotModel>[].obs;
+  final isLoadingNearest = false.obs;
+  final nearestActive = false.obs;
+  final nearestFocusIndex = 0.obs;
+
+  void clearNearest() {
+    nearestPlots.value = [];
+    nearestFocusIndex.value = 0;
+  }
+
   final myPlots = <PlotModel>[].obs;
   final plotTypes = <PlotTypeModel>[].obs;
   final plotTypesLoading = false.obs;
@@ -34,6 +45,7 @@ class PlotController extends GetxController {
   /// bare navigation.
   final listingStatusChangedTrigger = 0.obs;
   int _myPlotsPage = 1;
+  int _nearestRequestSeq = 0;
 
   @override
   void onInit() {
@@ -71,6 +83,34 @@ class PlotController extends GetxController {
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not load nearby plots.'));
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> loadNearest(double lat, double lng, String districtId) async {
+    final seq = ++_nearestRequestSeq;
+    try {
+      isLoadingNearest.value = true;
+      final res = await withRetry(() => ApiService.get('/plots/nearest', params: {
+        'latitude': lat,
+        'longitude': lng,
+        'count': AppConstants.nearestFallbackCount,
+        'districtId': districtId,
+      }));
+      if (seq != _nearestRequestSeq) return;
+      final items =
+          (res['data']['items'] as List).map((e) => NearbyPlotModel.fromJson(e)).toList();
+      if (items.isEmpty) {
+        AppToast.info('Is district me abhi koi plot nahi hai.');
+        return;
+      }
+      nearestPlots.value = items;
+      nearestActive.value = true;
+      nearestFocusIndex.value = 0;
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return;
+      AppToast.error(DioErrorMapper.toMessage(e, 'Could not load nearest plots.'));
+    } finally {
+      isLoadingNearest.value = false;
     }
   }
 
