@@ -38,13 +38,18 @@ class LocationStepStyle {
 
 /// Shared map/GPS/district/address subsystem for Add Room's and Add Plot's
 /// Location + Address steps — identical mechanism in both flows (pin
-/// placement, the 500m live-position safety check, resume-only pin
+/// placement, the live-position safety check, resume-only pin
 /// unstick, district/address reverse-geocode), previously duplicated
 /// byte-for-byte across both screens. Room-type/plot-type, price/area,
 /// furnished-status, photos, step navigation, and `_submit()`'s payload
 /// assembly stay in each host screen — this mixin owns only what's inside
 /// the map/location/address steps themselves.
 mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
+  static const double pinMaxRadiusKm = 1.0;
+  String get _pinRadiusLabel => pinMaxRadiusKm >= 1
+      ? '${pinMaxRadiusKm.toStringAsFixed(pinMaxRadiusKm % 1 == 0 ? 0 : 1)} km'
+      : '${(pinMaxRadiusKm * 1000).toStringAsFixed(0)} m';
+
   MapLibreMapController? _mapController;
   Symbol? _nativePin;
   double _currentZoom = 14.0;
@@ -145,7 +150,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
   // ── Internal mechanism (verbatim from the pre-extraction Add screens) ───
 
   // Keeps _userLocation tied to the CURRENT GPS fix always (read live by the
-  // 500m pin-distance check) — but the visual pin/camera only follow it until
+  // pin-distance check) — but the visual pin/camera only follow it until
   // the user manually places a pin. After that, the pin stays exactly where
   // placed (surviving step navigation and app resume) — only a fresh manual
   // tap moves it again; GPS updates keep _userLocation accurate in the
@@ -158,7 +163,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     _userLocation = newLoc;
     if (_pinManuallyPlaced) return;
     if (_mapSize.width > 0) {
-      _minZoom = _calcMinZoom(0.5, newLoc.latitude, _mapSize.width);
+      _minZoom = _calcMinZoom(pinMaxRadiusKm, newLoc.latitude, _mapSize.width);
     }
     setState(() => _selectedLocation = newLoc);
     _setNativePin(newLoc);
@@ -182,7 +187,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     final ctrl = _mapController;
     if (ctrl == null) return;
     if (_userLocation != null && _mapSize.width > 0) {
-      _minZoom = _calcMinZoom(0.5, _userLocation!.latitude, _mapSize.width);
+      _minZoom = _calcMinZoom(pinMaxRadiusKm, _userLocation!.latitude, _mapSize.width);
     }
     final pinBytes = await _buildPinImage();
     await ctrl.addImage('location_pin', pinBytes);
@@ -227,7 +232,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     final ctrl = _mapController;
     final loc = _userLocation;
     if (ctrl == null || loc == null || !mounted) return;
-    final points = _circlePolygonPoints(loc, 0.5);
+    final points = _circlePolygonPoints(loc, pinMaxRadiusKm);
     _circleGlowLine = await ctrl.addLine(LineOptions(
       geometry: points,
       lineColor: _style.circleColorHex,
@@ -248,7 +253,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     final glow = _circleGlowLine;
     final border = _circleBorderLine;
     if (ctrl == null || glow == null || border == null) return;
-    final points = _circlePolygonPoints(loc, 0.5);
+    final points = _circlePolygonPoints(loc, pinMaxRadiusKm);
     ctrl.updateLine(glow, LineOptions(geometry: points));
     ctrl.updateLine(border, LineOptions(geometry: points));
   }
@@ -417,7 +422,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
             _userLocation != null
                 ? (_selectedLocation != null
                     ? 'Pinned — tap inside the circle to adjust'
-                    : 'Tap inside the 500 m circle to pin your ${_style.pinHintNoun}')
+                    : 'Tap inside the $_pinRadiusLabel circle to pin your ${_style.pinHintNoun}')
                 : 'Waiting for your GPS location...',
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
           )),
@@ -482,8 +487,8 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
                           _userLocation!.latitude, _userLocation!.longitude,
                           latLng.latitude, latLng.longitude,
                         );
-                        if (distM > 500) {
-                          AppToast.warning('You can only pin within 500 m of your current location');
+                        if (distM > pinMaxRadiusKm * 1000) {
+                          AppToast.warning('You can only pin within $_pinRadiusLabel of your current location');
                           return;
                         }
                       }
