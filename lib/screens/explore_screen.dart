@@ -1099,7 +1099,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     AddListingShortcutButton(
-                      label: 'Nearest',
+                      label: 'Try Nearest',
                       icon: Icons.travel_explore_rounded,
                       onTap: _openNearestConfirm,
                       mirrored: true,
