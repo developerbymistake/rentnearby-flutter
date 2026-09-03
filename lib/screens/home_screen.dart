@@ -616,19 +616,21 @@ class _HomeScreenState extends State<HomeScreen> {
         return Container(
           height: 160,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
+            // Neutral white card, color only in the badge/title/button — matches the filter
+            // panel and View List pill elsewhere on this screen, instead of a tinted-per-tab
+            // background (Plot's amber tint was a different hue family than its brown accent).
+            gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: isRooms
-                  ? const [Color(0xFFEFF6FF), Color(0xFFDBEAFE)]
-                  : const [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
+              colors: [Colors.white, Color(0xFFFAFBFF)],
             ),
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: accent.withValues(alpha: 0.14), width: 1),
             boxShadow: AppShadows.premium(
-              accent,
-              alpha: 0.16,
-              blur: 20,
-              offset: const Offset(0, 8),
+              AppColors.textDark,
+              alpha: 0.08,
+              blur: 16,
+              offset: const Offset(0, 6),
             ),
           ),
           clipBehavior: Clip.antiAlias,
@@ -656,7 +658,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               width: 84,
                               height: 16,
                               decoration: BoxDecoration(
-                                color: imageGlowColor.withValues(alpha: 0.35),
+                                // Lighter than before — this glow used to sit on a colored tint
+                                // background; against the new white card it reads heavier at the
+                                // same alpha.
+                                color: imageGlowColor.withValues(alpha: 0.22),
                                 borderRadius: BorderRadius.circular(50),
                               ),
                             ),
@@ -711,11 +716,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         isRooms ? 'List your room' : 'List your plot',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
-                          color: accent,
+                          color: AppColors.textDark,
                         ),
                       ),
                       const SizedBox(height: 3),
