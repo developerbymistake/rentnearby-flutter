@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import '../controllers/config_controller.dart';
 import '../controllers/listing_controller.dart';
@@ -28,6 +29,13 @@ class ListingPermissionService {
   ListingPermissionService(this._ctrl, this._location);
 
   Future<ListingPermissionResult> check() async {
+    // A cold app-open resolves GPS/district over 1-2s — selectedDistrict is
+    // briefly null then, same as a genuinely unsupported area. Only
+    // districtUnavailable means "confirmed unsupported"; wait it out instead
+    // of misreporting a still-loading district as unsupported.
+    if (_location.selectedDistrict.value == null && !_location.districtUnavailable.value) {
+      await _waitForDistrictResolution();
+    }
     if (_location.selectedDistrict.value == null) return ListingNeedsDistrict();
 
     final config = Get.find<ConfigController>();
@@ -38,5 +46,17 @@ class ListingPermissionService {
       return ListingLimitReached(cap: cap);
     }
     return ListingAllowed();
+  }
+
+  Future<void> _waitForDistrictResolution() async {
+    final completer = Completer<void>();
+    late final Worker worker;
+    worker = everAll([_location.selectedDistrict, _location.districtUnavailable], (_) {
+      if (_location.selectedDistrict.value != null || _location.districtUnavailable.value) {
+        if (!completer.isCompleted) completer.complete();
+      }
+    });
+    await completer.future.timeout(const Duration(seconds: 5), onTimeout: () {});
+    worker.dispose();
   }
 }

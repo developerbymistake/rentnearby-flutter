@@ -9,7 +9,9 @@ import '../config/app_colors.dart';
 import '../controllers/location_controller.dart';
 import '../models/city_model.dart';
 import '../models/location_context.dart';
+import '../repositories/district_boundary_repository.dart';
 import '../utils/app_toast.dart';
+import '../utils/geo_point_in_polygon.dart';
 import '../utils/input_formatters.dart';
 
 /// Room/Plot-specific styling for the shared location/address subsystem —
@@ -45,16 +47,10 @@ class LocationStepStyle {
 /// assembly stay in each host screen — this mixin owns only what's inside
 /// the map/location/address steps themselves.
 mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
-  static const double pinMaxRadiusKm = 1.0;
-  String get _pinRadiusLabel => pinMaxRadiusKm >= 1
-      ? '${pinMaxRadiusKm.toStringAsFixed(pinMaxRadiusKm % 1 == 0 ? 0 : 1)} km'
-      : '${(pinMaxRadiusKm * 1000).toStringAsFixed(0)} m';
-
   MapLibreMapController? _mapController;
   Symbol? _nativePin;
   double _currentZoom = 14.0;
-  Size _mapSize = Size.zero;
-  double _minZoom = 13.0;
+  final double _minZoom = 10.0;
   final _addressCtrl = TextEditingController();
   final _addressFocusNode = FocusNode();
 
@@ -68,13 +64,19 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
   Worker? _resumeRefreshWorker;
   LatLng? _selectedLocation;
   LatLng? _userLocation;
-  Line? _circleGlowLine;
-  Line? _circleBorderLine;
   Circle? _userDot;
   final _locationCtrl = Get.find<LocationController>();
   bool _mapReady = false;
   bool _cameraInitialized = false;
   late LocationStepStyle _style;
+
+  final _boundaryRepo = DistrictBoundaryRepository();
+  Map<String, dynamic>? _districtBoundaryGeoJson;
+  String? _boundaryDistrictId;
+  bool _boundarySourceAdded = false;
+  Worker? _districtWorker;
+  LatLngBounds? _districtCameraBounds;
+  bool _isFetchingBoundary = false;
 
   // ── Public surface for the host screen ──────────────────────────────────
 
@@ -121,11 +123,18 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
       if (newLoc != null) _resolveDistrictForPin(newLoc);
       onLocationStale?.call();
     });
+    // Covers district resolution completing (or changing) after the Location
+    // step is already open — the initial fetch itself is triggered from
+    // _onStyleLoaded, once the map exists to render into.
+    _districtWorker = ever<DistrictModel?>(_locationCtrl.selectedDistrict, (_) {
+      _fetchAndRenderBoundaryForCurrentDistrict();
+    });
   }
 
   void disposeLocationTracking() {
     _userLocationWorker?.dispose();
     _resumeRefreshWorker?.dispose();
+    _districtWorker?.dispose();
     _addressCtrl.removeListener(_onAddressChanged);
     _addressCtrl.dispose();
     _addressFocusNode.dispose();
@@ -142,8 +151,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     _mapReady = false;
     _cameraInitialized = false;
     _nativePin = null;
-    _circleGlowLine = null;
-    _circleBorderLine = null;
+    _boundarySourceAdded = false;
     _userDot = null;
   }
 
@@ -162,12 +170,8 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     if (!mounted || newLoc == null) return;
     _userLocation = newLoc;
     if (_pinManuallyPlaced) return;
-    if (_mapSize.width > 0) {
-      _minZoom = _calcMinZoom(pinMaxRadiusKm, newLoc.latitude, _mapSize.width);
-    }
     setState(() => _selectedLocation = newLoc);
     _setNativePin(newLoc);
-    _updateNativeCircle(newLoc);
     _updateNativeUserDot(newLoc);
     _animateTo(newLoc, _currentZoom);
   }
@@ -186,12 +190,9 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     if (!mounted) return;
     final ctrl = _mapController;
     if (ctrl == null) return;
-    if (_userLocation != null && _mapSize.width > 0) {
-      _minZoom = _calcMinZoom(pinMaxRadiusKm, _userLocation!.latitude, _mapSize.width);
-    }
     final pinBytes = await _buildPinImage();
     await ctrl.addImage('location_pin', pinBytes);
-    _initNativeCircle();
+    _fetchAndRenderBoundaryForCurrentDistrict();
     _initNativeUserDot();
     if (_selectedLocation != null) await _setNativePin(_selectedLocation!);
     if (_userLocation != null && !_cameraInitialized) {
@@ -228,34 +229,83 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     return bytes.buffer.asUint8List();
   }
 
-  Future<void> _initNativeCircle() async {
-    final ctrl = _mapController;
-    final loc = _userLocation;
-    if (ctrl == null || loc == null || !mounted) return;
-    final points = _circlePolygonPoints(loc, pinMaxRadiusKm);
-    _circleGlowLine = await ctrl.addLine(LineOptions(
-      geometry: points,
-      lineColor: _style.circleColorHex,
-      lineWidth: 10.0,
-      lineOpacity: 0.20,
-      lineBlur: 4.0,
-    ));
-    _circleBorderLine = await ctrl.addLine(LineOptions(
-      geometry: points,
-      lineColor: _style.circleColorHex,
-      lineWidth: 2.5,
-      lineOpacity: 0.90,
-    ));
+  // Fetches (once per district, in-memory cached in the repo itself) and
+  // renders the real polygon for whichever district the user is currently
+  // in. Called from _onStyleLoaded and again whenever selectedDistrict
+  // resolves/changes while the step is already open.
+  Future<void> _fetchAndRenderBoundaryForCurrentDistrict() async {
+    final district = _locationCtrl.effectiveDistrict;
+    if (district == null) return;
+    final myDistrictId = district.id;
+    // Same district already fetched (e.g. re-entering this step on a fresh
+    // MapLibreMap instance after AnimatedSwitcher rebuilt it) — re-render
+    // onto the new map without hitting the network again.
+    final cachedGeoJson = _districtBoundaryGeoJson;
+    if (myDistrictId == _boundaryDistrictId && cachedGeoJson != null) {
+      await _renderDistrictBoundary(cachedGeoJson);
+      return;
+    }
+    setState(() => _isFetchingBoundary = true);
+    final geojson = await _boundaryRepo.getBoundary(myDistrictId);
+    if (!mounted || _locationCtrl.effectiveDistrict?.id != myDistrictId) return;
+    setState(() => _isFetchingBoundary = false);
+    if (geojson == null) {
+      AppToast.info(
+          "Couldn't load your district's boundary — you can still pin; we'll double-check before you continue.",
+          compact: true);
+      return;
+    }
+    _boundaryDistrictId = myDistrictId;
+    _districtBoundaryGeoJson = geojson;
+    await _renderDistrictBoundary(geojson);
   }
 
-  void _updateNativeCircle(LatLng loc) {
+  Future<void> _renderDistrictBoundary(Map<String, dynamic> geojson) async {
     final ctrl = _mapController;
-    final glow = _circleGlowLine;
-    final border = _circleBorderLine;
-    if (ctrl == null || glow == null || border == null) return;
-    final points = _circlePolygonPoints(loc, pinMaxRadiusKm);
-    ctrl.updateLine(glow, LineOptions(geometry: points));
-    ctrl.updateLine(border, LineOptions(geometry: points));
+    if (ctrl == null || !mounted) return;
+    if (!_boundarySourceAdded) {
+      await ctrl.addGeoJsonSource('district-boundary-source', geojson);
+      // enableInteraction: false on all three — otherwise MapLibre routes a tap
+      // that lands on this overlay to a feature-tap instead of onMapClick, so
+      // taps "inside" the shaded district would never reach the pin-placement
+      // handler at all.
+      await ctrl.addFillLayer('district-boundary-source', 'district-boundary-fill',
+          FillLayerProperties(fillColor: _style.circleColorHex, fillOpacity: 0.06),
+          enableInteraction: false);
+      await ctrl.addLineLayer('district-boundary-source', 'district-boundary-glow',
+          LineLayerProperties(lineColor: _style.circleColorHex, lineWidth: 6.0,
+              lineOpacity: 0.15, lineBlur: 3.0),
+          enableInteraction: false);
+      await ctrl.addLineLayer('district-boundary-source', 'district-boundary-border',
+          LineLayerProperties(lineColor: _style.circleColorHex, lineWidth: 1.8,
+              lineOpacity: 0.65),
+          enableInteraction: false);
+      _boundarySourceAdded = true;
+    } else {
+      await ctrl.setGeoJsonSource('district-boundary-source', geojson);
+    }
+
+    // Pad the district's bbox by 20% on every side — enough room to see just
+    // past the border for context, not so much that panning still reaches a
+    // neighbouring district. The initial fit-to-bounds below can compute a
+    // zoom below _minZoom for a large district; onCameraIdle's floor clamp
+    // (see the MapLibreMap widget) catches that and snaps back up to 10, so
+    // the district is framed nicely but never zoomed out further than that.
+    final bounds = geoJsonFeatureCollectionBounds(geojson);
+    if (bounds != null && mounted) {
+      final south = bounds[0], west = bounds[1], north = bounds[2], east = bounds[3];
+      final latPad = (north - south) * 0.2, lngPad = (east - west) * 0.2;
+      setState(() {
+        _districtCameraBounds = LatLngBounds(
+          southwest: LatLng(south - latPad, west - lngPad),
+          northeast: LatLng(north + latPad, east + lngPad),
+        );
+      });
+      await ctrl.animateCamera(CameraUpdate.newLatLngBounds(
+        LatLngBounds(southwest: LatLng(south, west), northeast: LatLng(north, east)),
+        left: 24, top: 24, right: 24, bottom: 24,
+      ));
+    }
   }
 
   Future<void> _initNativeUserDot() async {
@@ -279,15 +329,6 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     ctrl.updateCircle(dot, CircleOptions(geometry: loc));
   }
 
-  double _calcMinZoom(double radiusKm, double lat, double screenWidthPx) {
-    const earthCircumference = 2 * pi * 6378137.0;
-    const tileSize = 512.0;
-    final metersPerPxAtZ0 = earthCircumference * cos(lat * pi / 180) / tileSize;
-    final targetMetersPerPx = (radiusKm * 1000 * 2) / (screenWidthPx * 0.85);
-    final zoom = log(metersPerPxAtZ0 / targetMetersPerPx) / log(2);
-    return zoom.clamp(11.0, 15.0);
-  }
-
   Future<void> _setNativePin(LatLng latLng) async {
     final ctrl = _mapController;
     if (ctrl == null || !mounted) return;
@@ -303,27 +344,6 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
-  static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
-    const steps = 128;
-    const earthRadius = 6378137.0;
-    final latRad = center.latitude * pi / 180;
-    return List.generate(steps + 1, (i) {
-      final angle = 2 * pi * i / steps;
-      final dLat = (radiusKm * 1000 * cos(angle)) / earthRadius * (180 / pi);
-      final dLng = (radiusKm * 1000 * sin(angle)) / (earthRadius * cos(latRad)) * (180 / pi);
-      return LatLng(center.latitude + dLat, center.longitude + dLng);
-    });
-  }
-
-  static double _distanceBetween(double lat1, double lon1, double lat2, double lon2) {
-    const R = 6378137.0;
-    final dLat = (lat2 - lat1) * pi / 180;
-    final dLon = (lon2 - lon1) * pi / 180;
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) * sin(dLon / 2) * sin(dLon / 2);
-    return R * 2 * atan2(sqrt(a), sqrt(1 - a));
-  }
-
   // District/city/address resolve for the current pin; a newer call supersedes one still in flight.
   Future<void> _resolveDistrictForPin(LatLng pos) async {
     if (!mounted) return;
@@ -337,6 +357,17 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     try {
       final ctx = await _locationCtrl.resolveDistrictAt(pos.latitude, pos.longitude, includeAddress: true);
       if (!mounted || myGeneration != _districtResolveGeneration) return;
+      // Double-check against the district the client-side boundary check already
+      // validated this pin against — catches the rare case where the simplified
+      // polygon accepted a tap that the real, full-fidelity boundary resolves to
+      // a different district.
+      final expectedDistrictId = _boundaryDistrictId;
+      if (expectedDistrictId != null && ctx.district.id != expectedDistrictId) {
+        setState(() { _isResolvingDistrict = false; _showAddressResolveOverlay = false; });
+        AppToast.error(
+            'This spot is actually in ${ctx.district.name} district. Please re-pin inside ${_locationCtrl.effectiveDistrict?.name ?? "your district"}.');
+        return;
+      }
       setState(() {
         _resolvedDistrict = ctx.district;
         _resolvedCity = ctx.nearestCity;
@@ -421,11 +452,18 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
           Expanded(child: Text(
             _userLocation != null
                 ? (_selectedLocation != null
-                    ? 'Pinned — tap inside the circle to adjust'
-                    : 'Tap inside the $_pinRadiusLabel circle to pin your ${_style.pinHintNoun}')
+                    ? 'Pinned — tap inside your district to adjust'
+                    : 'Tap inside your district to pin your ${_style.pinHintNoun}')
                 : 'Waiting for your GPS location...',
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
           )),
+          if (_isFetchingBoundary) ...[
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 12, height: 12,
+              child: CircularProgressIndicator(strokeWidth: 2, color: _style.accentColor),
+            ),
+          ],
         ]),
         const SizedBox(height: 12),
         if (_userLocation == null) ...[
@@ -451,7 +489,6 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
           borderRadius: BorderRadius.circular(14),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              _mapSize = Size(constraints.maxWidth, 340);
               return SizedBox(
                 height: 340,
                 child: Stack(children: [
@@ -467,11 +504,18 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
                     myLocationEnabled: false,
                     trackCameraPosition: true,
                     attributionButtonMargins: const Point(-200.0, 0.0),
+                    // Panning/zooming is capped to the current district's own
+                    // padded bounds (set once its boundary loads) instead of a
+                    // fixed minimum zoom — lets the user zoom out enough to see
+                    // their whole district and look around for their exact
+                    // property, without wandering into a neighbouring one.
+                    cameraTargetBounds: _districtCameraBounds != null
+                        ? CameraTargetBounds(_districtCameraBounds!)
+                        : CameraTargetBounds.unbounded,
                     onMapCreated: (ctrl) {
                       _mapController = ctrl;
                       _nativePin = null;
-                      _circleGlowLine = null;
-                      _circleBorderLine = null;
+                      _boundarySourceAdded = false;
                       _userDot = null;
                     },
                     onStyleLoadedCallback: _onStyleLoaded,
@@ -482,15 +526,11 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
                       }
                     },
                     onMapClick: (_, latLng) {
-                      if (_userLocation != null) {
-                        final distM = _distanceBetween(
-                          _userLocation!.latitude, _userLocation!.longitude,
-                          latLng.latitude, latLng.longitude,
-                        );
-                        if (distM > pinMaxRadiusKm * 1000) {
-                          AppToast.warning('You can only pin within $_pinRadiusLabel of your current location');
-                          return;
-                        }
+                      final geojson = _districtBoundaryGeoJson;
+                      if (geojson != null && !isPointInGeoJsonFeatureCollection(latLng.latitude, latLng.longitude, geojson)) {
+                        final name = _locationCtrl.effectiveDistrict?.name;
+                        AppToast.warning(name != null ? 'You can only pin within $name district' : 'You can only pin within your current district');
+                        return;
                       }
                       _pinManuallyPlaced = true;
                       setState(() => _selectedLocation = latLng);
