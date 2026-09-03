@@ -100,6 +100,12 @@ List<TourStep> _buildHomeSteps() {
       body: 'See how many people viewed and enquired about your listings — coming soon.',
     ),
     TourStep(
+      key: TourKeys.homeInstagramCard,
+      icon: Iconsax.camera,
+      title: 'Stay in the loop',
+      body: 'Follow us on Instagram for new listings, tips and updates — just one tap away.',
+    ),
+    TourStep(
       key: TourKeys.homeActionMenu,
       icon: Iconsax.notification_bing,
       title: 'Notifications & Messages',
@@ -196,18 +202,11 @@ final Map<int, TourDefinition> tourRegistry = {
         title: 'Or search a specific place',
         body: 'Type an area, locality or landmark to jump straight there — input-based, different from the area picker above.',
       ),
-      TourStep(
-        key: TourKeys.roomsFilterPanel,
-        icon: Iconsax.filter,
-        title: 'Narrow it down',
-        body: 'Filter by room type — 1BHK, PG, Shop and more — right from here.',
-      ),
-      TourStep(
-        key: TourKeys.roomsAddShortcut,
-        icon: Iconsax.add_circle,
-        title: 'List your own room',
-        body: 'Tap here to manage and post your rooms — one more tap from there starts a new listing.',
-      ),
+      // Order below is the actual on-screen top-to-bottom sweep: header (location/radius/
+      // search above) -> ViewList+FAB row (right under the header) -> the Find Nearest/Add
+      // button pair -> filter panel (screen bottom). ViewList/FAB moved up here from after
+      // AddShortcut/FilterPanel to match where they actually render post-redesign — visiting
+      // them last used to jump the spotlight back up to the top of the screen.
       TourStep(
         key: TourKeys.roomsViewListButton,
         icon: Icons.format_list_bulleted_rounded,
@@ -219,6 +218,24 @@ final Map<int, TourDefinition> tourRegistry = {
         icon: Icons.my_location_rounded,
         title: 'Lost your spot?',
         body: 'Tap to snap the map back to your current GPS location.',
+      ),
+      TourStep(
+        key: TourKeys.roomsFindNearest,
+        icon: Icons.travel_explore_rounded,
+        title: 'Nothing in this radius?',
+        body: 'Find Nearest instantly shows the closest listings anyway, even outside your selected radius.',
+      ),
+      TourStep(
+        key: TourKeys.roomsAddShortcut,
+        icon: Iconsax.add_circle,
+        title: 'List your own room',
+        body: 'Tap here to manage and post your rooms — one more tap from there starts a new listing.',
+      ),
+      TourStep(
+        key: TourKeys.roomsFilterPanel,
+        icon: Iconsax.filter,
+        title: 'Narrow it down',
+        body: 'Filter by room type — 1BHK, PG, Shop and more — right from here.',
       ),
     ],
   ),
@@ -245,18 +262,7 @@ final Map<int, TourDefinition> tourRegistry = {
         title: 'Or search a specific place',
         body: 'Type an area, locality or landmark to jump straight there — input-based, unlike the picker above.',
       ),
-      TourStep(
-        key: TourKeys.plotsFilterPanel,
-        icon: Iconsax.filter,
-        title: 'Narrow it down',
-        body: 'Filter by plot type right from here to find exactly what you need.',
-      ),
-      TourStep(
-        key: TourKeys.plotsAddShortcut,
-        icon: Iconsax.add_circle,
-        title: 'List your own plot',
-        body: 'Post a plot for rent or sale directly from here, right from this map.',
-      ),
+      // See the matching comment in the Rooms tour above — same reorder reasoning.
       TourStep(
         key: TourKeys.plotsViewListButton,
         icon: Icons.format_list_bulleted_rounded,
@@ -268,6 +274,24 @@ final Map<int, TourDefinition> tourRegistry = {
         icon: Icons.my_location_rounded,
         title: 'Lost your spot?',
         body: 'Tap to snap the map back to your current GPS location.',
+      ),
+      TourStep(
+        key: TourKeys.plotsFindNearest,
+        icon: Icons.travel_explore_rounded,
+        title: 'Nothing in this radius?',
+        body: 'Find Nearest instantly shows the closest listings anyway, even outside your selected radius.',
+      ),
+      TourStep(
+        key: TourKeys.plotsAddShortcut,
+        icon: Iconsax.add_circle,
+        title: 'List your own plot',
+        body: 'Post a plot for rent or sale directly from here, right from this map.',
+      ),
+      TourStep(
+        key: TourKeys.plotsFilterPanel,
+        icon: Iconsax.filter,
+        title: 'Narrow it down',
+        body: 'Filter by plot type right from here to find exactly what you need.',
       ),
     ],
   ),

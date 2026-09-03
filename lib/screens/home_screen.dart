@@ -1004,6 +1004,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildInstagramCard() {
     return Padding(
+      key: TourKeys.homeInstagramCard,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GestureDetector(
         onTap: _openInstagram,

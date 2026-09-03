@@ -11,6 +11,7 @@ class TourKeys {
   static final homeQuickActionAdd = GlobalKey();
   static final homeQuickActionFind = GlobalKey();
   static final homeQuickActionLeads = GlobalKey();
+  static final homeInstagramCard = GlobalKey();
   static final homeActionMenu = GlobalKey();
   static final homeRoomsNavIcon = GlobalKey();
   static final homePlotsNavIcon = GlobalKey();
@@ -23,6 +24,7 @@ class TourKeys {
   static final roomsSearchToggle = GlobalKey();
   static final roomsFilterPanel = GlobalKey();
   static final roomsAddShortcut = GlobalKey();
+  static final roomsFindNearest = GlobalKey();
   static final roomsViewListButton = GlobalKey();
   static final roomsLocationFab = GlobalKey();
 
@@ -32,6 +34,7 @@ class TourKeys {
   static final plotsSearchToggle = GlobalKey();
   static final plotsFilterPanel = GlobalKey();
   static final plotsAddShortcut = GlobalKey();
+  static final plotsFindNearest = GlobalKey();
   static final plotsViewListButton = GlobalKey();
   static final plotsLocationFab = GlobalKey();
 

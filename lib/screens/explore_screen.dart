@@ -1111,6 +1111,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     AddListingShortcutButton(
+                      key: TourKeys.roomsFindNearest,
                       label: 'Find Nearest',
                       icon: Icons.travel_explore_rounded,
                       onTap: _openNearestConfirm,
