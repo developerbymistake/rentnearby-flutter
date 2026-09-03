@@ -6,6 +6,7 @@ import '../models/service_detail_model.dart';
 import '../models/service_list_item_model.dart';
 import '../models/service_package_model.dart';
 import '../repositories/service_catalog_repository.dart';
+import 'tab_config_controller.dart';
 
 class ServiceCatalogController extends GetxController {
   final categories = <ServiceCategoryModel>[].obs;
@@ -27,6 +28,20 @@ class ServiceCatalogController extends GetxController {
 
   Future<void> loadCategories({bool forceRefresh = false}) async {
     if (_categoriesLoadedOnce && !forceRefresh) return;
+    // Services may be admin-deactivated — see AgentController.checkAgentStatus's identical guard
+    // for why this awaits the real config instead of the fail-open default. Set loading true before
+    // the await (not after) so a slow-network stall on the tab-config fetch renders the section's
+    // shimmer instead of it silently disappearing (local_services_screen.dart only shows the
+    // shimmer while categoriesLoading is true and categories is still empty).
+    if (Get.isRegistered<TabConfigController>()) {
+      final tabConfig = Get.find<TabConfigController>();
+      categoriesLoading.value = true;
+      await tabConfig.awaitLoaded();
+      if (!tabConfig.isServicesActive) {
+        categoriesLoading.value = false;
+        return;
+      }
+    }
     categoriesLoading.value = true;
     try {
       categories.value = await _repo.getCategories(forceRefresh: forceRefresh);

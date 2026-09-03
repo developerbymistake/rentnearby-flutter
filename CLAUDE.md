@@ -87,10 +87,12 @@ instance (`_nominatimDio`) hits a self-hosted Nominatim reverse-geocoding proxy.
 (`lib/config/app_constants.dart`) is the single source of truth for the backend origin
 (`https://developerbymistake.tech/api/v1`) — commented-out local/emulator URLs are left there for
 switching during local backend dev. Real-time features (chat, per-district promotional banners) use
-SignalR (`signalr_netcore`) via two independent hub services, not Dio: `ChatHubService` (lazy —
-callers explicitly connect/disconnect around opening the Chats list or a conversation) and
-`BannerHubService` (connects for the user's current district whenever `LocationController
-.selectedDistrict` changes, stays connected while browsing). Both hubs pass a fresh JWT via
+SignalR (`signalr_netcore`) via two independent hub services, not Dio: `ChatHubService` (connected
+unconditionally from `MainScreen.initState()`, session-lifetime — same shape as `WalletHubService`/
+`EnquiryHubService`, not scoped to any one conversation screen; `my_enquiries_screen.dart`/
+`enquiry_detail_screen.dart` still also call `connect()` from their own `initState()`/resume as
+harmless redundant no-ops) and `BannerHubService` (connects for the user's current district whenever
+`LocationController.selectedDistrict` changes, stays connected while browsing). Both hubs pass a fresh JWT via
 `accessTokenFactory` so token refresh is handled transparently, and both fall back silently to REST
 polling if the hub connection fails.
 

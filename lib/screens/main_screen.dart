@@ -22,6 +22,7 @@ import '../repositories/service_catalog_repository.dart';
 import '../repositories/user_repository.dart';
 import '../repositories/wallet_repository.dart';
 import '../controllers/config_controller.dart';
+import '../controllers/tab_config_controller.dart';
 import '../controllers/enquiry_controller.dart';
 import '../controllers/service_catalog_controller.dart';
 import '../controllers/wallet_controller.dart';
@@ -52,9 +53,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   late final LocationController _locationCtrl;
   late final BannerController _bannerCtrl;
   late final ChatController _chatCtrl;
+  late final TabConfigController _tabConfigCtrl;
   Worker? _bannerDistrictWorker;
   Worker? _digestTopicWorker;
   Worker? _tabLeaveWorker;
+  Worker? _servicesActiveWorker;
   int _previousTabIndex = AppTabs.home;
 
   final _screens = const [
@@ -69,6 +72,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     Get.put(ConfigRepository());
+    // First network call of the session, deliberately — every tab-scoped controller/hub put
+    // below (Rooms/Plots repos are always needed by Home regardless, but Services' controllers
+    // and EnquiryHubService's connect() specifically wait on this via
+    // TabConfigController.awaitLoaded()/the servicesActive worker set up further down) needs to
+    // know which tabs are admin-active before it's safe to assume "yes, call the API".
+    _tabConfigCtrl = Get.put(TabConfigController());
+    _tabConfigCtrl.load();
     Get.put(ConfigController());
     _locationCtrl = Get.put(LocationController());
     // GlobalLocationGates (main.dart's builder:) sits above the Navigator and
@@ -125,7 +135,17 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // no-ops now (SingleFlightHubConnect short-circuits once Connected), kept as extra
     // insurance against a connection that quietly died between this line and whichever of those
     // screens' own resume checks runs next.
-    EnquiryHubService.to.connect();
+    //
+    // Unlike Chat/Wallet, this connect is gated on Services being admin-active — and stays that
+    // way for the rest of the session via _servicesActiveWorker below, which disconnects it the
+    // moment an admin flips Services off (avoiding a dangling connection/leak for a vertical
+    // that's meant to be entirely dark) and reconnects it if flipped back on, all without an app
+    // restart. _reconcileServicesHub's own call right after the worker registration covers both
+    // "config already loaded from a previous await elsewhere" and "still on the fail-open
+    // default" — either way the correct action (connect, since default/most-common case is
+    // active) happens immediately, then self-corrects once the real config lands if it disagrees.
+    _servicesActiveWorker = ever<bool>(_tabConfigCtrl.servicesActive, _reconcileServicesHub);
+    _reconcileServicesHub(_tabConfigCtrl.servicesActive.value);
     _chatCtrl.loadConversations();
     _bannerCtrl = Get.put(BannerController());
     Get.put(BannerHubService());
@@ -179,9 +199,18 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) => DeepLinkService.to.markMainReady());
   }
 
+  void _reconcileServicesHub(bool active) {
+    if (active) {
+      EnquiryHubService.to.connect();
+    } else {
+      EnquiryHubService.to.disconnect();
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _servicesActiveWorker?.dispose();
     _bannerDistrictWorker?.dispose();
     _digestTopicWorker?.dispose();
     _tabLeaveWorker?.dispose();
@@ -198,7 +227,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       ChatHubService.to.connect();
       WalletHubService.to.connect();
-      EnquiryHubService.to.connect();
+      // EnquiryHubService's reconnect (and the Services-vertical active-count refresh below)
+      // wait on a fresh tab-config fetch first — a resume is exactly the moment a Services
+      // toggle an admin flipped while this device was backgrounded must take effect, not just
+      // whatever was cached at the last cold start.
+      _refreshTabConfigOnResume();
       Get.find<NotificationController>().loadUnreadCount();
       // Chat badge's app-resume anchor — pushes may have been missed while backgrounded
       // (the hub reconnect above isn't guaranteed to fire if the connection quietly died).
@@ -207,12 +240,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       // above — both are server-anchored (see their own doc comments) and a push can still have
       // been missed entirely while backgrounded even in a session where the connection itself
       // never actually dropped (so the reconnect above alone doesn't guarantee it).
-      // checkAgentStatus() is now pure REST status/count resolution — it no longer also
-      // reconnects EnquiryHubService as a side effect (that's owned explicitly above now,
-      // alongside Chat/Wallet).
-      Get.find<EnquiryController>().fetchActiveCount();
-      Get.find<AgentController>().checkAgentStatus();
-      Get.find<ServiceCatalogController>().loadCategories();
+      // checkAgentStatus()/loadCategories() are fired from inside _refreshTabConfigOnResume,
+      // AFTER its forceRefresh await resolves — not here. Both gate on
+      // TabConfigController.isServicesActive via awaitLoaded(), which returns instantly once
+      // `loaded` is already true (true for every resume, since it's set on cold start) — so
+      // calling them here, in parallel with the forceRefresh fetch still in flight, would read
+      // the pre-refresh (stale) isServicesActive and silently skip the real check exactly when a
+      // background admin toggle needs them to run.
       // Tour re-attempt anchor for app resume — Future.delayed timers inside
       // TourController's bounded retry (_searchForReadyStep) keep firing even
       // while the app is backgrounded (e.g. during a native location-permission
@@ -224,6 +258,16 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       Get.find<TourController>().attemptShowTourForCurrentTab();
     } else if (state == AppLifecycleState.paused) {
       _locationCtrl.appPaused();
+    }
+  }
+
+  Future<void> _refreshTabConfigOnResume() async {
+    await _tabConfigCtrl.load(forceRefresh: true);
+    _reconcileServicesHub(_tabConfigCtrl.servicesActive.value);
+    Get.find<AgentController>().checkAgentStatus();
+    Get.find<ServiceCatalogController>().loadCategories();
+    if (_tabConfigCtrl.isServicesActive) {
+      Get.find<EnquiryController>().fetchActiveCount();
     }
   }
 
@@ -337,7 +381,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           return;
         }
         if (_auth.tabIndex.value != AppTabs.home) {
-          _auth.tabIndex.value = AppTabs.home;
+          _auth.switchToTab(AppTabs.home);
         } else {
           _showExitConfirmation();
         }
@@ -456,24 +500,37 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + bottomInset),
+        // Home/Profile are always active (structural, never admin-deactivatable) so they're
+        // unconditional; Rooms/Plots/Services drop out of the row entirely (not just hidden —
+        // Expanded would otherwise still reserve their flex slot) the moment the master table
+        // marks them inactive. _buildBottomNav() is already called from inside an Obx (see
+        // bottomNavigationBar above), so these reactive reads make the whole row rebuild live.
         child: Row(
           children: [
-            _navItem(AppTabs.home, Iconsax.home, Iconsax.home5, 'Home'),
-            KeyedSubtree(
-              key: TourKeys.homeRoomsNavIcon,
-              child: _navItem(AppTabs.rooms, Iconsax.house, Iconsax.house5, 'Rooms'),
-            ),
-            KeyedSubtree(
-              key: TourKeys.homePlotsNavIcon,
-              child: _navItem(AppTabs.plots, Iconsax.location, Iconsax.location5, 'Plots'),
-            ),
-            KeyedSubtree(
-              key: TourKeys.homeServicesNavIcon,
-              child: _navItem(AppTabs.services, Iconsax.global_search, Iconsax.global_search5, 'Services'),
-            ),
+            _navItem(AppTabs.home, Iconsax.home, Iconsax.home5,
+                _tabConfigCtrl.displayNameForIndex(AppTabs.home, 'Home')),
+            if (_tabConfigCtrl.isRoomsActive)
+              KeyedSubtree(
+                key: TourKeys.homeRoomsNavIcon,
+                child: _navItem(AppTabs.rooms, Iconsax.house, Iconsax.house5,
+                    _tabConfigCtrl.displayNameForIndex(AppTabs.rooms, 'Rooms')),
+              ),
+            if (_tabConfigCtrl.isPlotsActive)
+              KeyedSubtree(
+                key: TourKeys.homePlotsNavIcon,
+                child: _navItem(AppTabs.plots, Iconsax.location, Iconsax.location5,
+                    _tabConfigCtrl.displayNameForIndex(AppTabs.plots, 'Plots')),
+              ),
+            if (_tabConfigCtrl.isServicesActive)
+              KeyedSubtree(
+                key: TourKeys.homeServicesNavIcon,
+                child: _navItem(AppTabs.services, Iconsax.global_search, Iconsax.global_search5,
+                    _tabConfigCtrl.displayNameForIndex(AppTabs.services, 'Services')),
+              ),
             KeyedSubtree(
               key: TourKeys.homeProfileNavIcon,
-              child: _navItem(AppTabs.profile, Iconsax.user, Iconsax.user5, 'Profile'),
+              child: _navItem(AppTabs.profile, Iconsax.user, Iconsax.user5,
+                  _tabConfigCtrl.displayNameForIndex(AppTabs.profile, 'Profile')),
             ),
           ],
         ),
@@ -495,7 +552,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           if (index == AppTabs.profile && _auth.tabIndex.value != AppTabs.profile) _auth.profileTabTrigger.value++;
           Get.find<ListingController>().filterResetTrigger.value++;
           Get.find<PlotController>().filterResetTrigger.value++;
-          _auth.tabIndex.value = index;
+          _auth.switchToTab(index);
         },
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(

@@ -1046,13 +1046,24 @@ class _ExploreScreenState extends State<ExploreScreen>
                     ),
                   ),
                 ),
-                // Current-location FAB sits right after the header, on the map,
-                // aligned under Search — no overlap into the header at all.
+                // Current-location FAB sits right after the header, on the map, aligned under
+                // Search — no overlap into the header at all. View List sits in the same row,
+                // mirrored to the left edge (was centered in the shortcut-button row below,
+                // between Find Nearest/Add my room — moved here so that row can be a clean
+                // 2-button pair aligned with the filter panel's own left/right bounds).
                 Padding(
-                  padding: const EdgeInsets.only(top: 12, right: 20),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: _buildLocationFab(),
+                  padding: const EdgeInsets.only(top: 12, left: 20, right: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Obx(() {
+                        if (_listingCtrl.nearestActive.value || _filteredListings.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        return _buildViewListButton();
+                      }),
+                      _buildLocationFab(),
+                    ],
                   ),
                 ),
               ],
@@ -1084,17 +1095,18 @@ class _ExploreScreenState extends State<ExploreScreen>
             );
           }),
 
-          // "Nearest" and "Add my room" are edge tabs flush with the screen's
-          // left/right edges; View List floats between them. In
-          // nearest-carousel mode this slot hosts the Prev/Next control bar
-          // instead — each mode gets its own Positioned (not a shared one)
-          // so repositioning the control bar can never drag this row with it.
+          // "Find Nearest" and "Add my room" are a proper button pair, inset to the same
+          // left/right bounds as the filter panel directly below (was edge-flush tabs with
+          // View List floating between them — View List now lives up by the location FAB
+          // instead, see the header Row above). In nearest-carousel mode this slot hosts the
+          // Prev/Next control bar instead — each mode gets its own Positioned (not a shared
+          // one) so repositioning the control bar can never drag this row with it.
           Obx(() {
             if (!_listingCtrl.nearestActive.value) {
               return Positioned(
                 bottom: 130,
-                left: 0,
-                right: 0,
+                left: 20,
+                right: 20,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1102,9 +1114,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                       label: 'Find Nearest',
                       icon: Icons.travel_explore_rounded,
                       onTap: _openNearestConfirm,
-                      mirrored: true,
                     ),
-                    _filteredListings.isNotEmpty ? _buildViewListButton() : const SizedBox.shrink(),
                     AddListingShortcutButton(
                       key: TourKeys.roomsAddShortcut,
                       label: 'Add my room',

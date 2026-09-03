@@ -213,7 +213,7 @@ class DeepLinkService extends GetxService {
           // beginSearchOverride() below (via _applySearchPin) already drives the same reactive
           // workers Explore uses for a manual location search, regardless of how the tab was
           // reached.
-          Get.find<AuthController>().tabIndex.value = config.tabIndex!;
+          Get.find<AuthController>().switchToTab(config.tabIndex!);
           final lat = (data['latitude'] as num?)?.toDouble();
           final lng = (data['longitude'] as num?)?.toDouble();
           if (lat != null && lng != null) {

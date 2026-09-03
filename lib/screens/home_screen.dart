@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
+import '../config/app_constants.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
@@ -32,6 +34,11 @@ import '../widgets/sweep_highlight.dart';
 const _kPlotColor = AppColors.plot;
 const _kPlotGradient = AppColors.plotGradient;
 const _kQuickActionGreen = Color(0xFF22C55E);
+const _kInstagramGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0xFFF58529), Color(0xFFDD2A7B), Color(0xFF8134AF)],
+);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -49,6 +56,20 @@ class _HomeScreenState extends State<HomeScreen> {
   late final _listingPermissionService = ListingPermissionService(_listingCtrl, _locationCtrl);
   late final _plotPermissionService = PlotPermissionService(_plotCtrl, _locationCtrl);
   bool _isCheckingAddLimit = false;
+
+  // Same "try the app-scheme deep link, fall back to the web URL" idiom as
+  // ProfileScreen._rateApp — instagram:// opens the app directly to the profile if it's
+  // installed; a failed launchUrl (app not installed / scheme unhandled) falls back to the
+  // plain https:// profile page in a browser.
+  Future<void> _openInstagram() async {
+    final appUri = Uri.parse('instagram://user?username=${AppConstants.instagramUsername}');
+    if (!await launchUrl(appUri, mode: LaunchMode.externalApplication)) {
+      await launchUrl(
+        Uri.parse('https://www.instagram.com/${AppConstants.instagramUsername}'),
+        mode: LaunchMode.externalApplication,
+      );
+    }
+  }
 
   void _onAddTap(bool isRooms) async {
     if (_isCheckingAddLimit) return;
@@ -161,6 +182,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 delay: const Duration(milliseconds: 240),
                 from: 14,
                 child: _buildRecentlyAddedSection(),
+              ),
+              const SizedBox(height: 15),
+              // Outside the Rooms/Plots toggle's content — _home.activeTab only switches the
+              // sections above, so this renders identically (once) regardless of which one is
+              // selected, rather than needing a copy per tab.
+              FadeInUp(
+                duration: const Duration(milliseconds: 260),
+                delay: const Duration(milliseconds: 260),
+                from: 14,
+                child: _buildInstagramCard(),
               ),
               const SizedBox(height: 20),
             ],
@@ -789,8 +820,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   shadowColor: _kQuickActionGreen,
                   label: isRooms ? 'Find Room' : 'Find Plot',
                   motion: IconMotionStyle.scan,
-                  onTap: () => _auth.tabIndex.value =
-                      isRooms ? AppTabs.rooms : AppTabs.plots,
+                  onTap: () => _auth.switchToTab(isRooms ? AppTabs.rooms : AppTabs.plots),
                 ),
               ),
             ),
@@ -963,6 +993,85 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       );
     });
+  }
+
+  Widget _buildInstagramCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GestureDetector(
+        onTap: _openInstagram,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: _kInstagramGradient,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: AppShadows.premium(
+              const Color(0xFFDD2A7B),
+              alpha: 0.25,
+              blur: 16,
+              offset: const Offset(0, 6),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Iconsax.camera, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Follow us on Instagram',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      '@bakhli_app · Listings, tips & updates',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11.5,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Follow',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFDD2A7B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // Vertical list-row layout for "Recently added" — same white rounded-card

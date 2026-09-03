@@ -8,6 +8,7 @@ import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
+import 'tab_config_controller.dart';
 import '../utils/app_toast.dart';
 import '../services/hub_session_manager.dart';
 
@@ -27,6 +28,19 @@ class AuthController extends GetxController {
   final user = Rxn<UserModel>();
   final tabIndex = AppTabs.home.obs;
   final profileTabTrigger = 0.obs;
+
+  /// Every tabIndex-setting call site (bottom nav tap, Home CTA, deep link, notification tap)
+  /// should route through this rather than assigning tabIndex directly — falls back to Home if
+  /// the target tab has been admin-deactivated (TabConfigController), so a stale deep link/push
+  /// can never land the user on a tab whose entire API surface is now server-rejected.
+  /// Home/Profile are always active so they're never redirected.
+  void switchToTab(int index) {
+    if (Get.isRegistered<TabConfigController>() && !Get.find<TabConfigController>().isActiveForIndex(index)) {
+      tabIndex.value = AppTabs.home;
+      return;
+    }
+    tabIndex.value = index;
+  }
 
   // Granular profile observables — each fires only when its specific field changes
   final profileName = ''.obs;

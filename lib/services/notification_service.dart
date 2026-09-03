@@ -434,7 +434,7 @@ class NotificationService extends GetxService {
       // Lead Detail screen instead (same route LeadAssigned's action_route already uses).
       Get.toNamed(AppRoutes.leadDetail, arguments: {'id': data['enquiry_id']});
     } else if (notificationType == 'broadcast') {
-      Get.find<AuthController>().tabIndex.value = AppTabs.rooms;
+      Get.find<AuthController>().switchToTab(AppTabs.rooms);
     } else {
       Get.toNamed(notificationType == 'plot' ? AppRoutes.myPlots : AppRoutes.myListings);
     }

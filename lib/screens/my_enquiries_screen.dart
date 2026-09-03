@@ -6,6 +6,7 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/enquiry_controller.dart';
+import '../controllers/tab_config_controller.dart';
 import '../models/enquiry_model.dart';
 import '../services/enquiry_hub_service.dart';
 import '../utils/app_date_format.dart';
@@ -38,16 +39,25 @@ class _MyEnquiriesScreenState extends State<MyEnquiriesScreen> with WidgetsBindi
     _ctrl.loadMyEnquiries();
     // EnquiryHubService is now connected app-wide from main_screen.dart's initState() — this
     // call is a harmless redundant no-op once that connection is already live, kept only as
-    // extra insurance in case it quietly died between then and this screen opening.
-    EnquiryHubService.to.connect();
+    // extra insurance in case it quietly died between then and this screen opening. Gated on
+    // Services being admin-active so it can't fight MainScreen's own connect/disconnect
+    // reconciliation (see _reconcileServicesHub) by blindly reconnecting a hub that's meant to
+    // stay dark while the tab is deactivated.
+    if (!Get.isRegistered<TabConfigController>() || Get.find<TabConfigController>().isServicesActive) {
+      EnquiryHubService.to.connect();
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Mobile OSes can silently suspend a socket while backgrounded without a
     // clean close event — MainScreen's own resume handler already reconnects this hub
-    // app-wide now; this is a redundant no-op safety net while this screen is active.
-    if (state == AppLifecycleState.resumed) EnquiryHubService.to.connect();
+    // app-wide now; this is a redundant no-op safety net while this screen is active. Same
+    // Services-active gate as initState above.
+    if (state == AppLifecycleState.resumed &&
+        (!Get.isRegistered<TabConfigController>() || Get.find<TabConfigController>().isServicesActive)) {
+      EnquiryHubService.to.connect();
+    }
   }
 
   @override

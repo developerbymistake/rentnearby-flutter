@@ -4,6 +4,7 @@ import '../models/agent_stats_model.dart';
 import '../models/enquiry_detail_model.dart';
 import '../models/enquiry_model.dart';
 import '../repositories/agent_repository.dart';
+import 'tab_config_controller.dart';
 import '../utils/app_toast.dart';
 import '../utils/network_retry.dart';
 
@@ -40,6 +41,17 @@ class AgentController extends GetxController {
   }
 
   Future<void> checkAgentStatus() async {
+    // Services (the vertical Agents belong to) may be admin-deactivated — wait for the real
+    // config rather than the fail-open default so a disabled tab's very first cold-start check
+    // never even reaches the backend (see TabConfigController.awaitLoaded's doc comment).
+    if (Get.isRegistered<TabConfigController>()) {
+      final tabConfig = Get.find<TabConfigController>();
+      await tabConfig.awaitLoaded();
+      if (!tabConfig.isServicesActive) {
+        isAgent.value = false;
+        return;
+      }
+    }
     try {
       final profile = await _repo.getMyAgentProfile();
       if (profile == null) {

@@ -9,6 +9,10 @@ class AppConstants {
   // link (opens the app if installed, else Play Store); websiteUrl/l/{type}/{slug} is the plain
   // text link, always the public website page with a manual Download CTA.
   static const String websiteUrl = 'https://bakhli.com';
+
+  // Social — Home's "Follow us" card. Username is the source of truth; both the app-scheme deep
+  // link and the web fallback (see home_screen.dart's _openInstagram) are built from it.
+  static const String instagramUsername = 'bakhli_app';
   // static const String baseUrl = 'http://192.168.1.33:5000/api/v1'; // Local dev
   // static const String baseUrl = 'http://10.0.2.2:5000/api/v1'; // Android emulator
 
