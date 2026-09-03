@@ -170,28 +170,30 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: _buildOwnerQuickActions(),
               ),
               const SizedBox(height: 15),
+              // Outside the Rooms/Plots toggle's content — _home.activeTab only switches the
+              // sections below, so this renders identically (once) regardless of which one is
+              // selected, rather than needing a copy per tab. Placed above "…near you" rather
+              // than at the very bottom of the page so it's actually seen on open, not scrolled
+              // past.
               FadeInUp(
                 duration: const Duration(milliseconds: 260),
                 delay: const Duration(milliseconds: 180),
+                from: 14,
+                child: _buildInstagramCard(),
+              ),
+              const SizedBox(height: 15),
+              FadeInUp(
+                duration: const Duration(milliseconds: 260),
+                delay: const Duration(milliseconds: 220),
                 from: 14,
                 child: _buildListingsSection(),
               ),
               const SizedBox(height: 15),
               FadeInUp(
                 duration: const Duration(milliseconds: 260),
-                delay: const Duration(milliseconds: 240),
-                from: 14,
-                child: _buildRecentlyAddedSection(),
-              ),
-              const SizedBox(height: 15),
-              // Outside the Rooms/Plots toggle's content — _home.activeTab only switches the
-              // sections above, so this renders identically (once) regardless of which one is
-              // selected, rather than needing a copy per tab.
-              FadeInUp(
-                duration: const Duration(milliseconds: 260),
                 delay: const Duration(milliseconds: 260),
                 from: 14,
-                child: _buildInstagramCard(),
+                child: _buildRecentlyAddedSection(),
               ),
               const SizedBox(height: 20),
             ],
@@ -1026,28 +1028,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 14),
               const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Follow us on Instagram',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      '@bakhli_app · Listings, tips & updates',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 11.5,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Follow us on Instagram',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
