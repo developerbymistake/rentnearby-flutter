@@ -130,6 +130,16 @@ class StorageService {
     return val == null ? null : DateTime.tryParse(val);
   }
 
+  // ── App-tabs cache — see AppConstants.appTabsCacheKey's doc comment ────────
+
+  static void saveAppTabsCache(List<Map<String, dynamic>> items) =>
+      _box.write(AppConstants.appTabsCacheKey, items);
+
+  static List<Map<String, dynamic>>? getAppTabsCache() {
+    final raw = _box.read<List>(AppConstants.appTabsCacheKey);
+    return raw?.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
   // ── Chat notification stacking ──────────────────────────────────────────
   // See AppConstants.chatStackedLinesKeyPrefix — persists recent messages (text + the time
   // each one arrived) per conversation across separate background-isolate invocations of the

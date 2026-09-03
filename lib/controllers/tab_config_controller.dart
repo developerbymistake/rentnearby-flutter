@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:get/get.dart';
 import '../config/app_tabs.dart';
+import '../models/app_tab_config_model.dart';
 import '../repositories/config_repository.dart';
 
 /// Single source of truth for the 5 bottom-nav tabs' admin-managed active/rename state
@@ -23,14 +24,36 @@ class TabConfigController extends GetxController {
 
   ConfigRepository get _repo => Get.find<ConfigRepository>();
 
+  @override
+  void onInit() {
+    super.onInit();
+    // Seed synchronously from the last-known-good persisted config, before the first frame
+    // ever builds — without this, a process relaunch that Android/Flutter reports as a plain
+    // "resume" (very common: the OS kills a backgrounded app for memory, then relaunches it,
+    // indistinguishable from a warm resume at the Dart level) would restart with every tab
+    // fail-open/active for the brief window before load()'s network response lands, visibly
+    // flashing a genuinely-deactivated tab before it disappears. This does NOT set `loaded` —
+    // it's a best-guess seed, not a confirmed answer, so awaitLoaded() callers still wait for
+    // the real fetch below.
+    final cached = _repo.getPersistedAppTabs();
+    if (cached != null && cached.isNotEmpty) _applyTabs(cached);
+    load();
+  }
+
   Future<void> load({bool forceRefresh = false}) async {
     final tabs = await _repo.getAppTabs(forceRefresh: forceRefresh);
     if (tabs.isEmpty) {
-      // Network/parse failure with nothing cached yet — leave every default (active) as-is;
-      // don't flip `loaded` so awaitLoaded() callers keep waiting for a real answer instead of
-      // racing ahead on a guess.
+      // Network/parse failure with nothing cached yet — leave every default (active, or
+      // whatever onInit()'s persisted-cache seed already applied) as-is; don't flip `loaded`
+      // so awaitLoaded() callers keep waiting for a real answer instead of racing ahead on a
+      // guess.
       return;
     }
+    _applyTabs(tabs);
+    loaded.value = true;
+  }
+
+  void _applyTabs(List<AppTabConfigModel> tabs) {
     for (final t in tabs) {
       _displayNames[t.tabKey] = t.displayName;
       if (t.isActive) {
@@ -40,7 +63,6 @@ class TabConfigController extends GetxController {
       }
     }
     servicesActive.value = isActive(AppTabKeys.services);
-    loaded.value = true;
   }
 
   bool isActive(String tabKey) => !_displayNames.containsKey(tabKey) || _activeKeys.contains(tabKey);

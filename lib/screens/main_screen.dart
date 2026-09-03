@@ -72,13 +72,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     Get.put(ConfigRepository());
-    // First network call of the session, deliberately — every tab-scoped controller/hub put
-    // below (Rooms/Plots repos are always needed by Home regardless, but Services' controllers
-    // and EnquiryHubService's connect() specifically wait on this via
-    // TabConfigController.awaitLoaded()/the servicesActive worker set up further down) needs to
-    // know which tabs are admin-active before it's safe to assume "yes, call the API".
+    // First network call of the session, deliberately — TabConfigController.onInit() fires
+    // load() itself the moment this Get.put() runs (after first synchronously seeding from
+    // its persisted last-known-good cache), before any tab-scoped controller/hub put below
+    // (Rooms/Plots repos are always needed by Home regardless, but Services' controllers and
+    // EnquiryHubService's connect() specifically wait on this via
+    // TabConfigController.awaitLoaded()/the servicesActive worker set up further down) is
+    // safe to assume "yes, call the API".
     _tabConfigCtrl = Get.put(TabConfigController());
-    _tabConfigCtrl.load();
     Get.put(ConfigController());
     _locationCtrl = Get.put(LocationController());
     // GlobalLocationGates (main.dart's builder:) sits above the Navigator and

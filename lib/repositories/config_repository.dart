@@ -1,5 +1,6 @@
 import '../models/app_tab_config_model.dart';
 import '../services/api_service.dart';
+import '../services/storage_service.dart';
 import '../utils/ttl_cache.dart';
 
 /// Thin TTL-caching wrapper around GET /config/listing-limits — anonymous,
@@ -84,9 +85,25 @@ class ConfigRepository {
       final result = data.map((e) => AppTabConfigModel.fromJson(e)).toList();
       _appTabsCache = result;
       _appTabsCacheTime = DateTime.now();
+      StorageService.saveAppTabsCache(
+        data.map((e) => Map<String, dynamic>.from(e as Map)).toList(),
+      );
       return result;
     } catch (_) {
       return _appTabsCache ?? [];
+    }
+  }
+
+  /// Synchronous — reads back the last successfully-persisted app-tabs response so
+  /// TabConfigController.onInit() can seed its state before the first frame, without waiting
+  /// on the network. Returns null if nothing has ever been persisted (first-ever launch).
+  List<AppTabConfigModel>? getPersistedAppTabs() {
+    final raw = StorageService.getAppTabsCache();
+    if (raw == null) return null;
+    try {
+      return raw.map((e) => AppTabConfigModel.fromJson(e)).toList();
+    } catch (_) {
+      return null;
     }
   }
 }

@@ -35,6 +35,13 @@ class AppConstants {
   // LocationController.)
   static const String districtsCacheKey = 'districts_cache';
   static const String citiesCacheKeyPrefix = 'cities_cache_';
+
+  // App-tabs master-table cache — seeds TabConfigController synchronously on process
+  // (re)start so a real "tab deactivated" state survives an Android-killed-and-relaunched
+  // "resume" instead of the fail-open default briefly showing every tab. No TTL/staleness
+  // key: TabConfigController always re-fetches over the network regardless, this exists
+  // purely to seed the pre-network-response window, not to skip a fetch.
+  static const String appTabsCacheKey = 'app_tabs_cache';
   static const Duration locationsCacheTtl = Duration(hours: 24);
 
   static const String registerTokenPath = '/notifications/register-token';
