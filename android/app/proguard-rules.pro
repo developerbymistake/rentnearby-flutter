@@ -5,15 +5,10 @@
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
 
-# GetX
--keep class com.google.** { *; }
-
 # Audio players
 -keep class xyz.luan.audioplayers.** { *; }
 
 # Kotlin
--keep class kotlin.** { *; }
--keep class kotlinx.** { *; }
 -dontwarn kotlin.**
 
 # Flutter Play Store deferred components (not used, suppress R8 warnings)
@@ -32,14 +27,14 @@
 # MapLibre GL — JNI bridge classes must not be renamed or removed by R8
 -keep class org.maplibre.** { *; }
 -keep interface org.maplibre.** { *; }
--keep class com.mapbox.mapboxsdk.** { *; }
--keep interface com.mapbox.mapboxsdk.** { *; }
 -dontwarn org.maplibre.**
--dontwarn com.mapbox.**
 
-# Razorpay — checkout SDK relies on reflection to invoke the host app's payment
-# callbacks; without this, minification silently breaks the checkout flow instead
-# of throwing a build error.
+# Razorpay checkout SDK relies on reflection to invoke the host app's payment
+# callbacks. NOTE: -optimizations is a global R8 directive with no package-scope
+# syntax — this disables the method/removal/parameter optimization pass for the
+# ENTIRE app, not just Razorpay, even though it's declared in this section.
+# Without it, minification silently breaks the checkout flow instead of throwing
+# a build error.
 -keep class com.razorpay.** {*;}
 -dontwarn com.razorpay.**
 -keepclasseswithmembers class * {
