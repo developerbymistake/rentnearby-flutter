@@ -96,8 +96,8 @@ List<TourStep> _buildHomeSteps() {
     TourStep(
       key: TourKeys.homeQuickActionLeads,
       icon: Icons.bar_chart_rounded,
-      title: 'Views & Leads',
-      body: 'See how many people viewed and enquired about your listings — coming soon.',
+      title: 'My Listings',
+      body: 'Jump straight to your posted rooms or plots, based on the active toggle.',
     ),
     TourStep(
       key: TourKeys.homeInstagramCard,
