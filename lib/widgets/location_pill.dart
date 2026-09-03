@@ -8,7 +8,7 @@ import 'location_switch_sheet.dart';
 /// copy (Explore Rooms/Plots privately, in sync only by luck), which let
 /// View All's copy silently fall behind when search-awareness was added to
 /// the other two. [accentColor] is the only thing that legitimately differs
-/// per screen (blue for Rooms, brown for Plots).
+/// per screen (blue for Rooms, coral for Plots).
 class LocationPill extends StatelessWidget {
   final Color accentColor;
   const LocationPill({super.key, required this.accentColor});

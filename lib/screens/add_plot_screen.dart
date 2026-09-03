@@ -50,8 +50,8 @@ class _AddPlotScreenState extends State<AddPlotScreen> with AddListingLocationMi
   final _picker = ImagePicker();
   int _step = 0;
 
-  static const _locationStyle = LocationStepStyle(
-    circleColorHex: '#92400E',
+  static final _locationStyle = LocationStepStyle(
+    circleColorHex: AppColors.plotHex,
     userDotColorHex: '#E53935',
     accentColor: AppColors.plot,
     addressSpinnerColor: AppColors.plot,

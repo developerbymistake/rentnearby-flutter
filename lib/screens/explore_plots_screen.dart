@@ -425,12 +425,12 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _precomputeCircleCache();
     await ctrl.addGeoJsonSource('radius-source', _circleCache[_radius]!);
     await ctrl.addFillLayer('radius-source', 'radius-fill',
-        FillLayerProperties(fillColor: '#92400e', fillOpacity: 0.06));
+        FillLayerProperties(fillColor: AppColors.plotHex, fillOpacity: 0.06));
     await ctrl.addLineLayer('radius-source', 'radius-glow',
-        LineLayerProperties(lineColor: '#92400e', lineWidth: 6.0,
+        LineLayerProperties(lineColor: AppColors.plotHex, lineWidth: 6.0,
             lineOpacity: 0.15, lineBlur: 3.0));
     await ctrl.addLineLayer('radius-source', 'radius-border',
-        LineLayerProperties(lineColor: '#92400e', lineWidth: 1.8,
+        LineLayerProperties(lineColor: AppColors.plotHex, lineWidth: 1.8,
             lineOpacity: 0.65));
   }
 
@@ -448,7 +448,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _nativeUserDot = await ctrl.addCircle(CircleOptions(
       geometry: loc,
       circleRadius: 8.0,
-      circleColor: '#92400E',
+      circleColor: AppColors.plotHex,
       circleOpacity: 1.0,
       circleStrokeColor: '#FFFFFF',
       circleStrokeWidth: 2.5,

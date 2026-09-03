@@ -8,11 +8,16 @@ class AppColors {
   static const Color accentLight = Color(0xFF38BDF8);
 
   // Plot palette — the Plots tab's own theme, distinct from Rooms' blue above.
-  static const Color plot = Color(0xFF92400E);      // Brown
-  static const Color plotDark = Color(0xFF78350F);  // Dark brown
+  static const Color plot = Color(0xFFE8623F);      // Coral
+  static const Color plotDark = Color(0xFFC2431F);  // Terracotta
+
+  /// Hex string for native MapLibre layer APIs, which require a String not a Color —
+  /// derived from [plot] so it can never drift out of sync with it.
+  static String get plotHex =>
+      '#${(plot.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
 
   // Services palette — the Services tab's own scaffold + feature-highlights
-  // tint, distinct from Rooms' blue and Plots' brown above.
+  // tint, distinct from Rooms' blue and Plots' coral above.
   static const Color servicesFeatureLight = Color(0xFFE3F0DE);
   static const Color servicesFeatureDark = Color(0xFFBFE0B2);
 
@@ -26,7 +31,7 @@ class AppColors {
   static const LinearGradient plotGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF92400E), Color(0xFF78350F)],
+    colors: [Color(0xFFE8623F), Color(0xFFC2431F)],
   );
 
   static const LinearGradient servicesFeatureGradient = LinearGradient(

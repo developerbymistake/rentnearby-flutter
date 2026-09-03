@@ -618,7 +618,7 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: BoxDecoration(
             // Neutral white card, color only in the badge/title/button — matches the filter
             // panel and View List pill elsewhere on this screen, instead of a tinted-per-tab
-            // background (Plot's amber tint was a different hue family than its brown accent).
+            // background (Plot's amber tint was a different hue family than its coral accent).
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,

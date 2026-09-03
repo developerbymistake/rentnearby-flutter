@@ -24,7 +24,7 @@ import '../widgets/insufficient_balance_sheet.dart';
 import '../widgets/listing_limit_reached_sheet.dart';
 import '../widgets/pulse_once.dart';
 
-const _kBrown = AppColors.plot;
+const _kPlotColor = AppColors.plot;
 
 class MyPlotsScreen extends StatefulWidget {
   const MyPlotsScreen({super.key});
@@ -139,7 +139,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
           unitLimitKey: 'plotLimit',
           unitSingular: 'plot',
           unitPlural: 'plots',
-          accentColor: _kBrown,
+          accentColor: _kPlotColor,
         );
         if (selection == null) return; // "Maybe Later" / dismissed
 
@@ -216,16 +216,16 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: _kBrown.withValues(alpha: 0.08),
+        color: _kPlotColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _kBrown.withValues(alpha: 0.2)),
+        border: Border.all(color: _kPlotColor.withValues(alpha: 0.2)),
       ),
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Icon(Icons.terrain_rounded, size: 13, color: _kBrown),
+        const Icon(Icons.terrain_rounded, size: 13, color: _kPlotColor),
         const SizedBox(width: 6),
         Text('$used / $cap plots used',
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                color: _kBrown, fontWeight: FontWeight.w600)),
+                color: _kPlotColor, fontWeight: FontWeight.w600)),
       ]),
     );
   }
@@ -353,7 +353,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         message: _ctrl.isSharing.value
             ? 'Sharing...'
             : (_ctrl.isTogglingActive.value ? 'Updating...' : 'Deleting...'),
-        indicatorColor: _kBrown,
+        indicatorColor: _kPlotColor,
         child: Column(
         children: [
           _buildHeader(),
@@ -368,7 +368,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
               if (plots.isEmpty) return _buildEmpty();
 
               return RefreshIndicator(
-                color: _kBrown,
+                color: _kPlotColor,
                 onRefresh: _refresh,
                 child: ListView.builder(
                   controller: _scrollCtrl,
@@ -378,7 +378,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                     if (i == plots.length) {
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: _kBrown)),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: _kPlotColor)),
                       );
                     }
                     return Padding(
@@ -449,15 +449,15 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: _kBrown),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: _kPlotColor),
                               )
                             : const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.add_rounded, size: 16, color: _kBrown),
+                                  Icon(Icons.add_rounded, size: 16, color: _kPlotColor),
                                   SizedBox(width: 4),
                                   Text('Add Plot',
-                                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _kBrown)),
+                                      style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _kPlotColor)),
                                 ],
                               ),
                       ),
@@ -475,8 +475,8 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
           Container(
             width: 90,
             height: 90,
-            decoration: BoxDecoration(color: _kBrown.withValues(alpha: 0.1), shape: BoxShape.circle),
-            child: const Icon(Iconsax.map, size: 40, color: _kBrown),
+            decoration: BoxDecoration(color: _kPlotColor.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: const Icon(Iconsax.map, size: 40, color: _kPlotColor),
           ),
           const SizedBox(height: 20),
           const Text('No plots yet',

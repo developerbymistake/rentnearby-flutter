@@ -11,8 +11,8 @@ class AddListingShortcutButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   // Defaults to the Room-tab blue gradient so the existing Rooms call site is unaffected — the
-  // Plots call site passes its own brown gradient (0xFF92400E -> 0xFF78350F, the same pair used
-  // everywhere else on the Plots tab) instead of inheriting Room's color.
+  // Plots call site passes AppColors.plotGradient (the same coral/terracotta pair used everywhere
+  // else on the Plots tab) instead of inheriting Room's color.
   final Gradient gradient;
 
   const AddListingShortcutButton({
