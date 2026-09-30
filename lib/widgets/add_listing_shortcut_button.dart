@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 
-/// "Find Nearest" / "Add my room" (or "Add my plot") shortcut — shared by the Rooms and Plots
+/// Floating pill shortcut ("Find Nearest", "Map view") — shared by the Rooms and Plots
 /// Explore screens so the CTA's color/border/shape stays byte-identical between both tabs (only
 /// label/icon/destination/gradient differ per caller). A standalone full pill, icon-then-label
 /// always — the caller's Positioned decides where it sits (both explore screens inset it to the

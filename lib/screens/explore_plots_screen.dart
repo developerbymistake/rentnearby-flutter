@@ -26,7 +26,8 @@ import '../widgets/nearest_control_bar.dart';
 import 'explore_location_search_mixin.dart';
 
 class ExplorePlotsScreen extends StatefulWidget {
-  const ExplorePlotsScreen({super.key});
+  const ExplorePlotsScreen({super.key, this.startNearest = false});
+  final bool startNearest;
   @override
   State<ExplorePlotsScreen> createState() => _ExplorePlotsScreenState();
 }
@@ -84,6 +85,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
   // nearbyPlots is simply empty because nothing has been requested yet, not because a
   // search came back with zero results.
   bool _hasLoadedOnce = false;
+  bool _startNearestPending = false;
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
@@ -296,6 +298,19 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       if (!mounted) return;
       if (_plotCtrl.nearestActive.value) _updateNearestFocus();
     });
+
+    _startNearestPending = widget.startNearest;
+    _mapActive = !mapShouldPause.value;
+    if (isSearchActive) {
+      _preSearchRadius = _radius;
+      _radius = AppConstants.radiusOptions.last;
+    }
+    if (_locationCtrl.effectiveDistrict != null && !mapShouldPause.value) {
+      _precomputeCircleCache();
+      _loadNearby(keepNearest: true);
+    } else {
+      _stale = true;
+    }
   }
 
   @override
@@ -313,15 +328,14 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _filterResetWorker?.dispose();
     _nearestActiveWorker?.dispose();
     _nearestFocusWorker?.dispose();
+    if (_plotCtrl.nearestActive.value) _plotCtrl.nearestActive.value = false;
+    _plotCtrl.clearNearest();
     _radarController.dispose();
     _nearestCircleController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
     _cameraIdleDebounce?.cancel();
     _audioPlayer.dispose();
-    if (_mapController != null && _nativeUserDot != null) {
-      _mapController!.removeCircle(_nativeUserDot!);
-    }
     super.dispose();
   }
 
@@ -417,6 +431,10 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     } else {
       _fitToRadius();
     }
+    if (_startNearestPending && _locationCtrl.effectiveDistrict != null) {
+      _startNearestPending = false;
+      _openNearestConfirm();
+    }
   }
 
   Future<void> _initNativeCircle() async {
@@ -480,8 +498,8 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     });
   }
 
-  void _loadNearby() {
-    if (_plotCtrl.nearestActive.value) _plotCtrl.nearestActive.value = false;
+  void _loadNearby({bool keepNearest = false}) {
+    if (!keepNearest && _plotCtrl.nearestActive.value) _plotCtrl.nearestActive.value = false;
     _reloadPending = true;
     _loadNearbyDebounceTimer?.cancel();
     _loadNearbyDebounceTimer = Timer(const Duration(milliseconds: 300), () async {
@@ -506,6 +524,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       setState(() {});
       final center = _searchCenter;
       await _plotCtrl.loadNearby(center.latitude, center.longitude, _radius, districtId);
+      if (!mounted) return;
       _radarController.stop();
       _radarController.reset();
       _buildMarkers();
@@ -978,10 +997,16 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                             // Fixed min-height guards against LocationPill collapsing to a
                             // zero-size SizedBox during the brief cold-start window before
                             // LocationController.effectiveDistrict resolves.
-                            SizedBox(
-                              height: 40,
-                              child: LocationPill(key: TourKeys.plotsLocationPill, accentColor: AppColors.plot),
-                            ),
+                            Row(children: [
+                              _buildBackButton(),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: SizedBox(
+                                  height: 40,
+                                  child: LocationPill(key: TourKeys.plotsLocationPill, accentColor: AppColors.plot),
+                                ),
+                              ),
+                            ]),
                             const SizedBox(height: 10),
                             Row(children: [
                               Expanded(child: KeyedSubtree(key: TourKeys.plotsRadiusChips, child: _buildRadiusChips())),
@@ -992,25 +1017,11 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                         ),
                       ),
                     ),
-                    // Current-location FAB sits right after the header, on the map, aligned
-                    // under Search — no overlap into the header at all. View List sits in the
-                    // same row, mirrored to the left edge (was centered in the shortcut-button
-                    // row below, between Find Nearest/Add my plot — moved here so that row can
-                    // be a clean 2-button pair aligned with the filter panel's own left/right
-                    // bounds).
                     Padding(
                       padding: const EdgeInsets.only(top: 12, left: 20, right: 20),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Obx(() {
-                            if (_plotCtrl.nearestActive.value || _filteredPlots.isEmpty) {
-                              return const SizedBox.shrink();
-                            }
-                            return _buildViewListButton();
-                          }),
-                          _buildLocationFab(),
-                        ],
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [_buildLocationFab()],
                       ),
                     ),
                   ],
@@ -1042,12 +1053,6 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                 );
               }),
 
-              // "Find Nearest" and "Add my plot" are a proper button pair, inset to the same
-              // left/right bounds as the filter panel directly below (was edge-flush tabs with
-              // View List floating between them — View List now lives up by the location FAB
-              // instead, see the header Row above). In nearest-carousel mode this slot hosts the
-              // Prev/Next control bar instead — each mode gets its own Positioned (not a shared
-              // one) so repositioning the control bar can never drag this row with it.
               Obx(() {
                 if (!_plotCtrl.nearestActive.value) {
                   return Positioned(
@@ -1057,18 +1062,17 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        Obx(() {
+                          if (_plotCtrl.nearestActive.value || _filteredPlots.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          return _buildViewListButton();
+                        }),
                         AddListingShortcutButton(
                           key: TourKeys.plotsFindNearest,
                           label: 'Find Nearest',
                           icon: Icons.travel_explore_rounded,
                           onTap: _openNearestConfirm,
-                          gradient: AppColors.plotGradient,
-                        ),
-                        AddListingShortcutButton(
-                          key: TourKeys.plotsAddShortcut,
-                          label: 'Add my plot',
-                          icon: Icons.landscape_rounded,
-                          onTap: () => Get.toNamed(AppRoutes.myPlots),
                           gradient: AppColors.plotGradient,
                         ),
                       ],
@@ -1109,6 +1113,31 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildBackButton() {
+    return GestureDetector(
+      onTap: () {
+        if (_plotCtrl.isLoadingNearest.value) return;
+        Navigator.of(context).maybePop();
+      },
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(Icons.chevron_left_rounded, color: AppColors.plot, size: 24),
       ),
     );
   }

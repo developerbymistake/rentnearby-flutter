@@ -4,7 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_shadows.dart';
 
-/// ViewAllScreen's grid card — full-bleed photo, price/area scrim overlay,
+/// Landing screen grid card — full-bleed photo, price/area scrim overlay,
 /// eye icon (view details) and a Chat action. Photo/placeholder handling
 /// mirrors home_screen.dart's `_HomeListingCard`, restructured into the
 /// grid layout approved in the 39.4/39.8 mockups.
@@ -54,7 +54,7 @@ class ListingGridCard extends StatelessWidget {
                           imageUrl: thumbnailUrl!,
                           fit: BoxFit.cover,
                           // Grid column is at most 190 (maxCrossAxisExtent in
-                          // view_all_screen.dart) — cap decode to that on an
+                          // explore_landing_screen.dart) — cap decode to that on an
                           // infinite-scroll grid instead of caching full-size
                           // source photos per item.
                           memCacheWidth: (190 * MediaQuery.of(context).devicePixelRatio).round(),

@@ -251,6 +251,7 @@ class ListingController extends GetxController {
       myListings.removeWhere((l) => l.id == id);
       nearbyListings.removeWhere((l) => l.id == id);
       AppToast.success('Listing removed successfully.');
+      listingStatusChangedTrigger.value++;
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not delete listing.'));

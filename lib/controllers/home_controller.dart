@@ -14,6 +14,7 @@ class HomeRoomModel {
   final String? cityName;
   final String districtName;
   final String furnishedStatus;
+  final DateTime? createdAt;
 
   HomeRoomModel({
     required this.id,
@@ -24,6 +25,7 @@ class HomeRoomModel {
     this.cityName,
     required this.districtName,
     required this.furnishedStatus,
+    this.createdAt,
   });
 
   factory HomeRoomModel.fromJson(Map<String, dynamic> json) => HomeRoomModel(
@@ -35,6 +37,7 @@ class HomeRoomModel {
     cityName: json['cityName'] as String?,
     districtName: json['districtName'] as String? ?? '',
     furnishedStatus: json['furnishedStatus'] as String? ?? 'None',
+    createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
   );
 }
 
@@ -48,6 +51,7 @@ class HomePlotModel {
   final String? thumbnailUrl;
   final String? cityName;
   final String districtName;
+  final DateTime? createdAt;
 
   HomePlotModel({
     required this.id,
@@ -58,6 +62,7 @@ class HomePlotModel {
     this.thumbnailUrl,
     this.cityName,
     required this.districtName,
+    this.createdAt,
   });
 
   factory HomePlotModel.fromJson(Map<String, dynamic> json) => HomePlotModel(
@@ -69,7 +74,18 @@ class HomePlotModel {
     thumbnailUrl: json['thumbnailUrl'] as String?,
     cityName: json['cityName'] as String?,
     districtName: json['districtName'] as String? ?? '',
+    createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
   );
+}
+
+class HomeRecentItem {
+  final HomeRoomModel? room;
+  final HomePlotModel? plot;
+
+  const HomeRecentItem.room(HomeRoomModel this.room) : plot = null;
+  const HomeRecentItem.plot(HomePlotModel this.plot) : room = null;
+
+  DateTime? get createdAt => room?.createdAt ?? plot?.createdAt;
 }
 
 /// Home tab's data source. Loads 5 most-recent (district-scoped "for you"
@@ -80,7 +96,7 @@ class HomeController extends GetxController {
 
   // "Recently added" — same district scope as recentRooms/recentPlots above,
   // but sorted newest-first via the existing /home/{rooms|plots}/browse
-  // endpoint (the same one ViewAllController already calls) instead of
+  // endpoint instead of
   // whatever ranking /home/rooms and /home/plots use for "X for you". Kept
   // as separate lists/loading flags so the two sections never get confused.
   final recentlyAddedRooms = <HomeRoomModel>[].obs;
@@ -90,9 +106,6 @@ class HomeController extends GetxController {
   final plotsLoading = true.obs;
   final recentlyAddedRoomsLoading = true.obs;
   final recentlyAddedPlotsLoading = true.obs;
-
-  /// 'rooms' | 'plots' — which rail the toggle is currently showing.
-  final activeTab = 'rooms'.obs;
 
   Worker? _districtWorker;
   Worker? _plotRefreshWorker;
@@ -154,7 +167,24 @@ class HomeController extends GetxController {
     loadHomeData(district.id);
   }
 
-  void setActiveTab(String tab) => activeTab.value = tab;
+  List<HomeRecentItem> recentMixed({
+    bool rooms = true,
+    bool plots = true,
+    int count = 6,
+  }) {
+    final all = <HomeRecentItem>[
+      if (rooms) ...recentlyAddedRooms.map(HomeRecentItem.room),
+      if (plots) ...recentlyAddedPlots.map(HomeRecentItem.plot),
+    ];
+    all.sort((a, b) {
+      final x = a.createdAt, y = b.createdAt;
+      if (x == null && y == null) return 0;
+      if (x == null) return 1;
+      if (y == null) return -1;
+      return y.compareTo(x);
+    });
+    return all.take(count).toList();
+  }
 
   Future<void> loadHomeData(String districtId) async {
     if (_loadedDistrictId == districtId) return;
@@ -187,14 +217,14 @@ class HomeController extends GetxController {
       // district, not a relabeled copy of "X for you".
       _loadList(
         path: '/home/rooms/recent',
-        params: {'limit': 5},
+        params: {'limit': 10},
         target: recentlyAddedRooms,
         loading: recentlyAddedRoomsLoading,
         parse: HomeRoomModel.fromJson,
       ),
       _loadList(
         path: '/home/plots/recent',
-        params: {'limit': 5},
+        params: {'limit': 10},
         target: recentlyAddedPlots,
         loading: recentlyAddedPlotsLoading,
         parse: HomePlotModel.fromJson,

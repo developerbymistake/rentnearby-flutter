@@ -237,6 +237,7 @@ class PlotController extends GetxController {
       myPlots.removeWhere((p) => p.id == id);
       nearbyPlots.removeWhere((p) => p.id == id);
       AppToast.success('Plot removed successfully.');
+      listingStatusChangedTrigger.value++;
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not delete plot.'));

@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import '../config/app_colors.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/plot_controller.dart';
-import '../controllers/view_all_controller.dart';
+import '../controllers/explore_landing_controller.dart';
 import 'gradient_button.dart';
 import 'selectable_chip.dart';
 
@@ -22,17 +22,17 @@ const _kSortChipPadding = EdgeInsets.symmetric(vertical: 13, horizontal: 10);
 /// the in-sheet draft without closing; Apply commits + closes.
 ///
 /// Takes the controller directly (not a snapshot of its values) so it can
-/// watch for an external reset (location change, Rooms/Plots toggle flip)
+/// watch for an external reset (nav-bar chip reset)
 /// while open and dismiss itself instead of silently showing/committing a
 /// stale draft — same defensive pattern LocationSwitchSheet already uses
 /// against LocationController.refreshOnResume() clearing browsingDistrict
 /// out from under it.
 class FilterSortSheet extends StatefulWidget {
-  final ViewAllController controller;
+  final ExploreLandingController controller;
 
   const FilterSortSheet({super.key, required this.controller});
 
-  static Future<void> show(BuildContext context, {required ViewAllController controller}) {
+  static Future<void> show(BuildContext context, {required ExploreLandingController controller}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -85,7 +85,7 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
     super.dispose();
   }
 
-  bool get _isRooms => widget.controller.activeType.value == ViewAllListingType.rooms;
+  bool get _isRooms => widget.controller.isRooms;
   Color get _activeColor => _isRooms ? AppColors.primary : _kPlotColor;
   Gradient get _headerGradient => _isRooms ? AppColors.primaryGradient : _kPlotGradient;
 

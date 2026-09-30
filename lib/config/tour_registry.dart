@@ -64,34 +64,28 @@ class TourDefinition {
 List<TourStep> _buildHomeSteps() {
   return [
     TourStep(
-      key: TourKeys.homeToggle,
-      icon: Iconsax.arrow_swap_horizontal,
-      title: 'Rooms & Plots are separate',
-      body: 'Switch between the two anytime — each has its own listings, pricing and posting limit.',
-    ),
-    TourStep(
       key: TourKeys.homeManageListingsCard,
       icon: Iconsax.building,
       title: 'List your own place',
-      body: 'Got a room or plot to rent out? List it here and reach genuine tenants in minutes.',
+      body: 'Got a room or plot to rent out? This card slides between the two — tap it to list yours and reach genuine tenants in minutes.',
     ),
     TourStep(
-      key: TourKeys.homeQuickActionAdd,
+      key: TourKeys.homeQuickActionAddRoom,
       icon: Icons.add_rounded,
-      title: 'Post in one tap',
-      body: "Quickly add a new room or plot listing — this always matches whichever tab you're on.",
+      title: 'Add a room',
+      body: 'Post a new room listing in one tap.',
     ),
     TourStep(
-      key: TourKeys.homeQuickActionFind,
-      icon: Icons.search_rounded,
-      title: 'Jump to search',
-      body: 'Straight to the Rooms or Plots map, whichever matches this toggle.',
+      key: TourKeys.homeQuickActionAddPlot,
+      icon: Icons.add_location_alt_rounded,
+      title: 'Add a plot',
+      body: 'Post a new plot listing in one tap.',
     ),
     TourStep(
       key: TourKeys.homeQuickActionLeads,
       icon: Icons.bar_chart_rounded,
       title: 'My Listings',
-      body: 'Jump straight to your posted rooms or plots, based on the active toggle.',
+      body: 'Jump straight to the rooms and plots you have posted.',
     ),
     TourStep(
       key: TourKeys.homeInstagramCard,
@@ -109,19 +103,70 @@ List<TourStep> _buildHomeSteps() {
       key: TourKeys.homeRoomsNavIcon,
       icon: Iconsax.home,
       title: 'Looking for a room?',
-      body: 'Tap here anytime to search rooms nearby.',
+      body: 'Tap here anytime to browse rooms near you.',
     ),
     TourStep(
       key: TourKeys.homePlotsNavIcon,
       icon: Icons.landscape_rounded,
       title: 'Looking for a plot?',
-      body: 'Tap here anytime to search plots nearby.',
+      body: 'Tap here anytime to browse plots near you.',
     ),
     TourStep(
       key: TourKeys.homeProfileNavIcon,
       icon: Iconsax.user,
       title: 'Your account lives here',
       body: 'Manage your profile, listings, wallet and settings from here.',
+    ),
+  ];
+}
+
+List<TourStep> _buildLandingSteps({required bool rooms}) {
+  final noun = rooms ? 'room' : 'plot';
+  final nouns = rooms ? 'rooms' : 'plots';
+  return [
+    TourStep(
+      key: rooms ? TourKeys.roomsLandingSearch : TourKeys.plotsLandingSearch,
+      icon: Iconsax.search_normal,
+      title: 'Search a specific place',
+      body: 'Tap the search icon to look up an area, locality or landmark and see $nouns around it.',
+    ),
+    TourStep(
+      key: rooms ? TourKeys.roomsLandingLocation : TourKeys.plotsLandingLocation,
+      icon: Iconsax.location,
+      title: 'Switch your city',
+      body: 'Tap to change your district or city — the list below follows it, shared across Rooms and Plots.',
+    ),
+    TourStep(
+      key: rooms ? TourKeys.roomsLandingTiles : TourKeys.plotsLandingTiles,
+      icon: Icons.grid_view_rounded,
+      title: 'Quick actions',
+      body: 'Add your own $noun, manage yours, open the map or find the nearest listings — all from this row.',
+    ),
+    TourStep(
+      key: rooms ? TourKeys.roomsLandingFilters : TourKeys.plotsLandingFilters,
+      icon: Iconsax.filter,
+      title: 'Narrow it down',
+      body: rooms
+          ? 'Filter by room type — 1BHK, PG, Shop and more — right from here.'
+          : 'Filter by plot type right from here to find exactly what you need.',
+    ),
+    TourStep(
+      key: rooms ? TourKeys.roomsLandingSort : TourKeys.plotsLandingSort,
+      icon: Icons.tune_rounded,
+      title: 'Filter & Sort',
+      body: 'Sort by newest or ${rooms ? 'price' : 'area'}, and refine results further.',
+    ),
+    TourStep(
+      key: rooms ? TourKeys.roomsLandingList : TourKeys.plotsLandingList,
+      icon: Icons.view_agenda_rounded,
+      title: 'Listings near you',
+      body: 'Scroll to keep browsing — more $nouns load automatically. Tap any card for full details.',
+    ),
+    TourStep(
+      key: rooms ? TourKeys.roomsLandingMapPill : TourKeys.plotsLandingMapPill,
+      icon: Icons.map_rounded,
+      title: 'Prefer a map?',
+      body: 'Switch to the map to see every $noun pinned around you.',
     ),
   ];
 }
@@ -152,116 +197,12 @@ final Map<int, TourDefinition> tourRegistry = {
     tabIndex: AppTabs.rooms,
     storageKey: AppConstants.tourRoomsSeenKey,
     label: 'Rooms Tour',
-    stepsBuilder: () => [
-      TourStep(
-        key: TourKeys.roomsLocationPill,
-        icon: Iconsax.location,
-        title: 'This is your area',
-        body: 'Tap to manually switch your district or city — pick from a list, sets where you browse from.',
-      ),
-      TourStep(
-        key: TourKeys.roomsRadiusChips,
-        icon: Iconsax.radar,
-        title: 'Search by radius',
-        body: 'Pick 1, 6 or 12 km — the map redraws instantly around your location. Starting a place search temporarily widens this to 12 km.',
-      ),
-      TourStep(
-        key: TourKeys.roomsSearchToggle,
-        icon: Iconsax.search_normal,
-        title: 'Or search a specific place',
-        body: 'Type an area, locality or landmark to jump straight there — input-based, different from the area picker above.',
-      ),
-      // Order below is the actual on-screen top-to-bottom sweep: header (location/radius/
-      // search above) -> ViewList+FAB row (right under the header) -> the Find Nearest/Add
-      // button pair -> filter panel (screen bottom). ViewList/FAB moved up here from after
-      // AddShortcut/FilterPanel to match where they actually render post-redesign — visiting
-      // them last used to jump the spotlight back up to the top of the screen.
-      TourStep(
-        key: TourKeys.roomsViewListButton,
-        icon: Icons.format_list_bulleted_rounded,
-        title: 'Prefer a list?',
-        body: 'Switch to a scrollable list of everything currently pinned on the map.',
-      ),
-      TourStep(
-        key: TourKeys.roomsLocationFab,
-        icon: Icons.my_location_rounded,
-        title: 'Lost your spot?',
-        body: 'Tap to snap the map back to your current GPS location.',
-      ),
-      TourStep(
-        key: TourKeys.roomsFindNearest,
-        icon: Icons.travel_explore_rounded,
-        title: 'Nothing in this radius?',
-        body: 'Find Nearest instantly shows the closest listings anyway, even outside your selected radius.',
-      ),
-      TourStep(
-        key: TourKeys.roomsAddShortcut,
-        icon: Iconsax.add_circle,
-        title: 'List your own room',
-        body: 'Tap here to manage and post your rooms — one more tap from there starts a new listing.',
-      ),
-      TourStep(
-        key: TourKeys.roomsFilterPanel,
-        icon: Iconsax.filter,
-        title: 'Narrow it down',
-        body: 'Filter by room type — 1BHK, PG, Shop and more — right from here.',
-      ),
-    ],
+    stepsBuilder: () => _buildLandingSteps(rooms: true),
   ),
   AppTabs.plots: TourDefinition(
     tabIndex: AppTabs.plots,
     storageKey: AppConstants.tourPlotsSeenKey,
     label: 'Plots Tour',
-    stepsBuilder: () => [
-      TourStep(
-        key: TourKeys.plotsLocationPill,
-        icon: Iconsax.location,
-        title: 'This is your area',
-        body: 'Tap to manually switch your district or city — same picker as Rooms, shared across both tabs.',
-      ),
-      TourStep(
-        key: TourKeys.plotsRadiusChips,
-        icon: Iconsax.radar,
-        title: 'Search plots by radius',
-        body: 'Same idea as Rooms, but scoped only to Plots — its own map, own results.',
-      ),
-      TourStep(
-        key: TourKeys.plotsSearchToggle,
-        icon: Iconsax.search_normal,
-        title: 'Or search a specific place',
-        body: 'Type an area, locality or landmark to jump straight there — input-based, unlike the picker above.',
-      ),
-      // See the matching comment in the Rooms tour above — same reorder reasoning.
-      TourStep(
-        key: TourKeys.plotsViewListButton,
-        icon: Icons.format_list_bulleted_rounded,
-        title: 'Prefer a list?',
-        body: 'Switch to a scrollable list of everything currently pinned on the map.',
-      ),
-      TourStep(
-        key: TourKeys.plotsLocationFab,
-        icon: Icons.my_location_rounded,
-        title: 'Lost your spot?',
-        body: 'Tap to snap the map back to your current GPS location.',
-      ),
-      TourStep(
-        key: TourKeys.plotsFindNearest,
-        icon: Icons.travel_explore_rounded,
-        title: 'Nothing in this radius?',
-        body: 'Find Nearest instantly shows the closest listings anyway, even outside your selected radius.',
-      ),
-      TourStep(
-        key: TourKeys.plotsAddShortcut,
-        icon: Iconsax.add_circle,
-        title: 'List your own plot',
-        body: 'Post a plot for rent or sale directly from here, right from this map.',
-      ),
-      TourStep(
-        key: TourKeys.plotsFilterPanel,
-        icon: Iconsax.filter,
-        title: 'Narrow it down',
-        body: 'Filter by plot type right from here to find exactly what you need.',
-      ),
-    ],
+    stepsBuilder: () => _buildLandingSteps(rooms: false),
   ),
 };

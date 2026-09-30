@@ -37,12 +37,21 @@ mixin ExploreLocationSearchMixin<T extends StatefulWidget> on State<T> {
     await _applyPickedPlace(picked);
   }
 
+  // Map screens are now pushed/popped on demand, so this State can be disposed
+  // mid-resolve — release the shared resolving flag or the search toggle stays disabled.
+  bool _abandonResolve(int generation) {
+    if (!_locSearchCtrl.isCurrentSearchGeneration(generation)) return true;
+    if (mounted) return false;
+    _locSearchCtrl.searchResolving.value = false;
+    return true;
+  }
+
   Future<void> _applyPickedPlace(PlaceResult picked) async {
     final myGeneration = _locSearchCtrl.beginSearchResolve();
     try {
       final ctx = await _locSearchCtrl.resolveDistrictAt(
           picked.latLng.latitude, picked.latLng.longitude);
-      if (!mounted || !_locSearchCtrl.isCurrentSearchGeneration(myGeneration)) return;
+      if (_abandonResolve(myGeneration)) return;
       final nearestCity = ctx.nearestCity;
       if (nearestCity == null) {
         _locSearchCtrl.searchResolving.value = false;
@@ -52,11 +61,11 @@ mixin ExploreLocationSearchMixin<T extends StatefulWidget> on State<T> {
       _locSearchCtrl.beginSearchOverride(
           ctx.district, nearestCity, picked.latLng, picked.name);
     } on DistrictNotFoundException {
-      if (!mounted || !_locSearchCtrl.isCurrentSearchGeneration(myGeneration)) return;
+      if (_abandonResolve(myGeneration)) return;
       _locSearchCtrl.searchResolving.value = false;
       AppToast.error("This area isn't in a serviceable location yet.");
     } catch (_) {
-      if (!mounted || !_locSearchCtrl.isCurrentSearchGeneration(myGeneration)) return;
+      if (_abandonResolve(myGeneration)) return;
       _locSearchCtrl.searchResolving.value = false;
       AppToast.error('Could not search that location. Please try again.');
     }

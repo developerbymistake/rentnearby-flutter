@@ -61,7 +61,20 @@ route table: `MainScreen` renders them as an `IndexedStack` of `TabNavigator` wi
 keyed via `lib/navigation/tab_keys.dart`. This isolates keyboard/layout/MediaQuery changes per tab.
 Deep/detail screens (listing detail, add listing, payment, chat conversation, etc.) still go through
 the global `Get.toNamed` navigator on top of everything, unaffected by which tab is active. "My
-Rooms"/"My Plots" are pushed named routes, not tabs (reached via a header button on Rooms/Plots).
+Rooms"/"My Plots" are pushed named routes, not tabs (reached via a tile on the Rooms/Plots landing).
+
+**Rooms/Plots/Home tab roots**: the Rooms and Plots tab roots are `ExploreLandingScreen(kind: ExploreKind)`
+(`lib/screens/explore_landing_screen.dart`), a list-first landing: gradient header with `LocationPill` + a
+search bar (opens `LocationSearchSheet` via `ExploreLocationSearchMixin`), four tiles (Map view / Add / Nearest /
+My), type chips, Filter & Sort (`FilterSortSheet`) and a 2-column infinite-scroll grid of `ListingGridCard`.
+Each kind has one persistent `ExploreLandingController` (`Get.put` with `tag: kind.name` by the screen, deleted in
+its `dispose`): keyset pagination via `nextCursor` from `GET /home/{rooms|plots}/browse` (page-based for price/area
+sorts), page size 20, first page kept in memory and refetched only when older than ~2 min, on
+`listingPostedTrigger`/`plotPostedTrigger`/`listingStatusChangedTrigger`, on a real district/city change, or on
+pull-to-refresh — never on `exploreRefreshTrigger` (bumped on every nav tap). It loads lazily, only once its tab is
+active. The map (`ExploreScreen`/`ExplorePlotsScreen`) is a second view pushed on that tab's nested navigator via
+`ExploreNavigation.openMap`. There is no View All screen or route any more: Home's "View all" calls
+`switchToTab(rooms|plots)`. Home has no Rooms|Plots toggle; its owner CTA is an auto-sliding room/plot carousel.
 
 Because `IndexedStack` never disposes inactive tabs, a `showModalBottomSheet` opened from a tab-root
 screen's own `context` (e.g. `LocationSwitchSheet`, `LocationSearchSheet`, the listing/plot detail

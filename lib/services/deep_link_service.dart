@@ -8,6 +8,7 @@ import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import 'api_service.dart';
+import 'explore_navigation.dart';
 import 'storage_service.dart';
 
 /// `type` -> where to resolve a `/go/{type}/{...slugSegments}` payload. `slugSegments` is how
@@ -187,14 +188,14 @@ class DeepLinkService extends GetxService {
       final data = res['data'];
       if (data is! Map) return;
 
-      // "Explore" isn't a pushed route — it's the Rooms/Plots tab-root screen itself, so
-      // opening the right listing means switching to that tab, not navigating anywhere.
+      // Switch to the Rooms/Plots tab, then push its map so the shared pin is visible.
       Get.find<AuthController>().switchToTab(config.tabIndex);
       final lat = (data['latitude'] as num?)?.toDouble();
       final lng = (data['longitude'] as num?)?.toDouble();
       if (lat != null && lng != null) {
         unawaited(_applySearchPin(lat, lng, data['address'] as String?));
       }
+      unawaited(ExploreNavigation.openMap(config.tabIndex));
     } catch (_) {
       // Unknown/soft-deleted slug (404) or a network failure — nothing to show for a route
       // the user didn't explicitly navigate to inside the app, so fail silently rather than

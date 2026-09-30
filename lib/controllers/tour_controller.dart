@@ -5,6 +5,7 @@ import '../config/app_tour_state.dart';
 import '../config/tour_registry.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
+import '../navigation/tab_keys.dart';
 import '../services/storage_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/rx_safe_call.dart';
@@ -33,14 +34,19 @@ import '../utils/tour_target_ready.dart';
 /// done" — only Skip and Next-past-the-final-step mark a tour permanently
 /// seen (see _teardown's markSeen). Everything else, including exhausting
 /// the bounded retry in _searchForReadyStep, leaves the seen flag untouched
-/// so the next natural trigger gets a fresh attempt.
+/// so the next natural trigger gets a fresh attempt — except a tour that never
+/// showed a single step, which is marked seen after _emptyAttemptsBeforeSeen
+/// failed attempts in a process.
 class TourController extends GetxController {
   TourDefinition? _activeTour;
   int _retryAttempt = 0;
   int _generation = 0;
+  List<int> _plan = [];
+  final Map<String, int> _emptyAttempts = {};
 
   static const int _maxFrameRetries = 2;
   static const int _totalRetryBudget = 4;
+  static const int _emptyAttemptsBeforeSeen = 3;
   static const Duration _delayedRetryGap = Duration(milliseconds: 500);
   static const Duration _preTourPause = Duration(milliseconds: 1000);
 
@@ -171,6 +177,7 @@ class TourController extends GetxController {
     if (Get.currentRoute != AppRoutes.main) return;
 
     _activeTour = tour;
+    _plan = [];
     final intro = tour.introContent;
     if (intro != null) {
       _showDialog(intro);
@@ -200,7 +207,7 @@ class TourController extends GetxController {
   void next() {
     final tour = _activeTour;
     if (tour == null) return;
-    if (tourStepIndex.value >= tour.steps.length - 1) {
+    if (_plan.isEmpty || tourStepIndex.value >= _plan.length - 1) {
       // Already on the physically final step — this is the user finishing.
       final outro = tour.outroContent;
       if (outro != null) {
@@ -268,18 +275,43 @@ class TourController extends GetxController {
       _teardown(markSeen: false);
       return;
     }
+    // The Rooms/Plots map is pushed on the tab's own Navigator, which the
+    // route check above can't see — the landing targets stay mounted (stale)
+    // underneath it.
+    if (tabKeys[tour.tabIndex].currentState?.canPop() ?? false) {
+      _teardown(markSeen: false);
+      return;
+    }
 
-    for (var i = fromIndex; i < tour.steps.length; i++) {
-      if (isTourTargetReady(tour.steps[i].key)) {
-        tourTotalSteps.value = tour.steps.length;
+    if (_plan.isEmpty) {
+      final ready = <int>[
+        for (var i = 0; i < tour.steps.length; i++)
+          if (isTourTargetReady(tour.steps[i].key)) i,
+      ];
+      if (ready.isNotEmpty) {
+        _plan = ready;
+        tourTotalSteps.value = ready.length;
         currentTourLabel.value = tour.label;
-        _showStepAt(i);
+        _showStepAt(0);
         return;
+      }
+    } else {
+      for (var p = fromIndex; p < _plan.length; p++) {
+        if (isTourTargetReady(tour.steps[_plan[p]].key)) {
+          _showStepAt(p);
+          return;
+        }
       }
     }
 
     if (_retryAttempt >= _totalRetryBudget) {
-      _teardown(markSeen: false);
+      if (_plan.isEmpty) {
+        final failures = (_emptyAttempts[tour.storageKey] ?? 0) + 1;
+        _emptyAttempts[tour.storageKey] = failures;
+        _teardown(markSeen: failures >= _emptyAttemptsBeforeSeen);
+      } else {
+        _teardown(markSeen: false);
+      }
       return;
     }
     _retryAttempt++;
@@ -297,10 +329,22 @@ class TourController extends GetxController {
     // call path to _showStepAt forgets to check tab match upstream (see _searchForReadyStep's
     // identical check above, which is currently this function's only caller).
     if (_auth.tabIndex.value != tour.tabIndex) return;
-    tourDialogContent.value = null; // dialog and spotlight are mutually exclusive
-    tourStepIndex.value = idx;
-    currentTourStep.value = tour.steps[idx];
-    tourInProgress.value = true;
+    final step = tour.steps[_plan[idx]];
+    final generation = _generation;
+    void apply() {
+      if (generation != _generation || _activeTour != tour) return;
+      if (_auth.tabIndex.value != tour.tabIndex) return;
+      tourDialogContent.value = null; // dialog and spotlight are mutually exclusive
+      tourStepIndex.value = idx;
+      currentTourStep.value = step;
+      tourInProgress.value = true;
+    }
+
+    if (ensureTourTargetVisible(step.key)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => apply());
+    } else {
+      apply();
+    }
   }
 
   void _teardown({required bool markSeen}) {
@@ -312,6 +356,7 @@ class TourController extends GetxController {
 
     final tour = _activeTour;
     _activeTour = null;
+    _plan = [];
     _retryAttempt = 0;
 
     try {

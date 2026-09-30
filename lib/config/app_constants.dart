@@ -25,9 +25,9 @@ class AppConstants {
 
   static const String introCarouselSeenKey = 'intro_carousel_seen';
 
-  static const String tourHomeSeenKey = 'tour_home_seen';
-  static const String tourRoomsSeenKey = 'tour_rooms_seen';
-  static const String tourPlotsSeenKey = 'tour_plots_seen';
+  static const String tourHomeSeenKey = 'tour_home_seen_v2';
+  static const String tourRoomsSeenKey = 'tour_rooms_seen_v2';
+  static const String tourPlotsSeenKey = 'tour_plots_seen_v2';
 
   // District-switch feature — cached reference data for the location picker.
   // (Not the user's manual browsing choice — that is in-memory only, see

@@ -4,7 +4,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
@@ -28,7 +27,8 @@ import '../widgets/nearest_control_bar.dart';
 import 'explore_location_search_mixin.dart';
 
 class ExploreScreen extends StatefulWidget {
-  const ExploreScreen({super.key});
+  const ExploreScreen({super.key, this.startNearest = false});
+  final bool startNearest;
   @override
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
@@ -87,6 +87,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   // nearbyListings is simply empty because nothing has been requested yet, not because a
   // search came back with zero results.
   bool _hasLoadedOnce = false;
+  bool _startNearestPending = false;
   final _audioPlayer = AudioPlayer();
   int _revealedCount = 0;
   Timer? _revealTimer;
@@ -302,6 +303,19 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (!mounted) return;
       if (_listingCtrl.nearestActive.value) _updateNearestFocus();
     });
+
+    _startNearestPending = widget.startNearest;
+    _mapActive = !mapShouldPause.value;
+    if (isSearchActive) {
+      _preSearchRadius = _radius;
+      _radius = AppConstants.radiusOptions.last;
+    }
+    if (_locationCtrl.effectiveDistrict != null && !mapShouldPause.value) {
+      _precomputeCircleCache();
+      _loadNearby(keepNearest: true);
+    } else {
+      _stale = true;
+    }
   }
 
   @override
@@ -319,15 +333,14 @@ class _ExploreScreenState extends State<ExploreScreen>
     _filterResetWorker?.dispose();
     _nearestActiveWorker?.dispose();
     _nearestFocusWorker?.dispose();
+    if (_listingCtrl.nearestActive.value) _listingCtrl.nearestActive.value = false;
+    _listingCtrl.clearNearest();
     _radarController.dispose();
     _nearestCircleController.dispose();
     _revealTimer?.cancel();
     _loadNearbyDebounceTimer?.cancel();
     _cameraIdleDebounce?.cancel();
     _audioPlayer.dispose();
-    if (_mapController != null && _nativeUserDot != null) {
-      _mapController!.removeCircle(_nativeUserDot!);
-    }
     super.dispose();
   }
 
@@ -474,6 +487,10 @@ class _ExploreScreenState extends State<ExploreScreen>
     } else {
       _fitToRadius();
     }
+    if (_startNearestPending && _locationCtrl.effectiveDistrict != null) {
+      _startNearestPending = false;
+      _openNearestConfirm();
+    }
   }
 
   void _onCameraIdle() {
@@ -494,8 +511,8 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   // ── Listings load ─────────────────────────────────────────────────────────
 
-  void _loadNearby() {
-    if (_listingCtrl.nearestActive.value) _listingCtrl.nearestActive.value = false;
+  void _loadNearby({bool keepNearest = false}) {
+    if (!keepNearest && _listingCtrl.nearestActive.value) _listingCtrl.nearestActive.value = false;
     _reloadPending = true;
     _loadNearbyDebounceTimer?.cancel();
     _loadNearbyDebounceTimer =
@@ -522,6 +539,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       final center = _searchCenter;
       await _listingCtrl.loadNearby(
           center.latitude, center.longitude, _radius, districtId);
+      if (!mounted) return;
       _radarController.stop();
       _radarController.reset();
       _buildMarkers();
@@ -1032,10 +1050,16 @@ class _ExploreScreenState extends State<ExploreScreen>
                         // Fixed min-height guards against LocationPill collapsing to a
                         // zero-size SizedBox during the brief cold-start window before
                         // LocationController.effectiveDistrict resolves.
-                        SizedBox(
-                          height: 40,
-                          child: LocationPill(key: TourKeys.roomsLocationPill, accentColor: AppColors.primary),
-                        ),
+                        Row(children: [
+                          _buildBackButton(),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: SizedBox(
+                              height: 40,
+                              child: LocationPill(key: TourKeys.roomsLocationPill, accentColor: AppColors.primary),
+                            ),
+                          ),
+                        ]),
                         const SizedBox(height: 10),
                         Row(children: [
                           Expanded(child: KeyedSubtree(key: TourKeys.roomsRadiusChips, child: _buildRadiusChips())),
@@ -1046,24 +1070,11 @@ class _ExploreScreenState extends State<ExploreScreen>
                     ),
                   ),
                 ),
-                // Current-location FAB sits right after the header, on the map, aligned under
-                // Search — no overlap into the header at all. View List sits in the same row,
-                // mirrored to the left edge (was centered in the shortcut-button row below,
-                // between Find Nearest/Add my room — moved here so that row can be a clean
-                // 2-button pair aligned with the filter panel's own left/right bounds).
                 Padding(
                   padding: const EdgeInsets.only(top: 12, left: 20, right: 20),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Obx(() {
-                        if (_listingCtrl.nearestActive.value || _filteredListings.isEmpty) {
-                          return const SizedBox.shrink();
-                        }
-                        return _buildViewListButton();
-                      }),
-                      _buildLocationFab(),
-                    ],
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [_buildLocationFab()],
                   ),
                 ),
               ],
@@ -1095,12 +1106,6 @@ class _ExploreScreenState extends State<ExploreScreen>
             );
           }),
 
-          // "Find Nearest" and "Add my room" are a proper button pair, inset to the same
-          // left/right bounds as the filter panel directly below (was edge-flush tabs with
-          // View List floating between them — View List now lives up by the location FAB
-          // instead, see the header Row above). In nearest-carousel mode this slot hosts the
-          // Prev/Next control bar instead — each mode gets its own Positioned (not a shared
-          // one) so repositioning the control bar can never drag this row with it.
           Obx(() {
             if (!_listingCtrl.nearestActive.value) {
               return Positioned(
@@ -1110,17 +1115,17 @@ class _ExploreScreenState extends State<ExploreScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    Obx(() {
+                      if (_listingCtrl.nearestActive.value || _filteredListings.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return _buildViewListButton();
+                    }),
                     AddListingShortcutButton(
                       key: TourKeys.roomsFindNearest,
                       label: 'Find Nearest',
                       icon: Icons.travel_explore_rounded,
                       onTap: _openNearestConfirm,
-                    ),
-                    AddListingShortcutButton(
-                      key: TourKeys.roomsAddShortcut,
-                      label: 'Add my room',
-                      icon: Iconsax.home,
-                      onTap: () => Get.toNamed(AppRoutes.myListings),
                     ),
                   ],
                 ),
@@ -1165,6 +1170,31 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   // ── UI widgets ────────────────────────────────────────────────────────────
+
+  Widget _buildBackButton() {
+    return GestureDetector(
+      onTap: () {
+        if (_listingCtrl.isLoadingNearest.value) return;
+        Navigator.of(context).maybePop();
+      },
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(Icons.chevron_left_rounded, color: AppColors.primary, size: 24),
+      ),
+    );
+  }
 
   Widget _buildSearchToggleButton() {
     // Obx-wrapped: isSearchActive/searchResolving now read shared

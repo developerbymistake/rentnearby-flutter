@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import '../config/app_tabs.dart';
 import '../screens/home_screen.dart';
-import '../screens/explore_screen.dart';
-import '../screens/explore_plots_screen.dart';
+import '../models/explore_kind.dart';
+import '../screens/explore_landing_screen.dart';
 import '../screens/profile_screen.dart';
 import 'tab_keys.dart';
 
 Widget _rootScreen(int tabId) {
   switch (tabId) {
     case AppTabs.home: return const HomeScreen();
-    case AppTabs.rooms: return const ExploreScreen();
-    case AppTabs.plots: return const ExplorePlotsScreen();
+    case AppTabs.rooms: return const ExploreLandingScreen(kind: ExploreKind.rooms);
+    case AppTabs.plots: return const ExploreLandingScreen(kind: ExploreKind.plots);
     case AppTabs.profile: return const ProfileScreen();
     default: return const SizedBox.shrink();
   }

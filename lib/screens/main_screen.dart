@@ -307,6 +307,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             Get.find<PlotController>().isLoadingNearest.value) {
           return;
         }
+        final tabNav = tabKeys[_auth.tabIndex.value].currentState;
+        if (tabNav != null && tabNav.canPop()) {
+          tabNav.maybePop();
+          return;
+        }
         if (_auth.tabIndex.value != AppTabs.home) {
           _auth.switchToTab(AppTabs.home);
         } else {
