@@ -392,6 +392,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     NearestConfirmSheet.show(
       context,
       itemLabel: 'plots',
+      isPlot: true,
       onConfirm: () => _plotCtrl.loadNearest(center.latitude, center.longitude, district.id),
     );
   }
@@ -1100,6 +1101,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                         if (idx < total - 1) _plotCtrl.nearestFocusIndex.value = idx + 1;
                       },
                       onCancel: () => _plotCtrl.nearestActive.value = false,
+                      isPlot: true,
                     ),
                   ),
                 );
@@ -1412,68 +1414,21 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     final plots = _plotCtrl.nearestPlots;
     final idx = _plotCtrl.nearestFocusIndex.value;
     if (idx < 0 || idx >= plots.length) return const SizedBox.shrink();
-    final p = plots[idx];
-    return GestureDetector(
+    return _nearbyRow(plots[idx], elevated: true);
+  }
+
+  Widget _nearbyRow(NearbyPlotModel p, {bool elevated = false}) {
+    return NearbyItemRow(
+      thumbnailUrl: p.thumbnailUrl,
+      tag: 'FOR SALE',
+      title: '${p.plotType} Plot',
+      subtitle: '${p.distanceKm.toStringAsFixed(1)} km away',
+      caption: 'PLOT AREA',
+      value: p.areaDisplay,
+      isPlot: true,
+      placeholderIcon: Icons.landscape_rounded,
+      elevated: elevated,
       onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id, 'distanceKm': p.distanceKm}),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: p.thumbnailUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: p.thumbnailUrl!,
-                      width: 56,
-                      height: 56,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      width: 56,
-                      height: 56,
-                      decoration: const BoxDecoration(gradient: AppColors.plotGradient),
-                      child: const Icon(Icons.landscape_rounded, color: Colors.white70, size: 24),
-                    ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    p.plotType,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${p.distanceKm.toStringAsFixed(1)} km away',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: AppColors.plot.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                p.areaDisplay,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.plot),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1586,15 +1541,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                       itemCount: items.length,
                       itemBuilder: (_, i) {
                         final p = items[i];
-                        return NearbyItemRow(
-                          thumbnailUrl: p.thumbnailUrl,
-                          title: p.plotType,
-                          subtitle: '${p.distanceKm.toStringAsFixed(1)} km away',
-                          trailingText: p.areaDisplay,
-                          trailingColor: AppColors.plot,
-                          placeholderIcon: Icons.landscape_rounded,
-                          onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id, 'distanceKm': p.distanceKm}),
-                        );
+                        return _nearbyRow(p);
                       },
                     );
                   }),

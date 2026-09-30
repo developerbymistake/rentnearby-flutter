@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
 import '../config/app_colors.dart';
+import '../config/app_shadows.dart';
 
 class AppToast {
   static void success(String message) => _show(message, ToastificationType.success, Alignment.topCenter);
@@ -9,6 +10,46 @@ class AppToast {
   static void warning(String message) => _show(message, ToastificationType.warning, Alignment.topCenter);
   static void info(String message, {Alignment alignment = Alignment.topCenter, bool compact = false}) =>
       _show(message, ToastificationType.info, alignment, compact: compact);
+
+  static void noData(String title, String subtitle, {required Color accent}) {
+    toastification.showCustom(
+      context: Get.overlayContext,
+      alignment: Alignment.bottomCenter,
+      autoCloseDuration: const Duration(seconds: 4),
+      builder: (context, holder) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.divider),
+            boxShadow: AppShadows.premium(accent, alpha: 0.12, blur: 18, offset: const Offset(0, 6)),
+          ),
+          child: Row(children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(color: accent.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(10)),
+              child: Icon(Icons.search_off_rounded, size: 20, color: accent),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark, decoration: TextDecoration.none)),
+                const SizedBox(height: 2),
+                Text(subtitle,
+                    style: const TextStyle(
+                        fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w400, color: AppColors.textLight, decoration: TextDecoration.none)),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
 
   // App-branded accent per severity, not toastification's own generic defaults — info in
   // particular uses AppColors.primary (the app's real navy) instead of an unrelated blue, so a

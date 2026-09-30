@@ -10,6 +10,7 @@ class NearestControlBar extends StatelessWidget {
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback onCancel;
+  final bool isPlot;
 
   const NearestControlBar({
     super.key,
@@ -18,6 +19,7 @@ class NearestControlBar extends StatelessWidget {
     required this.onPrev,
     required this.onNext,
     required this.onCancel,
+    this.isPlot = false,
   });
 
   @override
@@ -42,6 +44,7 @@ class NearestControlBar extends StatelessWidget {
             label: 'Prev',
             iconLeading: true,
             enabled: current > 0,
+            isPlot: isPlot,
             onTap: onPrev,
           ),
           const SizedBox(width: 6),
@@ -50,6 +53,7 @@ class NearestControlBar extends StatelessWidget {
             label: 'Next',
             iconLeading: false,
             enabled: current < total - 1,
+            isPlot: isPlot,
             onTap: onNext,
           ),
           Expanded(
@@ -64,7 +68,7 @@ class NearestControlBar extends StatelessWidget {
                     width: active ? 16 : 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      gradient: active ? AppColors.primaryGradient : null,
+                      gradient: active ? AppColors.gradientFor(isPlot) : null,
                       color: active ? null : AppColors.divider,
                       borderRadius: BorderRadius.circular(3),
                     ),
@@ -112,6 +116,7 @@ class _NavButton extends StatelessWidget {
   final String label;
   final bool iconLeading;
   final bool enabled;
+  final bool isPlot;
   final VoidCallback onTap;
 
   const _NavButton({
@@ -119,6 +124,7 @@ class _NavButton extends StatelessWidget {
     required this.label,
     required this.iconLeading,
     required this.enabled,
+    required this.isPlot,
     required this.onTap,
   });
 
@@ -142,13 +148,13 @@ class _NavButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          gradient: enabled ? AppColors.primaryGradient : null,
+          gradient: enabled ? AppColors.gradientFor(isPlot) : null,
           color: enabled ? null : AppColors.surface,
           borderRadius: BorderRadius.circular(11),
           boxShadow: enabled
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.32),
+                    color: AppColors.accentFor(isPlot).withValues(alpha: 0.32),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),

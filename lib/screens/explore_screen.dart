@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -15,6 +14,7 @@ import '../controllers/auth_controller.dart';
 import '../config/app_map_state.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
+import '../models/browse_item.dart';
 import '../models/listing_model.dart';
 import '../navigation/tour_keys.dart';
 import '../widgets/add_listing_shortcut_button.dart';
@@ -1149,6 +1149,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                     if (idx < total - 1) _listingCtrl.nearestFocusIndex.value = idx + 1;
                   },
                   onCancel: () => _listingCtrl.nearestActive.value = false,
+                  isPlot: false,
                 ),
               ),
             );
@@ -1482,68 +1483,22 @@ class _ExploreScreenState extends State<ExploreScreen>
     final listings = _listingCtrl.nearestListings;
     final idx = _listingCtrl.nearestFocusIndex.value;
     if (idx < 0 || idx >= listings.length) return const SizedBox.shrink();
-    final l = listings[idx];
-    return GestureDetector(
+    return _nearbyRow(listings[idx], elevated: true);
+  }
+
+  Widget _nearbyRow(NearbyListingModel l, {bool elevated = false}) {
+    return NearbyItemRow(
+      thumbnailUrl: l.thumbnailUrl,
+      tag: 'FOR RENT',
+      title: '${l.roomTypeName ?? 'Room'} Room',
+      subtitle: '${BrowseItem.furnishedLabel(l.furnishedStatus)} · ${l.distanceKm.toStringAsFixed(1)} km',
+      caption: 'MONTHLY RENT',
+      value: l.priceMonthly != null ? BrowseItem.inr(l.priceMonthly!) : 'On request',
+      unit: l.priceMonthly != null ? '/mo' : '',
+      isPlot: false,
+      placeholderIcon: Icons.home_rounded,
+      elevated: elevated,
       onTap: () => Get.toNamed(AppRoutes.listingDetail, arguments: {'id': l.id, 'distanceKm': l.distanceKm}),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: l.thumbnailUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: l.thumbnailUrl!,
-                      width: 56,
-                      height: 56,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      width: 56,
-                      height: 56,
-                      decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-                      child: const Icon(Icons.home_rounded, color: Colors.white70, size: 24),
-                    ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l.roomTypeName ?? 'Room',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${l.furnishedStatus} · ${l.distanceKm.toStringAsFixed(1)} km away',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                l.shortPrice,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1663,15 +1618,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                       itemCount: items.length,
                       itemBuilder: (_, i) {
                         final l = items[i];
-                        return NearbyItemRow(
-                          thumbnailUrl: l.thumbnailUrl,
-                          title: l.roomTypeName ?? 'Room',
-                          subtitle: '${l.furnishedStatus} · ${l.distanceKm.toStringAsFixed(1)} km away',
-                          trailingText: l.shortPrice,
-                          trailingColor: AppColors.primary,
-                          placeholderIcon: Icons.home_rounded,
-                          onTap: () => Get.toNamed(AppRoutes.listingDetail, arguments: {'id': l.id, 'distanceKm': l.distanceKm}),
-                        );
+                        return _nearbyRow(l);
                       },
                     );
                   }),

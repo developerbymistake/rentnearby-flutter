@@ -1,5 +1,4 @@
 import 'package:animate_do/animate_do.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -22,6 +21,7 @@ import '../services/add_listing_flow.dart';
 import '../widgets/home_owner_carousel.dart';
 import '../widgets/icon_motion.dart';
 import '../widgets/listing_grid_card.dart';
+import '../widgets/nearby_item_row.dart';
 
 const _kInstagramGradient = LinearGradient(
   begin: Alignment.topLeft,
@@ -746,12 +746,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _recentRow(HomeRecentItem item) {
     final r = item.room;
     if (r != null) {
-      return _HomeListingRow(
+      return NearbyItemRow(
         thumbnailUrl: r.thumbnailUrl,
-        priceLabel: '${BrowseItem.inr(r.priceMonthly)}/mo',
-        title: '${r.roomTypeName ?? 'Room'} · ${BrowseItem.furnishedLabel(r.furnishedStatus)}',
-        locationLabel: r.districtName,
-        isNew: true,
+        tag: 'FOR RENT',
+        title: '${r.roomTypeName ?? 'Room'} Room',
+        subtitle: r.districtName,
+        caption: 'MONTHLY RENT',
+        value: BrowseItem.inr(r.priceMonthly),
+        unit: '/mo',
+        isPlot: false,
+        placeholderIcon: Icons.home_rounded,
         onTap: () => Get.toNamed(AppRoutes.listingDetail, arguments: {'id': r.id}),
       );
     }
@@ -759,12 +763,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final area = p.areaValue == p.areaValue.roundToDouble()
         ? p.areaValue.toStringAsFixed(0)
         : p.areaValue.toStringAsFixed(1);
-    return _HomeListingRow(
+    return NearbyItemRow(
       thumbnailUrl: p.thumbnailUrl,
-      priceLabel: '$area ${p.areaUnit}',
-      title: p.plotTypeName ?? 'Plot',
-      locationLabel: p.districtName,
-      isNew: true,
+      tag: 'FOR SALE',
+      title: '${p.plotTypeName ?? 'Plot'} Plot',
+      subtitle: p.districtName,
+      caption: 'PLOT AREA',
+      value: '$area ${p.areaUnit}'.trim(),
+      isPlot: true,
       placeholderIcon: Icons.landscape_rounded,
       onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id}),
     );
@@ -849,7 +855,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 height: 80,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.cardBg,
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
@@ -860,168 +866,3 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
-/// "Recently added"'s vertical row layout — same chat-conversation-row card
-/// treatment (white, rounded, soft shadow), thumbnail left, price right.
-/// Display-only (no onTap) — matches _buildRoomsRail/_buildPlotsRail's
-/// clickable: false for this section.
-class _HomeListingRow extends StatelessWidget {
-  final String? thumbnailUrl;
-  final String priceLabel;
-  final String title;
-  final String locationLabel;
-  final bool isNew;
-  final IconData placeholderIcon;
-  final VoidCallback onTap;
-
-  const _HomeListingRow({
-    required this.thumbnailUrl,
-    required this.priceLabel,
-    required this.title,
-    required this.locationLabel,
-    this.isNew = false,
-    this.placeholderIcon = Icons.home_rounded,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: AppShadows.premium(
-          AppColors.primary,
-          alpha: 0.10,
-          blur: 12,
-          offset: const Offset(0, 4),
-        ),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Stack(
-              children: [
-                SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: thumbnailUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: thumbnailUrl!,
-                          fit: BoxFit.cover,
-                          memCacheWidth:
-                              (60 * MediaQuery.of(context).devicePixelRatio)
-                                  .round(),
-                          memCacheHeight:
-                              (60 * MediaQuery.of(context).devicePixelRatio)
-                                  .round(),
-                          placeholder: (_, __) =>
-                              Container(color: AppColors.surface),
-                          errorWidget: (_, __, ___) => _placeholder(placeholderIcon),
-                        )
-                      : _placeholder(placeholderIcon),
-                ),
-                if (isNew)
-                  Positioned(
-                    bottom: 3,
-                    right: 3,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1.5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.success,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'NEW',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 6.5,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    const Icon(
-                      Iconsax.location,
-                      size: 10,
-                      color: AppColors.primaryLight,
-                    ),
-                    const SizedBox(width: 3),
-                    Expanded(
-                      child: Text(
-                        locationLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 10.5,
-                          color: AppColors.textLight,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            priceLabel,
-            maxLines: 1,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 12.5,
-              fontWeight: FontWeight.w800,
-              color: AppColors.gold,
-            ),
-          ),
-          const SizedBox(width: 6),
-          const Icon(Iconsax.arrow_right_3, size: 16, color: AppColors.primary),
-        ],
-      ),
-      ),
-    );
-  }
-
-  static Widget _placeholder(IconData icon) => Container(
-    color: AppColors.surface,
-    child: Center(
-      child: Icon(icon, size: 22, color: AppColors.primaryLight),
-    ),
-  );
-}
-

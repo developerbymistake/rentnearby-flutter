@@ -6,18 +6,20 @@ import '../config/app_shadows.dart';
 class NearestConfirmSheet extends StatelessWidget {
   final String itemLabel;
   final VoidCallback onConfirm;
-  const NearestConfirmSheet({super.key, required this.itemLabel, required this.onConfirm});
+  final bool isPlot;
+  const NearestConfirmSheet({super.key, required this.itemLabel, required this.onConfirm, this.isPlot = false});
 
   static Future<void> show(
     BuildContext context, {
     required String itemLabel,
     required VoidCallback onConfirm,
+    bool isPlot = false,
   }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => NearestConfirmSheet(itemLabel: itemLabel, onConfirm: onConfirm),
+      builder: (_) => NearestConfirmSheet(itemLabel: itemLabel, onConfirm: onConfirm, isPlot: isPlot),
     );
   }
 
@@ -25,12 +27,13 @@ class NearestConfirmSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppColors.accentFor(isPlot);
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: AppShadows.premium(
-          AppColors.primaryLight,
+          accent,
           alpha: 0.28,
           blur: 20,
           offset: const Offset(0, -6),
@@ -51,8 +54,8 @@ class NearestConfirmSheet extends StatelessWidget {
               children: [
                 Container(
                   width: 60, height: 60,
-                  decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
-                  child: const Icon(Icons.travel_explore_rounded, size: 30, color: AppColors.primary),
+                  decoration: BoxDecoration(color: accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
+                  child: Icon(Icons.travel_explore_rounded, size: 30, color: accent),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -77,7 +80,7 @@ class NearestConfirmSheet extends StatelessWidget {
                       onConfirm();
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: accent,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

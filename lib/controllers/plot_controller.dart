@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/widgets.dart';
 import 'package:get/get.dart' hide FormData, MultipartFile;
 import '../config/app_constants.dart';
 import '../models/city_model.dart';
@@ -9,6 +8,7 @@ import '../repositories/plot_repository.dart';
 import '../repositories/wallet_repository.dart';
 import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
+import '../config/app_colors.dart';
 import '../utils/app_toast.dart';
 import '../utils/dio_error_mapper.dart';
 import '../utils/network_retry.dart';
@@ -101,7 +101,7 @@ class PlotController extends GetxController {
       final items =
           (res['data']['items'] as List).map((e) => NearbyPlotModel.fromJson(e)).toList();
       if (items.isEmpty) {
-        AppToast.info('No plots available in this district yet.', alignment: Alignment.center, compact: true);
+        AppToast.noData('No plots in this district yet', 'Try another city from the header', accent: AppColors.plot);
         return;
       }
       nearestPlots.value = items;
