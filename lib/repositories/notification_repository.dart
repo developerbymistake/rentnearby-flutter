@@ -2,7 +2,7 @@ import '../models/notification_model.dart';
 import '../services/api_service.dart';
 
 /// Thin wrapper around the consumer-facing notification inbox endpoints (/notifications) —
-/// deliberately uncached, mirrors AgentRepository. Separate from NotificationService, which owns
+/// deliberately uncached. Separate from NotificationService, which owns
 /// only FCM/local-notification plumbing (device-token register/unregister, tap routing) — this
 /// class owns the persisted inbox itself.
 class NotificationRepository {

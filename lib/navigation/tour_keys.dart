@@ -15,7 +15,6 @@ class TourKeys {
   static final homeActionMenu = GlobalKey();
   static final homeRoomsNavIcon = GlobalKey();
   static final homePlotsNavIcon = GlobalKey();
-  static final homeServicesNavIcon = GlobalKey();
   static final homeProfileNavIcon = GlobalKey();
 
   // Rooms
@@ -37,17 +36,4 @@ class TourKeys {
   static final plotsFindNearest = GlobalKey();
   static final plotsViewListButton = GlobalKey();
   static final plotsLocationFab = GlobalKey();
-
-  // Services
-  static final servicesEnquiriesButton = GlobalKey();
-
-  // One stable GlobalKey per service category, lazily created and cached —
-  // the category list is genuinely dynamic (admin-configurable, no fixed
-  // count), so these can't be static fields like the ones above. The map
-  // itself must persist across rebuilds (it's a static field, never
-  // recreated), while individual keys are created once per category id and
-  // reused thereafter.
-  static final Map<String, GlobalKey> _serviceCategoryKeys = {};
-  static GlobalKey serviceCategoryKey(String categoryId) =>
-      _serviceCategoryKeys.putIfAbsent(categoryId, () => GlobalKey());
 }

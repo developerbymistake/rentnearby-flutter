@@ -16,11 +16,6 @@ class AppColors {
   static String get plotHex =>
       '#${(plot.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
 
-  // Services palette — the Services tab's own scaffold + feature-highlights
-  // tint, distinct from Rooms' blue and Plots' coral above.
-  static const Color servicesFeatureLight = Color(0xFFE3F0DE);
-  static const Color servicesFeatureDark = Color(0xFFBFE0B2);
-
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -32,18 +27,6 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [Color(0xFFE8623F), Color(0xFFC2431F)],
-  );
-
-  static const LinearGradient servicesFeatureGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFE3F0DE), Color(0xFFBFE0B2)],
-  );
-
-  // Service Detail "See Your Journey" CTA. Deliberately no begin/end params (matches the exact
-  // angle already approved in the mockup, which also omits them).
-  static const LinearGradient amberGlowGradient = LinearGradient(
-    colors: [Color(0xFFFBBF24), Color(0xFFEA580C)],
   );
 
   static const LinearGradient cardGradient = LinearGradient(
@@ -63,7 +46,6 @@ class AppColors {
   static const Color surface = Color(0xFFEFF6FF);
   static const Color cardBg = Color(0xFFFFFFFF);
   static const Color scaffoldBg = Color(0xFFF8FAFF);
-  static const Color servicesScaffoldBg = Color(0xFFF7F1E8);
   static const Color chatBg = Color(0xFFE7ECF3);
 
   // Text

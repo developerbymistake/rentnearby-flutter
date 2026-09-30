@@ -3,13 +3,12 @@ import '../models/notification_model.dart';
 import '../repositories/notification_repository.dart';
 
 /// Owns the Home-screen bell's unread badge and the notification inbox list. [unreadCount] is
-/// fetched once per session at onInit() (mirrors AgentController.checkAgentStatus's own
-/// onInit()-fetches-once pattern) and again on app resume (see main_screen.dart) — that REST
+/// fetched once per session at onInit() and again on app resume (see main_screen.dart) — that REST
 /// anchor alone already covers cold-start/reopen-after-close correctly and is unchanged.
-/// [applyLiveNotification] is the separate foreground-live path: EnquiryHubService's
-/// session-wide "NotificationReceived" push now reaches this controller unconditionally for
-/// every event (not just Agent lead-assignment), so the badge/list update immediately instead
-/// of waiting for the next resume or a manual pull-to-refresh.
+/// [applyLiveNotification] is the separate foreground-live path: NotificationHubService's
+/// session-wide "NotificationReceived" push reaches this controller for every event, so the
+/// badge/list update immediately instead of waiting for the next resume or a manual
+/// pull-to-refresh.
 class NotificationController extends GetxController {
   final unreadCount = 0.obs;
   final notifications = <NotificationModel>[].obs;
@@ -78,8 +77,7 @@ class NotificationController extends GetxController {
     final idx = notifications.indexWhere((n) => n.id == id);
     if (idx == -1 || notifications[idx].isRead) return;
 
-    // Optimistic — flip locally and decrement the badge immediately, matching
-    // AgentController.updateLeadStatus's shape; the API call is fire-and-forget best-effort
+    // Optimistic — flip locally and decrement the badge immediately, the API call is fire-and-forget best-effort
     // since MarkNotificationRead is idempotent server-side regardless of retry/failure.
     notifications[idx] = notifications[idx].copyWith(isRead: true);
     if (unreadCount.value > 0) unreadCount.value--;
@@ -101,13 +99,11 @@ class NotificationController extends GetxController {
     } catch (_) {}
   }
 
-  /// Driven by EnquiryHubService's live "NotificationReceived" push — called unconditionally for
-  /// every event regardless of [Map] `type` (see EnquiryHubService's own comment on why this
-  /// differs from AgentController.applyLeadAssigned's type-gated call from the same handler).
+  /// Driven by NotificationHubService's live "NotificationReceived" push — called unconditionally for
+  /// every event regardless of [Map] `type`.
   /// unreadCount is incremented unconditionally — the badge should always reflect a genuinely
   /// new push — but the row is only prepended into [notifications] when the list is both already
-  /// loaded AND fully paginated (`!hasMoreNotifications`). Unlike myLeads (unpaginated), this
-  /// list is page-cursor-based (`_notificationsPage`), so inserting locally while further pages
+  /// loaded AND fully paginated (`!hasMoreNotifications`). This list is page-cursor-based (`_notificationsPage`), so inserting locally while further pages
   /// are still unfetched would desync the in-memory list from the next loadMoreNotifications()
   /// page fetch (a duplicate or skipped row) — safe only once every page is already in memory,
   /// same as this codebase's other server-anchored counts falling back to "next real fetch picks

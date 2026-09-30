@@ -191,7 +191,7 @@ class NotificationService extends GetxService {
         return;
       }
 
-      // Every other push (enquiry status, Agent lead-assignment/admin broadcast, report-filed)
+      // Every other push (admin broadcast, report-filed)
       // is a combined Notification+data payload — the OS auto-renders it while
       // backgrounded/killed, but NOT while foregrounded, and onMessage is the only delivery
       // path in that state. Without this branch the user gets zero signal at all.
@@ -248,7 +248,7 @@ class NotificationService extends GetxService {
     await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
       _generalChannelId,
       _generalChannelName,
-      description: 'Status updates, leads, and other alerts',
+      description: 'Status updates and other alerts',
       importance: Importance.high,
     ));
 
@@ -328,9 +328,6 @@ class NotificationService extends GetxService {
     AppRoutes.listingReports,
     AppRoutes.reportDetail,
     AppRoutes.myFiledReports,
-    AppRoutes.enquiryDetail,
-    AppRoutes.myLeads,
-    AppRoutes.leadDetail,
     AppRoutes.notifications,
     // Chat moved off the tab bar onto pushed routes — both need to be here so a second
     // notification arriving while the user is on Chats List or mid-conversation pops back to
@@ -384,8 +381,7 @@ class NotificationService extends GetxService {
   }
 
   // Broadcast still lands on the Rooms tab (AppTabs.rooms, backed by the class
-  // ExploreScreen/explore_screen.dart — an unrelated older "Explore" naming from that
-  // screen's map/search UI, not the AppTabs.services local-services tab). Room/Plot
+  // ExploreScreen/explore_screen.dart). Room/Plot
   // membership notifications push the My Rooms/My Plots route (no longer tabs).
   void _routeForNotificationData(Map<String, dynamic> data) {
     final isChatMessage = data['conversation_id'] != null;
@@ -401,7 +397,7 @@ class NotificationService extends GetxService {
     // and what Get.arguments to pass, so no per-type branch is needed here or ever again for a
     // future notification category built on that system. Checked first; falls through to the
     // legacy per-type branches below only for pushes that predate this system (chat, reports,
-    // enquiry_status, broadcast, room/plot membership).
+    // broadcast, room/plot membership).
     final actionRoute = data['action_route'];
     if (actionRoute != null) {
       Map<String, dynamic>? actionArguments;
@@ -423,16 +419,6 @@ class NotificationService extends GetxService {
         'listingType': reportListingType ?? 'Room',
         'title': data['listing_title'] ?? 'your listing',
       });
-    } else if (notificationType == 'enquiry_status') {
-      // Normal FCM notification block (see EnquiryStatusPushWorkerService/FcmService.SendAsync)
-      // — unlike chat, no data-only custom rendering needed here. 'id' matches the argument key
-      // EnquiryDetailScreen itself reads (see my_enquiries_screen.dart's own Get.toNamed call).
-      Get.toNamed(AppRoutes.enquiryDetail, arguments: {'id': data['enquiry_id']});
-    } else if (notificationType == 'agent_lead_status') {
-      // Same payload shape as enquiry_status above, but the recipient is a co-assigned agent, not
-      // the submitting consumer — GetEnquiryDetail would 403 them, so this routes to their own
-      // Lead Detail screen instead (same route LeadAssigned's action_route already uses).
-      Get.toNamed(AppRoutes.leadDetail, arguments: {'id': data['enquiry_id']});
     } else if (notificationType == 'broadcast') {
       Get.find<AuthController>().switchToTab(AppTabs.rooms);
     } else {

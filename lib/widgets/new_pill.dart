@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 
-/// Shared "NEW" pill — used by NotificationsScreen (unread) and MyEnquiriesScreen (recently
-/// created/updated), matching every other pill in those two screens (tinted background +
+/// Shared "NEW" pill — used by NotificationsScreen (unread).
+/// matching the other notification pills (tinted background +
 /// solid-color text, not a solid fill).
 class NewPill extends StatelessWidget {
   const NewPill({super.key});

@@ -4,43 +4,25 @@ import 'package:app_links/app_links.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:play_install_referrer/play_install_referrer.dart';
-import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
 
-/// How a resolved `/go/{type}/{...slugSegments}` payload gets shown once its by-slug lookup
-/// returns data — either switch to a tab-root screen (Rooms/Plots Explore), or push a normal
-/// route by id (Service Detail, which isn't a tab-root itself).
-enum _DeepLinkResolution { tabSwitch, routePush }
-
-/// `type` -> where/how to resolve a `/go/{type}/{...slugSegments}` payload. `slugSegments` is
-/// how many path segments after `type` make up the slug — 1 for Room/Plot (a flat slug), 2 for
-/// Services (categorySlug + serviceSlug, since Service.Slug is only unique per-category).
+/// `type` -> where to resolve a `/go/{type}/{...slugSegments}` payload. `slugSegments` is how
+/// many path segments after `type` make up the slug (1 for Room/Plot, a flat slug).
 class _DeepLinkTypeConfig {
   final String bySlugPath;
   final int slugSegments;
-  final _DeepLinkResolution resolution;
-  final int? tabIndex; // set when resolution == tabSwitch
-  final String? routeName; // set when resolution == routePush
+  final int tabIndex;
 
-  const _DeepLinkTypeConfig.tab(this.bySlugPath, this.slugSegments, int tabIndex)
-      : resolution = _DeepLinkResolution.tabSwitch,
-        tabIndex = tabIndex,
-        routeName = null;
-
-  const _DeepLinkTypeConfig.route(this.bySlugPath, this.slugSegments, String routeName)
-      : resolution = _DeepLinkResolution.routePush,
-        routeName = routeName,
-        tabIndex = null;
+  const _DeepLinkTypeConfig(this.bySlugPath, this.slugSegments, this.tabIndex);
 }
 
 const Map<String, _DeepLinkTypeConfig> _deepLinkTypes = {
-  'r': _DeepLinkTypeConfig.tab('/listings/by-slug', 1, AppTabs.rooms),
-  'p': _DeepLinkTypeConfig.tab('/plots/by-slug', 1, AppTabs.plots),
-  's': _DeepLinkTypeConfig.route('/services/by-slug', 2, AppRoutes.serviceDetail),
+  'r': _DeepLinkTypeConfig('/listings/by-slug', 1, AppTabs.rooms),
+  'p': _DeepLinkTypeConfig('/plots/by-slug', 1, AppTabs.plots),
 };
 
 /// Receiver for `developerbymistake.tech/go/{type}/{...slugSegments}` smart-link payloads, from
@@ -113,7 +95,7 @@ class DeepLinkService extends GetxService {
   }
 
   void _handleUri(Uri uri) {
-    // Only /go/{type}/... is a listing/service deep link — anything else (incl. plain /app
+    // Only /go/{type}/... is a listing deep link — anything else (incl. plain /app
     // opens, which have no in-app listener at all today and just launch the app normally) is
     // ignored.
     final segments = uri.pathSegments;
@@ -205,26 +187,13 @@ class DeepLinkService extends GetxService {
       final data = res['data'];
       if (data is! Map) return;
 
-      switch (config.resolution) {
-        case _DeepLinkResolution.tabSwitch:
-          // "Explore" isn't a pushed route — it's the Rooms/Plots tab-root screen itself, so
-          // opening the right listing means switching to that tab, not navigating anywhere.
-          // Radius chips, nearby-listing refresh, and map centering all follow automatically —
-          // beginSearchOverride() below (via _applySearchPin) already drives the same reactive
-          // workers Explore uses for a manual location search, regardless of how the tab was
-          // reached.
-          Get.find<AuthController>().switchToTab(config.tabIndex!);
-          final lat = (data['latitude'] as num?)?.toDouble();
-          final lng = (data['longitude'] as num?)?.toDouble();
-          if (lat != null && lng != null) {
-            unawaited(_applySearchPin(lat, lng, data['address'] as String?));
-          }
-          break;
-        case _DeepLinkResolution.routePush:
-          // Service Detail isn't a tab-root — push it like any other detail screen, on top of
-          // whatever's currently showing.
-          Get.toNamed(config.routeName!, arguments: {'id': data['id']});
-          break;
+      // "Explore" isn't a pushed route — it's the Rooms/Plots tab-root screen itself, so
+      // opening the right listing means switching to that tab, not navigating anywhere.
+      Get.find<AuthController>().switchToTab(config.tabIndex);
+      final lat = (data['latitude'] as num?)?.toDouble();
+      final lng = (data['longitude'] as num?)?.toDouble();
+      if (lat != null && lng != null) {
+        unawaited(_applySearchPin(lat, lng, data['address'] as String?));
       }
     } catch (_) {
       // Unknown/soft-deleted slug (404) or a network failure — nothing to show for a route

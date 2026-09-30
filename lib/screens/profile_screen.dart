@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
-import '../controllers/agent_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/config_controller.dart';
 import '../controllers/wallet_controller.dart';
@@ -24,7 +23,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = Get.find<AuthController>();
-  final _agentCtrl = Get.find<AgentController>();
 
   String _initials(String? name) {
     if (name == null || name.trim().isEmpty) return '';
@@ -157,21 +155,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _accountVisibilityTile(),
             ]),
 
-            // Agent — only rendered for the small subset of accounts that are also an Agent.
-            // Its own section (not mixed into Activity) since these are a distinct role's tools,
-            // not "things any user has done" — Dashboard (stats overview) leads into My Leads.
-            Obx(() => _agentCtrl.isAgent.value
-                ? _sectionGroup('AGENT', [
-                    _legalTile(icon: Iconsax.chart_2, label: 'Dashboard', onTap: () => Get.toNamed(AppRoutes.agentDashboard)),
-                    Divider(height: 1, indent: 56, color: AppColors.divider),
-                    _leadsTile(),
-                  ])
-                : const SizedBox.shrink()),
-
             // My Activity — every screen that shows "things the user has done/can act on"
             // (reports, redeem code), grouped together and separate from the pure app-meta
-            // Support section below. My Enquiries moved out to the Explore tab's own header (its
-            // natural hub, since enquiries are submitted from there) — not duplicated here.
+            // Support section below.
             _sectionGroup('ACTIVITY', [
               _legalTile(icon: Iconsax.flag, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
               Obx(() => Get.find<ConfigController>().paymentEnabled.value
@@ -620,42 +606,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       title: Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
       trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textLight),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-    );
-  }
-
-  // Same shape as _legalTile, plus a count badge — the exact red-pill styling _navItem() uses for
-  // the Chats tab's unread badge in main_screen.dart, reused here for visual consistency.
-  Widget _leadsTile() {
-    return ListTile(
-      onTap: () => Get.toNamed(AppRoutes.myLeads),
-      leading: Container(
-        width: 36, height: 36,
-        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
-        child: const Icon(Iconsax.briefcase, color: AppColors.primaryLight, size: 18),
-      ),
-      title: const Text('My Leads', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Obx(() {
-            final count = _agentCtrl.pendingLeadCount.value;
-            if (count <= 0) return const SizedBox.shrink();
-            return Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              constraints: const BoxConstraints(minWidth: 16),
-              decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(20)),
-              child: Text(
-                count > 99 ? '99+' : '$count',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white),
-              ),
-            );
-          }),
-          const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textLight),
-        ],
-      ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }

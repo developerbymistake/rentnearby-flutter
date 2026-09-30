@@ -859,7 +859,7 @@ class _AddListingScreenState extends State<AddListingScreen> with AddListingLoca
             const Text('Required', style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textHint)),
           ]),
           const SizedBox(height: 4),
-          const Text('Good photos get 3x more enquiries',
+          const Text('Good photos get 3x more responses',
               style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.primaryLight)),
           const SizedBox(height: 16),
 

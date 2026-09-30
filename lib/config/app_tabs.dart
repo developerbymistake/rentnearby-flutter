@@ -4,9 +4,8 @@ class AppTabs {
   static const int home = 0;
   static const int rooms = 1;
   static const int plots = 2;
-  static const int services = 3; // local services marketplace — was `chats`, then `explore`, same index
-  static const int profile = 4;
-  static const int count = 5;
+  static const int profile = 3;
+  static const int count = 4;
 
   // String keys matching the backend's master table (RentNearBy.Core.Models.AppTabKeys) —
   // TabConfigController reads active/rename state keyed by these, not by int index.
@@ -14,7 +13,6 @@ class AppTabs {
     home: 'HOME',
     rooms: 'ROOMS',
     plots: 'PLOTS',
-    services: 'SERVICES',
     profile: 'PROFILE',
   };
 }

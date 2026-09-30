@@ -21,7 +21,7 @@ class AppIntroScreen extends StatefulWidget {
 }
 
 class _AppIntroScreenState extends State<AppIntroScreen> {
-  static const _pageCount = 4;
+  static const _pageCount = 3;
   static const _autoAdvanceInterval = Duration(milliseconds: 4800);
 
   final _pageController = PageController();
@@ -38,7 +38,7 @@ class _AppIntroScreenState extends State<AppIntroScreen> {
   void _startAutoTimer() {
     _autoTimer?.cancel();
     // Autoplay never wraps past the last content page — this is a linear
-    // pitch, not a rotating banner. Looping index 3 (Services) straight back
+    // pitch, not a rotating banner. Looping the last page straight back
     // to index 0 (Discover) was the "purple flash" report: a jarring, looks-
     // like-a-glitch jump back to a completely different-coloured page.
     if (_currentPage >= _pageCount - 1) return;
@@ -89,8 +89,6 @@ class _AppIntroScreenState extends State<AppIntroScreen> {
     super.dispose();
   }
 
-  bool get _isLightPage => _currentPage == 3;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -115,13 +113,12 @@ class _AppIntroScreenState extends State<AppIntroScreen> {
             // briefly exposing the bare Scaffold behind the PageView — that's
             // the "white screen after the last slide" report. Clamping removes
             // the bounce entirely; the carousel still swipes normally between
-            // pages 0-3, it just stops dead at the edges instead of overshooting.
+            // pages 0-2, it just stops dead at the edges instead of overshooting.
             physics: const ClampingScrollPhysics(),
             children: [
               _DiscoverPage(isActive: _currentPage == 0),
               const _NoBrokerPage(),
               const _GoLivePage(),
-              _ServicesPage(isActive: _currentPage == 3),
             ],
             ),
           ),
@@ -146,9 +143,7 @@ class _AppIntroScreenState extends State<AppIntroScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(_pageCount, (i) {
                   final active = _currentPage == i;
-                  final color = _isLightPage
-                      ? (active ? AppColors.textDark : AppColors.textDark.withValues(alpha: 0.28))
-                      : (active ? Colors.white : Colors.white.withValues(alpha: 0.4));
+                  final color = active ? Colors.white : Colors.white.withValues(alpha: 0.4);
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeOut,
@@ -275,8 +270,7 @@ class _PageChrome extends StatelessWidget {
   final Color eyebrowColor;
   final Color subColor;
   // Lets a page delay its own text block until its graphic's entrance has
-  // actually finished (Services' rainbow+icons run well past the default
-  // ~250ms this text normally takes) instead of the two overlapping.
+  // actually finished instead of the two overlapping.
   final int textDelayMs;
 
   const _PageChrome({
@@ -1104,7 +1098,7 @@ class _GoLivePageState extends State<_GoLivePage> {
     Future.delayed(const Duration(milliseconds: 1900), () {
       if (mounted) setState(() => _live = true);
     });
-    // Mirrors HomeBannerCarousel's own Timer+PageController auto-advance —
+    // Auto-advance via Timer+PageController —
     // this is decorative ("look how many listings go live"), not the primary
     // narrative carousel, so wrap-around looping here is fine/expected.
     _cardTimer = Timer.periodic(const Duration(milliseconds: 1900), (_) {
@@ -1280,256 +1274,4 @@ class _StepRail extends StatelessWidget {
       ),
     );
   }
-}
-
-// ============================================================
-// PAGE 4 — Services: 5 category stamps
-// ============================================================
-
-class _ServicesPage extends StatefulWidget {
-  final bool isActive;
-  const _ServicesPage({required this.isActive});
-
-  @override
-  State<_ServicesPage> createState() => _ServicesPageState();
-}
-
-class _ServiceStop {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final double t; // 0..1 position along the arc, left to right
-  const _ServiceStop(this.icon, this.label, this.color, this.t);
-}
-
-class _ServicesPageState extends State<_ServicesPage> with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-
-  static const _stops = [
-    _ServiceStop(Icons.terrain_rounded, 'Char Dham', AppColors.success, 0.08),
-    _ServiceStop(Icons.explore_rounded, 'Tour & Travel', Color(0xFF0284C7), 0.29),
-    _ServiceStop(Icons.self_improvement_rounded, 'Yoga & Diet', Color(0xFFC2410C), 0.5),
-    _ServiceStop(Icons.camera_alt_rounded, 'Photography', Color(0xFF0284C7), 0.71),
-    _ServiceStop(Icons.school_rounded, 'Education', AppColors.success, 0.92),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200));
-    if (widget.isActive) _ctrl.forward();
-  }
-
-  @override
-  void didUpdateWidget(covariant _ServicesPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isActive && !oldWidget.isActive) {
-      _ctrl.forward(from: 0);
-    } else if (!widget.isActive && oldWidget.isActive) {
-      _ctrl.stop();
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _PageChrome(
-      solidColor: const Color(0xFFFBF6EC),
-      textColor: AppColors.textDark,
-      eyebrowColor: const Color(0xFF0284C7),
-      subColor: AppColors.textMedium,
-      eyebrow: 'Beyond Rooms & Plots',
-      headline: 'Book Experiences,\nNot Just Addresses',
-      sub: 'Char Dham Yatra, treks, yoga & more — expert teams, connected on demand.',
-      // Headline/sub wait for most of the rainbow+icon sequence to play out,
-      // shortened from 2100ms so they don't lag noticeably behind it.
-      textDelayMs: 1500,
-      // A rainbow arc sweeps in left-to-right, and each category pops in the
-      // instant the sweep reaches its spot on the arc — "rainbow jaise jaise
-      // banega, cards waise waise aayenge."
-      graphic: SizedBox(
-        width: 260,
-        height: 148,
-        child: AnimatedBuilder(
-          animation: _ctrl,
-          builder: (context, _) {
-            final progress = _ctrl.value;
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                CustomPaint(size: const Size(260, 148), painter: _RainbowArcPainter(progress: progress)),
-                for (final stop in _stops) _ServiceStopIcon(stop: stop, progress: progress),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _ServiceStopIcon extends StatelessWidget {
-  final _ServiceStop stop;
-  final double progress;
-  const _ServiceStopIcon({required this.stop, required this.progress});
-
-  // Same arc geometry as _RainbowArcPainter — center at bottom-middle, a
-  // wide flat ellipse arch swept from angle pi (left) through -pi/2 (top)
-  // to 0 (right). Kept in sync by hand rather than shared state, since it's
-  // just two numbers (center, radii); see the painter for the paired math.
-  // Sits at a bigger radius than the rainbow's outermost band (see
-  // _RainbowArcPainter) — outside the arc, not on top of it, so no band
-  // colour ever shows behind an icon/label and fights its readability.
-  static const _cx = 130.0, _cy = 140.0, _rx = 126.0, _ry = 134.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final angle = math.pi + stop.t * math.pi;
-    final dx = _cx + _rx * math.cos(angle);
-    final dy = _cy + _ry * math.sin(angle);
-    final visible = progress >= stop.t;
-    return Positioned(
-      left: dx - 34,
-      top: dy - 26,
-      // Slides up into place while it fades/scales in, the same "content
-      // rises into position" motion FadeInUp gives every other page's text —
-      // not just a static pop, so this page doesn't feel stiller than the rest.
-      child: AnimatedSlide(
-        offset: visible ? Offset.zero : const Offset(0, 0.5),
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeOutCubic,
-        child: AnimatedScale(
-        scale: visible ? 1 : 0.3,
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeOutBack,
-        child: AnimatedOpacity(
-          opacity: visible ? 1 : 0,
-          duration: const Duration(milliseconds: 200),
-          child: SizedBox(
-            width: 68,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.95), boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 8, offset: const Offset(0, 3)),
-                        ]),
-                      ),
-                      CustomPaint(size: const Size(44, 44), painter: _DashedCirclePainter(color: stop.color)),
-                      Icon(stop.icon, color: stop.color, size: 19),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  stop.label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 8, fontWeight: FontWeight.w800, color: stop.color, letterSpacing: 0.1),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      ),
-    );
-  }
-}
-
-/// A rainbow arch, drawn as concentric coloured bands sweeping in left to
-/// right as `progress` goes 0->1 — the backdrop the 5 category stops sit on.
-class _RainbowArcPainter extends CustomPainter {
-  final double progress;
-  const _RainbowArcPainter({required this.progress});
-
-  static const _bands = [
-    Color(0xFFEF4444), // red
-    Color(0xFFF97316), // orange
-    Color(0xFFFBBF24), // yellow
-    Color(0xFF10B981), // green
-    Color(0xFF0EA5E9), // blue
-    Color(0xFF6366F1), // indigo
-    Color(0xFF8B5CF6), // violet
-  ];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (progress <= 0) return;
-    final center = Offset(130, 140);
-    final sweep = math.pi * progress;
-    // Hairline-thin stripes sitting edge-to-edge (step == width, a hair of
-    // overlap to hide anti-aliasing seams) — a real rainbow's bands touch
-    // with no visible gap between them, and read as one continuous arc.
-    const stripeWidth = 1.0;
-    const step = 0.9;
-    for (int i = 0; i < _bands.length; i++) {
-      final rx = 92.0 - i * step;
-      final ry = 97.0 - i * step;
-      if (rx <= 0 || ry <= 0) continue;
-      final rect = Rect.fromCenter(center: center, width: rx * 2, height: ry * 2);
-      canvas.drawArc(
-        rect,
-        math.pi,
-        sweep,
-        false,
-        Paint()
-          ..color = _bands[i]
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = stripeWidth
-          ..strokeCap = StrokeCap.butt,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _RainbowArcPainter old) => old.progress != progress;
-}
-
-/// A dashed circular outline — Flutter's `Border` only supports solid/none,
-/// so the mockup's dashed stamp-circle needs a small painter instead.
-class _DashedCirclePainter extends CustomPainter {
-  final Color color;
-  const _DashedCirclePainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final radius = size.width / 2 - 1.2;
-    final center = Offset(size.width / 2, size.height / 2);
-    final circumference = 2 * math.pi * radius;
-    const dashLength = 5.0;
-    const gapLength = 4.0;
-    final dashCount = (circumference / (dashLength + gapLength)).floor();
-    final anglePerDash = 2 * math.pi / dashCount;
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2.4
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    final dashAngle = anglePerDash * (dashLength / (dashLength + gapLength));
-    for (int i = 0; i < dashCount; i++) {
-      final start = i * anglePerDash;
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        start,
-        dashAngle,
-        false,
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedCirclePainter old) => old.color != color;
 }

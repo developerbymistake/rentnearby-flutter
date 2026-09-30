@@ -96,7 +96,7 @@ class WalletController extends GetxController {
       creditPacks.value = await withRetry(() => Get.find<WalletRepository>().getCreditPacks());
     } catch (e) {
       // A 401 here means the interceptor has already run forceLogout(sessionExpired) and shown
-      // its own toast + redirected — see EnquiryController.loadMyEnquiries for the same guard.
+      // its own toast + redirected.
       if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error('Could not load credit packs. Pull to refresh.');
     } finally {

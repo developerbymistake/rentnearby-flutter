@@ -54,9 +54,8 @@ explicitly:
 
 **Navigation**: `GetMaterialApp` + named routes declared in `lib/config/app_routes.dart`
 (`AppRoutes.routes`, a flat `List<GetPage>` with per-route transitions). The bottom-nav tabs
-(`lib/config/app_tabs.dart`: `home(0) / rooms(1) / plots(2) / explore(3) / profile(4)` — index 3 was
-`chats` and is commented as repurposed for the local-services marketplace, see below; Chat is no longer
-a bottom-nav tab, reached instead via a header icon on Home) are NOT part of this
+(`lib/config/app_tabs.dart`: `home(0) / rooms(1) / plots(2) / profile(3)`, `count = 4`; Chat is not a
+bottom-nav tab, reached instead via a header icon on Home) are NOT part of this
 route table: `MainScreen` renders them as an `IndexedStack` of `TabNavigator` widgets
 (`lib/navigation/tab_router.dart`), each wrapping its tab root screen in its own nested `Navigator`
 keyed via `lib/navigation/tab_keys.dart`. This isolates keyboard/layout/MediaQuery changes per tab.
@@ -87,14 +86,12 @@ instance (`_nominatimDio`) hits a self-hosted Nominatim reverse-geocoding proxy.
 (`lib/config/app_constants.dart`) is the single source of truth for the backend origin
 (`https://developerbymistake.tech/api/v1`) — commented-out local/emulator URLs are left there for
 switching during local backend dev. Real-time features (chat, per-district promotional banners) use
-SignalR (`signalr_netcore`) via two independent hub services, not Dio: `ChatHubService` (connected
+SignalR (`signalr_netcore`) via independent hub services, not Dio: `ChatHubService` (connected
 unconditionally from `MainScreen.initState()`, session-lifetime — same shape as `WalletHubService`/
-`EnquiryHubService`, not scoped to any one conversation screen; `my_enquiries_screen.dart`/
-`enquiry_detail_screen.dart` still also call `connect()` from their own `initState()`/resume as
-harmless redundant no-ops) and `BannerHubService` (connects for the user's current district whenever
-`LocationController.selectedDistrict` changes, stays connected while browsing). Both hubs pass a fresh JWT via
-`accessTokenFactory` so token refresh is handled transparently, and both fall back silently to REST
-polling if the hub connection fails.
+`NotificationHubService`, not scoped to any one conversation screen) and `BannerHubService` (connects for
+the user's current district whenever `LocationController.selectedDistrict` changes, stays connected while
+browsing). All hubs pass a fresh JWT via `accessTokenFactory` so token refresh is handled transparently,
+and they fall back silently to REST polling / pull-to-refresh if the hub connection fails.
 
 **Data flow / caching**: `lib/repositories/*` wrap `ApiService` calls with simple in-memory
 TTL-based caches (e.g. `ListingRepository` caches `/listings/plans` for 5 min and membership status
@@ -187,45 +184,19 @@ so callers can branch on `GoLiveInsufficientBalance` specifically to open the sh
   `Get.put(WalletRepository())`/`Get.put(WalletController())` are registered in `MainScreen.initState()`
   alongside `ListingRepository`/`PlotRepository`.
 
-**Local services marketplace, Agents & Leads (separate vertical from Room/Plot)**: `local_services_screen.dart`
-is the `services` tab's content (Home does not duplicate this catalog UI). **Categories are the catalog's top
-level** (the old ServiceSection layer was removed backend-wide): each active `ServiceCategory` renders
-as one `ServiceCategoryPeekCard` in a single horizontal, user-slidable row (`lib/widgets/service_category_peek_card.dart`
-+ `service_zone.dart` — zones are still assigned by index rotation over the sorted active list, NEVER by
-category name, so an admin-added category needs no app release). Tapping a card opens
-`ServiceCategoryGridScreen` — a 2-column grid of the same cards sliced client-side from the already-loaded
-catalog (`servicesForCategory`), no intermediate list screens exist anymore.
-Detail's "Plan" vs "Package" noun switches on `serviceCategoryFormType == kFormTypeConsultation`
-(`utils/enquiry_form_fields.dart`). `EnquiryModel` (`serviceName`/`serviceCategoryName`/
-`servicePackageName`) powers the category badge on enquiry/lead rows. A consumer submits an `Enquiry`
-(a "lead") against a `Service`/`ServicePackage` via `EnquiryController.submitEnquiry()`
-(`/api/v1/enquiries`), which has **no credit/wallet parameter** — this is a free lead-generation flow,
-unrelated to the credit economy below; every Consultation (Yoga & Diet) package renders "Get Custom
-Quote" (the team quotes offline). `EnquiryContactSheet` lets a consumer submit under a different
-name/mobile (e.g. booking for someone else).
-- **`AgentController`** (`lib/controllers/agent_controller.dart`) checks `isAgent` once per session via
-  `GET /agents/me` — false for ~all consumer users, never surfaced as an error. `AgentModel` is
-  identity-only (id/name/photo, deliberately no phone — contact is one-directional, agent reaches
-  customer, never the reverse). `MyLeadsScreen`/`LeadDetailScreen` mirror `MyEnquiriesScreen`/
-  `EnquiryDetailScreen` but scoped server-side to `GET /agents/me/leads`, with a status-update action.
-  Profile screen has an agent-only "My Leads" tile, badge-counted.
-- **`EscalateEnquirySheet`**/`EnquiryEscalationModel` let a **consumer** (not the agent) report an issue
-  with their assigned agent (Not responding/Unhelpful/Wrong info/Other) — visible only to that consumer
-  and Admin, never the agent.
-- **`EnquiryHubService`** (`lib/services/enquiry_hub_service.dart`, `/hubs/enquiry`) is a push-only,
-  session-lifetime SignalR connection connected unconditionally from `MainScreen.initState()`/app-resume
-  (same shape as Chat/Wallet, not lazily via a screen or business check), delivering live
-  `EnquiryStatusChanged` events and a generic `NotificationReceived` envelope (today's only producer is
-  Agent lead-assignment, but the event is meant to be reused by future producers); falls back silently
-  to pull-to-refresh if it never connects. `hub_session_manager.dart` added a single teardown point,
-  `disconnectAllHubs()`, concurrently disconnecting all four hubs (Banner/Chat/Wallet/Enquiry) on logout
-  or a forced 401 — a revoked session previously left hubs retrying forever with an empty token.
+**Hubs**: `NotificationHubService` (`lib/services/notification_hub_service.dart`, `/hubs/notification`) is a
+push-only, session-lifetime SignalR connection connected unconditionally from `MainScreen.initState()`/
+app-resume (same shape as Chat/Wallet, not lazily via a screen or business check), delivering a generic
+`NotificationReceived` envelope; it falls back silently to pull-to-refresh if it never connects.
+`hub_session_manager.dart` is the single teardown point, `disconnectAllHubs()`, concurrently disconnecting
+all four hubs (Banner/Chat/Wallet/Notification) on logout or a forced 401 — a revoked session previously
+left hubs retrying forever with an empty token.
 
 **Notification inbox**: `NotificationController` (`lib/controllers/notification_controller.dart`) fetches
 `unreadCount` once at `onInit` and again on app resume (the REST anchor that keeps cold-start/reopen
 correct) and exposes a paginated list (`GET /notifications`) with a `_requestId` guard against
 refresh/load-more races. `NotificationModel` carries generic `actionRoute`/`actionArguments` so
-tap-routing is generic, not a per-type switch. `EnquiryHubService`'s `NotificationReceived` push also
+tap-routing is generic, not a per-type switch. `NotificationHubService`'s `NotificationReceived` push also
 reaches this controller live (`applyLiveNotification` — increments `unreadCount` and prepends into
 `notifications` if already loaded), so the bell updates immediately in foreground instead of only on the
 next resume/pull-to-refresh.

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import '../controllers/service_catalog_controller.dart';
 import '../navigation/tour_keys.dart';
 import 'app_constants.dart';
 import 'app_tabs.dart';
@@ -56,17 +54,13 @@ class TourDefinition {
   });
 
   /// Re-invokes [stepsBuilder] on every access rather than caching — cheap
-  /// for the 3 static tours (a trivial closure over a fixed list — not
-  /// const, since each TourStep's key is a non-const GlobalKey), and the
-  /// only way Services' step count can ever reflect the live category
-  /// catalog (see _buildServicesSteps below).
+  /// for the static tours (a trivial closure over a fixed list — not
+  /// const, since each TourStep's key is a non-const GlobalKey).
   List<TourStep> get steps => stepsBuilder();
 }
 
-/// Built as a function (like _buildServicesSteps below), even though this
-/// list is currently fixed, for consistency with the other per-tab builders
-/// and so a future Home step can freely depend on live state again without
-/// having to change the TourDefinition's shape.
+/// Built as a function so a future Home step can freely depend on live state
+/// without having to change the TourDefinition's shape.
 List<TourStep> _buildHomeSteps() {
   return [
     TourStep(
@@ -124,12 +118,6 @@ List<TourStep> _buildHomeSteps() {
       body: 'Tap here anytime to search plots nearby.',
     ),
     TourStep(
-      key: TourKeys.homeServicesNavIcon,
-      icon: Iconsax.briefcase,
-      title: 'Trip plans, wellness & more',
-      body: 'From trip planning to diet & wellness — submit a request and the right person reaches out to you.',
-    ),
-    TourStep(
       key: TourKeys.homeProfileNavIcon,
       icon: Iconsax.user,
       title: 'Your account lives here',
@@ -138,27 +126,8 @@ List<TourStep> _buildHomeSteps() {
   ];
 }
 
-List<TourStep> _buildServicesSteps() {
-  final categories = Get.find<ServiceCatalogController>().activeCategories;
-  return [
-    TourStep(
-      key: TourKeys.servicesEnquiriesButton,
-      icon: Iconsax.clipboard_text,
-      title: 'Track your requests here',
-      body: "Every enquiry you've submitted — and its status — lives in Enquiries, with a live count.",
-    ),
-    if (categories.isNotEmpty)
-      TourStep(
-        key: TourKeys.serviceCategoryKey(categories.first.id),
-        icon: Iconsax.call,
-        title: categories.first.name,
-        body: "Tap to talk to a local expert about ${categories.first.name} — submit a request and they'll reach out to you.",
-      ),
-  ];
-}
-
-/// Single source of truth for all 4 tours — one map entry per tab. Adding a
-/// 5th tour later means adding one more entry here, nowhere else.
+/// Single source of truth for all 3 tours — one map entry per tab. Adding a
+/// 4th tour later means adding one more entry here, nowhere else.
 final Map<int, TourDefinition> tourRegistry = {
   AppTabs.home: TourDefinition(
     tabIndex: AppTabs.home,
@@ -294,11 +263,5 @@ final Map<int, TourDefinition> tourRegistry = {
         body: 'Filter by plot type right from here to find exactly what you need.',
       ),
     ],
-  ),
-  AppTabs.services: TourDefinition(
-    tabIndex: AppTabs.services,
-    storageKey: AppConstants.tourServicesSeenKey,
-    label: 'Services Tour',
-    stepsBuilder: _buildServicesSteps,
   ),
 };
