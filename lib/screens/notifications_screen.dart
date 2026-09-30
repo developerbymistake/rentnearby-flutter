@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
+import '../config/app_routes.dart';
+import '../config/app_shadows.dart';
 import '../controllers/notification_controller.dart';
 import '../models/notification_model.dart';
 import '../utils/app_date_format.dart';
@@ -118,7 +120,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 20, 18),
+          padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
           child: Row(
             children: [
               IconButton(
@@ -130,7 +132,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   'Notifications',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white),
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
                 ),
               ),
               Obx(() => _ctrl.notifications.any((n) => !n.isRead)
@@ -152,8 +154,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           Container(
             width: 90,
             height: 90,
-            decoration: const BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
-            child: const Icon(Icons.notifications_none_rounded, size: 40, color: AppColors.primaryLight),
+            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), shape: BoxShape.circle),
+            child: const Icon(Icons.notifications_none_rounded, size: 40, color: AppColors.primary),
           ),
           const SizedBox(height: 20),
           const Text('No notifications yet',
@@ -165,7 +167,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       );
 
   Widget _buildShimmer() => ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
         itemCount: 6,
         itemBuilder: (_, __) => Shimmer.fromColors(
           baseColor: AppColors.shimmerBase,
@@ -173,7 +175,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           child: Container(
             height: 90,
             margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(color: AppColors.cardBg, borderRadius: BorderRadius.circular(16)),
           ),
         ),
       );
@@ -189,17 +191,21 @@ class _NotificationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRead = notification.isRead;
-    final tint = NotificationVisuals.color(notification.type);
+    final tint = NotificationVisuals.color(notification.type, notification.title);
+    final kind = NotificationVisuals.listingKind(notification.actionRoute);
+    final isPlot = notification.actionRoute == AppRoutes.myPlots;
+    final accent = isPlot ? AppColors.plot : AppColors.primary;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
-          color: isRead ? Colors.white : AppColors.primary.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
+          color: isRead ? AppColors.cardBg : (isPlot ? AppColors.plotSurface : AppColors.surface),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
+          boxShadow: AppShadows.premium(AppColors.primary, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,7 +214,7 @@ class _NotificationRow extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(color: tint.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(11)),
-              child: Icon(NotificationVisuals.icon(notification.type), size: 17, color: tint),
+              child: Icon(NotificationVisuals.icon(notification.type, notification.title), size: 18, color: tint),
             ),
             const SizedBox(width: 11),
             Expanded(
@@ -233,7 +239,7 @@ class _NotificationRow extends StatelessWidget {
                       ),
                       if (!isRead) ...[
                         const SizedBox(width: 8),
-                        const NewPill(),
+                        NewPill(color: accent),
                       ],
                     ],
                   ),
@@ -245,7 +251,22 @@ class _NotificationRow extends StatelessWidget {
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
                   ),
                   const SizedBox(height: 8),
-                  Text(dateText, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                  Row(
+                    children: [
+                      Text(dateText, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                      if (kind != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                          decoration: BoxDecoration(color: accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)),
+                          child: Text(
+                            kind,
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: accent),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),

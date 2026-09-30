@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../config/app_colors.dart';
 import '../controllers/location_controller.dart';
 import 'location_switch_sheet.dart';
 
@@ -8,7 +9,7 @@ import 'location_switch_sheet.dart';
 /// copy (Explore Rooms/Plots privately, in sync only by luck), which let
 /// View All's copy silently fall behind when search-awareness was added to
 /// the other two. [accentColor] is the only thing that legitimately differs
-/// per screen (blue for Rooms, coral for Plots).
+/// per screen (blue for Rooms, green for Plots).
 class LocationPill extends StatelessWidget {
   final Color accentColor;
   const LocationPill({super.key, required this.accentColor});
@@ -44,7 +45,7 @@ class LocationPill extends StatelessWidget {
         // Disabled while a location search is active — user must cancel the
         // search (via the toggle button) before switching city again, so
         // the two temporary overrides are never open at once.
-        onTap: searching ? null : () => LocationSwitchSheet.show(context),
+        onTap: searching ? null : () => LocationSwitchSheet.show(context, plots: accentColor == AppColors.plot),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),

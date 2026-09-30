@@ -24,6 +24,7 @@ mixin ExploreLocationSearchMixin<T extends StatefulWidget> on State<T> {
   bool get isSearchActive => _locSearchCtrl.searchPinOverride.value != null;
   String? get searchOverrideLabel => _locSearchCtrl.searchPinLabel.value;
   bool get searchResolving => _locSearchCtrl.searchResolving.value;
+  bool get searchPlotsTheme => false;
 
   /// Tap handler for the search toggle button.
   Future<void> onSearchToggleTap(BuildContext context) async {
@@ -32,7 +33,7 @@ mixin ExploreLocationSearchMixin<T extends StatefulWidget> on State<T> {
       _locSearchCtrl.endSearchOverride();
       return;
     }
-    final picked = await LocationSearchSheet.show(context, bias: searchCenter);
+    final picked = await LocationSearchSheet.show(context, bias: searchCenter, plots: searchPlotsTheme);
     if (picked == null || !mounted) return;
     await _applyPickedPlace(picked);
   }

@@ -5,16 +5,17 @@ import '../config/app_colors.dart';
 /// matching the other notification pills (tinted background +
 /// solid-color text, not a solid fill).
 class NewPill extends StatelessWidget {
-  const NewPill({super.key});
+  final Color color;
+  const NewPill({super.key, this.color = AppColors.accent});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-      decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-      child: const Text(
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(20)),
+      child: Text(
         'NEW',
-        style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: AppColors.accent),
+        style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: color),
       ),
     );
   }

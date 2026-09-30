@@ -18,7 +18,7 @@ class DayHeader extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
-          color: AppColors.textHint,
+          color: AppColors.textLight,
         ),
       ),
     );

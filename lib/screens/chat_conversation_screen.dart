@@ -26,6 +26,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
 
   late final String _conversationId;
   late final String _listingType;
+  bool get _isPlot => _listingType != 'Room';
+  Color get _accent => AppColors.accentFor(_isPlot);
   late final String? _roomTypeId;
   late final String? _plotTypeId;
   late final String _otherPartyId;
@@ -390,6 +392,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
             _send('quick_reply', {'key': q.key, 'text': q.questionText}),
         onRequestContact: () => _send('contact_request', {}),
         onScheduleVisit: _pickAndProposeSchedule,
+        accent: _accent,
       );
     } finally {
       _openingPlusMenu = false;
@@ -515,7 +518,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     // AnnotatedRegion override; it inherits the same app-wide light-icon default every other
     // gradient-headed screen already renders correctly against.
     return Scaffold(
-      backgroundColor: AppColors.chatBg,
+      backgroundColor: AppColors.surfaceWarm,
       body: Column(
         children: [
           _buildHeader(context),
@@ -528,9 +531,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                   Expanded(
                     child: Obx(() {
                       if (_loading.value) {
-                        return const Center(
+                        return Center(
                           child: CircularProgressIndicator(
-                            color: AppColors.primary,
+                            color: _accent,
                           ),
                         );
                       }
@@ -555,7 +558,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                       // trigger — default physics refuse to scroll at all once content is
                       // shorter than the viewport.
                       return RefreshIndicator(
-                        color: AppColors.primary,
+                        color: _accent,
                         onRefresh: _loadHistory,
                         child: ListView(
                           controller: _scrollCtrl,
@@ -613,13 +616,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     // load-more spinner, just at the top of this list instead of the bottom.
     if (_loadingOlder.value) {
       items.add(
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
           child: Center(
             child: SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+              child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
             ),
           ),
         ),
@@ -650,6 +653,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
             () => ChatNextSlotBubble(
               onTap: _openPlusMenu,
               sending: _sending.value,
+              accent: _accent,
             ),
           ),
         ),
@@ -707,7 +711,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     // Row's content gets padded down to clear it. This is what makes the status bar read as
     // "part of the navy header" instead of a separate light strip above it.
     return Container(
-      decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+      decoration: BoxDecoration(gradient: AppColors.gradientFor(_isPlot)),
       child: SafeArea(
         bottom: false,
         child: Padding(
@@ -1021,6 +1025,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         _messages.any((x) => x.respondsToMessageId == m.id);
     return ChatMessageBubble(
       message: m,
+      accent: _accent,
       templates: _chatCtrl.questionTemplates,
       onAnswerQuestion: canAnswer
           ? (answerKey, answerText) =>
@@ -1069,7 +1074,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       // again here would double it up.
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg,
         boxShadow: [
           BoxShadow(
             color: AppColors.shadow,

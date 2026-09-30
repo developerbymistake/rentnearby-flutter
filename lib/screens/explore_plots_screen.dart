@@ -34,6 +34,9 @@ class ExplorePlotsScreen extends StatefulWidget {
 
 class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver, ExploreLocationSearchMixin<ExplorePlotsScreen> {
+  @override
+  bool get searchPlotsTheme => true;
+
   // ── Map ──────────────────────────────────────────────────────────────────
   MapLibreMapController? _mapController;
   double _currentZoom = 13.0;
@@ -1725,7 +1728,7 @@ class _PlotBottomSheet extends StatelessWidget {
         'Residential' => const Color(0xFF3B82F6),
         'Commercial' => const Color(0xFFF59E0B),
         'Agricultural' => AppColors.plot,
-        'Farmhouse' => const Color(0xFF16A34A),
+        'Farmhouse' => const Color(0xFF7C3AED),
         _ => AppColors.primary,
       };
 

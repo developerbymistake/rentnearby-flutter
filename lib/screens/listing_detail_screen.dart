@@ -13,7 +13,10 @@ import '../controllers/report_controller.dart';
 import '../models/listing_model.dart';
 import '../services/listing_share_service.dart';
 import '../widgets/app_loading_overlay.dart';
+import '../models/browse_item.dart';
 import '../widgets/detail_action_bar.dart';
+import '../widgets/detail_header.dart';
+import '../config/app_shadows.dart';
 import '../widgets/report_listing_sheet.dart';
 
 class ListingDetailScreen extends StatefulWidget {
@@ -100,16 +103,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       case '1rk': return Icons.single_bed_rounded;
       default: return Icons.apartment_rounded;
     }
-  }
-
-  Widget _buildTitle(ListingModel l) {
-    const fs = 22.0;
-    return Row(children: [
-      Icon(_roomTypeIcon(l.roomTypeName), size: fs, color: AppColors.primary),
-      const SizedBox(width: 8),
-      Text(l.roomTypeName ?? 'Room',
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: fs, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-    ]);
   }
 
   String _locationStr(ListingModel l) {
@@ -271,7 +264,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           flexibleSpace: FlexibleSpaceBar(
             background: l.photos.isEmpty
                 ? Container(
-                    decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+                    decoration: BoxDecoration(gradient: AppColors.gradientFor(false)),
                     child: const Center(child: Icon(Icons.home_rounded, size: 80, color: Colors.white38)),
                   )
                 : Stack(
@@ -316,20 +309,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Title + price
-              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Expanded(
-                  child: _buildTitle(l),
-                ),
-                const SizedBox(width: 12),
-                if (l.priceMonthly != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(10)),
-                    child: Text(l.priceDisplay,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
-                  ),
-              ]),
+              DetailTitleRow(
+                accent: AppColors.primary,
+                tag: 'FOR RENT',
+                icon: _roomTypeIcon(l.roomTypeName),
+                title: '${l.roomTypeName ?? 'Room'} Room',
+                caption: 'MONTHLY RENT',
+                value: l.priceMonthly != null ? BrowseItem.inr(l.priceMonthly!) : 'On request',
+                unit: l.priceMonthly != null ? '/mo' : '',
+              ),
               const SizedBox(height: 16),
 
               // Info card
@@ -338,52 +326,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
+                  boxShadow: AppShadows.premium(AppColors.primary, alpha: 0.06, blur: 12, offset: const Offset(0, 4)),
                 ),
                 child: Column(children: [
-                  // Furnished + distance row
-                  Row(children: [
-                    if (l.furnishedStatus != 'None')
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Iconsax.home_hashtag, size: 13, color: Color(0xFF8B5CF6)),
-                          const SizedBox(width: 5),
-                          Text('${l.furnishedStatus} Furnished',
-                              style: const TextStyle(
-                                  fontFamily: 'Poppins', fontSize: 12,
-                                  fontWeight: FontWeight.w500, color: Color(0xFF8B5CF6))),
-                        ]),
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.textHint.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Iconsax.home_hashtag, size: 13, color: AppColors.textHint),
-                          const SizedBox(width: 5),
-                          const Text('Unfurnished',
-                              style: TextStyle(
-                                  fontFamily: 'Poppins', fontSize: 12,
-                                  fontWeight: FontWeight.w500, color: AppColors.textHint)),
-                        ]),
-                      ),
-                    const Spacer(),
-                    if (_distanceKm != null) ...[
-                      const Icon(Iconsax.location, size: 13, color: AppColors.textHint),
-                      const SizedBox(width: 4),
-                      Text('${_distanceKm!.toStringAsFixed(1)} km away',
-                          style: const TextStyle(
-                              fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                    ],
-                  ]),
+                  DetailChipRow(
+                    accent: AppColors.primary,
+                    icon: Iconsax.home_hashtag,
+                    label: BrowseItem.furnishedLabel(l.furnishedStatus),
+                    distanceKm: _distanceKm,
+                  ),
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 10),
                     child: Divider(height: 1, color: AppColors.divider),
@@ -461,6 +412,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               ? null
               : () => ReportListingSheet.show(context, listingId: l.id, listingType: 'Room'),
           onChat: _isOwner ? null : () => _openChat(l),
+          accent: AppColors.primary,
         ));
   }
 
@@ -485,7 +437,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   Widget _infoRow(IconData icon, String label, String value, {Color? valueColor, Color? iconColor}) => Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: iconColor ?? AppColors.primaryLight),
+          Icon(icon, size: 18, color: iconColor ?? AppColors.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

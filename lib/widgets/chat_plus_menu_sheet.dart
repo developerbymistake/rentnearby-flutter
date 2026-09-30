@@ -9,6 +9,7 @@ class ChatPlusMenuSheet extends StatelessWidget {
   final void Function(QuestionTemplateModel) onAskQuestion;
   final VoidCallback onRequestContact;
   final VoidCallback onScheduleVisit;
+  final Color accent;
 
   const ChatPlusMenuSheet({
     super.key,
@@ -16,6 +17,7 @@ class ChatPlusMenuSheet extends StatelessWidget {
     required this.onAskQuestion,
     required this.onRequestContact,
     required this.onScheduleVisit,
+    this.accent = AppColors.primary,
   });
 
   static Future<void> show(
@@ -24,17 +26,19 @@ class ChatPlusMenuSheet extends StatelessWidget {
     required void Function(QuestionTemplateModel) onAskQuestion,
     required VoidCallback onRequestContact,
     required VoidCallback onScheduleVisit,
+    Color accent = AppColors.primary,
   }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.cardBg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => ChatPlusMenuSheet(
         questions: questions,
         onAskQuestion: onAskQuestion,
         onRequestContact: onRequestContact,
         onScheduleVisit: onScheduleVisit,
+        accent: accent,
       ),
     );
   }
@@ -100,8 +104,8 @@ class ChatPlusMenuSheet extends StatelessWidget {
           child: Row(children: [
             Container(
               width: 28, height: 28,
-              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(8)),
-              child: Icon(icon, size: 16, color: AppColors.primary),
+              decoration: BoxDecoration(color: accent.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(8)),
+              child: Icon(icon, size: 16, color: accent),
             ),
             const SizedBox(width: 12),
             Expanded(

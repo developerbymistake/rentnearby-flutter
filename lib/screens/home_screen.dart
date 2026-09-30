@@ -15,11 +15,13 @@ import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/tab_config_controller.dart';
+import '../models/browse_item.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
 import '../services/add_listing_flow.dart';
 import '../widgets/home_owner_carousel.dart';
 import '../widgets/icon_motion.dart';
+import '../widgets/listing_grid_card.dart';
 
 const _kInstagramGradient = LinearGradient(
   begin: Alignment.topLeft,
@@ -327,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 150,
+          height: ListingGridCard.height,
           child: loading ? _buildListingShimmerRail() : rail(),
         ),
       ],
@@ -335,7 +337,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRoomsRail(List<HomeRoomModel> items) {
-    if (items.isEmpty) return _emptyRailMessage('No rooms listed here yet.');
+    if (items.isEmpty) {
+      return Align(alignment: Alignment.topLeft, child: _emptyRailMessage('No rooms listed here yet.'));
+    }
     return ListView.separated(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -343,21 +347,40 @@ class _HomeScreenState extends State<HomeScreen> {
       separatorBuilder: (_, __) => const SizedBox(width: 12),
       itemBuilder: (_, i) {
         final r = items[i];
-        return _HomeListingCard(
+        final item = BrowseItem.room(
+          id: r.id,
+          userId: r.userId,
           thumbnailUrl: r.thumbnailUrl,
-          priceLabel: '₹${r.priceMonthly}/mo',
-          title:
-              '${r.roomTypeName ?? 'Room'}${r.furnishedStatus != 'None' ? ' · ${r.furnishedStatus}' : ''}',
-          locationLabel: r.districtName,
-          onTap: () =>
-              Get.toNamed(AppRoutes.listingDetail, arguments: {'id': r.id}),
+          type: r.roomTypeName,
+          furnishedStatus: r.furnishedStatus,
+          priceMonthly: r.priceMonthly,
+          city: r.cityName,
+          district: r.districtName,
+        );
+        return SizedBox(
+          width: 160,
+          child: ListingGridCard(
+            thumbnailUrl: item.thumbnailUrl,
+            tagLabel: item.tagLabel,
+            title: item.title,
+            locationLabel: item.locationLabel,
+            facts: item.facts,
+            priceCaption: item.priceCaption,
+            priceValue: item.priceValue,
+            priceUnit: item.priceUnit,
+            isPlot: false,
+            onViewDetails: () =>
+                Get.toNamed(AppRoutes.listingDetail, arguments: {'id': r.id}),
+          ),
         );
       },
     );
   }
 
   Widget _buildPlotsRail(List<HomePlotModel> items) {
-    if (items.isEmpty) return _emptyRailMessage('No plots listed here yet.');
+    if (items.isEmpty) {
+      return Align(alignment: Alignment.topLeft, child: _emptyRailMessage('No plots listed here yet.'));
+    }
     return ListView.separated(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -365,16 +388,31 @@ class _HomeScreenState extends State<HomeScreen> {
       separatorBuilder: (_, __) => const SizedBox(width: 12),
       itemBuilder: (_, i) {
         final p = items[i];
-        final area = p.areaValue == p.areaValue.roundToDouble()
-            ? p.areaValue.toStringAsFixed(0)
-            : p.areaValue.toStringAsFixed(1);
-        return _HomeListingCard(
+        final item = BrowseItem.plot(
+          id: p.id,
+          userId: p.userId,
           thumbnailUrl: p.thumbnailUrl,
-          priceLabel: '$area ${p.areaUnit}',
-          title: p.plotTypeName ?? 'Plot',
-          locationLabel: p.districtName,
-          onTap: () =>
-              Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id}),
+          type: p.plotTypeName,
+          areaValue: p.areaValue,
+          areaUnit: p.areaUnit,
+          city: p.cityName,
+          district: p.districtName,
+        );
+        return SizedBox(
+          width: 160,
+          child: ListingGridCard(
+            thumbnailUrl: item.thumbnailUrl,
+            tagLabel: item.tagLabel,
+            title: item.title,
+            locationLabel: item.locationLabel,
+            facts: item.facts,
+            priceCaption: item.priceCaption,
+            priceValue: item.priceValue,
+            priceUnit: item.priceUnit,
+            isPlot: true,
+            onViewDetails: () =>
+                Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id}),
+          ),
         );
       },
     );
@@ -390,7 +428,7 @@ class _HomeScreenState extends State<HomeScreen> {
         baseColor: AppColors.shimmerBase,
         highlightColor: AppColors.shimmerHighlight,
         child: Container(
-          width: 140,
+          width: 160,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -504,7 +542,6 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _ownerQuickActionTile(
                 icon: Icons.add_rounded,
                 gradient: AppColors.primaryGradient,
-                shadowColor: AppColors.primaryLight,
                 label: 'Add Room',
                 motion: IconMotionStyle.pulse,
                 isLoading: checking == true,
@@ -517,7 +554,6 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _ownerQuickActionTile(
                 icon: Icons.add_rounded,
                 gradient: AppColors.plotGradient,
-                shadowColor: AppColors.plotDark,
                 label: 'Add Plot',
                 motion: IconMotionStyle.pulse,
                 isLoading: checking == false,
@@ -534,7 +570,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   end: Alignment.bottomRight,
                   colors: [Color(0xFFFBBF24), AppColors.warning],
                 ),
-                shadowColor: AppColors.warning,
                 label: 'My Listings',
                 motion: IconMotionStyle.grow,
                 onTap: () => Get.toNamed(
@@ -559,7 +594,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _ownerQuickActionTile({
     required IconData icon,
     required Gradient gradient,
-    required Color shadowColor,
     required String label,
     required VoidCallback? onTap,
     String? badge,
@@ -581,11 +615,12 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.divider.withValues(alpha: 0.7)),
           boxShadow: AppShadows.premium(
-            shadowColor,
-            alpha: 0.14,
-            blur: 12,
-            offset: const Offset(0, 5),
+            AppColors.primary,
+            alpha: 0.05,
+            blur: 8,
+            offset: const Offset(0, 2),
           ),
         ),
         child: Stack(
@@ -604,12 +639,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     border: Border.all(
                       color: Colors.white.withValues(alpha: 0.7),
                       width: 1,
-                    ),
-                    boxShadow: AppShadows.premium(
-                      shadowColor,
-                      alpha: 0.3,
-                      blur: 4,
-                      offset: const Offset(0, 2),
                     ),
                   ),
                   child: Center(
@@ -719,11 +748,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (r != null) {
       return _HomeListingRow(
         thumbnailUrl: r.thumbnailUrl,
-        priceLabel: '₹${r.priceMonthly}/mo',
-        title:
-            '${r.roomTypeName ?? 'Room'}${r.furnishedStatus != 'None' ? ' · ${r.furnishedStatus}' : ''}',
+        priceLabel: '${BrowseItem.inr(r.priceMonthly)}/mo',
+        title: '${r.roomTypeName ?? 'Room'} · ${BrowseItem.furnishedLabel(r.furnishedStatus)}',
         locationLabel: r.districtName,
         isNew: true,
+        onTap: () => Get.toNamed(AppRoutes.listingDetail, arguments: {'id': r.id}),
       );
     }
     final p = item.plot!;
@@ -737,7 +766,7 @@ class _HomeScreenState extends State<HomeScreen> {
       locationLabel: p.districtName,
       isNew: true,
       placeholderIcon: Icons.landscape_rounded,
-      accent: AppColors.plot,
+      onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id}),
     );
   }
 
@@ -832,149 +861,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _HomeListingCard extends StatelessWidget {
-  final String? thumbnailUrl;
-  final String priceLabel;
-  final String title;
-  final String locationLabel;
-  final VoidCallback onTap;
-
-  const _HomeListingCard({
-    required this.thumbnailUrl,
-    required this.priceLabel,
-    required this.title,
-    required this.locationLabel,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 140,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: AppShadows.premium(
-            AppColors.primary,
-            alpha: 0.10,
-            blur: 16,
-            offset: const Offset(0, 6),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(16),
-              ),
-              child: Stack(
-                children: [
-                  SizedBox(
-                    height: 100,
-                    width: double.infinity,
-                    child: thumbnailUrl != null
-                        ? CachedNetworkImage(
-                            imageUrl: thumbnailUrl!,
-                            fit: BoxFit.cover,
-                            memCacheWidth:
-                                (140 * MediaQuery.of(context).devicePixelRatio)
-                                    .round(),
-                            memCacheHeight:
-                                (100 * MediaQuery.of(context).devicePixelRatio)
-                                    .round(),
-                            placeholder: (_, __) =>
-                                Container(color: AppColors.surface),
-                            errorWidget: (_, __, ___) => _placeholder(),
-                          )
-                        : _placeholder(),
-                  ),
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.93),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        priceLabel,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      const Icon(
-                        Iconsax.location,
-                        size: 10,
-                        color: AppColors.primaryLight,
-                      ),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: Text(
-                          locationLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 10,
-                            color: AppColors.textLight,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  static Widget _placeholder() => Container(
-    color: AppColors.surface,
-    child: const Center(
-      child: Icon(Icons.home_rounded, size: 28, color: AppColors.primaryLight),
-    ),
-  );
-}
-
 /// "Recently added"'s vertical row layout — same chat-conversation-row card
 /// treatment (white, rounded, soft shadow), thumbnail left, price right.
 /// Display-only (no onTap) — matches _buildRoomsRail/_buildPlotsRail's
@@ -986,7 +872,7 @@ class _HomeListingRow extends StatelessWidget {
   final String locationLabel;
   final bool isNew;
   final IconData placeholderIcon;
-  final Color accent;
+  final VoidCallback onTap;
 
   const _HomeListingRow({
     required this.thumbnailUrl,
@@ -995,12 +881,15 @@ class _HomeListingRow extends StatelessWidget {
     required this.locationLabel,
     this.isNew = false,
     this.placeholderIcon = Icons.home_rounded,
-    this.accent = AppColors.primary,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1113,14 +1002,17 @@ class _HomeListingRow extends StatelessWidget {
           Text(
             priceLabel,
             maxLines: 1,
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: 'Poppins',
               fontSize: 12.5,
               fontWeight: FontWeight.w800,
-              color: accent,
+              color: AppColors.gold,
             ),
           ),
+          const SizedBox(width: 6),
+          const Icon(Iconsax.arrow_right_3, size: 16, color: AppColors.primary),
         ],
+      ),
       ),
     );
   }

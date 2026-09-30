@@ -10,6 +10,7 @@ class DetailActionBar extends StatelessWidget {
   final bool isOwner;
   final VoidCallback? onReport;
   final VoidCallback? onChat;
+  final Color accent;
   const DetailActionBar({
     super.key,
     this.latitude,
@@ -18,6 +19,7 @@ class DetailActionBar extends StatelessWidget {
     this.isOwner = false,
     this.onReport,
     this.onChat,
+    this.accent = AppColors.primary,
   });
 
   void _directions() async {
@@ -54,7 +56,7 @@ class DetailActionBar extends StatelessWidget {
         style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary,
+        backgroundColor: accent,
         foregroundColor: Colors.white,
         minimumSize: const Size(0, 52),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -72,8 +74,8 @@ class DetailActionBar extends StatelessWidget {
       label: const Text('Chat',
           style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.primary,
-        side: const BorderSide(color: AppColors.primaryLight),
+        foregroundColor: accent,
+        side: BorderSide(color: accent),
         minimumSize: const Size(0, 46),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),

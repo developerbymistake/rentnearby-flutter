@@ -526,7 +526,7 @@ class _PlotCard extends StatelessWidget {
   Color _typeColor(String type) => switch (type) {
     'Commercial'   => const Color(0xFFF59E0B),
     'Agricultural' => AppColors.plot,
-    'Farmhouse'    => const Color(0xFF16A34A),
+    'Farmhouse'    => const Color(0xFF7C3AED),
     _              => const Color(0xFF3B82F6),
   };
 

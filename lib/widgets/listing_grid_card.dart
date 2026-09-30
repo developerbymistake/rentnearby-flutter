@@ -4,167 +4,195 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_shadows.dart';
 
-/// Landing screen grid card — full-bleed photo, price/area scrim overlay,
-/// eye icon (view details) and a Chat action. Photo/placeholder handling
-/// mirrors home_screen.dart's `_HomeListingCard`, restructured into the
-/// grid layout approved in the 39.4/39.8 mockups.
 class ListingGridCard extends StatelessWidget {
+  static const double height = 240;
+
   final String? thumbnailUrl;
-  final String badgeLabel;
-  final String priceLabel;
+  final String tagLabel;
   final String title;
   final String locationLabel;
+  final List<String> facts;
+  final String priceCaption;
+  final String priceValue;
+  final String priceUnit;
+  final bool isPlot;
   final VoidCallback onViewDetails;
-  final VoidCallback onChat;
-  final Color tint;
 
   const ListingGridCard({
     super.key,
     required this.thumbnailUrl,
-    required this.badgeLabel,
-    required this.priceLabel,
+    required this.tagLabel,
     required this.title,
     required this.locationLabel,
+    required this.facts,
+    required this.priceCaption,
+    required this.priceValue,
+    required this.priceUnit,
+    required this.isPlot,
     required this.onViewDetails,
-    required this.onChat,
-    this.tint = AppColors.primary,
   });
+
+  Color get _accent => isPlot ? AppColors.plot : AppColors.primary;
+  Color get _accentDark => isPlot ? AppColors.plotDark : AppColors.primary;
 
   @override
   Widget build(BuildContext context) {
+    final dpr = MediaQuery.of(context).devicePixelRatio;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider.withValues(alpha: 0.6)),
-        boxShadow: AppShadows.premium(tint, alpha: 0.10, blur: 16, offset: const Offset(0, 6)),
+        border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
+        boxShadow: AppShadows.premium(AppColors.primary, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Stack(
-              children: [
-                SizedBox(
-                  height: 130,
-                  width: double.infinity,
-                  child: thumbnailUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: thumbnailUrl!,
-                          fit: BoxFit.cover,
-                          // Grid column is at most 190 (maxCrossAxisExtent in
-                          // explore_landing_screen.dart) — cap decode to that on an
-                          // infinite-scroll grid instead of caching full-size
-                          // source photos per item.
-                          memCacheWidth: (190 * MediaQuery.of(context).devicePixelRatio).round(),
-                          memCacheHeight: (130 * MediaQuery.of(context).devicePixelRatio).round(),
-                          placeholder: (_, __) => Container(color: AppColors.surface),
-                          errorWidget: (_, __, ___) => _placeholder(),
-                        )
-                      : _placeholder(),
-                ),
-                Positioned(
-                  top: 7,
-                  left: 7,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(8)),
-                    child: Text(
-                      badgeLabel,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 8, fontWeight: FontWeight.w800, color: AppColors.primary),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 7,
-                  right: 7,
-                  child: GestureDetector(
-                    onTap: onViewDetails,
-                    child: Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.92), shape: BoxShape.circle),
-                      child: const Icon(Iconsax.eye, size: 14, color: AppColors.primary),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(10, 22, 10, 8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black.withValues(alpha: 0.68)],
-                      ),
-                    ),
-                    child: Text(
-                      priceLabel,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w800, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.textDark),
-                ),
-                const SizedBox(height: 4),
-                Row(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onViewDetails,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 104,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    const Icon(Iconsax.location, size: 9, color: AppColors.primaryLight),
-                    const SizedBox(width: 3),
-                    Expanded(
-                      child: Text(
-                        locationLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 9.5, color: AppColors.textLight, fontWeight: FontWeight.w600),
+                    thumbnailUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: thumbnailUrl!,
+                            fit: BoxFit.cover,
+                            memCacheWidth: (190 * dpr).round(),
+                            memCacheHeight: (104 * dpr).round(),
+                            placeholder: (_, __) => _placeholder(),
+                            errorWidget: (_, __, ___) => _placeholder(),
+                          )
+                        : _placeholder(),
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                        decoration: BoxDecoration(color: _accent, borderRadius: BorderRadius.circular(999)),
+                        child: Text(
+                          tagLabel,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 7),
-                GestureDetector(
-                  onTap: onChat,
-                  child: Container(
-                    width: double.infinity,
-                    height: 26,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(9)),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Iconsax.message_text, size: 10, color: Colors.white),
-                        SizedBox(width: 4),
-                        Text('Chat', style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Iconsax.location, size: 10, color: AppColors.textLight),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            locationLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.textLight),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
+                    if (facts.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          for (var i = 0; i < facts.length; i++) ...[
+                            if (i > 0) const SizedBox(width: 4),
+                            Flexible(child: _factChip(facts[i])),
+                          ],
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Container(height: 1, color: AppColors.divider.withValues(alpha: 0.6)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  priceCaption,
+                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 8, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight),
+                                ),
+                                const SizedBox(height: 2),
+                                Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: priceValue,
+                                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.gold),
+                                      ),
+                                      TextSpan(
+                                        text: priceUnit,
+                                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 8.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
+                                      ),
+                                    ],
+                                  ),
+                                  maxLines: 1,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Iconsax.arrow_right_3, size: 16, color: AppColors.primary),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  static Widget _placeholder() => Container(
-        color: AppColors.surface,
-        child: const Center(child: Icon(Icons.home_rounded, size: 28, color: AppColors.primaryLight)),
+  Widget _factChip(String label) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(color: _accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w600, color: _accentDark),
+        ),
+      );
+
+  Widget _placeholder() => Container(
+        color: isPlot ? AppColors.plotSurface : AppColors.surface,
+        child: Center(
+          child: Icon(isPlot ? Icons.landscape_rounded : Icons.home_rounded, size: 30, color: _accent.withValues(alpha: 0.5)),
+        ),
       );
 }

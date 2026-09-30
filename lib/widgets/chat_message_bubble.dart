@@ -17,6 +17,7 @@ class ChatMessageBubble extends StatelessWidget {
   final VoidCallback? onDeclineSchedule;
   final VoidCallback? onCounterSchedule;
   final VoidCallback? onCall;
+  final Color accent;
 
   const ChatMessageBubble({
     super.key,
@@ -29,6 +30,7 @@ class ChatMessageBubble extends StatelessWidget {
     this.onDeclineSchedule,
     this.onCounterSchedule,
     this.onCall,
+    this.accent = AppColors.primary,
   });
 
   @override
@@ -92,7 +94,7 @@ class ChatMessageBubble extends StatelessWidget {
               final i = entry.key;
               final opt = entry.value;
               final negative = opt.sentiment == 'negative';
-              final color = negative ? AppColors.error : AppColors.primary;
+              final color = negative ? AppColors.error : accent;
               return FadeInUp(
                 duration: const Duration(milliseconds: 260),
                 delay: Duration(milliseconds: 40 * i),
@@ -147,11 +149,12 @@ class ChatMessageBubble extends StatelessWidget {
       readAt: message.readAt,
       actions: (!message.isMine && onApproveContact != null)
           ? [
-              _actionBtn('Approve', primary: true, onTap: onApproveContact),
-              _actionBtn('Decline', primary: false, onTap: onDeclineContact),
+              _actionBtn('Approve', primary: true, accent: accent, onTap: onApproveContact),
+              _actionBtn('Decline', primary: false, accent: accent, onTap: onDeclineContact),
             ]
           : null,
       mine: message.isMine,
+      accent: accent,
     );
   }
 
@@ -175,7 +178,7 @@ class ChatMessageBubble extends StatelessWidget {
                 icon: const Icon(Icons.call_rounded, size: 18),
                 label: const Text('Call', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white,
+                  backgroundColor: AppColors.warning, foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
@@ -208,6 +211,7 @@ class ChatMessageBubble extends StatelessWidget {
       onConfirm: onAcceptSlot,
       onCounterSchedule: onCounterSchedule,
       onDeclineSchedule: onDeclineSchedule,
+      accent: accent,
     );
   }
 
@@ -222,6 +226,7 @@ class ChatMessageBubble extends StatelessWidget {
       subtitle: confirmedAt != null ? _formatDateTime(confirmedAt) : null,
       readAt: message.readAt,
       mine: message.isMine,
+      accent: accent,
     );
   }
 
@@ -234,7 +239,7 @@ class ChatMessageBubble extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 280),
           padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
           decoration: BoxDecoration(
-            color: mine ? AppColors.primary : Colors.white,
+            color: mine ? accent : AppColors.cardBg,
             border: mine ? null : Border.all(color: AppColors.divider),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(14), topRight: const Radius.circular(14),
@@ -299,7 +304,7 @@ Widget _readTick(bool read, {bool onDark = true}) => Padding(
       child: Icon(
         read ? Icons.done_all_rounded : Icons.done_rounded,
         size: 14,
-        color: read ? const Color(0xFF34B7F1) : (onDark ? Colors.white70 : AppColors.textHint),
+        color: read ? AppColors.readTick : (onDark ? Colors.white70 : AppColors.textHint),
       ),
     );
 
@@ -311,6 +316,7 @@ Widget _card({
   List<Widget>? actions,
   required DateTime? readAt,
   required bool mine,
+  required Color accent,
 }) =>
     Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
@@ -319,7 +325,7 @@ Widget _card({
         constraints: const BoxConstraints(maxWidth: 300),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBg,
           border: Border.all(color: AppColors.divider),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 3))],
@@ -328,8 +334,8 @@ Widget _card({
           Row(children: [
             Container(
               width: 26, height: 26,
-              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(8)),
-              child: Icon(icon, size: 15, color: AppColors.primary),
+              decoration: BoxDecoration(color: accent.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(8)),
+              child: Icon(icon, size: 15, color: accent),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -369,7 +375,7 @@ Widget _card({
       ),
     );
 
-Widget _actionBtn(String label, {required bool primary, bool negative = false, VoidCallback? onTap}) {
+Widget _actionBtn(String label, {required bool primary, required Color accent, bool negative = false, VoidCallback? onTap}) {
   final disabled = onTap == null;
   return SizedBox(
     width: double.infinity,
@@ -377,7 +383,7 @@ Widget _actionBtn(String label, {required bool primary, bool negative = false, V
         ? ElevatedButton(
             onPressed: onTap,
             style: ElevatedButton.styleFrom(
-              backgroundColor: disabled ? AppColors.divider : AppColors.primary,
+              backgroundColor: disabled ? AppColors.divider : accent,
               foregroundColor: disabled ? AppColors.textHint : Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -440,6 +446,7 @@ class _ScheduleProposalCard extends StatefulWidget {
   final void Function(DateTime)? onConfirm;
   final VoidCallback? onCounterSchedule;
   final VoidCallback? onDeclineSchedule;
+  final Color accent;
 
   const _ScheduleProposalCard({
     required this.mine,
@@ -451,6 +458,7 @@ class _ScheduleProposalCard extends StatefulWidget {
     this.onConfirm,
     this.onCounterSchedule,
     this.onDeclineSchedule,
+    required this.accent,
   });
 
   @override
@@ -481,6 +489,7 @@ class _ScheduleProposalCardState extends State<_ScheduleProposalCard> {
         title: widget.title,
         readAt: widget.readAt,
         mine: widget.mine,
+        accent: widget.accent,
         subtitle: widget.canRespond && multiSlot
             ? 'Select a time, then confirm'
             : (widget.proposedAts.isEmpty ? 'a visit' : null),
@@ -493,9 +502,9 @@ class _ScheduleProposalCardState extends State<_ScheduleProposalCard> {
                     ? OutlinedButton.icon(
                         onPressed: () => setState(() => _selected = dt),
                         style: OutlinedButton.styleFrom(
-                          backgroundColor: isSelected ? AppColors.primary : Colors.white,
-                          foregroundColor: isSelected ? Colors.white : AppColors.primary,
-                          side: BorderSide(color: isSelected ? AppColors.primary : AppColors.primaryLight),
+                          backgroundColor: isSelected ? widget.accent : AppColors.cardBg,
+                          foregroundColor: isSelected ? Colors.white : widget.accent,
+                          side: BorderSide(color: isSelected ? widget.accent : widget.accent.withValues(alpha: 0.5)),
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
@@ -505,7 +514,7 @@ class _ScheduleProposalCardState extends State<_ScheduleProposalCard> {
                       )
                     : Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+                        decoration: BoxDecoration(color: AppColors.surfaceWarm, borderRadius: BorderRadius.circular(16)),
                         child: Text(_formatDateTime(dt),
                             style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
                       );
@@ -518,10 +527,10 @@ class _ScheduleProposalCardState extends State<_ScheduleProposalCard> {
               }).toList()),
         actions: widget.canRespond
             ? [
-                _actionBtn('Confirm visit', primary: true,
+                _actionBtn('Confirm visit', primary: true, accent: widget.accent,
                     onTap: _selected != null ? () => widget.onConfirm!(_selected!) : null),
-                _actionBtn('Propose different time', primary: false, onTap: widget.onCounterSchedule),
-                _actionBtn('Decline', primary: false, negative: true, onTap: widget.onDeclineSchedule),
+                _actionBtn('Propose different time', primary: false, accent: widget.accent, onTap: widget.onCounterSchedule),
+                _actionBtn('Decline', primary: false, accent: widget.accent, negative: true, onTap: widget.onDeclineSchedule),
               ]
             : null,
       ),

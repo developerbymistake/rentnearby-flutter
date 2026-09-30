@@ -5,8 +5,6 @@ import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
 import '../config/app_tabs.dart';
-import '../controllers/auth_controller.dart';
-import '../controllers/chat_controller.dart';
 import '../controllers/explore_landing_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
@@ -17,7 +15,6 @@ import '../models/explore_kind.dart';
 import '../navigation/tour_keys.dart';
 import '../services/add_listing_flow.dart';
 import '../services/explore_navigation.dart';
-import '../utils/app_toast.dart';
 import '../widgets/add_listing_shortcut_button.dart';
 import '../widgets/filter_sort_sheet.dart';
 import '../widgets/gradient_button.dart';
@@ -30,7 +27,7 @@ const _kGridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
   maxCrossAxisExtent: 190,
   mainAxisSpacing: 12,
   crossAxisSpacing: 12,
-  mainAxisExtent: 212,
+  mainAxisExtent: ListingGridCard.height,
 );
 
 const _kMapGradient = LinearGradient(
@@ -64,6 +61,9 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
   final _scroll = ScrollController();
 
   bool get _isRooms => widget.kind == ExploreKind.rooms;
+
+  @override
+  bool get searchPlotsTheme => !_isRooms;
   int get _tab => _isRooms ? AppTabs.rooms : AppTabs.plots;
   Color get _accent => _isRooms ? AppColors.primary : AppColors.plot;
   Color get _accentDark => _isRooms ? AppColors.primary : AppColors.plotDark;
@@ -99,24 +99,6 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
     } else {
       Get.toNamed(AppRoutes.plotDetail, arguments: item.id);
     }
-  }
-
-  Future<void> _chat(BrowseItem item) async {
-    final conv = await Get.find<ChatController>().createOrGetConversation(_isRooms ? 'Room' : 'Plot', item.id);
-    if (conv == null) return;
-    Get.toNamed(AppRoutes.chatConversation, arguments: {
-      'conversationId': conv.id,
-      'listingType': conv.listingType,
-      'listingId': conv.listingId,
-      'roomTypeId': conv.roomTypeId,
-      'plotTypeId': conv.plotTypeId,
-      'otherPartyId': conv.otherPartyId,
-      'otherPartyName': conv.otherPartyName,
-      'listingTitle': conv.listingTitle,
-      'isOwner': conv.isOwner,
-      'status': conv.status,
-      'isBlockedByMe': conv.isBlockedByMe,
-    });
   }
 
   @override
@@ -214,7 +196,7 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 18),
               KeyedSubtree(
                 key: _isRooms ? TourKeys.roomsLandingLocation : TourKeys.plotsLandingLocation,
                 child: _buildCityDropdown(),
@@ -234,25 +216,38 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
         behavior: HitTestBehavior.opaque,
         onTap: resolving ? null : () => onSearchToggleTap(context),
         child: Container(
-          width: 38,
-          height: 38,
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 13),
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: active ? AppColors.error : Colors.white,
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 3)),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2)),
             ],
           ),
           child: resolving
-              ? Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: CircularProgressIndicator(strokeWidth: 2, color: _accentDark),
+              ? SizedBox(
+                  width: 15,
+                  height: 15,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: _accent),
                 )
-              : Icon(
-                  active ? Icons.close_rounded : Icons.search_rounded,
-                  size: 18,
-                  color: active ? Colors.white : _accentDark,
-                ),
+              : active
+                  ? const Text(
+                      'Cancel',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.search_rounded, size: 15, color: _accent),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Search',
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: _accent),
+                        ),
+                      ],
+                    ),
         ),
       );
     });
@@ -281,7 +276,7 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
             ];
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: searching ? null : () => LocationSwitchSheet.show(context),
+        onTap: searching ? null : () => LocationSwitchSheet.show(context, plots: !_isRooms),
         child: Container(
           height: 46,
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -322,28 +317,24 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
         label: _isRooms ? 'Add Room' : 'Add Plot',
         icon: Icons.add_rounded,
         gradient: _gradient,
-        shadow: _accent,
         onTap: () => AddListingFlow.start(_isRooms),
       ),
       _OptionTile(
         label: _isRooms ? 'My Rooms' : 'My Plots',
         icon: Icons.bar_chart_rounded,
         gradient: _kMineGradient,
-        shadow: AppColors.warning,
         onTap: () => Get.toNamed(_isRooms ? AppRoutes.myListings : AppRoutes.myPlots),
       ),
       _OptionTile(
         label: 'Map view',
         icon: Icons.map_outlined,
         gradient: _kMapGradient,
-        shadow: AppColors.accent,
         onTap: () => ExploreNavigation.openMap(_tab),
       ),
       _OptionTile(
         label: 'Nearest',
         icon: Icons.explore_outlined,
         gradient: _kNearestGradient,
-        shadow: const Color(0xFF22C55E),
         onTap: () => ExploreNavigation.openMap(_tab, startNearest: true),
       ),
     ];
@@ -445,7 +436,6 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
         if (_ctrl.isLoading.value) return _buildShimmerGrid();
         return SliverToBoxAdapter(child: _buildMessage(failed: _ctrl.loadFailed.value));
       }
-      final myId = Get.find<AuthController>().user.value?.id;
       return SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
         sliver: SliverGrid(
@@ -456,15 +446,15 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
               final card = ListingGridCard(
                 key: ValueKey(item.id),
                 thumbnailUrl: item.thumbnailUrl,
-                badgeLabel: item.badgeLabel,
-                priceLabel: item.priceLabel,
+                tagLabel: item.tagLabel,
                 title: item.title,
                 locationLabel: item.locationLabel,
+                facts: item.facts,
+                priceCaption: item.priceCaption,
+                priceValue: item.priceValue,
+                priceUnit: item.priceUnit,
+                isPlot: !_isRooms,
                 onViewDetails: () => _viewDetails(item),
-                onChat: item.userId == myId
-                    ? () => AppToast.info("You can't chat on your own listing")
-                    : () => _chat(item),
-                tint: _accent,
               );
               return i == 0 ? KeyedSubtree(key: _listKey, child: card) : card;
             },
@@ -566,14 +556,12 @@ class _OptionTile extends StatelessWidget {
   final String label;
   final IconData icon;
   final Gradient gradient;
-  final Color shadow;
   final VoidCallback onTap;
 
   const _OptionTile({
     required this.label,
     required this.icon,
     required this.gradient,
-    required this.shadow,
     required this.onTap,
   });
 
@@ -587,7 +575,8 @@ class _OptionTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: AppShadows.premium(shadow, alpha: 0.16, blur: 12, offset: const Offset(0, 5)),
+          border: Border.all(color: AppColors.divider.withValues(alpha: 0.7)),
+          boxShadow: AppShadows.premium(AppColors.primary, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

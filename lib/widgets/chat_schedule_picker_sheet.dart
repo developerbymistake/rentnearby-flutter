@@ -105,7 +105,7 @@ class _ChatSchedulePickerSheetState extends State<ChatSchedulePickerSheet> {
                     ),
                     child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Text(i == 0 ? 'Today' : _dayLabels[d.weekday % 7],
-                          style: TextStyle(fontFamily: 'Poppins', fontSize: 10, color: sel ? Colors.white70 : AppColors.textLight)),
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 10, color: sel ? Colors.white : AppColors.primary)),
                       const SizedBox(height: 2),
                       Text('${d.day}',
                           style: TextStyle(

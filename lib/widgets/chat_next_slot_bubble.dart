@@ -9,8 +9,9 @@ import '../config/app_colors.dart';
 class ChatNextSlotBubble extends StatelessWidget {
   final VoidCallback onTap;
   final bool sending;
+  final Color accent;
 
-  const ChatNextSlotBubble({super.key, required this.onTap, required this.sending});
+  const ChatNextSlotBubble({super.key, required this.onTap, required this.sending, this.accent = AppColors.primary});
 
   static const _radius = BorderRadius.only(
     topLeft: Radius.circular(14),
@@ -34,18 +35,18 @@ class ChatNextSlotBubble extends StatelessWidget {
               borderRadius: _radius,
               onTap: sending ? null : onTap,
               child: CustomPaint(
-                painter: _DashedRRectPainter(color: AppColors.primary.withValues(alpha: 0.55), radius: _radius),
+                painter: _DashedRRectPainter(color: accent.withValues(alpha: 0.55), radius: _radius),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.055),
+                    color: accent.withValues(alpha: 0.055),
                     borderRadius: _radius,
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
+                    Icon(Icons.add_rounded, size: 16, color: accent),
                     const SizedBox(width: 5),
-                    const Text('Ask something',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                    Text('Ask something',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: accent)),
                   ]),
                 ),
               ),

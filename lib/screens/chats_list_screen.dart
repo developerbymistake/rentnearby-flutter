@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
+import '../config/app_shadows.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/chat_controller.dart';
@@ -123,7 +124,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
     // screen then inherits the app-wide light-icon default, same as every other
     // gradient-headed screen, instead of needing its own AnnotatedRegion override.
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.scaffoldBg,
       body: Column(
         children: [
           Container(
@@ -134,7 +135,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(4, 16, 12, 20),
+                padding: const EdgeInsets.fromLTRB(4, 8, 12, 20),
                 child: Row(
                   children: [
                     IconButton(
@@ -265,14 +266,22 @@ class _ChatsListScreenState extends State<ChatsListScreen>
             color: AppColors.textHint,
           ),
           filled: true,
-          fillColor: AppColors.surface,
+          fillColor: AppColors.cardBg,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 14,
             vertical: 12,
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+            borderSide: const BorderSide(color: AppColors.divider),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.divider),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
           ),
         ),
       ),
@@ -281,10 +290,18 @@ class _ChatsListScreenState extends State<ChatsListScreen>
 
   Widget _conversationCard(ConversationModel c) {
     final unread = c.unreadCount > 0;
+    final isPlot = c.listingType != 'Room';
+    final accent = isPlot ? AppColors.plot : AppColors.primary;
+    final statusLabel = c.isActive
+        ? null
+        : switch (c.status) {
+            'ListingInactive' => 'Listing inactive',
+            'ListingRemoved' => 'Listing removed',
+            'Blocked' => 'Blocked',
+            _ => 'Unavailable',
+          };
     return Material(
-      // Background is always white now — unread is signaled by the bold name/preview
-      // text and the count badge instead of a background tint or border.
-      color: Colors.white,
+      color: AppColors.cardBg,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -293,63 +310,22 @@ class _ChatsListScreenState extends State<ChatsListScreen>
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            // No border, and a neutral black-based shadow (not primary-tinted) — a
-            // colored border/shadow was reading as "the card itself looks dark/tinted"
-            // even though the fill was already pure white. Matches the shadow pattern
-            // already used elsewhere in the app (create_banner_screen.dart's fields,
-            // question_templates_screen.dart's cards).
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
+            boxShadow: AppShadows.premium(AppColors.primary, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 23,
-                    backgroundColor: AppColors.primary,
-                    child: Opacity(
-                      opacity: c.isActive ? 1 : 0.55,
-                      child: Text(
-                        c.otherPartyName.isNotEmpty
-                            ? c.otherPartyName[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+              CircleAvatar(
+                radius: 23,
+                backgroundColor: accent,
+                child: Opacity(
+                  opacity: c.isActive ? 1 : 0.6,
+                  child: Text(
+                    c.otherPartyName.isNotEmpty ? c.otherPartyName[0].toUpperCase() : '?',
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white),
                   ),
-                  if (!c.isActive)
-                    Positioned(
-                      right: -2,
-                      bottom: -2,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.fromBorderSide(
-                            BorderSide(color: AppColors.divider),
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.block_rounded,
-                          size: 11,
-                          color: AppColors.textHint,
-                        ),
-                      ),
-                    ),
-                ],
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -365,9 +341,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 14.5,
-                              fontWeight: unread
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
+                              fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
                               color: AppColors.textDark,
                             ),
                           ),
@@ -377,26 +351,44 @@ class _ChatsListScreenState extends State<ChatsListScreen>
                           style: TextStyle(
                             fontFamily: 'Poppins',
                             fontSize: 11,
-                            color: unread
-                                ? AppColors.primary
-                                : AppColors.textHint,
-                            fontWeight: unread
-                                ? FontWeight.w600
-                                : FontWeight.w400,
+                            color: unread ? accent : AppColors.textLight,
+                            fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${c.listingType == 'Room' ? '🏠' : '📍'} ${c.listingTitle}'
-                      '${c.area != null && c.area!.isNotEmpty ? ' · ${c.area}' : ''}',
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 11.5,
-                        color: AppColors.textLight,
-                      ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                          decoration: BoxDecoration(color: accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)),
+                          child: Text(
+                            isPlot ? 'PLOT' : 'ROOM',
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: accent),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '${c.listingTitle}${c.area != null && c.area!.isNotEmpty ? ' · ${c.area}' : ''}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+                          ),
+                        ),
+                        if (statusLabel != null) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                            decoration: BoxDecoration(color: AppColors.divider.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(6)),
+                            child: Text(
+                              statusLabel,
+                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.textLight),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 5),
                     Row(
@@ -404,17 +396,13 @@ class _ChatsListScreenState extends State<ChatsListScreen>
                       children: [
                         Expanded(
                           child: Text(
-                            c.lastMessagePreview ?? 'Say hi 👋',
+                            c.lastMessagePreview ?? 'Say hi',
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 13,
-                              fontWeight: unread
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                              color: unread
-                                  ? AppColors.textDark
-                                  : AppColors.textMedium,
+                              fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
+                              color: unread ? AppColors.textDark : AppColors.textMedium,
                             ),
                           ),
                         ),
@@ -425,18 +413,10 @@ class _ChatsListScreenState extends State<ChatsListScreen>
                             height: 20,
                             padding: const EdgeInsets.symmetric(horizontal: 6),
                             alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
+                            decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(20)),
                             child: Text(
                               c.unreadCount > 99 ? '99+' : '${c.unreadCount}',
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
+                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
                             ),
                           ),
                         ],
@@ -540,20 +520,20 @@ class _ChatsListScreenState extends State<ChatsListScreen>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.cardBg,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
             children: [
-              const CircleAvatar(radius: 23, backgroundColor: Colors.white),
+              const CircleAvatar(radius: 23, backgroundColor: AppColors.cardBg),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(height: 12, width: 120, color: Colors.white),
+                    Container(height: 12, width: 120, color: AppColors.cardBg),
                     const SizedBox(height: 8),
-                    Container(height: 10, width: 180, color: Colors.white),
+                    Container(height: 10, width: 180, color: AppColors.cardBg),
                   ],
                 ),
               ),

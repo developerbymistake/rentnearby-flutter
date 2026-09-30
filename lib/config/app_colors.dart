@@ -8,8 +8,10 @@ class AppColors {
   static const Color accentLight = Color(0xFF38BDF8);
 
   // Plot palette — the Plots tab's own theme, distinct from Rooms' blue above.
-  static const Color plot = Color(0xFFE8623F);      // Coral
-  static const Color plotDark = Color(0xFFC2431F);  // Terracotta
+  static const Color plot = Color(0xFF15803D);      // Forest
+  static const Color plotDark = Color(0xFF166534);  // Deep forest
+  static const Color plotSurface = Color(0xFFF0FDF4);
+  static const Color gold = Color(0xFFB8862E);
 
   /// Hex string for native MapLibre layer APIs, which require a String not a Color —
   /// derived from [plot] so it can never drift out of sync with it.
@@ -23,10 +25,13 @@ class AppColors {
     colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
   );
 
+  static Color accentFor(bool isPlot) => isPlot ? plot : primary;
+  static LinearGradient gradientFor(bool isPlot) => isPlot ? plotGradient : primaryGradient;
+
   static const LinearGradient plotGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFE8623F), Color(0xFFC2431F)],
+    colors: [Color(0xFF15803D), Color(0xFF166534)],
   );
 
   static const LinearGradient cardGradient = LinearGradient(
@@ -45,8 +50,8 @@ class AppColors {
   static const Color background = Color(0xFFFFFFFF);
   static const Color surface = Color(0xFFEFF6FF);
   static const Color cardBg = Color(0xFFFFFFFF);
-  static const Color scaffoldBg = Color(0xFFF8FAFF);
-  static const Color chatBg = Color(0xFFE7ECF3);
+  static const Color scaffoldBg = Color(0xFFFAF8F4);
+  static const Color readTick = Color(0xFF34B7F1);
 
   // Text
   static const Color textDark = Color(0xFF0F172A);
@@ -64,6 +69,7 @@ class AppColors {
   // Misc
   static const Color divider = Color(0xFFE2E8F0);
   static const Color shimmerBase = Color(0xFFE2E8F0);
-  static const Color shimmerHighlight = Color(0xFFEFF6FF);
+  static const Color surfaceWarm = Color(0xFFF3EFE8);
+  static const Color shimmerHighlight = surfaceWarm;
   static const Color shadow = Color(0x1A1E3A8A);
 }

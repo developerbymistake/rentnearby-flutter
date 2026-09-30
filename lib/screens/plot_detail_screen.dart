@@ -14,6 +14,8 @@ import '../models/plot_model.dart';
 import '../services/listing_share_service.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/detail_action_bar.dart';
+import '../widgets/detail_header.dart';
+import '../config/app_shadows.dart';
 import '../widgets/report_listing_sheet.dart';
 
 class PlotDetailScreen extends StatefulWidget {
@@ -99,17 +101,6 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
     'Farmhouse'   => Icons.cottage_rounded,
     _             => Icons.landscape_rounded,
   };
-
-  Widget _buildTitle(PlotModel p) => Row(children: [
-    Icon(_plotTypeIcon(p.plotType), size: 22, color: AppColors.plot),
-    const SizedBox(width: 8),
-    Flexible(
-      child: Text(
-        p.plotType,
-        style: const TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textDark),
-      ),
-    ),
-  ]);
 
   String _locationStr(PlotModel p) {
     final parts = [p.cityName, p.districtName]
@@ -271,7 +262,7 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
           flexibleSpace: FlexibleSpaceBar(
             background: p.photos.isEmpty
                 ? Container(
-                    color: AppColors.plot,
+                    decoration: BoxDecoration(gradient: AppColors.gradientFor(true)),
                     child: const Center(child: Icon(Icons.landscape_rounded, size: 80, color: Colors.white38)),
                   )
                 : Stack(
@@ -316,26 +307,14 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Title + area chip
-              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Expanded(child: _buildTitle(p)),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.plot,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(p.areaDisplay,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
-                    ],
-                  ),
-                ),
-              ]),
+              DetailTitleRow(
+                accent: AppColors.plot,
+                tag: 'FOR SALE',
+                icon: _plotTypeIcon(p.plotType),
+                title: '${p.plotType} Plot',
+                caption: 'PLOT AREA',
+                value: p.areaDisplay,
+              ),
               const SizedBox(height: 16),
 
               // Info card
@@ -344,9 +323,19 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
+                  boxShadow: AppShadows.premium(AppColors.plot, alpha: 0.07, blur: 12, offset: const Offset(0, 4)),
                 ),
                 child: Column(children: [
+                  DetailChipRow(
+                    accent: AppColors.plot,
+                    icon: _plotTypeIcon(p.plotType),
+                    label: p.plotType,
+                    distanceKm: _distanceKm,
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Divider(height: 1, color: AppColors.divider),
+                  ),
                   if (p.ownerName != null && p.ownerName!.isNotEmpty) ...[
                     _infoRow(Icons.person_rounded, 'Owner', p.ownerName!),
                     const Padding(
@@ -382,13 +371,6 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
                 const SizedBox(width: 4),
                 Text('Posted ${_timeAgo(p.createdAt)}',
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
-                const Spacer(),
-                if (_distanceKm != null) ...[
-                  const Icon(Iconsax.location, size: 13, color: AppColors.textHint),
-                  const SizedBox(width: 4),
-                  Text('${_distanceKm!.toStringAsFixed(1)} km away',
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                ],
               ]),
               const SizedBox(height: 20),
             ]),
@@ -424,6 +406,7 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
               ? null
               : () => ReportListingSheet.show(context, listingId: p.id, listingType: 'Plot'),
           onChat: _isOwner ? null : () => _openChat(p),
+          accent: AppColors.plot,
         ));
   }
 
@@ -448,7 +431,7 @@ class _PlotDetailScreenState extends State<PlotDetailScreen> {
   Widget _infoRow(IconData icon, String label, String value, {Color? valueColor, Color? iconColor}) => Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: iconColor ?? AppColors.primaryLight),
+          Icon(icon, size: 18, color: iconColor ?? AppColors.plot),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

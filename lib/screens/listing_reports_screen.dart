@@ -5,7 +5,7 @@ import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/report_controller.dart';
 import '../models/listing_report_model.dart';
-import '../utils/app_date_format.dart';
+import '../widgets/report_row.dart';
 
 class ListingReportsScreen extends StatefulWidget {
   const ListingReportsScreen({super.key});
@@ -38,7 +38,7 @@ class _ListingReportsScreenState extends State<ListingReportsScreen> {
     return Scaffold(
       body: Column(children: [
         Container(
-          decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+          decoration: BoxDecoration(gradient: AppColors.gradientFor(_listingType == 'Plot')),
           child: SafeArea(
             bottom: false,
             child: Padding(
@@ -71,43 +71,14 @@ class _ListingReportsScreenState extends State<ListingReportsScreen> {
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: _reports.length,
-                      itemBuilder: (_, i) => _reportRow(_reports[i]),
+                      itemBuilder: (_, i) => ReportRow(
+                        report: _reports[i],
+                        showKind: false,
+                        onTap: () => Get.toNamed(AppRoutes.reportDetail, arguments: _reports[i]),
+                      ),
                     ),
         ),
       ]),
-    );
-  }
-
-  Widget _reportRow(ListingReportModel r) {
-    final isPending = r.status == 'Pending';
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 2))],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        title: Text(r.reasonName,
-            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        subtitle: Text(_formatDate(r.createdAt),
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-          decoration: BoxDecoration(
-            color: isPending ? AppColors.reportAlert.withValues(alpha: 0.12) : AppColors.success.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(r.status,
-              style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: isPending ? AppColors.reportAlert : AppColors.success)),
-        ),
-        onTap: () => Get.toNamed(AppRoutes.reportDetail, arguments: r),
-      ),
     );
   }
 
@@ -124,10 +95,8 @@ class _ListingReportsScreenState extends State<ListingReportsScreen> {
           child: Container(
             height: 70,
             margin: const EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(color: AppColors.cardBg, borderRadius: BorderRadius.circular(14)),
           ),
         ),
       );
-
-  String _formatDate(DateTime dt) => 'Filed ${AppDateFormat.date(dt)}';
 }

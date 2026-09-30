@@ -12,11 +12,13 @@ class ReportDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final r = Get.arguments as ListingReportModel;
     final isPending = r.status == 'Pending';
+    final isPlot = r.listingType == 'Plot';
+    final accent = AppColors.accentFor(isPlot);
 
     return Scaffold(
       body: Column(children: [
         Container(
-          decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+          decoration: BoxDecoration(gradient: AppColors.gradientFor(isPlot)),
           child: SafeArea(
             bottom: false,
             child: Padding(
@@ -36,6 +38,13 @@ class ReportDetailScreen extends StatelessWidget {
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(color: accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)),
+                child: Text(isPlot ? 'PLOT' : 'ROOM',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: accent)),
+              ),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -69,7 +78,7 @@ class ReportDetailScreen extends StatelessWidget {
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(color: accent.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(10)),
                 child: Row(children: [
                   const Icon(Iconsax.shield_tick, size: 16, color: AppColors.textLight),
                   const SizedBox(width: 8),

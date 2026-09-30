@@ -15,9 +15,10 @@ import '../utils/input_formatters.dart';
 /// either screen's location state to the other.
 class LocationSearchSheet extends StatefulWidget {
   final LatLng? bias;
-  const LocationSearchSheet({super.key, this.bias});
+  final bool plots;
+  const LocationSearchSheet({super.key, this.bias, this.plots = false});
 
-  static Future<PlaceResult?> show(BuildContext context, {LatLng? bias}) {
+  static Future<PlaceResult?> show(BuildContext context, {LatLng? bias, bool plots = false}) {
     return showModalBottomSheet<PlaceResult>(
       context: context,
       isScrollControlled: true,
@@ -25,7 +26,7 @@ class LocationSearchSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => LocationSearchSheet(bias: bias),
+      builder: (_) => LocationSearchSheet(bias: bias, plots: plots),
     );
   }
 
@@ -34,6 +35,8 @@ class LocationSearchSheet extends StatefulWidget {
 }
 
 class _LocationSearchSheetState extends State<LocationSearchSheet> {
+  Color get _accent => widget.plots ? AppColors.plot : AppColors.primary;
+  Gradient get _gradient => widget.plots ? AppColors.plotGradient : AppColors.primaryGradient;
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
 
@@ -124,9 +127,9 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
-      decoration: const BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        gradient: _gradient,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
@@ -165,6 +168,7 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
       child: TextField(
         controller: _searchCtrl,
         autofocus: true,
+        cursorColor: _accent,
         inputFormatters: noEmojiInputFormatters,
         onChanged: _onChanged,
         style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
@@ -175,13 +179,19 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
           prefixIcon: const Icon(Icons.search_rounded,
               size: 20, color: AppColors.textHint),
           filled: true,
-          fillColor: AppColors.surface,
+          fillColor: widget.plots ? AppColors.plotSurface : AppColors.surface,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
+          focusedBorder: widget.plots
+              ? OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.plot, width: 1.5),
+                )
+              : null,
         ),
       ),
     );
@@ -211,7 +221,7 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
         child: Row(
           children: [
-            const Icon(Iconsax.location, size: 17, color: AppColors.primary),
+            Icon(Iconsax.location, size: 17, color: _accent),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -273,13 +283,13 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
     return '${withSpaces[0].toUpperCase()}${withSpaces.substring(1)}';
   }
 
-  Widget _loadingIndicator() => const Padding(
+  Widget _loadingIndicator() => Padding(
         padding: EdgeInsets.symmetric(vertical: 48),
         child: Center(
           child: SizedBox(
             width: 26,
             height: 26,
-            child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary),
+            child: CircularProgressIndicator(strokeWidth: 2.5, color: _accent),
           ),
         ),
       );
@@ -308,8 +318,8 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
             const SizedBox(height: 10),
             TextButton(
               onPressed: onRetry,
-              child: const Text('Retry',
-                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.primary)),
+              child: Text('Retry',
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: _accent)),
             ),
           ],
         ),

@@ -11,9 +11,10 @@ import '../utils/input_formatters.dart';
 /// District (scoped to the current state) → State. Reads/writes browsing
 /// state directly on [LocationController]; callers don't need any callbacks.
 class LocationSwitchSheet extends StatefulWidget {
-  const LocationSwitchSheet({super.key});
+  final bool plots;
+  const LocationSwitchSheet({super.key, this.plots = false});
 
-  static Future<void> show(BuildContext context) {
+  static Future<void> show(BuildContext context, {bool plots = false}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -26,7 +27,7 @@ class LocationSwitchSheet extends StatefulWidget {
       // keyboard height on top of that fixed height fights it and pushes
       // list content down away from the search box. The sheet computes its
       // own height around the keyboard instead (see _sheetHeight()).
-      builder: (_) => const LocationSwitchSheet(),
+      builder: (_) => LocationSwitchSheet(plots: plots),
     );
   }
 
@@ -37,6 +38,8 @@ class LocationSwitchSheet extends StatefulWidget {
 enum _Level { city, district, state }
 
 class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
+  Color get _accent => widget.plots ? AppColors.plot : AppColors.primary;
+  Gradient get _gradient => widget.plots ? AppColors.plotGradient : AppColors.primaryGradient;
   final _locationCtrl = Get.find<LocationController>();
   final _searchCtrl = TextEditingController();
 
@@ -297,9 +300,9 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
-      decoration: const BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        gradient: _gradient,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
@@ -352,6 +355,7 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
       child: TextField(
         controller: _searchCtrl,
+        cursorColor: _accent,
         inputFormatters: noEmojiInputFormatters,
         onChanged: (v) => setState(() => _query = v),
         style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
@@ -362,13 +366,19 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
           prefixIcon: const Icon(Icons.search_rounded,
               size: 20, color: AppColors.textHint),
           filled: true,
-          fillColor: AppColors.surface,
+          fillColor: widget.plots ? AppColors.plotSurface : AppColors.surface,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
+          focusedBorder: widget.plots
+              ? OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.plot, width: 1.5),
+                )
+              : null,
         ),
       ),
     );
@@ -515,7 +525,7 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
     final disabled = onTap == null;
     final color = disabled
         ? AppColors.textHint
-        : (selected ? AppColors.primary : AppColors.textDark);
+        : (selected ? _accent : AppColors.textDark);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -537,21 +547,21 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
               ),
             ),
             if (selected)
-              const Icon(Icons.check_rounded, size: 18, color: AppColors.primary),
+              Icon(Icons.check_rounded, size: 18, color: _accent),
           ],
         ),
       ),
     );
   }
 
-  Widget _loadingIndicator() => const Padding(
+  Widget _loadingIndicator() => Padding(
         padding: EdgeInsets.symmetric(vertical: 48),
         child: Center(
           child: SizedBox(
             width: 26,
             height: 26,
             child: CircularProgressIndicator(
-                strokeWidth: 2.5, color: AppColors.primary),
+                strokeWidth: 2.5, color: _accent),
           ),
         ),
       );
@@ -582,11 +592,11 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
             const SizedBox(height: 10),
             TextButton(
               onPressed: onRetry,
-              child: const Text('Retry',
+              child: Text('Retry',
                   style: TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.w600,
-                      color: AppColors.primary)),
+                      color: _accent)),
             ),
           ],
         ),
