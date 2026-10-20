@@ -35,6 +35,12 @@ class ConfigController extends GetxController {
     isLoaded.value = true;
   }
 
+  Future<void> refreshPaymentFeature() async {
+    final paymentFeature = await Get.find<ConfigRepository>().getPaymentFeature(forceRefresh: true);
+    paymentEnabled.value = paymentFeature.enabled;
+    freeGoLiveDurationDays.value = paymentFeature.freeGoLiveDurationDays;
+  }
+
   Future<void> ensureLoaded() async {
     if (isLoaded.value) return;
     await _load();

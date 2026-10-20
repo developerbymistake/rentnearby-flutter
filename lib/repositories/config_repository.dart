@@ -39,27 +39,27 @@ class ConfigRepository {
       _paymentCache != null && isCacheValid(_paymentCacheTime, _paymentTtl);
 
   /// GET /config/payment-feature — anonymous, admin-managed kill switch for
-  /// the entire credit/payment economy. Unlike getListingLimits() above, this
-  /// must fail toward payment-required (enabled: true) on any parse/network
-  /// error — a slow or failed fetch should never silently hide payment UI
-  /// from users who should still see it. Kept on its own, much shorter TTL
+  /// the entire credit/payment economy. Fails toward hidden (enabled: false)
+  /// on any parse/network error so a failed fetch never surfaces payment UI;
+  /// the backend still enforces payment, and the app-resume refresh recovers
+  /// the real value. Kept on its own, much shorter TTL
   /// since an admin flipping this switch is expected to take effect quickly,
   /// not the "almost never changes" assumption behind the 1h listing-limits
   /// cache above.
-  Future<({bool enabled, int freeGoLiveDurationDays})> getPaymentFeature() async {
-    if (_isPaymentCacheValid) return _paymentCache!;
+  Future<({bool enabled, int freeGoLiveDurationDays})> getPaymentFeature({bool forceRefresh = false}) async {
+    if (!forceRefresh && _isPaymentCacheValid) return _paymentCache!;
     try {
       final res = await ApiService.get('/config/payment-feature');
       final data = res['data'] as Map<String, dynamic>? ?? {};
       final result = (
-        enabled: data['enabled'] as bool? ?? true,
+        enabled: data['enabled'] as bool? ?? false,
         freeGoLiveDurationDays: (data['freeGoLiveDurationDays'] as num?)?.toInt() ?? 30,
       );
       _paymentCache = result;
       _paymentCacheTime = DateTime.now();
       return result;
     } catch (_) {
-      return _paymentCache ?? (enabled: true, freeGoLiveDurationDays: 30);
+      return _paymentCache ?? (enabled: false, freeGoLiveDurationDays: 30);
     }
   }
 
