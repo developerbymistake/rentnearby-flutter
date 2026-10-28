@@ -140,7 +140,7 @@ List<TourStep> _buildLandingSteps({required bool rooms}) {
       key: rooms ? TourKeys.roomsLandingTiles : TourKeys.plotsLandingTiles,
       icon: Icons.grid_view_rounded,
       title: 'Quick actions',
-      body: 'Add your own $noun, manage yours, open the map or find the nearest listings — all from this row.',
+      body: 'Add your own $noun, manage yours or open the map — all from this row.',
     ),
     TourStep(
       key: rooms ? TourKeys.roomsLandingFilters : TourKeys.plotsLandingFilters,

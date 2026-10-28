@@ -35,11 +35,6 @@ const _kMapGradient = LinearGradient(
   end: Alignment.bottomRight,
   colors: [AppColors.accentLight, AppColors.accent],
 );
-const _kNearestGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [Color(0xFF4ADE80), Color(0xFF22C55E)],
-);
 const _kMineGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
@@ -331,12 +326,6 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
         gradient: _kMapGradient,
         onTap: () => ExploreNavigation.openMap(_tab),
       ),
-      _OptionTile(
-        label: 'Nearest',
-        icon: Icons.explore_outlined,
-        gradient: _kNearestGradient,
-        onTap: () => ExploreNavigation.openMap(_tab, startNearest: true),
-      ),
     ];
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
@@ -571,7 +560,7 @@ class _OptionTile extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(4, 12, 4, 10),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -582,19 +571,22 @@ class _OptionTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(gradient: gradient, borderRadius: BorderRadius.circular(14)),
-              child: Icon(icon, size: 22, color: Colors.white),
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: gradient,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 1),
+              ),
+              child: Icon(icon, size: 26, color: Colors.white),
             ),
             const SizedBox(height: 6),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label,
-                maxLines: 1,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
-              ),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textDark),
             ),
           ],
         ),
