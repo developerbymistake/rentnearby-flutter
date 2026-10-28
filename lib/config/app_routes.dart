@@ -20,6 +20,8 @@ import '../screens/credit_packs_screen.dart';
 import '../screens/redeem_code_screen.dart';
 import '../screens/wallet_ledger_screen.dart';
 import '../screens/notifications_screen.dart';
+import '../screens/role_select_screen.dart';
+import '../screens/role_change_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -47,6 +49,12 @@ class AppRoutes {
 
   // Notification inbox — backs the Home-screen bell icon.
   static const String notifications = '/notifications';
+
+  static const String roleSelect = '/role-select';
+  static const String roleChange = '/role-change';
+
+  static const Set<String> roomOwnerOnly = {myListings, addListing};
+  static const Set<String> plotOwnerOnly = {myPlots, addPlot};
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
@@ -173,6 +181,18 @@ class AppRoutes {
     GetPage(
       name: notifications,
       page: () => const NotificationsScreen(),
+      transition: Transition.rightToLeft,
+      transitionDuration: const Duration(milliseconds: 300),
+    ),
+    GetPage(
+      name: roleSelect,
+      page: () => const RoleSelectScreen(),
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 400),
+    ),
+    GetPage(
+      name: roleChange,
+      page: () => const RoleChangeScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

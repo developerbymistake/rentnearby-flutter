@@ -9,9 +9,11 @@ import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/config_controller.dart';
 import '../controllers/wallet_controller.dart';
+import '../utils/app_date_format.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
 import '../widgets/credit_icon.dart';
+import '../widgets/role_option_card.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
 
@@ -139,6 +141,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
+            _buildRoleCard(),
+
             // Wallet — when hidden, keep the card's own top margin as a plain gap so
             // the ACCOUNT section below (whose own Padding has zero top inset) doesn't
             // end up flush against the header above.
@@ -251,6 +255,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
             : const Icon(Iconsax.user5, size: 38, color: Colors.white),
       ),
     );
+  }
+
+  Widget _buildRoleCard() {
+    return Obx(() {
+      final roleKey = _auth.roleKey.value;
+      final u = _auth.user.value;
+      final pending = u?.hasPendingRoleRequest ?? false;
+      final rejected = u?.hasRejectedRoleRequest ?? false;
+      final reason = u?.roleRequestReason;
+      final blockedUntil = u?.roleRequestBlockedUntil;
+      final retryText = blockedUntil != null ? 'Try again after ${AppDateFormat.dateTime(blockedUntil)}' : null;
+      final title = rejected ? 'Request rejected' : RoleVisuals.displayName(roleKey);
+      final subtitle = pending
+          ? 'Request pending'
+          : rejected
+              ? (reason != null && reason.isNotEmpty ? reason : (retryText ?? 'Tap to try again'))
+              : (retryText ?? 'Change role');
+      return GestureDetector(
+        onTap: () => Get.toNamed(AppRoutes.roleChange),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: pending ? AppColors.warning : rejected ? AppColors.error : null,
+                  gradient: pending || rejected ? null : RoleVisuals.gradient(roleKey),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  pending ? Iconsax.clock : rejected ? Iconsax.close_circle : RoleVisuals.icon(roleKey),
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   Widget _buildWalletCard() {

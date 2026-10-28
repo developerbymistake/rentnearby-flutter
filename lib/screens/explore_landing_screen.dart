@@ -5,6 +5,7 @@ import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
 import '../config/app_tabs.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/explore_landing_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
@@ -53,6 +54,7 @@ class ExploreLandingScreen extends StatefulWidget {
 class _ExploreLandingScreenState extends State<ExploreLandingScreen>
     with ExploreLocationSearchMixin<ExploreLandingScreen> {
   late final ExploreLandingController _ctrl;
+  final _auth = Get.find<AuthController>();
   final _scroll = ScrollController();
 
   bool get _isRooms => widget.kind == ExploreKind.rooms;
@@ -327,19 +329,23 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
         onTap: () => ExploreNavigation.openMap(_tab),
       ),
     ];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-      child: KeyedSubtree(
-        key: _isRooms ? TourKeys.roomsLandingTiles : TourKeys.plotsLandingTiles,
-        child: Row(
-          children: [
-            for (var i = 0; i < tiles.length; i++) ...[
-              if (i > 0) const SizedBox(width: 10),
-              Expanded(child: tiles[i]),
-            ],
-          ],
-        ),
-      ),
+    return Obx(
+      () => !(_isRooms ? _auth.canListRooms.value : _auth.canListPlots.value)
+          ? const SizedBox.shrink()
+          : Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              child: KeyedSubtree(
+                key: _isRooms ? TourKeys.roomsLandingTiles : TourKeys.plotsLandingTiles,
+                child: Row(
+                  children: [
+                    for (var i = 0; i < tiles.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 10),
+                      Expanded(child: tiles[i]),
+                    ],
+                  ],
+                ),
+              ),
+            ),
     );
   }
 

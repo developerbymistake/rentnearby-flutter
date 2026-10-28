@@ -6,6 +6,7 @@ import '../models/go_live_result.dart';
 import '../models/plot_model.dart';
 import '../repositories/plot_repository.dart';
 import '../repositories/wallet_repository.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../config/app_colors.dart';
@@ -52,7 +53,7 @@ class PlotController extends GetxController {
   void onInit() {
     super.onInit();
     loadPlotTypes();
-    loadMyPlots();
+    if (Get.find<AuthController>().canListPlots.value) loadMyPlots();
   }
 
   Future<void> loadPlotTypes() async {

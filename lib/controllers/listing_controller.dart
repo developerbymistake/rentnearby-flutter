@@ -6,6 +6,7 @@ import '../models/go_live_result.dart';
 import '../models/listing_model.dart';
 import '../repositories/listing_repository.dart';
 import '../repositories/wallet_repository.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../config/app_colors.dart';
@@ -51,7 +52,7 @@ class ListingController extends GetxController {
   void onInit() {
     super.onInit();
     loadRoomTypes();
-    loadMyListings();
+    if (Get.find<AuthController>().canListRooms.value) loadMyListings();
   }
 
   Future<void> loadRoomTypes() async {

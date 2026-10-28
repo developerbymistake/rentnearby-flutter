@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
@@ -16,6 +17,8 @@ class AddListingFlow {
   static final Rxn<bool> checking = Rxn<bool>();
 
   static Future<void> start(bool isRooms) async {
+    final auth = Get.find<AuthController>();
+    if (!(isRooms ? auth.canListRooms.value : auth.canListPlots.value)) return;
     if (checking.value != null) return;
     checking.value = isRooms;
     try {

@@ -6,6 +6,7 @@ import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../controllers/app_version_controller.dart';
+import '../controllers/auth_controller.dart';
 import '../services/storage_service.dart';
 import '../utils/update_decision.dart';
 
@@ -79,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
     if (_parkWhileForced()) return;
 
     if (StorageService.isLoggedIn) {
-      Get.offAllNamed(AppRoutes.main);
+      Get.offAllNamed(Get.find<AuthController>().postLoginRoute);
     } else if (!StorageService.getTourSeen(AppConstants.introCarouselSeenKey)) {
       Get.offAllNamed(AppRoutes.intro);
     } else {

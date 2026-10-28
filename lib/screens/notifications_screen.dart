@@ -5,6 +5,7 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../models/notification_model.dart';
 import '../utils/app_date_format.dart';
@@ -53,9 +54,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   void _openNotification(NotificationModel n) {
     _ctrl.markRead(n.id);
-    if (n.actionRoute != null) {
-      Get.toNamed(n.actionRoute!, arguments: n.actionArguments);
-    }
+    final route = n.actionRoute;
+    if (route == null || route == AppRoutes.notifications || !Get.find<AuthController>().canOpenRoute(route)) return;
+    Get.toNamed(route, arguments: n.actionArguments);
   }
 
   @override

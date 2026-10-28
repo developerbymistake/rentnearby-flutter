@@ -108,9 +108,12 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
   @override
   Widget build(BuildContext context) {
     return Obx(() {
+      final canRooms = _auth.canListRooms.value;
+      final canPlots = _auth.canListPlots.value;
+      final owner = canRooms || canPlots;
       final slides = <bool>[
-        if (_tabs.isRoomsActive) true,
-        if (_tabs.isPlotsActive) false,
+        if (_tabs.isRoomsActive && (!owner || canRooms)) true,
+        if (_tabs.isPlotsActive && (!owner || canPlots)) false,
       ];
       if (slides.length != _count) _onCountChanged(slides.length);
       if (slides.isEmpty) return const SizedBox.shrink();
@@ -123,7 +126,7 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
             child: slides.length == 1
                 ? Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _OwnerBanner(isRooms: slides.first),
+                    child: _OwnerBanner(isRooms: slides.first, isOwner: owner),
                   )
                 : NotificationListener<ScrollNotification>(
                     onNotification: _onScroll,
@@ -132,7 +135,10 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
                       onPageChanged: (i) => setState(() => _page = i),
                       itemBuilder: (_, i) => Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _OwnerBanner(isRooms: slides[i % slides.length]),
+                        child: _OwnerBanner(
+                          isRooms: slides[i % slides.length],
+                          isOwner: owner,
+                        ),
                       ),
                     ),
                   ),
@@ -166,8 +172,9 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
 
 class _OwnerBanner extends StatelessWidget {
   final bool isRooms;
+  final bool isOwner;
 
-  const _OwnerBanner({required this.isRooms});
+  const _OwnerBanner({required this.isRooms, required this.isOwner});
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +255,9 @@ class _OwnerBanner extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    'Are you an Owner?',
+                    isOwner
+                        ? 'Are you an Owner?'
+                        : (isRooms ? 'Looking for a room?' : 'Looking for a plot?'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -261,7 +270,9 @@ class _OwnerBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isRooms ? 'List your room' : 'List your plot',
+                  isOwner
+                      ? (isRooms ? 'List your room' : 'List your plot')
+                      : (isRooms ? 'Find your room' : 'Find your plot'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -272,11 +283,13 @@ class _OwnerBanner extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                const Text(
-                  'Grow your reach',
+                Text(
+                  isOwner
+                      ? 'Grow your reach'
+                      : (isRooms ? 'Browse rooms near you' : 'Browse plots near you'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 10.5,
                     fontWeight: FontWeight.w500,
@@ -285,9 +298,13 @@ class _OwnerBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 GestureDetector(
-                  onTap: () => Get.toNamed(
-                    isRooms ? AppRoutes.myListings : AppRoutes.myPlots,
-                  ),
+                  onTap: isOwner
+                      ? () => Get.toNamed(
+                            isRooms ? AppRoutes.myListings : AppRoutes.myPlots,
+                          )
+                      : () => Get.find<AuthController>().switchToTab(
+                            isRooms ? AppTabs.rooms : AppTabs.plots,
+                          ),
                   child: PulseOnce(
                     child: SweepHighlight(
                       borderRadius: BorderRadius.circular(12),
@@ -300,22 +317,24 @@ class _OwnerBanner extends StatelessWidget {
                           color: accent,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Add Your Listing',
+                              isOwner
+                                  ? 'Add Your Listing'
+                                  : (isRooms ? 'Browse Rooms' : 'Browse Plots'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontFamily: 'Poppins',
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
                             ),
-                            SizedBox(width: 4),
-                            Icon(
+                            const SizedBox(width: 4),
+                            const Icon(
                               Icons.arrow_forward_rounded,
                               size: 12,
                               color: Colors.white,

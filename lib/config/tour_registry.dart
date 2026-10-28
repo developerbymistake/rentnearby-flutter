@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import '../controllers/auth_controller.dart';
 import '../navigation/tour_keys.dart';
 import 'app_constants.dart';
 import 'app_tabs.dart';
@@ -62,31 +64,44 @@ class TourDefinition {
 /// Built as a function so a future Home step can freely depend on live state
 /// without having to change the TourDefinition's shape.
 List<TourStep> _buildHomeSteps() {
+  final auth = Get.find<AuthController>();
+  final canRooms = auth.canListRooms.value;
+  final canPlots = auth.canListPlots.value;
+  final owner = canRooms || canPlots;
   return [
     TourStep(
       key: TourKeys.homeManageListingsCard,
       icon: Iconsax.building,
-      title: 'List your own place',
-      body: 'Got a room or plot to rent out? This card slides between the two — tap it to list yours and reach genuine tenants in minutes.',
+      title: owner ? 'List your own place' : 'Find your next place',
+      body: owner
+          ? (canRooms
+              ? 'Got a room to rent out? Tap this card to list yours and reach genuine tenants in minutes.'
+              : 'Got a plot to sell? Tap this card to list yours and reach genuine buyers in minutes.')
+          : 'This card slides between rooms and plots — tap it to start browsing.',
     ),
-    TourStep(
-      key: TourKeys.homeQuickActionAddRoom,
-      icon: Icons.add_rounded,
-      title: 'Add a room',
-      body: 'Post a new room listing in one tap.',
-    ),
-    TourStep(
-      key: TourKeys.homeQuickActionAddPlot,
-      icon: Icons.add_location_alt_rounded,
-      title: 'Add a plot',
-      body: 'Post a new plot listing in one tap.',
-    ),
-    TourStep(
-      key: TourKeys.homeQuickActionLeads,
-      icon: Icons.bar_chart_rounded,
-      title: 'My Listings',
-      body: 'Jump straight to the rooms and plots you have posted.',
-    ),
+    if (canRooms)
+      TourStep(
+        key: TourKeys.homeQuickActionAddRoom,
+        icon: Icons.add_rounded,
+        title: 'Add a room',
+        body: 'Post a new room listing in one tap.',
+      ),
+    if (canPlots)
+      TourStep(
+        key: TourKeys.homeQuickActionAddPlot,
+        icon: Icons.add_location_alt_rounded,
+        title: 'Add a plot',
+        body: 'Post a new plot listing in one tap.',
+      ),
+    if (owner)
+      TourStep(
+        key: TourKeys.homeQuickActionLeads,
+        icon: Icons.bar_chart_rounded,
+        title: 'My Listings',
+        body: canRooms
+            ? 'Jump straight to the rooms you have posted.'
+            : 'Jump straight to the plots you have posted.',
+      ),
     TourStep(
       key: TourKeys.homeInstagramCard,
       icon: Iconsax.camera,
@@ -115,7 +130,9 @@ List<TourStep> _buildHomeSteps() {
       key: TourKeys.homeProfileNavIcon,
       icon: Iconsax.user,
       title: 'Your account lives here',
-      body: 'Manage your profile, listings, wallet and settings from here.',
+      body: owner
+          ? 'Manage your profile, listings, wallet and settings from here.'
+          : 'Manage your profile, wallet and settings from here.',
     ),
   ];
 }
@@ -136,12 +153,15 @@ List<TourStep> _buildLandingSteps({required bool rooms}) {
       title: 'Switch your city',
       body: 'Tap to change your district or city — the list below follows it, shared across Rooms and Plots.',
     ),
-    TourStep(
-      key: rooms ? TourKeys.roomsLandingTiles : TourKeys.plotsLandingTiles,
-      icon: Icons.grid_view_rounded,
-      title: 'Quick actions',
-      body: 'Add your own $noun, manage yours or open the map — all from this row.',
-    ),
+    if (rooms
+        ? Get.find<AuthController>().canListRooms.value
+        : Get.find<AuthController>().canListPlots.value)
+      TourStep(
+        key: rooms ? TourKeys.roomsLandingTiles : TourKeys.plotsLandingTiles,
+        icon: Icons.grid_view_rounded,
+        title: 'Quick actions',
+        body: 'Add your own $noun, manage yours or open the map — all from this row.',
+      ),
     TourStep(
       key: rooms ? TourKeys.roomsLandingFilters : TourKeys.plotsLandingFilters,
       icon: Iconsax.filter,

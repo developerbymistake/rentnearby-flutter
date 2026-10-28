@@ -80,7 +80,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const HomeOwnerCarousel(),
                 ),
               ),
-              const SizedBox(height: 12),
               FadeInUp(
                 duration: const Duration(milliseconds: 260),
                 delay: const Duration(milliseconds: 120),
@@ -529,56 +528,59 @@ class _HomeScreenState extends State<HomeScreen> {
   // ── Owner quick actions ─────────────────────────────────────────────────
 
   Widget _buildOwnerQuickActions() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Obx(() {
-        final rooms = _tabs.isRoomsActive;
-        final plots = _tabs.isPlotsActive;
-        final checking = AddListingFlow.checking.value;
-        final tiles = <Widget>[
-          if (rooms)
-            KeyedSubtree(
-              key: TourKeys.homeQuickActionAddRoom,
-              child: _ownerQuickActionTile(
-                icon: Icons.add_rounded,
-                gradient: AppColors.primaryGradient,
-                label: 'Add Room',
-                motion: IconMotionStyle.pulse,
-                isLoading: checking == true,
-                onTap: checking != null ? null : () => AddListingFlow.start(true),
+    return Obx(() {
+      final canRooms = _auth.canListRooms.value;
+      final canPlots = _auth.canListPlots.value;
+      if (!canRooms && !canPlots) return const SizedBox.shrink();
+      final rooms = _tabs.isRoomsActive && canRooms;
+      final plots = _tabs.isPlotsActive && canPlots;
+      final checking = AddListingFlow.checking.value;
+      final tiles = <Widget>[
+        if (rooms)
+          KeyedSubtree(
+            key: TourKeys.homeQuickActionAddRoom,
+            child: _ownerQuickActionTile(
+              icon: Icons.add_rounded,
+              gradient: AppColors.primaryGradient,
+              label: 'Add Room',
+              motion: IconMotionStyle.pulse,
+              isLoading: checking == true,
+              onTap: checking != null ? null : () => AddListingFlow.start(true),
+            ),
+          ),
+        if (plots)
+          KeyedSubtree(
+            key: TourKeys.homeQuickActionAddPlot,
+            child: _ownerQuickActionTile(
+              icon: Icons.add_rounded,
+              gradient: AppColors.plotGradient,
+              label: 'Add Plot',
+              motion: IconMotionStyle.pulse,
+              isLoading: checking == false,
+              onTap: checking != null ? null : () => AddListingFlow.start(false),
+            ),
+          ),
+        if (rooms || plots)
+          KeyedSubtree(
+            key: TourKeys.homeQuickActionLeads,
+            child: _ownerQuickActionTile(
+              icon: Icons.bar_chart_rounded,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFBBF24), AppColors.warning],
+              ),
+              label: 'My Listings',
+              motion: IconMotionStyle.grow,
+              onTap: () => Get.toNamed(
+                canRooms ? AppRoutes.myListings : AppRoutes.myPlots,
               ),
             ),
-          if (plots)
-            KeyedSubtree(
-              key: TourKeys.homeQuickActionAddPlot,
-              child: _ownerQuickActionTile(
-                icon: Icons.add_rounded,
-                gradient: AppColors.plotGradient,
-                label: 'Add Plot',
-                motion: IconMotionStyle.pulse,
-                isLoading: checking == false,
-                onTap: checking != null ? null : () => AddListingFlow.start(false),
-              ),
-            ),
-          if (rooms || plots)
-            KeyedSubtree(
-              key: TourKeys.homeQuickActionLeads,
-              child: _ownerQuickActionTile(
-                icon: Icons.bar_chart_rounded,
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFFFBBF24), AppColors.warning],
-                ),
-                label: 'My Listings',
-                motion: IconMotionStyle.grow,
-                onTap: () => Get.toNamed(
-                  rooms ? AppRoutes.myListings : AppRoutes.myPlots,
-                ),
-              ),
-            ),
-        ];
-        return Row(
+          ),
+      ];
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (var i = 0; i < tiles.length; i++) ...[
@@ -586,9 +588,9 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(child: tiles[i]),
             ],
           ],
-        );
-      }),
-    );
+        ),
+      );
+    });
   }
 
   Widget _ownerQuickActionTile({

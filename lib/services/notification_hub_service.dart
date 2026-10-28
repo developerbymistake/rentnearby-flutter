@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import '../config/app_constants.dart';
+import '../config/notification_types.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/notification_controller.dart';
 import 'hub_connection_shared.dart';
 import 'hub_session_manager.dart';
@@ -41,6 +43,11 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect {
       try {
         final data = Map<String, dynamic>.from(args[0] as Map);
         Get.find<NotificationController>().applyLiveNotification(data);
+        if (data['type'] == NotificationTypeKeys.roleRequestApproved) {
+          Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
+        } else if (data['type'] == NotificationTypeKeys.roleRequestRejected) {
+          Get.find<AuthController>().refreshProfile();
+        }
       } catch (_) {}
     });
 

@@ -11,6 +11,7 @@ import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
+import '../config/notification_types.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../models/conversation_model.dart';
@@ -191,6 +192,15 @@ class NotificationService extends GetxService {
         return;
       }
 
+      final notificationType = message.data['notification_type'];
+      if (notificationType == NotificationTypeKeys.roleRequestApprovedWire) {
+        Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
+        return;
+      }
+      if (notificationType == NotificationTypeKeys.roleRequestRejectedWire) {
+        Get.find<AuthController>().refreshProfile();
+      }
+
       // Every other push (admin broadcast, report-filed)
       // is a combined Notification+data payload — the OS auto-renders it while
       // backgrounded/killed, but NOT while foregrounded, and onMessage is the only delivery
@@ -329,6 +339,7 @@ class NotificationService extends GetxService {
     AppRoutes.reportDetail,
     AppRoutes.myFiledReports,
     AppRoutes.notifications,
+    AppRoutes.roleChange,
     // Chat moved off the tab bar onto pushed routes — both need to be here so a second
     // notification arriving while the user is on Chats List or mid-conversation pops back to
     // main via the lightweight Get.until path below, not the full Get.offAllNamed teardown/
@@ -356,6 +367,10 @@ class NotificationService extends GetxService {
   // (_onLocalNotificationTap / cold-start getNotificationAppLaunchDetails, for a notification we
   // rendered ourselves — chat, or the new generic foreground one). One routing decision, one place.
   void _dispatchNotificationRoute(Map<String, dynamic> data) {
+    if (data['notification_type'] == NotificationTypeKeys.roleRequestApprovedWire) {
+      Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
+      return;
+    }
     final currentRoute = Get.currentRoute;
     if (currentRoute == AppRoutes.main) {
       // Already on main screen — no rebuild needed for the tab case; the
@@ -369,6 +384,7 @@ class NotificationService extends GetxService {
     } else {
       // Main screen is NOT in stack: terminated app, login, splash, onboarding
       // Navigate fresh — double postFrameCallback waits for MainScreen.initState()
+      if (Get.find<AuthController>().postLoginRoute != AppRoutes.main) return;
       Get.offAllNamed(AppRoutes.main);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -398,8 +414,13 @@ class NotificationService extends GetxService {
     // future notification category built on that system. Checked first; falls through to the
     // legacy per-type branches below only for pushes that predate this system (chat, reports,
     // broadcast, room/plot membership).
+    final auth = Get.find<AuthController>();
     final actionRoute = data['action_route'];
     if (actionRoute != null) {
+      if (!auth.canOpenRoute(actionRoute)) {
+        Get.toNamed(AppRoutes.notifications);
+        return;
+      }
       Map<String, dynamic>? actionArguments;
       final argsJson = data['action_args_json'];
       if (argsJson != null) {
@@ -421,8 +442,9 @@ class NotificationService extends GetxService {
       });
     } else if (notificationType == 'broadcast') {
       Get.find<AuthController>().switchToTab(AppTabs.rooms);
-    } else {
-      Get.toNamed(notificationType == 'plot' ? AppRoutes.myPlots : AppRoutes.myListings);
+    } else if (notificationType == 'room' || notificationType == 'plot') {
+      final route = notificationType == 'plot' ? AppRoutes.myPlots : AppRoutes.myListings;
+      Get.toNamed(auth.canOpenRoute(route) ? route : AppRoutes.notifications);
     }
   }
 
@@ -438,6 +460,7 @@ class NotificationService extends GetxService {
       Get.until((route) => route.settings.name == AppRoutes.main);
       _openChatConversation(conversationId);
     } else {
+      if (Get.find<AuthController>().postLoginRoute != AppRoutes.main) return;
       Get.offAllNamed(AppRoutes.main);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         WidgetsBinding.instance.addPostFrameCallback((_) {

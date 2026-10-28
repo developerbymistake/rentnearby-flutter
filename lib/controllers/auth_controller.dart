@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import '../models/role_model.dart';
 import '../models/user_model.dart';
 import '../repositories/user_repository.dart';
 import '../services/api_service.dart';
@@ -8,14 +9,16 @@ import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
+import '../config/user_roles.dart';
 import 'tab_config_controller.dart';
 import '../utils/app_toast.dart';
+import '../utils/jwt_claims.dart';
 import '../services/hub_session_manager.dart';
 
 /// What triggered a logout — decides whether the server-side revoke call fires and which (if
 /// any) toast is shown. Kept as a typed reason rather than booleans so each of the 3 real-world
 /// triggers (explicit tap, account deletion, a server-forced 401) is unambiguous at the call site.
-enum LogoutReason { explicitLogout, accountDeleted, sessionExpired }
+enum LogoutReason { explicitLogout, accountDeleted, sessionExpired, roleChanged }
 
 class AuthController extends GetxController {
   final isLoading = false.obs;
@@ -26,6 +29,9 @@ class AuthController extends GetxController {
   // out..." overlay and blocks MainScreen's root back-handling while true.
   final isLoggingOut = false.obs;
   final user = Rxn<UserModel>();
+  final roleKey = UserRoleKeys.seeker.obs;
+  final canListRooms = false.obs;
+  final canListPlots = false.obs;
   final tabIndex = AppTabs.home.obs;
   final profileTabTrigger = 0.obs;
 
@@ -61,9 +67,26 @@ class AuthController extends GetxController {
     profilePhoneChangeLocked.value = u?.hasUsedPhoneChange ?? false;
   }
 
+  bool get isOwner => canListRooms.value || canListPlots.value;
+
+  bool canOpenRoute(String route) =>
+      !(AppRoutes.roomOwnerOnly.contains(route) && !canListRooms.value) &&
+      !(AppRoutes.plotOwnerOnly.contains(route) && !canListPlots.value);
+
+  void _syncRoleFromToken(String? token) {
+    final key = JwtClaims.role(token) ?? UserRoleKeys.seeker;
+    roleKey.value = key;
+    final c = RoleCapabilities.of(key);
+    canListRooms.value = c.canListRooms;
+    canListPlots.value = c.canListPlots;
+  }
+
+  String get postLoginRoute => (user.value?.roleConfirmed ?? false) ? AppRoutes.main : AppRoutes.roleSelect;
+
   @override
   void onInit() {
     super.onInit();
+    _syncRoleFromToken(StorageService.getToken());
     user.value = StorageService.getUser();
     _syncProfileFields(user.value);
   }
@@ -95,7 +118,7 @@ class AuthController extends GetxController {
       final needsOnboarding = data['needsOnboarding'] as bool? ?? false;
       if (needsOnboarding) return 'onboarding';
       await _saveSession(data);
-      Get.offAllNamed(AppRoutes.main);
+      Get.offAllNamed(postLoginRoute);
       return null;
     } catch (e) {
       return _otpVerifyError(e);
@@ -116,7 +139,7 @@ class AuthController extends GetxController {
       });
       await _saveSession(res['data'] as Map<String, dynamic>);
       justSignedUp = true;
-      Get.offAllNamed(AppRoutes.main);
+      Get.offAllNamed(postLoginRoute);
     } catch (e) {
       AppToast.error(_onboardingError(e));
     } finally {
@@ -167,14 +190,19 @@ class AuthController extends GetxController {
 
   // ── Session ───────────────────────────────────────────────────────────────
 
-  Future<void> _saveSession(Map<String, dynamic> data) async {
+  Future<void> _applySession(Map<String, dynamic> data) async {
     final token = data['token'] as String;
     final userData = data['user'] as Map<String, dynamic>;
     await StorageService.saveToken(token);
+    _syncRoleFromToken(token);
     final userModel = UserModel.fromJson(userData);
     StorageService.saveUser(userModel);
     user.value = userModel;
     _syncProfileFields(userModel);
+  }
+
+  Future<void> _saveSession(Map<String, dynamic> data) async {
+    await _applySession(data);
     // Register FCM token after login — fire-and-forget, must not block login flow
     NotificationService.to.registerTokenAfterLogin()
         .catchError((e) => debugPrint('FCM token registration failed: $e'));
@@ -216,10 +244,17 @@ class AuthController extends GetxController {
       }).timeout(const Duration(seconds: 5));
     } catch (_) {}
     user.value = null;
+    roleKey.value = UserRoleKeys.seeker;
+    canListRooms.value = false;
+    canListPlots.value = false;
     _syncProfileFields(null);
     if (reason == LogoutReason.sessionExpired) {
       try {
         AppToast.info('Session expired. Please log in again.');
+      } catch (_) {}
+    } else if (reason == LogoutReason.roleChanged) {
+      try {
+        AppToast.info('Role updated. Please log in again.');
       } catch (_) {}
     }
     Get.offAllNamed(AppRoutes.login);
@@ -263,7 +298,8 @@ class AuthController extends GetxController {
   }
 
   Future<void> refreshProfile() async {
-    Get.find<UserRepository>().invalidate();
+    // Role select runs before MainScreen registers UserRepository.
+    if (Get.isRegistered<UserRepository>()) Get.find<UserRepository>().invalidate();
     try {
       final res = await ApiService.get('/users/profile');
       final updated = UserModel.fromJson(res['data'] as Map<String, dynamic>);
@@ -312,7 +348,83 @@ class AuthController extends GetxController {
     }
   }
 
+  // ── Role ──────────────────────────────────────────────────────────────────
+
+  Future<List<RoleModel>> fetchRoles() async {
+    try {
+      final res = await ApiService.get('/roles');
+      return (res['data'] as List)
+          .map((e) => RoleModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      if (!_isUnauthorized(e)) AppToast.error(_dioMessage(e, 'Could not load roles.'));
+      return const [];
+    }
+  }
+
+  Future<void> chooseRole(String roleKey) async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.put('/users/me/role-choice', {'role': roleKey});
+      await _applySession(res['data'] as Map<String, dynamic>);
+      Get.offAllNamed(AppRoutes.main);
+    } catch (e) {
+      if (_isUnauthorized(e)) return;
+      if (e is DioException && e.response?.statusCode == 409) {
+        await _recoverChosenRole();
+      } else {
+        AppToast.error(_dioMessage(e, 'Could not save your role.'));
+      }
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // The token must carry the server's committed role, not the login-time claim.
+  Future<void> _recoverChosenRole() async {
+    await refreshProfile();
+    final current = user.value;
+    if (current == null || !current.roleConfirmed) {
+      Get.offAllNamed(postLoginRoute);
+      return;
+    }
+    try {
+      final res = await ApiService.put('/users/me/role-choice', {'role': current.role});
+      await _applySession(res['data'] as Map<String, dynamic>);
+      Get.offAllNamed(AppRoutes.main);
+    } catch (e) {
+      if (_isUnauthorized(e)) return;
+      AppToast.error(_dioMessage(e, 'Could not save your role.'));
+    }
+  }
+
+  Future<bool> requestRoleChange(String roleKey) async {
+    try {
+      isLoading.value = true;
+      await ApiService.post('/users/me/role-request', {'role': roleKey});
+      await refreshProfile();
+      return true;
+    } catch (e) {
+      if (_isUnauthorized(e)) return false;
+      if (e is DioException && e.response?.statusCode == 409) {
+        final type = e.response?.data?['error']?['type'];
+        AppToast.warning(type == RoleRequestErrorTypes.cooldown || type == RoleRequestErrorTypes.liveListing
+            ? _dioMessage(e, 'Try again later.')
+            : 'A request is already pending.');
+        await refreshProfile();
+      } else {
+        AppToast.error(_dioMessage(e, 'Could not send request.'));
+      }
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   // ── Error helpers ─────────────────────────────────────────────────────────
+
+  // The ApiService interceptor already logged out and toasted on a 401.
+  static bool _isUnauthorized(dynamic e) => e is DioException && e.response?.statusCode == 401;
 
   static String _retryAfter(DioException e) {
     final raw = e.response?.headers.value('retry-after');
