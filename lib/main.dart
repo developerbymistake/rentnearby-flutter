@@ -7,6 +7,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:toastification/toastification.dart';
 import 'config/app_theme.dart';
 import 'config/app_routes.dart';
+import 'controllers/app_version_controller.dart';
 import 'controllers/auth_controller.dart';
 import 'services/api_service.dart';
 import 'services/deep_link_service.dart';
@@ -14,7 +15,9 @@ import 'services/map_pause_observer.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 import 'services/tour_dismiss_observer.dart';
+import 'utils/app_toast.dart';
 import 'widgets/global_location_gates.dart';
+import 'widgets/soft_update_dialog.dart';
 import 'widgets/tour_host.dart';
 
 Future<void> main() async {
@@ -23,6 +26,7 @@ Future<void> main() async {
   await StorageService.init();
   ApiService.init();
   await Firebase.initializeApp();
+  final installed = await AppVersionController.readInstalledVersion();
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -38,6 +42,11 @@ Future<void> main() async {
 
   Get.put(NotificationService(), permanent: true);
   Get.put(AuthController(), permanent: true);
+  Get.put(
+    AppVersionController(installedBuild: installed.build, installedVersionName: installed.name),
+    permanent: true,
+  );
+  AppVersionController.to.softDialogBuilder = (_) => const SoftUpdateDialog();
   Get.put(DeepLinkService(), permanent: true);
   unawaited(DeepLinkService.to.init());
 
@@ -61,13 +70,19 @@ class BakhliApp extends StatelessWidget {
       builder: (context, child) => ToastificationWrapper(
         child: MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
-          child: GlobalLocationGates(
-            child: Stack(
-              children: [
-                Positioned.fill(child: child!),
-                const TourHost(),
-              ],
-            ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              GlobalLocationGates(
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: child!),
+                    const TourHost(),
+                  ],
+                ),
+              ),
+              Overlay(key: AppToast.overlayKey),
+            ],
           ),
         ),
       ),

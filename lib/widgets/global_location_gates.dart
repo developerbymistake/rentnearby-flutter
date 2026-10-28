@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import '../config/app_colors.dart';
+import '../controllers/app_version_controller.dart';
 import '../controllers/location_controller.dart';
+import '../utils/update_decision.dart';
+import 'force_update_screen.dart';
 import 'gradient_button.dart';
 
 /// Wraps the whole app (via GetMaterialApp's `builder:`) so the Offline/
@@ -27,6 +30,30 @@ class GlobalLocationGates extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locationLayer = _buildLocationLayer();
+    if (!Get.isRegistered<AppVersionController>()) return locationLayer;
+    final versionCtrl = AppVersionController.to;
+    return Obx(() {
+      final forced = versionCtrl.gate.value == UpdateGateState.force;
+      // The shielded child must keep index 0 so its state survives force toggles.
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: ExcludeSemantics(
+              excluding: forced,
+              child: ExcludeFocus(
+                excluding: forced,
+                child: IgnorePointer(ignoring: forced, child: locationLayer),
+              ),
+            ),
+          ),
+          if (forced) const Positioned.fill(child: ForceUpdateScreen()),
+        ],
+      );
+    });
+  }
+
+  Widget _buildLocationLayer() {
     return ValueListenableBuilder<int>(
       valueListenable: _readyTick,
       builder: (context, _, _) {

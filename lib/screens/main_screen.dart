@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_tabs.dart';
+import '../controllers/app_version_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/listing_controller.dart';
@@ -156,7 +157,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // Replays any /go/{type}/{slug} deep link caught before main was ever reached this
     // session (see DeepLinkService's doc comment) — post-frame so this MainScreen build
     // has fully settled before a detail screen gets pushed on top of it.
-    WidgetsBinding.instance.addPostFrameCallback((_) => DeepLinkService.to.markMainReady());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      DeepLinkService.to.markMainReady();
+      AppVersionController.to.maybeShowSoftPrompt();
+    });
   }
 
   @override

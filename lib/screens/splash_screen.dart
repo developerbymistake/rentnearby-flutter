@@ -5,7 +5,9 @@ import 'package:geolocator/geolocator.dart';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_routes.dart';
+import '../controllers/app_version_controller.dart';
 import '../services/storage_service.dart';
+import '../utils/update_decision.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,6 +17,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver {
   bool _waitingForSettings = false;
+  Worker? _updateGateWorker;
 
   @override
   void initState() {
@@ -28,6 +31,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     WidgetsBinding.instance.removeObserver(this);
+    _updateGateWorker?.dispose();
     super.dispose();
   }
 
@@ -40,12 +44,31 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
   }
 
   Future<void> _start() async {
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future.wait([
+      Future.delayed(const Duration(milliseconds: 1000)),
+      AppVersionController.to.initialCheck
+          .timeout(AppConstants.appVersionSplashWait, onTimeout: () {})
+          .catchError((_) {}),
+    ]);
+    if (!mounted) return;
     _navigate();
+  }
+
+  bool _parkWhileForced() {
+    final versionCtrl = AppVersionController.to;
+    if (versionCtrl.gate.value != UpdateGateState.force) return false;
+    _updateGateWorker ??= ever<UpdateGateState>(versionCtrl.gate, (state) {
+      if (state == UpdateGateState.force) return;
+      _updateGateWorker?.dispose();
+      _updateGateWorker = null;
+      if (mounted && !_waitingForSettings) _navigate();
+    });
+    return true;
   }
 
   Future<void> _navigate() async {
     while (true) {
+      if (_parkWhileForced()) return;
       final granted = await _ensureLocationPermission();
       if (!mounted) return;
       if (_waitingForSettings) return;
@@ -53,6 +76,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
     }
 
     if (!mounted) return;
+    if (_parkWhileForced()) return;
 
     if (StorageService.isLoggedIn) {
       Get.offAllNamed(AppRoutes.main);

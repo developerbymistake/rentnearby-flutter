@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../config/app_routes.dart';
 import '../config/app_tour_state.dart';
 import '../config/tour_registry.dart';
+import '../controllers/app_version_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
 import '../navigation/tab_keys.dart';
@@ -10,6 +11,7 @@ import '../services/storage_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/rx_safe_call.dart';
 import '../utils/tour_target_ready.dart';
+import '../utils/update_decision.dart';
 
 /// Coach-mark tour engine — one persistent singleton driving 4 independent,
 /// one-time, first-visit tours (see tour_registry.dart). Purely a decision
@@ -59,6 +61,8 @@ class TourController extends GetxController {
   Worker? _gpsWorker;
   Worker? _districtWorker;
   Worker? _permissionWorker;
+  Worker? _updateGateWorker;
+  Worker? _softUpdateDialogWorker;
 
   @override
   void onInit() {
@@ -83,6 +87,11 @@ class TourController extends GetxController {
     _gpsWorker = ever(_locationCtrl.gpsEnabled, rxSafe('tour.gpsEnabled', (_) => _reconcile()));
     _districtWorker = ever(_locationCtrl.districtUnavailable, rxSafe('tour.districtUnavailable', (_) => _reconcile()));
     _permissionWorker = ever(_locationCtrl.locationPermissionGranted, rxSafe('tour.locationPermissionGranted', (_) => _reconcile()));
+    if (Get.isRegistered<AppVersionController>()) {
+      final versionCtrl = Get.find<AppVersionController>();
+      _updateGateWorker = ever(versionCtrl.gate, rxSafe('tour.updateGate', (_) => _reconcile()));
+      _softUpdateDialogWorker = ever(versionCtrl.softDialogOpen, rxSafe('tour.softUpdateDialog', (_) => _reconcile()));
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) => attemptShowTourForCurrentTab());
   }
@@ -95,6 +104,8 @@ class TourController extends GetxController {
     _gpsWorker?.dispose();
     _districtWorker?.dispose();
     _permissionWorker?.dispose();
+    _updateGateWorker?.dispose();
+    _softUpdateDialogWorker?.dispose();
     try {
       _teardown(markSeen: false);
     } catch (_) {}
@@ -116,10 +127,18 @@ class TourController extends GetxController {
   /// bumped by this path.
   void _reconcile() {
     if (tourInProgress.value) {
-      if (_locationCtrl.hasActiveGate) _teardown(markSeen: false);
+      if (_isGated) _teardown(markSeen: false);
       return;
     }
-    if (!_locationCtrl.hasActiveGate) attemptShowTourForCurrentTab();
+    if (!_isGated) attemptShowTourForCurrentTab();
+  }
+
+  bool get _isGated => _locationCtrl.hasActiveGate || _isUpdateGated;
+
+  bool get _isUpdateGated {
+    if (!Get.isRegistered<AppVersionController>()) return false;
+    final versionCtrl = Get.find<AppVersionController>();
+    return versionCtrl.gate.value == UpdateGateState.force || versionCtrl.softDialogOpen.value;
   }
 
   /// Called by TourDismissObserver.didPush — any route pushed on the root
@@ -140,7 +159,7 @@ class TourController extends GetxController {
     final tour = tourRegistry[_auth.tabIndex.value];
     if (tour == null) return;
     if (StorageService.getTourSeen(tour.storageKey)) return;
-    if (_locationCtrl.hasActiveGate) return;
+    if (_isGated) return;
     // TourHost is mounted above the ENTIRE routed app (main.dart), not just
     // MainScreen — so without this, a resume/reconcile-triggered attempt while
     // the user has a detail screen (listing, chat, checkout) pushed on top
@@ -168,7 +187,7 @@ class TourController extends GetxController {
     if (generation != _generation) return;
     if (tourInProgress.value) return;
     if (StorageService.getTourSeen(tour.storageKey)) return;
-    if (_locationCtrl.hasActiveGate) return;
+    if (_isGated) return;
     if (_auth.user.value == null) return;
     if (_auth.tabIndex.value != tour.tabIndex) return;
     // Re-check same as attemptShowTourForCurrentTab's own check — up to
@@ -246,7 +265,7 @@ class TourController extends GetxController {
     // offline/GPS/district goes bad mid-retry, showing the tour anyway would
     // visually cover MainScreen's own gate (TourHost sits above MainScreen's
     // entire Stack). Re-check on every attempt, not just the first.
-    if (_locationCtrl.hasActiveGate) {
+    if (_isGated) {
       _teardown(markSeen: false);
       return;
     }

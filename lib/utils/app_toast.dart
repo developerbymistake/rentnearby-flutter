@@ -5,6 +5,9 @@ import '../config/app_colors.dart';
 import '../config/app_shadows.dart';
 
 class AppToast {
+  /// Root-level host above every app-wide gate; the Navigator's own overlay sits beneath them.
+  static final overlayKey = GlobalKey<OverlayState>();
+
   static void success(String message) => _show(message, ToastificationType.success, Alignment.topCenter);
   static void error(String message) => _show(message, ToastificationType.error, Alignment.topCenter);
   static void warning(String message) => _show(message, ToastificationType.warning, Alignment.topCenter);
@@ -14,6 +17,7 @@ class AppToast {
   static void noData(String title, String subtitle, {required Color accent}) {
     toastification.showCustom(
       context: Get.overlayContext,
+      overlayState: overlayKey.currentState,
       alignment: Alignment.bottomCenter,
       autoCloseDuration: const Duration(seconds: 4),
       builder: (context, holder) => Padding(
@@ -78,6 +82,7 @@ class AppToast {
     final accent = _accentColor(type);
     toastification.show(
       context: Get.overlayContext,
+      overlayState: overlayKey.currentState,
       type: type,
       // White card + colored accent (icon/text/border) — matches the filter panel/View List/
       // owner-card language the rest of the app already uses, instead of toastification's

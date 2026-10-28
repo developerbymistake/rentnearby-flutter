@@ -43,6 +43,26 @@ class AppConstants {
   static const String appTabsCacheKey = 'app_tabs_cache';
   static const Duration locationsCacheTtl = Duration(hours: 24);
 
+  // App version gate (force/soft update).
+  static const String androidPackageId = 'com.rentnearby.rentnearby';
+  static const String playStoreUrl = 'https://play.google.com/store/apps/details?id=$androidPackageId';
+  static const String playStoreMarketUrl = 'market://details?id=$androidPackageId';
+  static const String playStoreHost = 'play.google.com';
+  static const String appStoreHost = 'apps.apple.com';
+  static const String appVersionCacheKey = 'app_version_config_cache';
+  static const String softUpdateSnoozeKey = 'soft_update_snooze';
+  static const Duration appVersionCheckTimeout = Duration(seconds: 5);
+  static const Duration appVersionSplashWait = Duration(seconds: 3);
+  static const Duration appVersionRecheckThrottle = Duration(seconds: 30);
+  static const Duration defaultForceCacheMaxAge = Duration(hours: 168);
+  static const Duration maxForceCacheMaxAge = Duration(days: 30);
+  static const List<Duration> softUpdateSnoozeDurations = [
+    Duration(hours: 24),
+    Duration(hours: 72),
+    Duration(days: 7),
+  ];
+  static const Duration softUpdateAfterStoreSnooze = Duration(hours: 24);
+
   static const String registerTokenPath = '/notifications/register-token';
   static const String districtTopicPrefix = 'district_';
 

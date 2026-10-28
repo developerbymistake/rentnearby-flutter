@@ -7,6 +7,7 @@ import 'storage_service.dart';
 class ApiService {
   static late Dio _dio;
   static Future<void>? _logoutInFlight;
+  static const String skipAuthExtra = 'skipAuth';
 
   // Shared single-flight guard for every logout trigger (explicit logout, account deletion, a
   // forced 401) so concurrent callers all await the exact same cleanup instead of racing —
@@ -27,12 +28,14 @@ class ApiService {
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
-        final token = StorageService.getToken();
-        if (token != null) options.headers['Authorization'] = 'Bearer $token';
+        if (options.extra[skipAuthExtra] != true) {
+          final token = StorageService.getToken();
+          if (token != null) options.headers['Authorization'] = 'Bearer $token';
+        }
         handler.next(options);
       },
       onError: (error, handler) async {
-        if (error.response?.statusCode == 401) {
+        if (error.response?.statusCode == 401 && error.requestOptions.extra[skipAuthExtra] != true) {
           await runExclusiveLogout(
             () => Get.find<AuthController>().forceLogout(reason: LogoutReason.sessionExpired),
           );
@@ -54,8 +57,18 @@ class ApiService {
     return res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
   }
 
-  static Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? params}) async {
-    final res = await _dio.get(path, queryParameters: params);
+  static Future<Map<String, dynamic>> get(
+    String path, {
+    Map<String, dynamic>? params,
+    CancelToken? cancelToken,
+    bool skipAuth = false,
+  }) async {
+    final res = await _dio.get(
+      path,
+      queryParameters: params,
+      cancelToken: cancelToken,
+      options: skipAuth ? Options(extra: {skipAuthExtra: true}) : null,
+    );
     return res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
   }
 

@@ -140,6 +140,33 @@ class StorageService {
     return raw?.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
+  // ── App version gate — deliberately not cleared by clearAll() ──────────────
+
+  static void saveAppVersionConfig(Map<String, dynamic> json) =>
+      _box.write(AppConstants.appVersionCacheKey, jsonEncode(json));
+
+  static Map<String, dynamic>? getAppVersionConfig() => _readJsonMap(AppConstants.appVersionCacheKey);
+
+  static void clearAppVersionConfig() => _box.remove(AppConstants.appVersionCacheKey);
+
+  static void saveSoftUpdateSnooze(Map<String, dynamic> json) =>
+      _box.write(AppConstants.softUpdateSnoozeKey, jsonEncode(json));
+
+  static Map<String, dynamic>? getSoftUpdateSnooze() => _readJsonMap(AppConstants.softUpdateSnoozeKey);
+
+  static void clearSoftUpdateSnooze() => _box.remove(AppConstants.softUpdateSnoozeKey);
+
+  static Map<String, dynamic>? _readJsonMap(String key) {
+    try {
+      final raw = _box.read(key);
+      if (raw is! String) return null;
+      final decoded = jsonDecode(raw);
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ── Chat notification stacking ──────────────────────────────────────────
   // See AppConstants.chatStackedLinesKeyPrefix — persists recent messages (text + the time
   // each one arrived) per conversation across separate background-isolate invocations of the
