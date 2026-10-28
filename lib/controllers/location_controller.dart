@@ -47,8 +47,8 @@ class LocationController extends GetxController {
   // `autoCity` above — it must never be read by listing creation or by the
   // district-banner/notification-topic logic, both of which must always stay
   // tied to the user's real, GPS-resolved district. It is in-memory only and
-  // is never persisted to disk: it resets to null on every app resume/cold
-  // start (see `resetBrowsing()` and its call in `refreshOnResume()`).
+  // is never persisted to disk: it resets on cold start and on a resume after
+  // a real background trip or forced refresh (see `refreshOnResume()`).
   final browsingDistrict = Rxn<DistrictModel>();
   final browsingCity     = Rxn<CityModel>();
 
@@ -586,12 +586,8 @@ class LocationController extends GetxController {
   // Uses checkPermission() only — never requestPermission() — so a denied
   // user isn't re-prompted by the OS dialog on every throttled resume.
   Future<void> refreshOnResume({bool force = false}) async {
-    // Manual browsing is temporary — always discard it on resume/cold start,
-    // regardless of what happens with the GPS refresh below. Unconditional
-    // and placed before the guard so it fires on every resume call.
-    resetBrowsing();
-
     if (_shouldSkipResumeRefresh(force)) return;
+    resetBrowsing();
 
     // Guard: one refresh at a time, skip if location init is in progress.
     if (locationLoading.value || _refreshing) {

@@ -14,6 +14,7 @@ class HomeRoomModel {
   final String? cityName;
   final String districtName;
   final String furnishedStatus;
+  final bool? isAc;
   final DateTime? createdAt;
 
   HomeRoomModel({
@@ -25,6 +26,7 @@ class HomeRoomModel {
     this.cityName,
     required this.districtName,
     required this.furnishedStatus,
+    this.isAc,
     this.createdAt,
   });
 
@@ -37,6 +39,7 @@ class HomeRoomModel {
     cityName: json['cityName'] as String?,
     districtName: json['districtName'] as String? ?? '',
     furnishedStatus: json['furnishedStatus'] as String? ?? 'None',
+    isAc: json['isAc'] as bool?,
     createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
   );
 }

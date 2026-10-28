@@ -202,7 +202,7 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
     if (_error != null) {
       return _errorState(_error!, () => _runSearch(_searchCtrl.text));
     }
-    if (!_searched) return _emptyState('Search for an area or locality');
+    if (!_searched) return _emptyState('Search area, locality or landmark');
     if (_results.isEmpty) {
       return _emptyState('No results for "${_searchCtrl.text}"');
     }

@@ -93,3 +93,13 @@ class FurnishedStatus {
   static const String full = 'Full';
   static const List<String> values = [none, semi, full];
 }
+
+class AcStatus {
+  static const List<bool> values = [true, false];
+  static String label(bool v) => v ? 'AC' : 'Non-AC';
+}
+
+class FloorLevel {
+  static const List<int> values = [0, 1, 2, 3];
+  static String label(int v) => switch (v) { 0 => 'Ground', 1 => '1', 2 => '2', _ => '3+' };
+}

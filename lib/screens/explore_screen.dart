@@ -1491,7 +1491,9 @@ class _ExploreScreenState extends State<ExploreScreen>
       thumbnailUrl: l.thumbnailUrl,
       tag: 'FOR RENT',
       title: '${l.roomTypeName ?? 'Room'} Room',
-      subtitle: '${BrowseItem.furnishedLabel(l.furnishedStatus)} · ${l.distanceKm.toStringAsFixed(1)} km',
+      subtitle: [BrowseItem.furnishedLabel(l.furnishedStatus), BrowseItem.acLabel(l.isAc), '${l.distanceKm.toStringAsFixed(1)} km']
+          .whereType<String>()
+          .join(' · '),
       caption: 'MONTHLY RENT',
       value: l.priceMonthly != null ? BrowseItem.inr(l.priceMonthly!) : 'On request',
       unit: l.priceMonthly != null ? '/mo' : '',

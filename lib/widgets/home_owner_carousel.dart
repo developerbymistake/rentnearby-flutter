@@ -8,10 +8,12 @@ import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
 import '../config/app_tabs.dart';
 import '../config/app_tour_state.dart';
+import '../config/user_roles.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import 'floating_loop.dart';
 import 'pulse_once.dart';
+import 'role_option_card.dart';
 import 'sweep_highlight.dart';
 
 class HomeOwnerCarousel extends StatefulWidget {
@@ -256,7 +258,11 @@ class _OwnerBanner extends StatelessWidget {
                   ),
                   child: Text(
                     isOwner
-                        ? 'Are you an Owner?'
+                        ? RoleVisuals.displayName(
+                            isRooms
+                                ? UserRoleKeys.rentOwner
+                                : UserRoleKeys.propertyOwner,
+                          )
                         : (isRooms ? 'Looking for a room?' : 'Looking for a plot?'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

@@ -15,20 +15,14 @@ class PhotonService {
     headers: {'User-Agent': 'Bakhli/1.0 (support@bakhli.in)'},
   ));
 
-  // Server-side filter: only real settlements/localities (OSM `place` key),
-  // minus place values that aren't a useful pinpoint-on-map result for a
-  // property search (administrative rollups, uninhabited/geographic values).
-  // Single choke point if the allow/deny list needs to change later.
-  //
-  // `landuse:residential` is a separate allow rule, independent of the
-  // `place:*` excludes above — some planned-city sectors (e.g. Noida/Greater
-  // Noida "Sector 135") are mapped as a named `landuse=residential` polygon
-  // instead of a `place=*` node, so they're invisible without this. It does
-  // not reopen individual houses/buildings: those use `building`/`amenity`
-  // keys, never `landuse`, so they stay excluded exactly as before.
+  // Excludes must use the `!key:value` form; `key:!value` is not Photon syntax.
   static const _osmTagFilter = [
     'place',
     'landuse:residential',
+    'amenity',
+    'tourism',
+    'railway:station',
+    'man_made:tower',
     '!place:county',
     '!place:state',
     '!place:country',
@@ -43,7 +37,32 @@ class PhotonService {
     '!place:isolated_dwelling',
     '!place:house',
     '!place:district',
+    '!amenity:bench',
+    '!amenity:parking',
+    '!amenity:parking_space',
+    '!amenity:parking_entrance',
+    '!amenity:bicycle_parking',
+    '!amenity:motorcycle_parking',
+    '!amenity:toilets',
+    '!amenity:waste_basket',
+    '!amenity:waste_disposal',
+    '!amenity:recycling',
+    '!amenity:drinking_water',
+    '!amenity:vending_machine',
+    '!amenity:atm',
+    '!amenity:shelter',
+    '!amenity:telephone',
+    '!amenity:post_box',
+    '!amenity:charging_station',
+    '!amenity:grit_bin',
+    '!amenity:bbq',
+    '!amenity:hunting_stand',
+    '!tourism:information',
+    '!tourism:artwork',
+    '!tourism:picnic_site',
   ];
+
+  static const _bbox = '77.5,28.7,81.1,31.5';
 
   static Future<List<PlaceResult>> search(String query, {LatLng? bias, int limit = 8}) async {
     final trimmed = query.trim();
@@ -53,6 +72,7 @@ class PhotonService {
       'q': trimmed,
       'limit': limit,
       'osm_tag': _osmTagFilter,
+      'bbox': _bbox,
     };
     if (bias != null) {
       params['lat'] = bias.latitude;

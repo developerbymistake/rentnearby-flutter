@@ -352,6 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
           thumbnailUrl: r.thumbnailUrl,
           type: r.roomTypeName,
           furnishedStatus: r.furnishedStatus,
+          isAc: r.isAc,
           priceMonthly: r.priceMonthly,
           city: r.cityName,
           district: r.districtName,

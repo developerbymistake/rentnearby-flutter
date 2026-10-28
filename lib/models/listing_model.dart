@@ -22,6 +22,9 @@ class ListingModel {
   final DateTime createdAt;
   final DateTime? validUntil;
   final String furnishedStatus;
+  final bool? isAc;
+  final int? securityDeposit;
+  final int? floor;
   final bool hasReported;
   final int pendingReportCount;
   final String? moderationStatus;
@@ -49,6 +52,9 @@ class ListingModel {
     required this.createdAt,
     this.validUntil,
     this.furnishedStatus = 'None',
+    this.isAc,
+    this.securityDeposit,
+    this.floor,
     this.hasReported = false,
     this.pendingReportCount = 0,
     this.moderationStatus,
@@ -81,6 +87,9 @@ class ListingModel {
             ? DateTime.parse(json['validUntil'] as String)
             : null,
         furnishedStatus: json['furnishedStatus'] ?? 'None',
+        isAc: json['isAc'] as bool?,
+        securityDeposit: (json['securityDeposit'] as num?)?.toInt(),
+        floor: (json['floor'] as num?)?.toInt(),
         hasReported: json['hasReported'] ?? false,
         pendingReportCount: json['pendingReportCount'] ?? 0,
         // GoLiveRequestStatuses.* ("Pending"/"Approved"/"Rejected") or null if never requested.
@@ -117,6 +126,7 @@ class NearbyListingModel {
   final double distanceKm;
   final bool isActive;
   final String furnishedStatus;
+  final bool? isAc;
 
   NearbyListingModel({
     required this.id,
@@ -130,6 +140,7 @@ class NearbyListingModel {
     required this.distanceKm,
     required this.isActive,
     this.furnishedStatus = 'None',
+    this.isAc,
   });
 
   factory NearbyListingModel.fromJson(Map<String, dynamic> json) => NearbyListingModel(
@@ -148,6 +159,7 @@ class NearbyListingModel {
         distanceKm: (json['distanceKm'] as num).toDouble(),
         isActive: json['isActive'] ?? true,
         furnishedStatus: json['furnishedStatus'] ?? 'None',
+        isAc: json['isAc'] as bool?,
       );
 
   String get shortPrice =>

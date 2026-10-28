@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
@@ -339,6 +340,27 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                     padding: EdgeInsets.symmetric(vertical: 10),
                     child: Divider(height: 1, color: AppColors.divider),
                   ),
+                  if (l.isAc != null) ...[
+                    _infoRow(Iconsax.wind, 'AC / Non-AC', AcStatus.label(l.isAc!)),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(height: 1, color: AppColors.divider),
+                    ),
+                  ],
+                  if (l.securityDeposit != null) ...[
+                    _infoRow(Iconsax.wallet_3, 'Security Deposit', BrowseItem.depositLabel(l.securityDeposit!)),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(height: 1, color: AppColors.divider),
+                    ),
+                  ],
+                  if (l.floor != null) ...[
+                    _infoRow(Iconsax.buildings, 'Floor', FloorLevel.label(l.floor!)),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(height: 1, color: AppColors.divider),
+                    ),
+                  ],
                   // Owner row
                   if (l.ownerName != null && l.ownerName!.isNotEmpty) ...[
                     _infoRow(Icons.person_rounded, 'Owner', l.ownerName!),

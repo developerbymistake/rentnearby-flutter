@@ -167,7 +167,7 @@ List<TourStep> _buildLandingSteps({required bool rooms}) {
       icon: Iconsax.filter,
       title: 'Narrow it down',
       body: rooms
-          ? 'Filter by room type — 1BHK, PG, Shop and more — right from here.'
+          ? 'Filter by room type — 1BHK, PG, House and more — right from here.'
           : 'Filter by plot type right from here to find exactly what you need.',
     ),
     TourStep(

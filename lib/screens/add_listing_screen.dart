@@ -29,9 +29,13 @@ class _AddListingScreenState extends State<AddListingScreen> with AddListingLoca
   final _descCtrl = TextEditingController();
   final _priceMonthlyCtrl = TextEditingController();
   final _priceFocusNode = FocusNode();
+  final _depositCtrl = TextEditingController();
+  final _depositFocusNode = FocusNode();
 
   String? _selectedRoomTypeId;
+  bool? _selectedIsAc;
   String _selectedFurnishedStatus = FurnishedStatus.none;
+  int? _selectedFloor;
   bool _isUploading = false;
   bool _isFinalizing = false;
   Set<int> _uploadDone = {};
@@ -57,6 +61,9 @@ class _AddListingScreenState extends State<AddListingScreen> with AddListingLoca
       _descCtrl.text.isNotEmpty ||
       _photos.isNotEmpty ||
       _selectedFurnishedStatus != FurnishedStatus.none ||
+      _selectedIsAc != null ||
+      _depositCtrl.text.isNotEmpty ||
+      _selectedFloor != null ||
       hasLocationOrAddressChanges;
 
   @override
@@ -71,6 +78,8 @@ class _AddListingScreenState extends State<AddListingScreen> with AddListingLoca
     _descCtrl.dispose();
     _priceMonthlyCtrl.dispose();
     _priceFocusNode.dispose();
+    _depositCtrl.dispose();
+    _depositFocusNode.dispose();
     super.dispose();
   }
 
@@ -226,6 +235,10 @@ class _AddListingScreenState extends State<AddListingScreen> with AddListingLoca
         AppToast.error('Please select a room type to continue');
         return;
       }
+      if (_selectedIsAc == null) {
+        AppToast.error('Please select AC or Non-AC');
+        return;
+      }
       if (_priceMonthlyCtrl.text.trim().isEmpty) {
         AppToast.error('Please enter the monthly rent amount');
         _priceFocusNode.requestFocus();
@@ -240,6 +253,17 @@ class _AddListingScreenState extends State<AddListingScreen> with AddListingLoca
       if (rent > 9900000) {
         AppToast.error('Monthly rent cannot exceed ₹99,00,000');
         _priceFocusNode.requestFocus();
+        return;
+      }
+      if (_depositCtrl.text.trim().isEmpty) {
+        AppToast.error('Please enter the security deposit (0 if none)');
+        _depositFocusNode.requestFocus();
+        return;
+      }
+      final deposit = int.tryParse(_depositCtrl.text) ?? 0;
+      if (deposit > 9900000) {
+        AppToast.error('Security deposit cannot exceed ₹99,00,000');
+        _depositFocusNode.requestFocus();
         return;
       }
     }
@@ -308,6 +332,9 @@ class _AddListingScreenState extends State<AddListingScreen> with AddListingLoca
       'furnishedStatus': _selectedFurnishedStatus,
       'description': _descCtrl.text.trim().isNotEmpty ? _descCtrl.text.trim() : null,
       'priceMonthly': _priceMonthlyCtrl.text.isNotEmpty ? int.tryParse(_priceMonthlyCtrl.text) : null,
+      'isAc': _selectedIsAc,
+      'securityDeposit': int.tryParse(_depositCtrl.text),
+      'floor': _selectedFloor,
       'latitude': pinLocation.latitude,
       'longitude': pinLocation.longitude,
       'address': trimmedAddress,
@@ -699,6 +726,49 @@ class _AddListingScreenState extends State<AddListingScreen> with AddListingLoca
     ]),
   );
 
+  Widget _optionGrid({
+    required int crossAxisCount,
+    required double childAspectRatio,
+    required List<String> labels,
+    required bool Function(int) isActive,
+    required void Function(int) onTap,
+  }) => GridView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    padding: EdgeInsets.zero,
+    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: crossAxisCount,
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+      childAspectRatio: childAspectRatio,
+    ),
+    itemCount: labels.length,
+    itemBuilder: (_, i) {
+      final active = isActive(i);
+      return GestureDetector(
+        onTap: () => onTap(i),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: active ? AppColors.primary : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+                color: active ? AppColors.primary : AppColors.divider,
+                width: 1.5),
+          ),
+          child: Center(
+            child: Text(labels[i],
+                style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: active ? Colors.white : AppColors.textMedium)),
+          ),
+        ),
+      );
+    },
+  );
+
   Widget _detailsStep() => SingleChildScrollView(
     key: const ValueKey(0),
     padding: const EdgeInsets.all(16),
@@ -775,44 +845,24 @@ class _AddListingScreenState extends State<AddListingScreen> with AddListingLoca
       ),
 
       _sectionCard(
+        title: 'AC / Non-AC *',
+        child: _optionGrid(
+          crossAxisCount: 2,
+          childAspectRatio: 3.9,
+          labels: AcStatus.values.map(AcStatus.label).toList(),
+          isActive: (i) => _selectedIsAc == AcStatus.values[i],
+          onTap: (i) => setState(() => _selectedIsAc = AcStatus.values[i]),
+        ),
+      ),
+
+      _sectionCard(
         title: 'Furnished Status *',
-        child: GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 2.6,
-          ),
-          itemCount: 3,
-          itemBuilder: (_, i) {
-            const options = FurnishedStatus.values;
-            final label = options[i];
-            final active = _selectedFurnishedStatus == label;
-            return GestureDetector(
-              onTap: () => setState(() => _selectedFurnishedStatus = label),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                decoration: BoxDecoration(
-                  color: active ? AppColors.primary : Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                      color: active ? AppColors.primary : AppColors.divider,
-                      width: 1.5),
-                ),
-                child: Center(
-                  child: Text(label,
-                      style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: active ? Colors.white : AppColors.textMedium)),
-                ),
-              ),
-            );
-          },
+        child: _optionGrid(
+          crossAxisCount: 3,
+          childAspectRatio: 2.6,
+          labels: FurnishedStatus.values,
+          isActive: (i) => _selectedFurnishedStatus == FurnishedStatus.values[i],
+          onTap: (i) => setState(() => _selectedFurnishedStatus = FurnishedStatus.values[i]),
         ),
       ),
 
@@ -828,6 +878,40 @@ class _AddListingScreenState extends State<AddListingScreen> with AddListingLoca
           ],
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
           decoration: _inputDec('e.g. 8000', prefix: '₹ '),
+        ),
+      ),
+
+      _sectionCard(
+        title: 'Security Deposit (₹) *',
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Enter 0 if there is none',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _depositCtrl,
+            focusNode: _depositFocusNode,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(7),
+            ],
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+            decoration: _inputDec('e.g. 10000', prefix: '₹ '),
+          ),
+        ]),
+      ),
+
+      _sectionCard(
+        title: 'Floor (Optional)',
+        child: _optionGrid(
+          crossAxisCount: 4,
+          childAspectRatio: 1.9,
+          labels: FloorLevel.values.map(FloorLevel.label).toList(),
+          isActive: (i) => _selectedFloor == FloorLevel.values[i],
+          onTap: (i) => setState(() {
+            final value = FloorLevel.values[i];
+            _selectedFloor = _selectedFloor == value ? null : value;
+          }),
         ),
       ),
 

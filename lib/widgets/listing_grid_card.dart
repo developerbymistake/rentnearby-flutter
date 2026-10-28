@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_shadows.dart';
+import '../models/card_fact.dart';
 
 class ListingGridCard extends StatelessWidget {
   static const double height = 240;
@@ -11,7 +12,7 @@ class ListingGridCard extends StatelessWidget {
   final String tagLabel;
   final String title;
   final String locationLabel;
-  final List<String> facts;
+  final List<CardFact> facts;
   final String priceCaption;
   final String priceValue;
   final String priceUnit;
@@ -178,16 +179,23 @@ class ListingGridCard extends StatelessWidget {
     );
   }
 
-  Widget _factChip(String label) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(color: _accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)),
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w600, color: _accentDark),
-        ),
-      );
+  Widget _factChip(CardFact f) {
+    final (bg, fg) = switch (f.tone) {
+      FactTone.accent => (_accent.withValues(alpha: 0.08), _accentDark),
+      FactTone.cyan => (AppColors.accent.withValues(alpha: 0.12), AppColors.accent),
+      FactTone.slate => (AppColors.textLight.withValues(alpha: 0.12), AppColors.textMedium),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+      child: Text(
+        f.label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w600, color: fg),
+      ),
+    );
+  }
 
   Widget _placeholder() => Container(
         color: isPlot ? AppColors.plotSurface : AppColors.surface,

@@ -65,8 +65,9 @@ Rooms"/"My Plots" are pushed named routes, not tabs (reached via a tile on the R
 
 **Rooms/Plots/Home tab roots**: the Rooms and Plots tab roots are `ExploreLandingScreen(kind: ExploreKind)`
 (`lib/screens/explore_landing_screen.dart`), a list-first landing: gradient header with `LocationPill` + a
-search bar (opens `LocationSearchSheet` via `ExploreLocationSearchMixin`), four tiles (Map view / Add / Nearest /
-My), type chips, Filter & Sort (`FilterSortSheet`) and a 2-column infinite-scroll grid of `ListingGridCard`.
+search bar (opens `LocationSearchSheet` via `ExploreLocationSearchMixin`), a row of three tiles (Add / My / Map
+view) shown only to the role that lists that kind (Rent Owner on Rooms, Property Owner on Plots; hidden for everyone
+else, there is no Nearest tile), type chips, Filter & Sort (`FilterSortSheet`) and a 2-column infinite-scroll grid of `ListingGridCard`.
 Each kind has one persistent `ExploreLandingController` (`Get.put` with `tag: kind.name` by the screen, deleted in
 its `dispose`): keyset pagination via `nextCursor` from `GET /home/{rooms|plots}/browse` (page-based for price/area
 sorts), page size 20, first page kept in memory and refetched only when older than ~2 min, on
@@ -74,7 +75,8 @@ sorts), page size 20, first page kept in memory and refetched only when older th
 pull-to-refresh — never on `exploreRefreshTrigger` (bumped on every nav tap). It loads lazily, only once its tab is
 active. The map (`ExploreScreen`/`ExplorePlotsScreen`) is a second view pushed on that tab's nested navigator via
 `ExploreNavigation.openMap`. There is no View All screen or route any more: Home's "View all" calls
-`switchToTab(rooms|plots)`. Home has no Rooms|Plots toggle; its owner CTA is an auto-sliding room/plot carousel.
+`switchToTab(rooms|plots)`. Home has no Rooms|Plots toggle; its banner is an auto-sliding room/plot carousel (`home_owner_carousel.dart`) whose
+slides and copy follow the role (see "Roles").
 
 Because `IndexedStack` never disposes inactive tabs, a `showModalBottomSheet` opened from a tab-root
 screen's own `context` (e.g. `LocationSwitchSheet`, `LocationSearchSheet`, the listing/plot detail
@@ -93,7 +95,7 @@ auto-attaches the bearer token from `StorageService` on every request and auto-l
 calling `AuthController.forceLogout(reason: LogoutReason.sessionExpired)` through
 `ApiService.runExclusiveLogout` — a shared single-flight `Future` guard so concurrent 401s (and
 explicit logout/account-deletion, which route through the same `forceLogout`) all await one cleanup
-instead of racing. `LogoutReason` (`explicitLogout`/`accountDeleted`/`sessionExpired`) decides whether
+instead of racing. `LogoutReason` (`explicitLogout`/`accountDeleted`/`sessionExpired`/`roleChanged`) decides whether
 the server-side revoke call fires and which toast, if any, is shown. A second `Dio`
 instance (`_nominatimDio`) hits a self-hosted Nominatim reverse-geocoding proxy. `AppConstants.baseUrl`
 (`lib/config/app_constants.dart`) is the single source of truth for the backend origin
@@ -126,7 +128,7 @@ the user's manually browsed district is *never* persisted, only the reference li
 `LocationController` (`lib/controllers/location_controller.dart`) is the single source of truth for:
 live GPS (`userLocation`), the user's real GPS-resolved district/city (`selectedDistrict`/
 `autoCity`), a *temporary* manually-browsed district/city (`browsingDistrict`/`browsingCity`, never
-persisted, reset on every resume/cold start), and a precise map-search pin override shared between
+persisted, reset on cold start and after a real (>2 min) background resume), and a precise map-search pin override shared between
 the Rooms and Plots explore screens. `effectiveDistrict`/`effectiveCity`/`effectiveSearchCenter` are
 the derived getters screens should read rather than picking through the raw fields. `MainScreen`
 gates the whole app behind full-screen states driven by this controller: offline, GPS-disabled, and
@@ -138,6 +140,14 @@ see the Backend repo's CLAUDE.md "Known gap" note): new-listing pin placement is
 user's live GPS fix, enforced in `add_listing_screen.dart`/`add_plot_screen.dart` against a client-computed
 distance. Explore radius is a fixed 3-value chip selector, `AppConstants.radiusOptions = [1.0, 6.0, 12.0]`
 (km) — not a slider — used identically by `explore_screen.dart`/`explore_plots_screen.dart`.
+
+**Room fields (AC / Non-AC, Security Deposit, Floor)**: `AcStatus` and `FloorLevel` live in `lib/config/app_constants.dart`
+(Floor 0 = Ground, 3 = "3+"). `add_listing_screen.dart` Details step order is Room Type, AC / Non-AC `*`, Furnished `*`, Monthly Rent `*`,
+Security Deposit `*` (0 allowed), Floor (optional, tap again to clear), Description. `isAc` is parsed null-tolerantly into
+`ListingModel`, `HomeRoomModel`, `NearbyListingModel` and `BrowseItem.room`; it shows next to Furnished on `ListingGridCard` (cyan/slate
+`CardFact` chip), in the Explore nearby row subtitle and as a chip in `listing_bottom_sheet.dart`, and null (old listings) shows
+nothing. Security Deposit (`BrowseItem.depositLabel`, "None" for 0) and Floor appear only on `listing_detail_screen.dart`. Spec:
+`F:\Dhasu\ROOM_FIELDS_FEATURE.md`.
 
 **Maps**: `maplibre_gl` (not Google Maps) using a custom style at `assets/map_style.json`. Map-related
 tuning constants (clustering radius, max markers, fallback center coordinates for Uttarakhand) live in
@@ -157,7 +167,30 @@ topic subscriptions (`district_<id>`), kept in sync with `LocationController.sel
 `ever()` worker in `MainScreen`. Notification-tap routing has to distinguish several app states
 (cold start / already on `main` / a detail screen pushed on top of main) — see the routing logic and
 comments in `NotificationService._handleNotificationTap`/`_navigateToChatConversation` before changing
-navigation-on-tap behavior.
+navigation-on-tap behavior. A push with an `action_route` goes through `AuthController.canOpenRoute`; a route the
+role cannot open lands on the notifications screen instead (same guard in `notifications_screen.dart`).
+
+**Roles (Seeker / Rent Owner / Property Owner)**: one account, one role; spec in `F:\Dhasu\ROLE_FEATURE.md`.
+- `lib/config/user_roles.dart` is the single capability map: `UserRoleKeys` (`SEEKER`/`RENT_OWNER`/
+  `PROPERTY_OWNER`, `claim = 'role'`; names via `RoleVisuals.displayName` in `role_option_card.dart`), `RoleCapabilities.byRole` (role key -> `canListRooms`,
+  `canListPlots`; Seeker has neither, an unknown key falls back to none), `RoleRequestErrorTypes` and
+  `RoleRequestStatus`. Add a role there, never as scattered `== 'RENT_OWNER'` checks.
+- `AuthController` reads the `role` claim from the stored JWT (`_syncRoleFromToken`, via `JwtClaims.role`) and
+  exposes reactive `roleKey`, `canListRooms`, `canListPlots`, plus `isOwner` (derived convenience only) and
+  `canOpenRoute(route)` (checks `AppRoutes.roomOwnerOnly` = `myListings`/`addListing`, `plotOwnerOnly` =
+  `myPlots`/`addPlot`). `chooseRole` calls `PUT /users/me/role-choice` and stores the returned token;
+  `requestRoleChange` posts `/users/me/role-request` and shows the server's cooldown/live-listing message.
+- Post-login routing: `AuthController.postLoginRoute` = `AppRoutes.main` once `user.roleConfirmed`, else
+  `AppRoutes.roleSelect`; splash and the login/OTP flows navigate to it, and a cold-start notification tap is ignored while it is `roleSelect`.
+- Pages: `RoleSelectScreen` (first login, 3 cards from `GET /roles`, Seeker preselected, applies immediately) and
+  `RoleChangeScreen` (from Profile's role card, sends an admin-approval request); cards and per-role colors/icons
+  live in `widgets/role_option_card.dart` (`RoleVisuals`, `RoleOptionCard`). Approval revokes the session: the
+  `role_request_approved` push or hub event calls `forceLogout(reason: LogoutReason.roleChanged)`.
+- Gating (hide the entry point AND guard the choke point): Home banner shows both slides to a Seeker and only the
+  own-kind slide to an owner (opens My Rooms/My Plots); Home quick tiles (Add / My Listings) render only for an
+  owner and only for the kind they list; the Rooms/Plots landing tile row (see above); `tour_registry.dart` skips
+  owner steps; `AddListingFlow.start` returns early without the capability; `ListingController`/`PlotController`
+  load "my" lists only with the capability.
 
 **Credit economy (replaces the old membership/payment model)**: there is no more per-listing membership
 entity and no more free-vs-paid tier on listing *creation*. Users buy credits (Razorpay packs, redeem
@@ -188,7 +221,7 @@ so callers can branch on `GoLiveInsufficientBalance` specifically to open the sh
   `WalletController.loadBalance()` (or let `goLive`/`goLivePlot`/`verifyPayment`/`redeemCode` do it for
   you — they already do) after any balance-changing spend or credit so the balance stays live everywhere;
   nothing else should cache balance separately. `CreditBalanceChip` (`lib/widgets/credit_balance_chip.dart`) is
-  the reusable balance pill dropped into My Rooms and My Plots. Profile has its own bespoke wallet card
+  a reusable balance pill that is not currently mounted on any screen. Profile has its own bespoke wallet card
   (`ProfileScreen._buildWalletCard`) instead — balance + Buy Credits button, since it doesn't fit the shared
   chip's shape.
 - **Screens**: `CreditPacksScreen` (buy credits + entry points to redeem/history), `RedeemCodeScreen`,

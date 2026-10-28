@@ -40,11 +40,7 @@ class PlaceResult {
       name: name,
       subtitle: subtitleParts.join(', '),
       latLng: LatLng(lat, lon),
-      // Photon's own `type` field is a coarse, unreliable bucket (e.g. a
-      // suburb or hamlet can come back labeled "district", a school labeled
-      // "house") — `osm_value` is the actual OSM value for the `place` key
-      // our search is already scoped to (city/town/village/hamlet/suburb/
-      // etc.), so it's the accurate source for the tag shown to the user.
+      // Photon's `type` is unreliable; `osm_value` is the accurate OSM type tag.
       placeType: props['osm_value'] as String?,
       extent: (props['extent'] as List?)?.map((e) => (e as num).toDouble()).toList(),
     );
