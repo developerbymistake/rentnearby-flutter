@@ -99,7 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       name.trim().isNotEmpty ? name.trim() : 'Your Profile',
                                       style: const TextStyle(
                                           fontFamily: 'Poppins',
-                                          fontSize: 20,
+                                          fontSize: 21,
                                           fontWeight: FontWeight.w700,
                                           color: Colors.white),
                                       maxLines: 1,
@@ -126,7 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 '+91 ${_auth.profilePhone.value}',
                                 style: const TextStyle(
                                     fontFamily: 'Poppins',
-                                    fontSize: 13,
+                                    fontSize: 14,
                                     color: Colors.white70),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
