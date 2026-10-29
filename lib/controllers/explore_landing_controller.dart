@@ -116,6 +116,11 @@ class ExploreLandingController extends GetxController {
   }
 
   void refreshIfNeeded() {
+    if (isRooms) {
+      Get.find<ListingController>().ensureTypesLoaded();
+    } else {
+      Get.find<PlotController>().ensureTypesLoaded();
+    }
     if (_resetInFlight && !_dirty) return;
     final at = _loadedAt;
     final stale = at == null || DateTime.now().difference(at) > _staleAfter;

@@ -70,10 +70,13 @@ class _RoleChangeScreenState extends State<RoleChangeScreen> {
       _exitLocked();
       return;
     }
-    final ok = await _auth.requestRoleChange(targetKey);
-    if (ok && mounted) {
+    final result = await _auth.requestRoleChange(targetKey);
+    if (!mounted) return;
+    if (result == RoleActionResult.success) {
       AppToast.success('Request sent');
       Get.back();
+    } else if (result == RoleActionResult.unavailable) {
+      _retry();
     }
   }
 
@@ -120,6 +123,17 @@ class _RoleChangeScreenState extends State<RoleChangeScreen> {
                   final targets = _roles.where((r) => r.key != currentKey).map((r) => r.key).toList();
                   final targetKey = targets.contains(_targetKey) ? _targetKey : targets.firstOrNull;
                   final deletionLine = RoleCapabilities.of(currentKey).deletionLine;
+                  final cards = _roles.any((r) => r.key == currentKey)
+                      ? _roles
+                      : [
+                          RoleModel(
+                            key: currentKey,
+                            name: RoleVisuals.displayName(currentKey),
+                            description: 'Paused',
+                            sortOrder: -1,
+                          ),
+                          ..._roles,
+                        ];
 
                   return Column(
                     children: [
@@ -129,15 +143,27 @@ class _RoleChangeScreenState extends State<RoleChangeScreen> {
                       const SizedBox(height: 20),
                       if (_loading)
                         const Expanded(child: Center(child: CircularProgressIndicator(color: AppColors.primary)))
-                      else if (targetKey == null)
+                      else if (_roles.isEmpty)
                         Expanded(child: RoleLoadError(onRetry: _retry))
+                      else if (targetKey == null)
+                        const Expanded(
+                          child: Center(
+                            child: Text('No other role available',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textMedium)),
+                          ),
+                        )
                       else
                         Expanded(
                           child: SingleChildScrollView(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: Column(
                               children: [
-                                for (final role in _roles) ...[
+                                for (final role in cards) ...[
                                   RoleOptionCard(
                                     role: role,
                                     selected: role.key == targetKey,

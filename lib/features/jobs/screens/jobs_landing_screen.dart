@@ -7,21 +7,23 @@ import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../config/app_shadows.dart';
 import '../../../config/app_tabs.dart';
+import '../../../config/module_palette.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
+import '../../../screens/explore_location_search_mixin.dart';
 import '../../../widgets/gradient_button.dart';
 import '../../../widgets/location_switch_sheet.dart';
-import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/jobs_list_controller.dart';
+import '../jobs_colors.dart';
 import '../models/job_experience_bucket.dart';
 import '../models/job_lookups_model.dart';
 import '../models/job_summary_model.dart';
 import '../widgets/job_list_card.dart';
 import 'jobs_filter_sheet.dart';
 
-const _kAccent = StayColors.accent;
-const _kAccentDark = StayColors.accentDark;
-const _kGradient = StayColors.gradient;
+const _kAccent = JobColors.accent;
+const _kAccentDark = JobColors.accentDark;
+const _kGradient = JobColors.gradient;
 
 class JobsLandingScreen extends StatefulWidget {
   const JobsLandingScreen({super.key});
@@ -30,9 +32,12 @@ class JobsLandingScreen extends StatefulWidget {
   State<JobsLandingScreen> createState() => _JobsLandingScreenState();
 }
 
-class _JobsLandingScreenState extends State<JobsLandingScreen> {
+class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocationSearchMixin<JobsLandingScreen> {
   late final JobsListController _ctrl;
   final _scroll = ScrollController();
+
+  @override
+  ModulePalette get searchPalette => JobColors.palette;
 
   @override
   void initState() {
@@ -99,25 +104,37 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
         Padding(
           padding: EdgeInsets.fromLTRB(20, top + 16, 20, 0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Obx(() => Text(
-                    Get.find<TabConfigController>().displayNameForIndex(AppTabs.jobs, 'Jobs'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),
-                  )),
-              const SizedBox(height: 2),
-              Text(
-                'Work at stays near you',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white.withValues(alpha: 0.85),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Obx(() => Text(
+                              Get.find<TabConfigController>().displayNameForIndex(AppTabs.jobs, 'Jobs'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),
+                            )),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Work at stays near you',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildSearchButton(),
+                ],
               ),
               const SizedBox(height: 18),
               _buildDistrictPill(),
@@ -126,6 +143,51 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildSearchButton() {
+    return Obx(() {
+      final active = isSearchActive;
+      final resolving = searchResolving;
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: resolving ? null : () => onSearchToggleTap(context),
+        child: Container(
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 13),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? AppColors.error : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: resolving
+              ? const SizedBox(
+                  width: 15,
+                  height: 15,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: _kAccentDark),
+                )
+              : active
+                  ? const Text(
+                      'Cancel',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
+                    )
+                  : const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.search_rounded, size: 15, color: _kAccentDark),
+                        SizedBox(width: 5),
+                        Text(
+                          'Search',
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: _kAccentDark),
+                        ),
+                      ],
+                    ),
+        ),
+      );
+    });
   }
 
   Widget _buildDistrictPill() {
@@ -150,7 +212,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
             ];
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: searching ? null : () => LocationSwitchSheet.show(context, plots: false),
+        onTap: searching ? null : () => LocationSwitchSheet.show(context, palette: JobColors.palette),
         child: Container(
           height: 46,
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -175,7 +237,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
                 Container(
                   width: 26,
                   height: 26,
-                  decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                  decoration: const BoxDecoration(color: AppColors.neutralChip, shape: BoxShape.circle),
                   child: const Icon(Iconsax.arrow_down_1, size: 14, color: _kAccentDark),
                 ),
             ],

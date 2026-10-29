@@ -2,24 +2,30 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_shadows.dart';
+import '../config/module_palette.dart';
 
 class NearestConfirmSheet extends StatelessWidget {
   final String itemLabel;
   final VoidCallback onConfirm;
-  final bool isPlot;
-  const NearestConfirmSheet({super.key, required this.itemLabel, required this.onConfirm, this.isPlot = false});
+  final ModulePalette palette;
+  const NearestConfirmSheet({
+    super.key,
+    required this.itemLabel,
+    required this.onConfirm,
+    this.palette = ModulePalette.rooms,
+  });
 
   static Future<void> show(
     BuildContext context, {
     required String itemLabel,
     required VoidCallback onConfirm,
-    bool isPlot = false,
+    ModulePalette palette = ModulePalette.rooms,
   }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => NearestConfirmSheet(itemLabel: itemLabel, onConfirm: onConfirm, isPlot: isPlot),
+      builder: (_) => NearestConfirmSheet(itemLabel: itemLabel, onConfirm: onConfirm, palette: palette),
     );
   }
 
@@ -27,7 +33,7 @@ class NearestConfirmSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = AppColors.accentFor(isPlot);
+    final accent = palette.accent;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,

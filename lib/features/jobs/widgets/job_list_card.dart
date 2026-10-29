@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_shadows.dart';
-import '../../stay/setup/stay_option_sets.dart';
 
 class JobListCardAction {
   const JobListCardAction({required this.icon, required this.label, required this.color, this.onTap});
@@ -28,8 +27,8 @@ class JobListCard extends StatelessWidget {
     this.dimmed = false,
     this.onTap,
     this.actions = const [],
-    this.accent = StayColors.accent,
-    this.accentDark = StayColors.accentDark,
+    required this.accent,
+    required this.accentDark,
   });
 
   final String title;

@@ -58,9 +58,9 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   double _uploadProgress = 0.0;
   int _step = 0;
 
-  static const _locationStyle = LocationStepStyle(
-    circleColorHex: '#F59E0B',
-    userDotColorHex: '#1E88E5',
+  static final _locationStyle = LocationStepStyle(
+    circleColorHex: AppColors.stayHex,
+    userDotColorHex: AppColors.userDotHex,
     accentColor: StayColors.accent,
     addressSpinnerColor: StayColors.accent,
     addressPrefixIcon: Iconsax.building_4,
@@ -621,10 +621,10 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         ),
         if (_isUploading) _buildUploadOverlay(),
         Obx(() => _ctrl.isSaving.value
-            ? AppLoadingOverlay.stackChild(message: 'Saving your stay...')
+            ? AppLoadingOverlay.stackChild(message: 'Saving your stay...', indicatorColor: StayColors.accent)
             : const SizedBox.shrink()),
-        if (_isFinalizing) AppLoadingOverlay.stackChild(message: 'Please wait...'),
-        if (_step == 2 && showAddressResolveOverlay) AppLoadingOverlay.stackChild(message: 'Please wait...'),
+        if (_isFinalizing) AppLoadingOverlay.stackChild(message: 'Please wait...', indicatorColor: StayColors.accent),
+        if (_step == 2 && showAddressResolveOverlay) AppLoadingOverlay.stackChild(message: 'Please wait...', indicatorColor: StayColors.accent),
       ]),
     );
   }
@@ -718,6 +718,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                 crossAxisCount: 3,
                 childAspectRatio: 2.6,
                 labels: types.map((t) => t.name).toList(),
+                accent: StayColors.accent,
                 isActive: (i) => _stayTypeId == types[i].id,
                 onTap: (i) => setState(() {
                   _stayTypeId = types[i].id;
@@ -732,6 +733,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               crossAxisCount: 3,
               childAspectRatio: 2.6,
               labels: StayOptionSets.vehicleAccess.map((o) => o.label).toList(),
+              accent: StayColors.accent,
               isActive: (i) => _vehicleAccess == StayOptionSets.vehicleAccess[i].value,
               onTap: (i) => setState(() {
                 _vehicleAccess = StayOptionSets.vehicleAccess[i].value;
@@ -745,6 +747,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               crossAxisCount: 2,
               childAspectRatio: 3.9,
               labels: const ['Yes', 'No'],
+              accent: StayColors.accent,
               isActive: (i) => _hostLivesHere == (i == 0),
               onTap: (i) => setState(() {
                 _hostLivesHere = i == 0;
@@ -795,8 +798,8 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
-            placeholder: (_, _) => Container(color: StayColors.surface),
-            errorWidget: (_, _, _) => Container(color: StayColors.surface),
+            placeholder: (_, _) => Container(color: AppColors.shimmerBase),
+            errorWidget: (_, _, _) => Container(color: AppColors.shimmerBase),
           );
     return Stack(children: [
       ClipRRect(borderRadius: BorderRadius.circular(12), child: image),

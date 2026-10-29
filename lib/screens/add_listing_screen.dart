@@ -69,6 +69,7 @@ class _AddListingScreenState extends State<AddListingScreen> with AddListingLoca
   @override
   void initState() {
     super.initState();
+    _ctrl.ensureTypesLoaded();
     initLocationTracking(style: _locationStyle, onLocationStale: _handleLocationStale);
   }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
-import '../../stay/setup/stay_option_sets.dart';
+import '../jobs_colors.dart';
 import '../models/my_job_model.dart';
 import 'job_list_card.dart';
 
@@ -64,12 +64,14 @@ class MyJobCard extends StatelessWidget {
       salaryLabel: job.salaryLabel,
       salaryUnit: job.salaryUnit,
       topRightBadge: active
-          ? _pill('ACTIVE', const Color(0xFFDCFCE7), const Color(0xFF166534))
-          : _pill('CLOSED', AppColors.surface, AppColors.textLight),
+          ? _pill('ACTIVE', AppColors.successSurface, AppColors.successText)
+          : _pill('CLOSED', AppColors.neutralChip, AppColors.textLight),
       dimmed: !active,
       onTap: onTap,
+      accent: JobColors.accent,
+      accentDark: JobColors.accentDark,
       actions: [
-        JobListCardAction(icon: Iconsax.eye, label: 'View', color: StayColors.accentDark, onTap: onTap),
+        JobListCardAction(icon: Iconsax.eye, label: 'View', color: JobColors.accentDark, onTap: onTap),
         active
             ? JobListCardAction(icon: Iconsax.close_circle, label: 'Close', color: AppColors.error, onTap: onClose)
             : const JobListCardAction(icon: Iconsax.close_circle, label: 'Closed', color: AppColors.textHint),

@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_colors.dart';
+import '../../../config/module_palette.dart';
 import '../../../models/browse_item.dart';
-import '../../../widgets/role_option_card.dart';
 import '../models/stay_owner_model.dart';
 
 class StayColors {
-  static const Color accent = AppColors.warning;
-  static const Color accentDark = Color(0xFFD97706);
-  static const Color surface = Color(0xFFFFFBEB);
-  static const LinearGradient gradient = RoleVisuals.stayGradient;
+  static const Color accent = AppColors.stay;
+  static const Color accentDark = AppColors.stayDark;
+  static const Color accentLight = AppColors.stayLight;
+  static const Color surface = AppColors.staySurface;
+  static const LinearGradient gradient = AppColors.stayGradient;
+  static const ModulePalette palette = ModulePalette.stays;
 }
 
 class StayOption {

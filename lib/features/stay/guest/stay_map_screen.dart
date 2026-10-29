@@ -11,6 +11,7 @@ import '../../../config/app_insets.dart';
 import '../../../config/app_map_state.dart';
 import '../../../config/app_routes.dart';
 import '../../../config/app_tabs.dart';
+import '../../../config/module_palette.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../models/browse_item.dart';
@@ -27,10 +28,6 @@ import 'stay_bottom_sheet.dart';
 import 'stay_guest_controller.dart';
 import 'stay_landing_controller.dart';
 
-const _kAccent = StayColors.accent;
-const _kAccentDark = StayColors.accentDark;
-const _kGradient = StayColors.gradient;
-const _kCircleHex = '#F59E0B';
 
 class StayMapScreen extends StatefulWidget {
   const StayMapScreen({super.key});
@@ -77,6 +74,9 @@ class _StayMapScreenState extends State<StayMapScreen>
   LatLng? _nearestCircleCenter;
 
   bool get _onStaysTab => _auth.tabIndex.value == AppTabs.stays;
+
+  @override
+  ModulePalette get searchPalette => StayColors.palette;
 
   @override
   void initState() {
@@ -322,6 +322,7 @@ class _StayMapScreenState extends State<StayMapScreen>
     NearestConfirmSheet.show(
       context,
       itemLabel: 'stays',
+      palette: StayColors.palette,
       onConfirm: () => _guest.loadNearest(center.latitude, center.longitude, district.id),
     );
   }
@@ -331,11 +332,11 @@ class _StayMapScreenState extends State<StayMapScreen>
     if (ctrl == null || !mounted) return;
     _precomputeCircleCache();
     await ctrl.addGeoJsonSource('radius-source', _circleCache[_radius]!);
-    await ctrl.addFillLayer('radius-source', 'radius-fill', FillLayerProperties(fillColor: _kCircleHex, fillOpacity: 0.06));
+    await ctrl.addFillLayer('radius-source', 'radius-fill', FillLayerProperties(fillColor: AppColors.stayHex, fillOpacity: 0.06));
     await ctrl.addLineLayer('radius-source', 'radius-glow',
-        LineLayerProperties(lineColor: _kCircleHex, lineWidth: 6.0, lineOpacity: 0.15, lineBlur: 3.0));
+        LineLayerProperties(lineColor: AppColors.stayHex, lineWidth: 6.0, lineOpacity: 0.15, lineBlur: 3.0));
     await ctrl.addLineLayer('radius-source', 'radius-border',
-        LineLayerProperties(lineColor: _kCircleHex, lineWidth: 1.8, lineOpacity: 0.65));
+        LineLayerProperties(lineColor: AppColors.stayHex, lineWidth: 1.8, lineOpacity: 0.65));
   }
 
   void _updateNativeRadiusCircle() {
@@ -351,9 +352,9 @@ class _StayMapScreenState extends State<StayMapScreen>
     _nativeUserDot = await ctrl.addCircle(CircleOptions(
       geometry: loc,
       circleRadius: 8.0,
-      circleColor: '#1E88E5',
+      circleColor: AppColors.userDotHex,
       circleOpacity: 1.0,
-      circleStrokeColor: '#FFFFFF',
+      circleStrokeColor: AppColors.hexOf(AppColors.textWhite),
       circleStrokeWidth: 2.5,
     ));
   }
@@ -465,7 +466,7 @@ class _StayMapScreenState extends State<StayMapScreen>
       widget: AnimatedBuilder(
         animation: _radarController,
         builder: (context2, child2) => CustomPaint(
-          painter: _RadarPainter(progress: _radarController.value, color: const Color(0xFF1E88E5)),
+          painter: _RadarPainter(progress: _radarController.value, color: AppColors.userDot),
         ),
       ),
     );
@@ -498,13 +499,13 @@ class _StayMapScreenState extends State<StayMapScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(17),
-                  border: Border.all(color: _kAccent, width: 2),
+                  border: Border.all(color: StayColors.accent, width: 2),
                   boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))],
                 ),
                 child: Center(
                   child: Text(
                     priceText,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: _kAccentDark),
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: StayColors.accentDark),
                   ),
                 ),
               ),
@@ -521,7 +522,7 @@ class _StayMapScreenState extends State<StayMapScreen>
             child: _AnimatedPin(
               child: Container(
                 decoration: const BoxDecoration(
-                  gradient: _kGradient,
+                  gradient: StayColors.gradient,
                   shape: BoxShape.circle,
                   boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3))],
                 ),
@@ -553,7 +554,7 @@ class _StayMapScreenState extends State<StayMapScreen>
             child: _AnimatedPin(
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: _kGradient,
+                  gradient: StayColors.gradient,
                   borderRadius: BorderRadius.circular(19),
                   border: Border.all(color: Colors.white, width: 2.5),
                   boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3))],
@@ -829,6 +830,7 @@ class _StayMapScreenState extends State<StayMapScreen>
                                 child: EmptyRadiusHint(
                                   label: 'No stays in this radius — try Nearest',
                                   circleRadiusPx: radiusPx,
+                                  palette: StayColors.palette,
                                 ),
                               ),
                             );
@@ -844,7 +846,7 @@ class _StayMapScreenState extends State<StayMapScreen>
                 child: Column(
                   children: [
                     Container(
-                      decoration: const BoxDecoration(gradient: _kGradient),
+                      decoration: const BoxDecoration(gradient: StayColors.gradient),
                       child: SafeArea(
                         bottom: false,
                         child: Padding(
@@ -856,7 +858,7 @@ class _StayMapScreenState extends State<StayMapScreen>
                               const Expanded(
                                 child: SizedBox(
                                   height: 40,
-                                  child: LocationPill(accentColor: _kAccentDark),
+                                  child: LocationPill(palette: StayColors.palette),
                                 ),
                               ),
                             ]),
@@ -893,7 +895,7 @@ class _StayMapScreenState extends State<StayMapScreen>
                         AddListingShortcutButton(
                           label: 'Find Nearest',
                           icon: Icons.travel_explore_rounded,
-                          gradient: _kGradient,
+                          gradient: StayColors.gradient,
                           onTap: _openNearestConfirm,
                         ),
                       ],
@@ -925,6 +927,7 @@ class _StayMapScreenState extends State<StayMapScreen>
                       if (idx < total - 1) _guest.nearestFocusIndex.value = idx + 1;
                     },
                     onCancel: () => _guest.nearestActive.value = false,
+                    palette: StayColors.palette,
                   ),
                 );
               }),
@@ -954,7 +957,7 @@ class _StayMapScreenState extends State<StayMapScreen>
           shape: BoxShape.circle,
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2))],
         ),
-        child: const Icon(Icons.chevron_left_rounded, color: _kAccentDark, size: 24),
+        child: const Icon(Icons.chevron_left_rounded, color: StayColors.accentDark, size: 24),
       ),
     );
   }
@@ -975,7 +978,7 @@ class _StayMapScreenState extends State<StayMapScreen>
                 ? const SizedBox(
                     width: 15,
                     height: 15,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: _kAccentDark),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: StayColors.accentDark),
                   )
                 : (isSearchActive
                     ? const Text('Cancel',
@@ -983,10 +986,10 @@ class _StayMapScreenState extends State<StayMapScreen>
                     : const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.search_rounded, color: _kAccentDark, size: 15),
+                          Icon(Icons.search_rounded, color: StayColors.accentDark, size: 15),
                           SizedBox(width: 5),
                           Text('Search',
-                              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: _kAccentDark)),
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
                         ],
                       )),
           ),
@@ -1022,10 +1025,10 @@ class _StayMapScreenState extends State<StayMapScreen>
                 margin: EdgeInsets.only(right: i < radii.length - 1 ? 4 : 0),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  gradient: active ? _kGradient : null,
+                  gradient: active ? StayColors.gradient : null,
                   borderRadius: BorderRadius.circular(11),
                   boxShadow: active
-                      ? [BoxShadow(color: _kAccent.withValues(alpha: 0.32), blurRadius: 8, offset: const Offset(0, 3))]
+                      ? [BoxShadow(color: StayColors.accent.withValues(alpha: 0.32), blurRadius: 8, offset: const Offset(0, 3))]
                       : null,
                 ),
                 child: Text('${r.toInt()} km',
@@ -1060,7 +1063,7 @@ class _StayMapScreenState extends State<StayMapScreen>
           shape: BoxShape.circle,
           boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
         ),
-        child: const Icon(Icons.my_location_rounded, color: _kAccentDark, size: 22),
+        child: const Icon(Icons.my_location_rounded, color: StayColors.accentDark, size: 22),
       ),
     );
   }
@@ -1084,7 +1087,7 @@ class _StayMapScreenState extends State<StayMapScreen>
       caption: 'FROM',
       value: s.minPricePerNight != null ? BrowseItem.inr(s.minPricePerNight!) : 'On request',
       unit: s.minPricePerNight != null ? '/night' : '',
-      isPlot: false,
+      palette: StayColors.palette,
       placeholderIcon: Iconsax.building_4,
       elevated: elevated,
       onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, 'distanceKm': s.distanceKm}),
@@ -1100,20 +1103,20 @@ class _StayMapScreenState extends State<StayMapScreen>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _kAccent, width: 1.4),
+          border: Border.all(color: StayColors.accent, width: 1.4),
           boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 12, offset: const Offset(0, 4))],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.format_list_bulleted_rounded, color: _kAccentDark, size: 16),
+            const Icon(Icons.format_list_bulleted_rounded, color: StayColors.accentDark, size: 16),
             const SizedBox(width: 6),
             const Text('View List',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: _kAccentDark)),
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: _kAccent, borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: StayColors.accent, borderRadius: BorderRadius.circular(10)),
               child: Text('$count',
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
             ),
@@ -1143,7 +1146,7 @@ class _StayMapScreenState extends State<StayMapScreen>
               children: [
                 Container(
                   decoration: const BoxDecoration(
-                    gradient: _kGradient,
+                    gradient: StayColors.gradient,
                     borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                   ),
                   child: Column(

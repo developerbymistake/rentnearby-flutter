@@ -39,6 +39,10 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
 
   Future<void> _load() async {
     final ok = await _ctrl.load();
+    if (!ok && mounted && !_auth.staysEnabled) {
+      _auth.leaveOffTabRoute();
+      return;
+    }
     final s = _ctrl.stay.value;
     if (!ok || !mounted || _fromMyStays || s == null || s.isDraft) return;
     await _auth.refreshProfile();
@@ -160,6 +164,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         number: 1,
         title: 'Basic details',
         subtitle: d1 ? StayOptionSets.basicSummary(s!) : 'Details, location, address, photos',
+        accent: StayColors.accent,
         state: state(true, d1),
         onTap: () => _open(AppRoutes.stayBasicDetails),
       ),
@@ -167,6 +172,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         number: 2,
         title: 'Rooms',
         subtitle: !u2 ? 'Complete step 1 first' : d2 ? StayOptionSets.roomsSummary(s!) : 'Add rooms, up to 2',
+        accent: StayColors.accent,
         state: state(u2, d2),
         onTap: () => _open(AppRoutes.stayRooms),
       ),
@@ -174,6 +180,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         number: 3,
         title: 'Rules',
         subtitle: !u3 ? 'Complete step 2 first' : d3 ? StayOptionSets.rulesSummary(s!) : 'Check-in, house rules, cancellation',
+        accent: StayColors.accent,
         state: state(u3, d3),
         onTap: () => _open(AppRoutes.stayRules),
       ),
@@ -187,6 +194,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
                 : d4
                     ? 'Submitted for review'
                     : 'Review and submit',
+        accent: StayColors.accent,
         state: state(u4, d4),
         onTap: () => _open(AppRoutes.staySubmit),
       ),

@@ -27,12 +27,6 @@ const _kDivider = Padding(
   child: Divider(height: 1, color: AppColors.divider),
 );
 
-const _kHeroGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [TaxiColors.surface, Color(0xFF5EEAD4)],
-);
-
 class TaxiDetailScreen extends StatefulWidget {
   const TaxiDetailScreen({super.key});
   @override
@@ -108,6 +102,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
       body: Obx(() => AppLoadingOverlay(
             isLoading: _isSharing.value,
             message: 'Sharing...',
+            indicatorColor: TaxiColors.accent,
             child: _loading ? _buildLoader() : _buildContent(),
           )),
       bottomNavigationBar: _loading || _taxi == null ? null : _buildActionBar(),
@@ -227,7 +222,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
           ],
           flexibleSpace: FlexibleSpaceBar(
             background: Container(
-              decoration: const BoxDecoration(gradient: _kHeroGradient),
+              decoration: const BoxDecoration(gradient: TaxiColors.heroGradient),
               child: Center(child: Icon(Iconsax.car, size: 72, color: TaxiColors.accent.withValues(alpha: 0.9))),
             ),
           ),
@@ -416,8 +411,8 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
         safetyText: TaxiOptionSets.safetyLine,
         onReport: (t.hasReported || reportedLocally)
             ? null
-            : () => ReportListingSheet.show(context, listingId: t.id, listingType: 'Taxi'),
-        accent: TaxiColors.accent,
+            : () => ReportListingSheet.show(context, listingId: t.id, listingType: 'Taxi', palette: TaxiColors.palette),
+        palette: TaxiColors.palette,
       );
     });
   }

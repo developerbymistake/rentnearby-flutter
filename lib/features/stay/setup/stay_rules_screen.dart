@@ -186,6 +186,7 @@ class _StayRulesScreenState extends State<StayRulesScreen> {
                       crossAxisCount: 3,
                       childAspectRatio: 2.6,
                       labels: StayOptionSets.cancellation.map((o) => o.label).toList(),
+                      accent: StayColors.accent,
                       isActive: (i) => _cancellation == StayOptionSets.cancellation[i].value,
                       onTap: (i) => setState(() {
                         _cancellation = StayOptionSets.cancellation[i].value;
@@ -210,7 +211,7 @@ class _StayRulesScreenState extends State<StayRulesScreen> {
           ]),
         ),
         Obx(() => _ctrl.isSaving.value
-            ? AppLoadingOverlay.stackChild(message: 'Saving rules...')
+            ? AppLoadingOverlay.stackChild(message: 'Saving rules...', indicatorColor: StayColors.accent)
             : const SizedBox.shrink()),
       ]),
     );

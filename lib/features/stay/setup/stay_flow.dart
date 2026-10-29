@@ -10,7 +10,7 @@ class StayFlow {
   static bool _busy = false;
 
   static Future<void> start() async {
-    if (_busy || !Get.find<AuthController>().canListStays.value) return;
+    if (_busy || !Get.find<AuthController>().staysEnabled) return;
     _busy = true;
     try {
       final stay = await const StayRepository().getMine();

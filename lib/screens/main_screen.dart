@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../controllers/app_version_controller.dart';
 import '../controllers/auth_controller.dart';
@@ -12,7 +13,6 @@ import '../controllers/location_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../controllers/report_controller.dart';
-import '../repositories/config_repository.dart';
 import '../repositories/notification_repository.dart';
 import '../repositories/listing_repository.dart';
 import '../repositories/plot_repository.dart';
@@ -39,6 +39,7 @@ import '../controllers/tour_controller.dart';
 import '../features/stay/guest/stay_landing_controller.dart';
 import '../features/stay/guest/stay_guest_controller.dart';
 import '../features/jobs/controllers/jobs_list_controller.dart';
+import '../features/taxi/guest/taxi_list_controller.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -55,6 +56,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Worker? _bannerDistrictWorker;
   Worker? _digestTopicWorker;
   Worker? _tabLeaveWorker;
+  Worker? _tabConfigWorker;
   int _previousTabIndex = AppTabs.home;
 
   final _screens = const [
@@ -63,17 +65,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     TabNavigator(tabId: AppTabs.plots),
     TabNavigator(tabId: AppTabs.stays),
     TabNavigator(tabId: AppTabs.jobs),
+    TabNavigator(tabId: AppTabs.taxi),
     TabNavigator(tabId: AppTabs.profile),
   ];
 
   @override
   void initState() {
     super.initState();
-    Get.put(ConfigRepository());
-    // First network call of the session, deliberately — TabConfigController.onInit() fires
-    // load() itself the moment this Get.put() runs (after first synchronously seeding from
-    // its persisted last-known-good cache), before any tab-scoped controller/hub put below.
-    _tabConfigCtrl = Get.put(TabConfigController());
+    _tabConfigCtrl = TabConfigController.to;
     Get.put(ConfigController());
     _locationCtrl = Get.put(LocationController());
     // GlobalLocationGates (main.dart's builder:) sits above the Navigator and
@@ -155,6 +154,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       _previousTabIndex = newIndex;
     });
+    _tabConfigWorker = ever<int>(_tabConfigCtrl.version, (_) {
+      if (!_tabConfigCtrl.isActiveForIndex(_auth.tabIndex.value)) _auth.switchToTab(AppTabs.home);
+      final route = Get.currentRoute;
+      if (AppRoutes.tabKeyForRoute(route) != null && !_auth.canOpenRoute(route)) {
+        Get.until((r) => r.settings.name == AppRoutes.main);
+      }
+    });
+    if (!_tabConfigCtrl.isActiveForIndex(_auth.tabIndex.value)) _auth.switchToTab(AppTabs.home);
     _auth.refreshProfile();
     // Last, deliberately — needs every controller any tour could reference
     // (LocationController, AuthController) already registered above.
@@ -174,6 +181,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _bannerDistrictWorker?.dispose();
     _digestTopicWorker?.dispose();
     _tabLeaveWorker?.dispose();
+    _tabConfigWorker?.dispose();
     super.dispose();
   }
 
@@ -371,7 +379,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           Obx(() {
             final roomLoading = Get.find<ListingController>().isLoadingNearest.value;
             final plotLoading = Get.find<PlotController>().isLoadingNearest.value;
-            // StayGuestController is lazy; .to registers it so this Obx subscribes.
+            // StayGuestController is lazy and makes no call on put; .to registers it so this Obx subscribes.
             final stayLoading = StayGuestController.to.isLoadingNearest.value;
             if (!roomLoading && !plotLoading && !stayLoading) return const SizedBox.shrink();
             return AppLoadingOverlay.stackChild(
@@ -446,9 +454,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + bottomInset),
+        padding: EdgeInsets.fromLTRB(4, 8, 4, 8 + bottomInset),
         // Home/Profile are always active (structural, never admin-deactivatable) so they're
-        // unconditional; Rooms/Plots drop out of the row entirely (not just hidden —
+        // unconditional; every other tab drops out of the row entirely (not just hidden —
         // Expanded would otherwise still reserve their flex slot) the moment the master table
         // marks them inactive. _buildBottomNav() is already called from inside an Obx (see
         // bottomNavigationBar above), so these reactive reads make the whole row rebuild live.
@@ -468,13 +476,21 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 child: _navItem(AppTabs.plots, Iconsax.location, Iconsax.location5,
                     _tabConfigCtrl.displayNameForIndex(AppTabs.plots, 'Plots')),
               ),
-            KeyedSubtree(
-              key: TourKeys.homeStaysNavIcon,
-              child: _navItem(AppTabs.stays, Iconsax.building_4, Iconsax.building_45,
-                  _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
-            ),
-            _navItem(AppTabs.jobs, Iconsax.briefcase, Iconsax.briefcase5,
-                _tabConfigCtrl.displayNameForIndex(AppTabs.jobs, 'Jobs')),
+            if (_tabConfigCtrl.isActive(AppTabKeys.stays))
+              KeyedSubtree(
+                key: TourKeys.homeStaysNavIcon,
+                child: _navItem(AppTabs.stays, Iconsax.building_4, Iconsax.building_45,
+                    _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
+              ),
+            if (_tabConfigCtrl.isActiveForIndex(AppTabs.jobs))
+              _navItem(AppTabs.jobs, Iconsax.briefcase, Iconsax.briefcase5,
+                  _tabConfigCtrl.displayNameForIndex(AppTabs.jobs, 'Jobs')),
+            if (_tabConfigCtrl.isActive(AppTabKeys.taxi))
+              KeyedSubtree(
+                key: TourKeys.homeTaxiNavIcon,
+                child: _navItem(AppTabs.taxi, Iconsax.car, Iconsax.car5,
+                    _tabConfigCtrl.displayNameForIndex(AppTabs.taxi, 'Taxi')),
+              ),
             KeyedSubtree(
               key: TourKeys.homeProfileNavIcon,
               child: _navItem(AppTabs.profile, Iconsax.user, Iconsax.user5,
@@ -509,6 +525,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           if (index == AppTabs.jobs && _auth.tabIndex.value != AppTabs.jobs) {
             jobs?.exploreRefreshTrigger.value++;
           }
+          if (index == AppTabs.taxi && Get.isRegistered<TaxiListController>(tag: TaxiListController.tag)) {
+            Get.find<TaxiListController>(tag: TaxiListController.tag).refreshIfStale();
+          }
           if (index == AppTabs.profile && _auth.tabIndex.value != AppTabs.profile) _auth.profileTabTrigger.value++;
           Get.find<ListingController>().filterResetTrigger.value++;
           Get.find<PlotController>().filterResetTrigger.value++;
@@ -535,7 +554,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                     isActive ? activeIcon : icon,
                     key: ValueKey(isActive),
                     color: isActive ? AppColors.primary : AppColors.textHint,
-                    size: 24,
+                    size: 22,
                   ),
                 ),
                 if (badgeCount > 0)
@@ -558,11 +577,22 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 duration: const Duration(milliseconds: 200),
                 style: TextStyle(
                   fontFamily: 'Poppins',
-                  fontSize: 11,
+                  fontSize: 10.5,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                   color: isActive ? AppColors.primary : AppColors.textHint,
                 ),
-                child: Text(label),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      softWrap: false,
+                      textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

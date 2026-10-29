@@ -70,6 +70,7 @@ class _AddPlotScreenState extends State<AddPlotScreen> with AddListingLocationMi
   @override
   void initState() {
     super.initState();
+    _ctrl.ensureTypesLoaded();
     initLocationTracking(style: _locationStyle, onLocationStale: _handleLocationStale);
   }
 

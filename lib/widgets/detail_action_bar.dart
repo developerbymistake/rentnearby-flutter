@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
+import '../config/module_palette.dart';
 
 class DetailActionBar extends StatelessWidget {
   final double? latitude;
@@ -11,6 +12,7 @@ class DetailActionBar extends StatelessWidget {
   final VoidCallback? onReport;
   final VoidCallback? onChat;
   final Color accent;
+  final ModulePalette? palette;
   final bool showDirections;
   final String? whatsAppPhone;
   final String callLabel;
@@ -25,12 +27,15 @@ class DetailActionBar extends StatelessWidget {
     this.onReport,
     this.onChat,
     this.accent = AppColors.primary,
+    this.palette,
     this.showDirections = true,
     this.whatsAppPhone,
     this.callLabel = 'Call Owner',
     this.reportLabel = 'Report this listing',
     this.safetyText,
   });
+
+  Color get _accent => palette?.accent ?? accent;
 
   void _directions() async {
     if (latitude == null || longitude == null) return;
@@ -67,7 +72,7 @@ class DetailActionBar extends StatelessWidget {
         style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: accent,
+        backgroundColor: _accent,
         foregroundColor: Colors.white,
         minimumSize: const Size(0, 52),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -85,8 +90,8 @@ class DetailActionBar extends StatelessWidget {
       label: const Text('Chat',
           style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
       style: OutlinedButton.styleFrom(
-        foregroundColor: accent,
-        side: BorderSide(color: accent),
+        foregroundColor: _accent,
+        side: BorderSide(color: _accent),
         minimumSize: const Size(0, 46),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
@@ -98,17 +103,18 @@ class DetailActionBar extends StatelessWidget {
   // reach the owner directly from this screen without ever opening chat, so the warning has
   // to live where the actual contact buttons are, not just inside the chat screen.
   Widget _safetyStrip() {
+    final strip = palette ?? ModulePalette.rooms;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.primaryLight.withValues(alpha: 0.12))),
+        color: strip.surface,
+        border: Border(bottom: BorderSide(color: strip.accentLight.withValues(alpha: 0.12))),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.info_outline_rounded, size: 13, color: AppColors.primaryLight),
+          Icon(Icons.info_outline_rounded, size: 13, color: strip.accentLight),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
@@ -205,7 +211,7 @@ class DetailActionBar extends StatelessWidget {
                               style: const TextStyle(
                                   fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFF59E0B),
+                            backgroundColor: palette?.accentDark ?? AppColors.warning,
                             foregroundColor: Colors.white,
                             minimumSize: const Size(0, 48),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -222,7 +228,7 @@ class DetailActionBar extends StatelessWidget {
                               style: TextStyle(
                                   fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF25D366),
+                            backgroundColor: AppColors.whatsApp,
                             foregroundColor: Colors.white,
                             minimumSize: const Size(0, 48),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

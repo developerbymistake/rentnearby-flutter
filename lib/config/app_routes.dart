@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../controllers/tab_config_controller.dart' show AppTabKeys;
 import '../screens/splash_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/onboarding_screen.dart';
@@ -80,6 +81,34 @@ class AppRoutes {
   static const Set<String> plotOwnerOnly = {myPlots, addPlot};
   static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob};
   static const Set<String> taxiDriverOnly = {taxiSetup, taxiVehicle, taxiRoutes, taxiSubmit, myTaxi};
+
+  static const Map<String, String> _routeTabKeys = {
+    listingDetail: AppTabKeys.rooms,
+    myListings: AppTabKeys.rooms,
+    addListing: AppTabKeys.rooms,
+    plotDetail: AppTabKeys.plots,
+    myPlots: AppTabKeys.plots,
+    addPlot: AppTabKeys.plots,
+    staySetup: AppTabKeys.stays,
+    stayBasicDetails: AppTabKeys.stays,
+    stayRooms: AppTabKeys.stays,
+    stayRules: AppTabKeys.stays,
+    staySubmit: AppTabKeys.stays,
+    myStays: AppTabKeys.stays,
+    stayDetail: AppTabKeys.stays,
+    myJobs: AppTabKeys.jobs,
+    postJob: AppTabKeys.jobs,
+    jobDetail: AppTabKeys.jobs,
+    taxiSetup: AppTabKeys.taxi,
+    taxiVehicle: AppTabKeys.taxi,
+    taxiRoutes: AppTabKeys.taxi,
+    taxiSubmit: AppTabKeys.taxi,
+    myTaxi: AppTabKeys.taxi,
+    taxiDetail: AppTabKeys.taxi,
+    taxiList: AppTabKeys.taxi,
+  };
+
+  static String? tabKeyForRoute(String route) => _routeTabKeys[route];
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),

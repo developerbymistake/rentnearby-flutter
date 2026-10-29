@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import '../config/module_palette.dart';
 
 // Shown attached to the TOP edge of the radius circle when the current radius+filter
 // combination has zero matching listings — a small tagged chip with a tail pointing
@@ -15,7 +16,13 @@ class EmptyRadiusHint extends StatefulWidget {
   // scales down against this as the user zooms out, so it never spills outside the
   // (shrinking) circle the way a fixed-size chip does.
   final double circleRadiusPx;
-  const EmptyRadiusHint({super.key, required this.label, required this.circleRadiusPx});
+  final ModulePalette palette;
+  const EmptyRadiusHint({
+    super.key,
+    required this.label,
+    required this.circleRadiusPx,
+    this.palette = ModulePalette.rooms,
+  });
 
   @override
   State<EmptyRadiusHint> createState() => _EmptyRadiusHintState();
@@ -62,7 +69,7 @@ class _EmptyRadiusHintState extends State<EmptyRadiusHint> with SingleTickerProv
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
-                BoxShadow(color: AppColors.primary.withValues(alpha: 0.22), blurRadius: 12, offset: const Offset(0, 3)),
+                BoxShadow(color: widget.palette.accent.withValues(alpha: 0.22), blurRadius: 12, offset: const Offset(0, 3)),
               ],
             ),
             child: Row(

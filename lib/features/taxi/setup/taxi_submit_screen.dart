@@ -43,11 +43,11 @@ class _TaxiSubmitScreenState extends State<TaxiSubmitScreen> {
     AppToast.success('Submitted for review');
     if (_ctrl.mainBelow) {
       Get.until((r) => r.settings.name == AppRoutes.main);
-      auth.switchToTab(AppTabs.stays);
+      auth.switchToTab(AppTabs.taxi);
       return;
     }
     Get.offAllNamed(AppRoutes.main);
-    WidgetsBinding.instance.addPostFrameCallback((_) => auth.switchToTab(AppTabs.stays));
+    WidgetsBinding.instance.addPostFrameCallback((_) => auth.switchToTab(AppTabs.taxi));
   }
 
   @override

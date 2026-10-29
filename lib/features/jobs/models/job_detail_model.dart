@@ -32,7 +32,7 @@ class JobDetailModel extends JobSummaryModel {
           stayListingId: json['stayListingId'] as String? ?? '',
           stayName: json['stayName'] as String? ?? 'Stay',
           stayTypeName: json['stayTypeName'] as String?,
-          coverPhotoUrl: json['coverPhotoUrl'] as String?,
+          coverPhotoUrl: jobPhotoUrl(json['coverPhotoUrl']),
           title: json['title'] as String? ?? '',
           departmentName: json['departmentName'] as String? ?? '',
           roleName: json['roleName'] as String? ?? '',

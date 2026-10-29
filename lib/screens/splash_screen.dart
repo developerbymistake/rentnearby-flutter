@@ -7,6 +7,7 @@ import '../config/app_constants.dart';
 import '../config/app_routes.dart';
 import '../controllers/app_version_controller.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/tab_config_controller.dart';
 import '../services/storage_service.dart';
 import '../utils/update_decision.dart';
 
@@ -50,6 +51,9 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
       AppVersionController.to.initialCheck
           .timeout(AppConstants.appVersionSplashWait, onTimeout: () {})
           .catchError((_) {}),
+      TabConfigController.to.ready
+          .timeout(AppConstants.appVersionSplashWait, onTimeout: () {})
+          .catchError((_) {}),
     ]);
     if (!mounted) return;
     _navigate();
@@ -80,7 +84,15 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
     if (_parkWhileForced()) return;
 
     if (StorageService.isLoggedIn) {
-      Get.offAllNamed(Get.find<AuthController>().postLoginRoute);
+      final auth = Get.find<AuthController>();
+      if (auth.hasPendingSetup && !TabConfigController.to.loaded.value) {
+        // Setup vs main must not be decided from a stale persisted tab seed.
+        await TabConfigController.to.load()
+            .timeout(AppConstants.appVersionSplashWait, onTimeout: () {})
+            .catchError((_) {});
+        if (!mounted) return;
+      }
+      Get.offAllNamed(auth.postLoginRoute);
     } else if (!StorageService.getTourSeen(AppConstants.introCarouselSeenKey)) {
       Get.offAllNamed(AppRoutes.intro);
     } else {

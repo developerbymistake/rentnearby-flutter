@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_colors.dart';
-import 'stay_option_sets.dart';
 
 class StayOptionGrid extends StatelessWidget {
   final int crossAxisCount;
@@ -17,7 +16,7 @@ class StayOptionGrid extends StatelessWidget {
     required this.labels,
     required this.isActive,
     required this.onTap,
-    this.accent = StayColors.accent,
+    required this.accent,
   });
 
   @override

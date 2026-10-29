@@ -191,11 +191,11 @@ class StayOwnerCard extends StatelessWidget {
 
   Widget _statusBadge() {
     final (String label, List<Color> colors) = switch (stay.status) {
-      StayStatus.approved when stay.acceptingGuests => ('LIVE', const [Color(0xFF10B981), Color(0xFF059669)]),
-      StayStatus.approved => ('PAUSED', const [Color(0xFF94A3B8), Color(0xFF64748B)]),
-      StayStatus.pendingReview => ('UNDER REVIEW', const [AppColors.warning, StayColors.accentDark]),
-      StayStatus.rejected => ('REJECTED', const [AppColors.error, Color(0xFFDC2626)]),
-      _ => ('DRAFT', const [Color(0xFF94A3B8), Color(0xFF64748B)]),
+      StayStatus.approved when stay.acceptingGuests => ('LIVE', const [AppColors.success, AppColors.successDark]),
+      StayStatus.approved => ('PAUSED', const [AppColors.textHint, AppColors.textLight]),
+      StayStatus.pendingReview => ('UNDER REVIEW', const [AppColors.warning, AppColors.warningText]),
+      StayStatus.rejected => ('REJECTED', const [AppColors.error, AppColors.errorDark]),
+      _ => ('DRAFT', const [AppColors.textHint, AppColors.textLight]),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -275,8 +275,8 @@ class StayOwnerCard extends StatelessWidget {
               Switch(
                 value: stay.acceptingGuests,
                 onChanged: onAcceptingChanged,
-                activeThumbColor: const Color(0xFF10B981),
-                activeTrackColor: const Color(0xFFD1FAE5),
+                activeThumbColor: AppColors.success,
+                activeTrackColor: AppColors.successTrack,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ]),

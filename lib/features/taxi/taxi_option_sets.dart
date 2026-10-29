@@ -1,15 +1,24 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../config/app_colors.dart';
+import '../../config/module_palette.dart';
 import '../../models/browse_item.dart';
-import '../../widgets/role_option_card.dart';
 import 'models/taxi_owner_model.dart';
 
 class TaxiColors {
-  static const Color accent = Color(0xFF0D9488);
-  static const Color accentDark = Color(0xFF0F766E);
-  static const Color surface = Color(0xFFF0FDFA);
-  static const LinearGradient gradient = RoleVisuals.taxiGradient;
+  static const Color accent = AppColors.taxi;
+  static const Color accentDark = AppColors.taxiDark;
+  static const Color accentLight = AppColors.taxiLight;
+  static const Color surface = AppColors.taxiSurface;
+  static const Color heroEnd = AppColors.taxiHeroEnd;
+  static const LinearGradient gradient = AppColors.taxiGradient;
+  static const LinearGradient heroGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [surface, heroEnd],
+  );
+  static const ModulePalette palette = ModulePalette.taxi;
 }
 
 class TaxiStatus {

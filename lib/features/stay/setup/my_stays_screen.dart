@@ -72,6 +72,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
       body: Obx(() => AppLoadingOverlay(
             isLoading: _ctrl.isSaving.value || _isSharing.value,
             message: _isSharing.value ? 'Sharing...' : 'Updating...',
+            indicatorColor: StayColors.accent,
             child: Column(children: [
               _header(),
               Expanded(

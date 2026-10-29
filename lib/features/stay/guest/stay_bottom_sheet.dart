@@ -11,7 +11,6 @@ import '../../../widgets/detail_header.dart';
 import '../setup/stay_option_sets.dart';
 import '../models/stay_nearby_model.dart';
 
-const _kGradient = StayColors.gradient;
 
 class StayBottomSheet extends StatelessWidget {
   final StayNearbyModel stay;
@@ -45,7 +44,7 @@ class StayBottomSheet extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: stay.thumbnailUrl!,
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(color: AppColors.surface),
+                        placeholder: (context, url) => Container(color: AppColors.shimmerBase),
                         errorWidget: (context, url, error) => _photoPlaceholder(),
                       )
                     : _photoPlaceholder(),
@@ -78,7 +77,7 @@ class StayBottomSheet extends StatelessWidget {
                         flex: 2,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(gradient: _kGradient, borderRadius: BorderRadius.circular(10)),
+                          decoration: BoxDecoration(gradient: StayColors.gradient, borderRadius: BorderRadius.circular(10)),
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
@@ -140,7 +139,7 @@ class StayBottomSheet extends StatelessWidget {
   }
 
   static Widget _photoPlaceholder() => Container(
-        color: AppColors.surface,
+        color: AppColors.shimmerBase,
         child: const Center(child: Icon(Iconsax.building_4, size: 56, color: StayColors.accent)),
       );
 }

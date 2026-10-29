@@ -1,22 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../config/app_colors.dart';
+import '../config/module_palette.dart';
 import '../controllers/location_controller.dart';
 import 'location_switch_sheet.dart';
 
-/// Single shared implementation used identically by Explore Rooms, Explore
-/// Plots, and View All — previously each of the three maintained its own
-/// copy (Explore Rooms/Plots privately, in sync only by luck), which let
-/// View All's copy silently fall behind when search-awareness was added to
-/// the other two. [accentColor] is the only thing that legitimately differs
-/// per screen (blue for Rooms, green for Plots).
+/// Single shared city pill for the module map screens; [palette] is the only
+/// thing that differs per module.
 class LocationPill extends StatelessWidget {
-  final Color accentColor;
-  const LocationPill({super.key, required this.accentColor});
+  final ModulePalette palette;
+  const LocationPill({super.key, required this.palette});
 
   @override
   Widget build(BuildContext context) {
     final locationCtrl = Get.find<LocationController>();
+    final accentColor = palette.accent;
     return Obx(() {
       final district = locationCtrl.effectiveDistrict;
       if (district == null) return const SizedBox();
@@ -45,7 +42,7 @@ class LocationPill extends StatelessWidget {
         // Disabled while a location search is active — user must cancel the
         // search (via the toggle button) before switching city again, so
         // the two temporary overrides are never open at once.
-        onTap: searching ? null : () => LocationSwitchSheet.show(context, plots: accentColor == AppColors.plot),
+        onTap: searching ? null : () => LocationSwitchSheet.show(context, palette: palette),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),

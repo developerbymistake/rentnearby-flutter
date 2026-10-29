@@ -2,12 +2,19 @@ import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide Response, FormData, MultipartFile;
 import '../config/app_constants.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/tab_config_controller.dart';
 import 'storage_service.dart';
 
 class ApiService {
   static late Dio _dio;
   static Future<void>? _logoutInFlight;
   static const String skipAuthExtra = 'skipAuth';
+  static const String tabInactiveType = 'TabInactive';
+
+  static Object? _errorType(Object? data) {
+    final error = data is Map ? data['error'] : null;
+    return error is Map ? error['type'] : null;
+  }
 
   // Shared single-flight guard for every logout trigger (explicit logout, account deletion, a
   // forced 401) so concurrent callers all await the exact same cleanup instead of racing —
@@ -35,10 +42,14 @@ class ApiService {
         handler.next(options);
       },
       onError: (error, handler) async {
-        if (error.response?.statusCode == 401 && error.requestOptions.extra[skipAuthExtra] != true) {
+        final status = error.response?.statusCode;
+        if (status == 401 && error.requestOptions.extra[skipAuthExtra] != true) {
           await runExclusiveLogout(
             () => Get.find<AuthController>().forceLogout(reason: LogoutReason.sessionExpired),
           );
+        } else if (status == 403 && _errorType(error.response?.data) == tabInactiveType &&
+            Get.isRegistered<TabConfigController>()) {
+          TabConfigController.to.load(forceRefresh: true);
         }
         handler.next(error);
       },

@@ -34,14 +34,17 @@ class JobsListController extends GetxController {
   int _page = 1;
   int _gen = 0;
   DateTime? _loadedAt;
-  String? _loadedDistrictId;
+  String? _loadedLocationKey;
   bool _dirty = false;
   bool _resetInFlight = false;
   bool _lookupsLoading = false;
+  bool _locationCheckQueued = false;
 
   AuthController get _auth => Get.find<AuthController>();
   bool get _tabActive => _auth.tabIndex.value == AppTabs.jobs;
-  String? get _districtId => Get.find<LocationController>().effectiveDistrict?.id;
+  LocationController get _loc => Get.find<LocationController>();
+  String? get _districtId => _loc.effectiveDistrict?.id;
+  String get _locationKey => '${_loc.effectiveDistrict?.id}|${_loc.effectiveCity?.id}';
 
   bool get hasFilters =>
       selectedDepartmentId.value != null || selectedExperience.value != null || minSalary.value != null;
@@ -49,8 +52,11 @@ class JobsListController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    final loc = Get.find<LocationController>();
-    _workers.add(everAll([loc.selectedDistrict, loc.browsingDistrict], (_) => _onDistrictChanged()));
+    final loc = _loc;
+    _workers.add(everAll(
+      [loc.selectedDistrict, loc.browsingDistrict, loc.browsingCity, loc.autoCity],
+      (_) => _queueLocationCheck(),
+    ));
     _workers.add(ever(_auth.tabIndex, (i) {
       if (i == AppTabs.jobs) refreshIfNeeded();
     }));
@@ -67,10 +73,15 @@ class JobsListController extends GetxController {
     super.onClose();
   }
 
-  void _onDistrictChanged() {
-    if (isClosed || _districtId == _loadedDistrictId) return;
-    _invalidateHard();
-    if (_tabActive) refreshIfNeeded();
+  void _queueLocationCheck() {
+    if (_locationCheckQueued) return;
+    _locationCheckQueued = true;
+    Future.microtask(() {
+      _locationCheckQueued = false;
+      if (isClosed || _locationKey == _loadedLocationKey) return;
+      _invalidateHard();
+      if (_tabActive) refreshIfNeeded();
+    });
   }
 
   void _clearFilters() {
@@ -93,7 +104,7 @@ class JobsListController extends GetxController {
     _gen++;
     _resetInFlight = false;
     _loadedAt = null;
-    _loadedDistrictId = null;
+    _loadedLocationKey = null;
     hasMore.value = false;
     loadFailed.value = false;
     loadMoreFailed.value = false;
@@ -183,7 +194,7 @@ class JobsListController extends GetxController {
     if (reset) {
       _resetInFlight = true;
       _dirty = false;
-      _loadedDistrictId = districtId;
+      _loadedLocationKey = _locationKey;
       loadFailed.value = false;
       loadMoreFailed.value = false;
       isLoadingMore.value = false;
@@ -196,6 +207,7 @@ class JobsListController extends GetxController {
     try {
       final res = await _repo.browse(
         districtId: districtId,
+        cityId: _loc.effectiveCity?.id,
         departmentId: selectedDepartmentId.value,
         minExperience: selectedExperience.value?.min,
         maxExperience: selectedExperience.value?.max,

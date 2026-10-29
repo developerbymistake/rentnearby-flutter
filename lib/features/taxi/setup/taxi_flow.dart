@@ -10,7 +10,7 @@ class TaxiFlow {
   static bool _busy = false;
 
   static Future<void> start() async {
-    if (_busy || !Get.find<AuthController>().canListTaxis.value) return;
+    if (_busy || !Get.find<AuthController>().taxisEnabled) return;
     _busy = true;
     try {
       final taxi = await const TaxiRepository().getMine();

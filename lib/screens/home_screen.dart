@@ -9,6 +9,7 @@ import '../config/app_constants.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
+import '../config/module_palette.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
@@ -18,13 +19,17 @@ import '../models/browse_item.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
 import '../features/jobs/controllers/my_jobs_controller.dart';
+import '../features/jobs/jobs_colors.dart';
 import '../features/stay/setup/stay_flow.dart';
 import '../features/stay/setup/stay_option_sets.dart';
+import '../features/taxi/models/taxi_browse_item.dart';
 import '../features/taxi/setup/taxi_flow.dart';
 import '../features/taxi/taxi_option_sets.dart';
 import '../services/add_listing_flow.dart';
 import '../utils/app_toast.dart';
 import '../widgets/home_owner_carousel.dart';
+import '../widgets/home_stay_rail_card.dart';
+import '../widgets/home_taxi_rail_card.dart';
 import '../widgets/icon_motion.dart';
 import '../widgets/listing_grid_card.dart';
 import '../widgets/nearby_item_row.dart';
@@ -106,7 +111,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 from: 14,
                 child: _buildListingsSections(),
               ),
-              const SizedBox(height: 15),
               FadeInUp(
                 duration: const Duration(milliseconds: 260),
                 delay: const Duration(milliseconds: 260),
@@ -265,41 +269,98 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── "Rooms for Rent near you" / "Plots for Sale near you" ──────────────────
+  // ── Near-you rails: Rooms, Plots, Stays, Taxis ─────────────────────────────
 
   Widget _buildListingsSections() {
     return Obx(() {
-      final rooms = _tabs.isRoomsActive;
-      final plots = _tabs.isPlotsActive;
+      final rails = <Widget>[
+        if (_tabs.isRoomsActive)
+          _buildRail(
+            title: 'Rooms for Rent near you',
+            tab: AppTabs.rooms,
+            section: HomeSectionKeys.rooms,
+            palette: ModulePalette.rooms,
+            loading: _home.roomsLoading.value,
+            isEmpty: _home.recentRooms.isEmpty,
+            rail: () => _buildRoomsRail(_home.recentRooms),
+          ),
+        if (_tabs.isPlotsActive)
+          _buildRail(
+            title: 'Plots for Sale near you',
+            tab: AppTabs.plots,
+            section: HomeSectionKeys.plots,
+            palette: ModulePalette.plots,
+            loading: _home.plotsLoading.value,
+            isEmpty: _home.recentPlots.isEmpty,
+            rail: () => _buildPlotsRail(_home.recentPlots),
+          ),
+        if (_tabs.isStaysActive)
+          _buildRail(
+            title: 'Stays near you',
+            tab: AppTabs.stays,
+            section: HomeSectionKeys.stays,
+            palette: ModulePalette.stays,
+            loading: _home.staysLoading.value,
+            isEmpty: _home.stays.isEmpty,
+            rail: () => _buildStaysRail(_home.stays),
+          ),
+        if (_tabs.isTaxiActive)
+          _buildRail(
+            title: 'Taxis near you',
+            tab: AppTabs.taxi,
+            section: HomeSectionKeys.taxis,
+            palette: ModulePalette.taxi,
+            loading: _home.taxisLoading.value,
+            isEmpty: _home.taxis.isEmpty,
+            rail: () => _buildTaxisRail(_home.taxis),
+          ),
+      ];
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (rooms)
-            _buildRail(
-              title: 'Rooms for Rent near you',
-              tab: AppTabs.rooms,
-              loading: _home.roomsLoading.value,
-              rail: () => _buildRoomsRail(_home.recentRooms),
-            ),
-          if (rooms && plots) const SizedBox(height: 15),
-          if (plots)
-            _buildRail(
-              title: 'Plots for Sale near you',
-              tab: AppTabs.plots,
-              loading: _home.plotsLoading.value,
-              rail: () => _buildPlotsRail(_home.recentPlots),
-            ),
+          for (final rail in rails)
+            Padding(padding: const EdgeInsets.only(bottom: 15), child: rail),
         ],
       );
     });
   }
 
+  Widget _buildStaysRail(List<HomeStayModel> items) {
+    if (items.isEmpty) {
+      return _emptyRailMessage('No stays listed here yet.', palette: ModulePalette.stays);
+    }
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const SizedBox(width: 12),
+      itemBuilder: (_, i) => HomeStayRailCard(stay: items[i]),
+    );
+  }
+
+  Widget _buildTaxisRail(List<TaxiBrowseItem> items) {
+    if (items.isEmpty) {
+      return _emptyRailMessage('No taxis listed here yet.', palette: ModulePalette.taxi, icon: Iconsax.car);
+    }
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const SizedBox(width: 12),
+      itemBuilder: (_, i) => HomeTaxiRailCard(taxi: items[i]),
+    );
+  }
+
   Widget _buildRail({
     required String title,
     required int tab,
+    required String section,
+    required ModulePalette palette,
     required bool loading,
+    required bool isEmpty,
     required Widget Function() rail,
   }) {
+    final failed = _home.failedSections.contains(section);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -333,17 +394,21 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          height: ListingGridCard.height,
-          child: loading ? _buildListingShimmerRail() : rail(),
-        ),
+        if (loading)
+          SizedBox(height: ListingGridCard.height, child: _buildListingShimmerRail())
+        else if (failed)
+          _railErrorMessage(palette, () => _home.reloadSections({section}))
+        else if (isEmpty)
+          rail()
+        else
+          SizedBox(height: ListingGridCard.height, child: rail()),
       ],
     );
   }
 
   Widget _buildRoomsRail(List<HomeRoomModel> items) {
     if (items.isEmpty) {
-      return Align(alignment: Alignment.topLeft, child: _emptyRailMessage('No rooms listed here yet.'));
+      return _emptyRailMessage('No rooms listed here yet.');
     }
     return ListView.separated(
       scrollDirection: Axis.horizontal,
@@ -385,7 +450,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPlotsRail(List<HomePlotModel> items) {
     if (items.isEmpty) {
-      return Align(alignment: Alignment.topLeft, child: _emptyRailMessage('No plots listed here yet.'));
+      return _emptyRailMessage(
+        'No plots listed here yet.',
+        palette: ModulePalette.plots,
+        icon: Icons.landscape_rounded,
+      );
     }
     return ListView.separated(
       scrollDirection: Axis.horizontal,
@@ -444,12 +513,41 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // No fixed height — inside the near-you rail's SizedBox(height: 150)
-  // parent it gets stretched tight to fill that space (unchanged from
-  // before); inside Recently Added's plain Column it sizes to content.
-  Widget _emptyRailMessage(String text) => Padding(
+  Widget _emptyRailMessage(
+    String text, {
+    ModulePalette palette = ModulePalette.rooms,
+    IconData icon = Icons.home_rounded,
+  }) =>
+      _railMessage(
+        title: 'Nothing here yet',
+        text: text,
+        palette: palette,
+        icon: icon,
+        watermark: Icons.search_rounded,
+      );
+
+  Widget _railErrorMessage(ModulePalette palette, VoidCallback onRetry) => _railMessage(
+        title: "Couldn't load",
+        text: 'Tap to retry',
+        palette: palette,
+        icon: Icons.refresh_rounded,
+        watermark: Icons.cloud_off_rounded,
+        onTap: onRetry,
+      );
+
+  Widget _railMessage({
+    required String title,
+    required String text,
+    required ModulePalette palette,
+    required IconData icon,
+    required IconData watermark,
+    VoidCallback? onTap,
+  }) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 20),
-    child: Container(
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       alignment: Alignment.center,
@@ -459,7 +557,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.divider),
         boxShadow: AppShadows.premium(
-          AppColors.primary,
+          palette.accent,
           alpha: 0.06,
           blur: 16,
           offset: const Offset(0, 6),
@@ -473,9 +571,9 @@ class _HomeScreenState extends State<HomeScreen> {
             right: -8,
             bottom: -12,
             child: Icon(
-              Icons.search_rounded,
+              watermark,
               size: 60,
-              color: AppColors.primaryLight.withValues(alpha: 0.08),
+              color: palette.accentLight.withValues(alpha: 0.08),
             ),
           ),
           Row(
@@ -485,12 +583,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: palette.surface,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.home_rounded,
-                  color: AppColors.primaryLight,
+                child: Icon(
+                  icon,
+                  color: palette.accentLight,
                   size: 20,
                 ),
               ),
@@ -500,11 +598,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Nothing here yet',
+                    Text(
+                      title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
@@ -530,6 +628,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     ),
+    ),
   );
 
   // ── Owner quick actions ─────────────────────────────────────────────────
@@ -545,13 +644,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildOwnerQuickActions() {
     return Obx(() {
-      final canRooms = _auth.canListRooms.value;
-      final canPlots = _auth.canListPlots.value;
-      final stays = _auth.canListStays.value;
-      final taxis = _auth.canListTaxis.value;
-      if (!canRooms && !canPlots && !stays && !taxis) return const SizedBox.shrink();
-      final rooms = _tabs.isRoomsActive && canRooms;
-      final plots = _tabs.isPlotsActive && canPlots;
+      final rooms = _auth.roomsEnabled;
+      final plots = _auth.plotsEnabled;
+      final stays = _auth.staysEnabled;
+      final taxis = _auth.taxisEnabled;
+      final jobs = _auth.jobsEnabled;
       final checking = AddListingFlow.checking.value;
       final tiles = <Widget>[
         if (rooms)
@@ -606,18 +703,14 @@ class _HomeScreenState extends State<HomeScreen> {
             key: TourKeys.homeQuickActionLeads,
             child: _ownerQuickActionTile(
               icon: Icons.bar_chart_rounded,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFBBF24), AppColors.warning],
-              ),
+              gradient: AppColors.warningGradient,
               label: stays ? 'My Stays' : 'My Listings',
               motion: IconMotionStyle.grow,
               compact: stays,
               onTap: () => Get.toNamed(
-                canRooms
+                rooms
                     ? AppRoutes.myListings
-                    : canPlots
+                    : plots
                         ? AppRoutes.myPlots
                         : stays
                             ? AppRoutes.myStays
@@ -625,27 +718,24 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-        if (stays) ...[
+        if (jobs) ...[
           _ownerQuickActionTile(
             icon: Iconsax.briefcase,
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.accentLight, AppColors.accent],
-            ),
+            gradient: JobColors.gradient,
             label: 'Post Job',
             compact: true,
             onTap: _postJob,
           ),
           _ownerQuickActionTile(
             icon: Iconsax.task_square,
-            gradient: AppColors.primaryGradient,
+            gradient: JobColors.gradient,
             label: 'My Jobs',
             compact: true,
             onTap: () => Get.toNamed(AppRoutes.myJobs),
           ),
         ],
       ];
+      if (tiles.isEmpty) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
         child: Row(
@@ -770,13 +860,20 @@ class _HomeScreenState extends State<HomeScreen> {
     return Obx(() {
       final rooms = _tabs.isRoomsActive;
       final plots = _tabs.isPlotsActive;
-      if (!rooms && !plots) return const SizedBox.shrink();
+      final stays = _tabs.isStaysActive;
+      if (!rooms && !plots && !stays) return const SizedBox.shrink();
       final loading =
           (rooms && _home.recentlyAddedRoomsLoading.value) ||
-          (plots && _home.recentlyAddedPlotsLoading.value);
+          (plots && _home.recentlyAddedPlotsLoading.value) ||
+          (stays && _home.recentlyAddedStaysLoading.value);
       final items = loading
           ? const <HomeRecentItem>[]
-          : _home.recentMixed(rooms: rooms, plots: plots);
+          : _home.recentMixed(rooms: rooms, plots: plots, stays: stays);
+      final failed = {
+        if (rooms) HomeSectionKeys.recentRooms,
+        if (plots) HomeSectionKeys.recentPlots,
+        if (stays) HomeSectionKeys.recentStays,
+      }.where(_home.failedSections.contains).toSet();
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -796,6 +893,8 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 10),
           if (loading)
             _buildRecentlyAddedShimmerList()
+          else if (items.isEmpty && failed.isNotEmpty)
+            _railErrorMessage(ModulePalette.rooms, () => _home.reloadSections(failed))
           else if (items.isEmpty)
             _emptyRailMessage('No listings yet.')
           else
@@ -826,9 +925,23 @@ class _HomeScreenState extends State<HomeScreen> {
         caption: 'MONTHLY RENT',
         value: BrowseItem.inr(r.priceMonthly),
         unit: '/mo',
-        isPlot: false,
         placeholderIcon: Icons.home_rounded,
         onTap: () => Get.toNamed(AppRoutes.listingDetail, arguments: {'id': r.id}),
+      );
+    }
+    final s = item.stay;
+    if (s != null) {
+      return NearbyItemRow(
+        thumbnailUrl: s.item.thumbnailUrl,
+        tag: s.item.tagLabel,
+        title: s.item.title,
+        subtitle: s.districtName.isNotEmpty ? s.districtName : s.item.locationLabel,
+        caption: s.item.priceCaption,
+        value: s.item.priceValue,
+        unit: s.item.priceUnit,
+        palette: ModulePalette.stays,
+        placeholderIcon: Icons.home_rounded,
+        onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.item.id}),
       );
     }
     final p = item.plot!;
@@ -842,7 +955,7 @@ class _HomeScreenState extends State<HomeScreen> {
       subtitle: p.districtName,
       caption: 'PLOT AREA',
       value: '$area ${p.areaUnit}'.trim(),
-      isPlot: true,
+      palette: ModulePalette.plots,
       placeholderIcon: Icons.landscape_rounded,
       onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id}),
     );

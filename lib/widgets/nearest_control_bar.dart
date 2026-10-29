@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import '../config/module_palette.dart';
 
 /// Prev/Next + dots + Cancel, meant to sit directly above the bottom preview
 /// card in nearest-carousel mode. [current]/[total] are display-only —
@@ -10,7 +11,7 @@ class NearestControlBar extends StatelessWidget {
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback onCancel;
-  final bool isPlot;
+  final ModulePalette palette;
 
   const NearestControlBar({
     super.key,
@@ -19,7 +20,7 @@ class NearestControlBar extends StatelessWidget {
     required this.onPrev,
     required this.onNext,
     required this.onCancel,
-    this.isPlot = false,
+    this.palette = ModulePalette.rooms,
   });
 
   @override
@@ -44,7 +45,7 @@ class NearestControlBar extends StatelessWidget {
             label: 'Prev',
             iconLeading: true,
             enabled: current > 0,
-            isPlot: isPlot,
+            palette: palette,
             onTap: onPrev,
           ),
           const SizedBox(width: 6),
@@ -53,7 +54,7 @@ class NearestControlBar extends StatelessWidget {
             label: 'Next',
             iconLeading: false,
             enabled: current < total - 1,
-            isPlot: isPlot,
+            palette: palette,
             onTap: onNext,
           ),
           Expanded(
@@ -68,7 +69,7 @@ class NearestControlBar extends StatelessWidget {
                     width: active ? 16 : 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      gradient: active ? AppColors.gradientFor(isPlot) : null,
+                      gradient: active ? palette.gradient : null,
                       color: active ? null : AppColors.divider,
                       borderRadius: BorderRadius.circular(3),
                     ),
@@ -116,7 +117,7 @@ class _NavButton extends StatelessWidget {
   final String label;
   final bool iconLeading;
   final bool enabled;
-  final bool isPlot;
+  final ModulePalette palette;
   final VoidCallback onTap;
 
   const _NavButton({
@@ -124,7 +125,7 @@ class _NavButton extends StatelessWidget {
     required this.label,
     required this.iconLeading,
     required this.enabled,
-    required this.isPlot,
+    required this.palette,
     required this.onTap,
   });
 
@@ -148,13 +149,13 @@ class _NavButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          gradient: enabled ? AppColors.gradientFor(isPlot) : null,
+          gradient: enabled ? palette.gradient : null,
           color: enabled ? null : AppColors.surface,
           borderRadius: BorderRadius.circular(11),
           boxShadow: enabled
               ? [
                   BoxShadow(
-                    color: AppColors.accentFor(isPlot).withValues(alpha: 0.32),
+                    color: palette.accent.withValues(alpha: 0.32),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),

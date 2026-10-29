@@ -113,16 +113,12 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final canRooms = _auth.canListRooms.value;
-      final canPlots = _auth.canListPlots.value;
-      final canStays = _auth.canListStays.value;
-      final canTaxis = _auth.canListTaxis.value;
-      final owner = canRooms || canPlots || canStays || canTaxis;
+      final owner = _auth.effectiveIsOwner;
       final slides = <_Slide>[
-        if (_tabs.isRoomsActive && (!owner || canRooms)) _Slide.rooms,
-        if (_tabs.isPlotsActive && (!owner || canPlots)) _Slide.plots,
-        if (canStays) _Slide.stay,
-        if (canTaxis) _Slide.taxi,
+        if (_tabs.isRoomsActive && (!owner || _auth.roomsEnabled)) _Slide.rooms,
+        if (_tabs.isPlotsActive && (!owner || _auth.plotsEnabled)) _Slide.plots,
+        if (_tabs.isStaysActive && (!owner || _auth.staysEnabled)) _Slide.stay,
+        if (_tabs.isTaxiActive && (!owner || _auth.taxisEnabled)) _Slide.taxi,
       ];
       if (slides.length != _count) _onCountChanged(slides.length);
       if (slides.isEmpty) return const SizedBox.shrink();
@@ -192,11 +188,45 @@ class _OwnerBanner extends StatelessWidget {
         _Slide.taxi => RoleVisuals.accent(UserRoleKeys.taxiDriver),
       };
 
+  static String roleKeyOf(_Slide slide) => switch (slide) {
+        _Slide.rooms => UserRoleKeys.rentOwner,
+        _Slide.plots => UserRoleKeys.propertyOwner,
+        _Slide.stay => UserRoleKeys.stayOwner,
+        _Slide.taxi => UserRoleKeys.taxiDriver,
+      };
+
+  static (String, String, String, String) seekerCopyOf(_Slide slide) => switch (slide) {
+        _Slide.rooms => ('Looking for a room?', 'Find your room', 'Browse rooms near you', 'Browse Rooms'),
+        _Slide.plots => ('Looking for a plot?', 'Find your plot', 'Browse plots near you', 'Browse Plots'),
+        _Slide.stay => ('Looking for a stay?', 'Find your stay', 'Browse stays near you', 'Browse Stays'),
+        _Slide.taxi => ('Need a taxi?', 'Find a taxi', 'Local taxis near you', 'Browse Taxis'),
+      };
+
+  static String ownerTitleOf(_Slide slide) => switch (slide) {
+        _Slide.rooms => 'List your room',
+        _Slide.plots => 'List your plot',
+        _Slide.stay => 'List your stay',
+        _Slide.taxi => 'List your taxi',
+      };
+
+  static String ownerRouteOf(_Slide slide) => switch (slide) {
+        _Slide.rooms => AppRoutes.myListings,
+        _Slide.plots => AppRoutes.myPlots,
+        _Slide.stay => AppRoutes.myStays,
+        _Slide.taxi => AppRoutes.myTaxi,
+      };
+
+  static int tabOf(_Slide slide) => switch (slide) {
+        _Slide.rooms => AppTabs.rooms,
+        _Slide.plots => AppTabs.plots,
+        _Slide.stay => AppTabs.stays,
+        _Slide.taxi => AppTabs.taxi,
+      };
+
   @override
   Widget build(BuildContext context) {
-    final isRooms = slide != _Slide.plots;
-    final isStay = slide == _Slide.stay;
     final isTaxi = slide == _Slide.taxi;
+    final (seekerBadge, seekerTitle, seekerSubtitle, seekerCta) = seekerCopyOf(slide);
     final accent = accentOf(slide);
     final imageGlowColor = slide == _Slide.plots ? AppColors.success : accent;
     return Container(
@@ -255,16 +285,16 @@ class _OwnerBanner extends StatelessWidget {
                               width: 96,
                               height: 96,
                               decoration: const BoxDecoration(
-                                gradient: RoleVisuals.taxiGradient,
+                                gradient: AppColors.taxiGradient,
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(Iconsax.car, size: 48, color: Colors.white),
                             ),
                           )
                         : Image.asset(
-                            isRooms
-                                ? 'assets/images/owner_cta/house.png'
-                                : 'assets/images/owner_cta/plot.png',
+                            slide == _Slide.plots
+                                ? 'assets/images/owner_cta/plot.png'
+                                : 'assets/images/owner_cta/house.png',
                             fit: BoxFit.contain,
                             alignment: Alignment.centerRight,
                           ),
@@ -287,14 +317,7 @@ class _OwnerBanner extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    isOwner
-                        ? RoleVisuals.displayName(switch (slide) {
-                            _Slide.rooms => UserRoleKeys.rentOwner,
-                            _Slide.plots => UserRoleKeys.propertyOwner,
-                            _Slide.stay => UserRoleKeys.stayOwner,
-                            _Slide.taxi => UserRoleKeys.taxiDriver,
-                          })
-                        : (isRooms ? 'Looking for a room?' : 'Looking for a plot?'),
+                    isOwner ? RoleVisuals.displayName(roleKeyOf(slide)) : seekerBadge,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -307,15 +330,7 @@ class _OwnerBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isOwner
-                      ? (isTaxi
-                          ? 'List your taxi'
-                          : isStay
-                              ? 'List your stay'
-                              : isRooms
-                                  ? 'List your room'
-                                  : 'List your plot')
-                      : (isRooms ? 'Find your room' : 'Find your plot'),
+                  isOwner ? ownerTitleOf(slide) : seekerTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -327,9 +342,7 @@ class _OwnerBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  isOwner
-                      ? 'Grow your reach'
-                      : (isRooms ? 'Browse rooms near you' : 'Browse plots near you'),
+                  isOwner ? 'Grow your reach' : seekerSubtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -342,18 +355,8 @@ class _OwnerBanner extends StatelessWidget {
                 const SizedBox(height: 10),
                 GestureDetector(
                   onTap: isOwner
-                      ? () => Get.toNamed(
-                            isTaxi
-                                ? AppRoutes.myTaxi
-                                : isStay
-                                    ? AppRoutes.myStays
-                                    : isRooms
-                                        ? AppRoutes.myListings
-                                        : AppRoutes.myPlots,
-                          )
-                      : () => Get.find<AuthController>().switchToTab(
-                            isRooms ? AppTabs.rooms : AppTabs.plots,
-                          ),
+                      ? () => Get.toNamed(ownerRouteOf(slide))
+                      : () => Get.find<AuthController>().switchToTab(tabOf(slide)),
                   child: PulseOnce(
                     child: SweepHighlight(
                       borderRadius: BorderRadius.circular(12),
@@ -370,9 +373,7 @@ class _OwnerBanner extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              isOwner
-                                  ? 'Add Your Listing'
-                                  : (isRooms ? 'Browse Rooms' : 'Browse Plots'),
+                              isOwner ? 'Add Your Listing' : seekerCta,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(

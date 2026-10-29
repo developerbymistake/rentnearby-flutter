@@ -2,19 +2,60 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../config/module_palette.dart';
 import '../controllers/location_controller.dart';
 import '../models/city_model.dart';
 import '../utils/input_formatters.dart';
+
+class PickedPlace {
+  final String name;
+  final double latitude;
+  final double longitude;
+  final String cityId;
+  final String districtId;
+  final String districtName;
+
+  const PickedPlace({
+    required this.name,
+    required this.latitude,
+    required this.longitude,
+    required this.cityId,
+    required this.districtId,
+    required this.districtName,
+  });
+}
 
 /// Shared bottom sheet for the district-switch feature — used identically by
 /// Explore Rooms and Explore Plots. A 3-level drill-down: City (home) →
 /// District (scoped to the current state) → State. Reads/writes browsing
 /// state directly on [LocationController]; callers don't need any callbacks.
+/// [pick] reuses the same UI but only returns the tapped city.
 class LocationSwitchSheet extends StatefulWidget {
-  final bool plots;
-  const LocationSwitchSheet({super.key, this.plots = false});
+  final ModulePalette palette;
+  final bool pickOnly;
+  final String? title;
+  const LocationSwitchSheet({
+    super.key,
+    this.palette = ModulePalette.rooms,
+    this.pickOnly = false,
+    this.title,
+  });
 
-  static Future<void> show(BuildContext context, {bool plots = false}) {
+  static Future<PickedPlace?> pick(BuildContext context,
+      {ModulePalette palette = ModulePalette.rooms, String? title}) {
+    return showModalBottomSheet<PickedPlace>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => LocationSwitchSheet(
+          palette: palette, pickOnly: true, title: title ?? 'Pick a city'),
+    );
+  }
+
+  static Future<void> show(BuildContext context, {ModulePalette palette = ModulePalette.rooms}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -27,7 +68,7 @@ class LocationSwitchSheet extends StatefulWidget {
       // keyboard height on top of that fixed height fights it and pushes
       // list content down away from the search box. The sheet computes its
       // own height around the keyboard instead (see _sheetHeight()).
-      builder: (_) => LocationSwitchSheet(plots: plots),
+      builder: (_) => LocationSwitchSheet(palette: palette),
     );
   }
 
@@ -38,8 +79,8 @@ class LocationSwitchSheet extends StatefulWidget {
 enum _Level { city, district, state }
 
 class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
-  Color get _accent => widget.plots ? AppColors.plot : AppColors.primary;
-  Gradient get _gradient => widget.plots ? AppColors.plotGradient : AppColors.primaryGradient;
+  Color get _accent => widget.palette.accent;
+  Gradient get _gradient => widget.palette.gradient;
   final _locationCtrl = Get.find<LocationController>();
   final _searchCtrl = TextEditingController();
 
@@ -77,8 +118,11 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
   @override
   void initState() {
     super.initState();
-    _viewingDistrict = _locationCtrl.effectiveDistrict;
+    _viewingDistrict = widget.pickOnly
+        ? (_locationCtrl.selectedDistrict.value ?? _locationCtrl.effectiveDistrict)
+        : _locationCtrl.effectiveDistrict;
     _loadCitiesFor(_viewingDistrict);
+    if (widget.pickOnly) return;
 
     // If browsing is reset/changed from outside this sheet — most notably
     // LocationController.refreshOnResume() discarding it when the app comes
@@ -207,9 +251,24 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
   }
 
   void _pickCity(CityModel city) {
-    if (_viewingDistrict == null) return;
+    final district = _viewingDistrict;
+    if (district == null) return;
     _closing = true;
-    _locationCtrl.setBrowsing(_viewingDistrict!, city);
+    if (widget.pickOnly) {
+      Navigator.pop(
+        context,
+        PickedPlace(
+          name: city.name,
+          latitude: city.latitude!,
+          longitude: city.longitude!,
+          cityId: city.id,
+          districtId: district.id,
+          districtName: district.name,
+        ),
+      );
+      return;
+    }
+    _locationCtrl.setBrowsing(district, city);
     Navigator.pop(context);
   }
 
@@ -259,12 +318,14 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
 
   Widget _buildHeader() {
     String title;
+    String? subtitle;
     VoidCallback? onBack;
     Widget? trailing;
 
     switch (_level) {
       case _Level.city:
-        title = _viewingDistrict?.name ?? 'Choose city';
+        title = widget.title ?? _viewingDistrict?.name ?? 'Choose city';
+        if (widget.title != null) subtitle = _viewingDistrict?.name;
         onBack = null;
         trailing = TextButton(
           onPressed: _goToDistrictLevel,
@@ -327,14 +388,32 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
                   ),
                 ),
               Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               ?trailing,
@@ -366,19 +445,17 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
           prefixIcon: const Icon(Icons.search_rounded,
               size: 20, color: AppColors.textHint),
           filled: true,
-          fillColor: widget.plots ? AppColors.plotSurface : AppColors.surface,
+          fillColor: widget.palette.surface,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
-          focusedBorder: widget.plots
-              ? OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.plot, width: 1.5),
-                )
-              : null,
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: _accent, width: 1.5),
+          ),
         ),
       ),
     );
@@ -420,10 +497,12 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
       return _errorState(_citiesError!, () => _loadCitiesFor(_viewingDistrict));
     }
 
-    final isOwnDistrict = _viewingDistrict != null &&
+    final pickOnly = widget.pickOnly;
+    final isOwnDistrict = !pickOnly &&
+        _viewingDistrict != null &&
         _locationCtrl.selectedDistrict.value != null &&
         _viewingDistrict!.id == _locationCtrl.selectedDistrict.value!.id;
-    final activeCityId = _locationCtrl.browsingCity.value?.id;
+    final activeCityId = pickOnly ? null : _locationCtrl.browsingCity.value?.id;
 
     final filtered = _cities
         .where((c) => _query.isEmpty ||
@@ -443,7 +522,9 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
           icon: Iconsax.location,
           label: c.name,
           selected: c.id == activeCityId,
-          onTap: () => _pickCity(c),
+          onTap: pickOnly && (c.latitude == null || c.longitude == null)
+              ? null
+              : () => _pickCity(c),
         )));
 
     if (items.isEmpty) return _emptyState('No city matches "$_query"');

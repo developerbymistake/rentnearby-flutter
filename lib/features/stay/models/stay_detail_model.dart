@@ -16,6 +16,9 @@ class StayDetailModel {
   final double? longitude;
   final String? districtName;
   final String? cityName;
+  final String? cityId;
+  final double? cityLat;
+  final double? cityLng;
   final List<String> photos;
   final List<StayRoomModel> rooms;
   final StayRulesModel? rules;
@@ -40,6 +43,9 @@ class StayDetailModel {
     this.longitude,
     this.districtName,
     this.cityName,
+    this.cityId,
+    this.cityLat,
+    this.cityLng,
     required this.photos,
     required this.rooms,
     this.rules,
@@ -54,6 +60,20 @@ class StayDetailModel {
 
   String get locality =>
       [cityName, districtName].where((s) => s != null && s.isNotEmpty).join(', ');
+
+  String get placeName {
+    for (final n in [cityName, districtName]) {
+      final t = n?.trim() ?? '';
+      if (t.isNotEmpty) return t;
+    }
+    return 'This stay';
+  }
+
+  ({double lat, double lng})? get taxiTarget {
+    if (cityLat != null && cityLng != null) return (lat: cityLat!, lng: cityLng!);
+    if (latitude != null && longitude != null) return (lat: latitude!, lng: longitude!);
+    return null;
+  }
 
   static String _url(String u) => u.startsWith('http') ? u : '${AppConstants.serverUrl}$u';
 
@@ -72,6 +92,9 @@ class StayDetailModel {
         longitude: (j['longitude'] as num?)?.toDouble(),
         districtName: j['districtName'] as String?,
         cityName: j['cityName'] as String?,
+        cityId: j['cityId']?.toString(),
+        cityLat: (j['cityLatitude'] as num?)?.toDouble(),
+        cityLng: (j['cityLongitude'] as num?)?.toDouble(),
         photos: ((j['photos'] as List?) ?? const []).map((e) => _url(e.toString())).toList(),
         rooms: ((j['rooms'] as List?) ?? const [])
             .map((e) => StayRoomModel.fromJson(e as Map<String, dynamic>))

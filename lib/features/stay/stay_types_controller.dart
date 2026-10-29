@@ -10,12 +10,6 @@ class StayTypesController extends GetxController {
   final types = <StayTypeModel>[].obs;
   final isLoading = false.obs;
 
-  @override
-  void onInit() {
-    super.onInit();
-    load();
-  }
-
   Future<void> load() async {
     if (isLoading.value) return;
     try {

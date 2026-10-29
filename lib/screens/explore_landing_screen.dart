@@ -5,6 +5,7 @@ import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
 import '../config/app_tabs.dart';
+import '../config/module_palette.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/explore_landing_controller.dart';
 import '../controllers/listing_controller.dart';
@@ -36,11 +37,7 @@ const _kMapGradient = LinearGradient(
   end: Alignment.bottomRight,
   colors: [AppColors.accentLight, AppColors.accent],
 );
-const _kMineGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [Color(0xFFFBBF24), AppColors.warning],
-);
+const _kMineGradient = AppColors.warningGradient;
 
 class ExploreLandingScreen extends StatefulWidget {
   const ExploreLandingScreen({super.key, required this.kind});
@@ -60,11 +57,11 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
   bool get _isRooms => widget.kind == ExploreKind.rooms;
 
   @override
-  bool get searchPlotsTheme => !_isRooms;
+  ModulePalette get searchPalette => _isRooms ? ModulePalette.rooms : ModulePalette.plots;
   int get _tab => _isRooms ? AppTabs.rooms : AppTabs.plots;
-  Color get _accent => _isRooms ? AppColors.primary : AppColors.plot;
-  Color get _accentDark => _isRooms ? AppColors.primary : AppColors.plotDark;
-  Gradient get _gradient => _isRooms ? AppColors.primaryGradient : AppColors.plotGradient;
+  Color get _accent => searchPalette.accent;
+  Color get _accentDark => searchPalette.accentDark;
+  Gradient get _gradient => searchPalette.gradient;
   GlobalKey get _listKey => _isRooms ? TourKeys.roomsLandingList : TourKeys.plotsLandingList;
 
   @override
@@ -273,7 +270,7 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
             ];
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: searching ? null : () => LocationSwitchSheet.show(context, plots: !_isRooms),
+        onTap: searching ? null : () => LocationSwitchSheet.show(context, palette: searchPalette),
         child: Container(
           height: 46,
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -298,7 +295,7 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
                 Container(
                   width: 26,
                   height: 26,
-                  decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                  decoration: const BoxDecoration(color: AppColors.neutralChip, shape: BoxShape.circle),
                   child: Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: _accentDark),
                 ),
             ],

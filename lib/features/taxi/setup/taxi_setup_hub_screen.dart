@@ -39,6 +39,10 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
 
   Future<void> _load() async {
     final ok = await _ctrl.load();
+    if (!ok && mounted && !_auth.taxisEnabled) {
+      _auth.leaveOffTabRoute();
+      return;
+    }
     final t = _ctrl.taxi.value;
     if (!ok || !mounted || _fromMyTaxi || t == null || t.isDraft) return;
     await _auth.refreshProfile();
@@ -273,16 +277,16 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
   Widget _pendingStrip() => Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(999)),
+        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(999)),
         child: const Row(children: [
-          Icon(Iconsax.clock, size: 16, color: Color(0xFF92400E)),
+          Icon(Iconsax.clock, size: 16, color: AppColors.warningText),
           SizedBox(width: 8),
           Expanded(
             child: Text('Under review · We will notify you',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF92400E))),
+                    fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText)),
           ),
         ]),
       );

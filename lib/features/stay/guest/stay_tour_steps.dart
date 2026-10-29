@@ -17,9 +17,9 @@ List<TourStep> buildStayLandingSteps() {
       key: TourKeys.staysLandingLocation,
       icon: Iconsax.location,
       title: 'Switch your city',
-      body: 'Tap to change your district or city — the list below follows it, shared across Rooms, Plots and Stays.',
+      body: 'Tap to change your district or city — the list below follows it.',
     ),
-    if (Get.find<AuthController>().canListStays.value)
+    if (Get.find<AuthController>().staysEnabled)
       TourStep(
         key: TourKeys.staysLandingTiles,
         icon: Icons.grid_view_rounded,
