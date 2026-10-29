@@ -44,8 +44,8 @@ permission.
 widgets), dependency injection (`Get.put`/`Get.find`), and navigation (`GetMaterialApp`,
 `Get.toNamed`/`offAllNamed`). There is no `Bindings` layer — dependencies are registered eagerly and
 explicitly:
-- App-wide singletons (`NotificationService`, `AuthController`) are `Get.put` in `main()` before
-  `runApp`.
+- App-wide singletons (`ConfigRepository`, `TabConfigController`, `NotificationService`, `AuthController`) are
+  `Get.put(permanent: true)` in `main()` before `runApp`, in that order: tab state exists before any routing decision.
 - Everything else (feature controllers, repositories, hub services) is `Get.put` in
   `MainScreen.initState()` (`lib/screens/main_screen.dart`) in a specific dependency order — read the
   comments there before reordering (e.g. `HomeController.onInit()` looks up `LocationController`, so
@@ -59,6 +59,8 @@ bottom-nav tab, reached instead via a header icon on Home) are NOT part of this
 route table: `MainScreen` renders them as an `IndexedStack` of `TabNavigator` widgets
 (`lib/navigation/tab_router.dart`), each wrapping its tab root screen in its own nested `Navigator`
 keyed via `lib/navigation/tab_keys.dart`. This isolates keyboard/layout/MediaQuery changes per tab.
+The root sits in an `Obx` and is a `SizedBox.shrink()` while `TabConfigController.isActiveForIndex` is false, so an
+admin-disabled tab is never built and makes no API call.
 Deep/detail screens (listing detail, add listing, payment, chat conversation, etc.) still go through
 the global `Get.toNamed` navigator on top of everything, unaffected by which tab is active. "My
 Rooms"/"My Plots" are pushed named routes, not tabs (reached via a tile on the Rooms/Plots landing).
@@ -192,7 +194,7 @@ role cannot open lands on the notifications screen instead (same guard in `notif
   own-kind slide to an owner (opens My Rooms/My Plots); Home quick tiles (Add / My Listings) render only for an
   owner and only for the kind they list; the Rooms/Plots landing tile row (see above); `tour_registry.dart` skips
   owner steps; `AddListingFlow.start` returns early without the capability; `ListingController`/`PlotController`
-  load "my" lists only with the capability.
+  load "my" lists only with the capability. All of these use the effective (role AND tab) getters, see "Tab gating".
 
 **Credit economy (replaces the old membership/payment model)**: there is no more per-listing membership
 entity and no more free-vs-paid tier on listing *creation*. Users buy credits (Razorpay packs, redeem
@@ -228,7 +230,7 @@ so callers can branch on `GoLiveInsufficientBalance` specifically to open the sh
   chip's shape.
 - **Screens**: `CreditPacksScreen` (buy credits + entry points to redeem/history), `RedeemCodeScreen`,
   `WalletLedgerScreen` — reachable via `AppRoutes.creditPacks`/`redeemCode`/`walletLedger`.
-- Both `Get.put(ConfigRepository())`/`Get.put(ConfigController())` and
+- `ConfigRepository` is put permanently in `main()`; `ConfigController` and
   `Get.put(WalletRepository())`/`Get.put(WalletController())` are registered in `MainScreen.initState()`
   alongside `ListingRepository`/`PlotRepository`.
 
@@ -274,6 +276,22 @@ sites.
   `TextField`/`TextFormField` in the app — city search, descriptions, addresses, report details, chat
   search, name fields — apply it to any new free-text field too. Numeric fields (price, area,
   phone/OTP) use their own digit-only formatters instead and don't need it)
+
+**Tab gating (admin turns a tab off)**: spec `F:\Dhasu\TAB_GATING_FEATURE.md`; the backend is the real gate
+(403 `TabInactive` on `/listings`, `/plots`, `/stays`, `/taxis`, `/stay-jobs`). `TabConfigController` is the one
+client snapshot: seeded from storage, fetched once in `onInit`, `ready` (splash waits on it with the version check),
+`version` (bumped only on a real change; its getters read it, so any `Obx` using them rebuilds), single-flight `load`,
+`isActiveForIndex` (Jobs needs JOBS and STAYS), `activeSectionKeys` for `/home/feed`. `AuthController` exposes
+effective capabilities `roomsEnabled`/`plotsEnabled`/`staysEnabled`/`taxisEnabled`/`jobsEnabled`/`effectiveIsOwner`
+(role AND tab) and `roleTabActive`; `postLoginRoute`, `canOpenRoute` (also checks `AppRoutes.tabKeyForRoute`), add
+flows, tiles, tours and my-list loads use them, raw `canListX` stay for role change and contact visibility.
+`ListingController`/`PlotController` fetch types only through `ensureTypesLoaded()` (first open of the tab or an add
+flow) and my-lists only when enabled; `StayTypesController` loads from `StayLandingController.refreshIfNeeded`.
+`MainScreen` has one `ever(version)` worker that leaves an inactive current tab for Home. The `ApiService` error
+interceptor calls `TabConfigController.load(forceRefresh: true)` on a 403 `TabInactive`. Deep links check the tab
+before the by-slug call. Role screens trust the server-filtered `GET /roles`; `chooseRole`/`requestRoleChange`
+return `RoleActionResult.unavailable` on 400 `RoleUnavailable` and the screen reloads. App-wide location calls use
+the ungated `/locations/context`, `/locations/districts`, `/locations/districts/{id}/boundary`, `/locations/cities`.
 
 **Theming**: single fixed light theme (`lib/config/app_theme.dart` + `app_colors.dart`), Material 3,
 Poppins font family declared in `pubspec.yaml`. No dark mode, no localization/i18n setup — all UI

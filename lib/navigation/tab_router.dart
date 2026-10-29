@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../config/app_tabs.dart';
+import '../controllers/tab_config_controller.dart';
 import '../screens/home_screen.dart';
 import '../models/explore_kind.dart';
 import '../screens/explore_landing_screen.dart';
@@ -36,7 +38,10 @@ class TabNavigator extends StatelessWidget {
     return Navigator(
       key: tabKeys[tabId],
       onGenerateRoute: (_) => PageRouteBuilder(
-        pageBuilder: (_, __, ___) => _rootScreen(tabId),
+        // An inactive tab's root is never built, so it makes no API call and puts no controller.
+        pageBuilder: (_, __, ___) => Obx(
+          () => TabConfigController.to.isActiveForIndex(tabId) ? _rootScreen(tabId) : const SizedBox.shrink(),
+        ),
         transitionDuration: Duration.zero,
         reverseTransitionDuration: Duration.zero,
       ),

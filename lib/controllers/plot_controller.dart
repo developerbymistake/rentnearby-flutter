@@ -7,6 +7,7 @@ import '../models/plot_model.dart';
 import '../repositories/plot_repository.dart';
 import '../repositories/wallet_repository.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/tab_config_controller.dart';
 import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../config/app_colors.dart';
@@ -49,11 +50,30 @@ class PlotController extends GetxController {
   int _myPlotsPage = 1;
   int _nearestRequestSeq = 0;
 
+  Worker? _tabWorker;
+
   @override
   void onInit() {
     super.onInit();
-    loadPlotTypes();
-    if (Get.find<AuthController>().canListPlots.value) loadMyPlots();
+    _loadMyIfEnabled();
+    _tabWorker = ever<int>(TabConfigController.to.version, (_) => _loadMyIfEnabled());
+  }
+
+  @override
+  void onClose() {
+    _tabWorker?.dispose();
+    super.onClose();
+  }
+
+  Future<bool>? _myLoad;
+
+  void _loadMyIfEnabled() {
+    if (hasLoadedMyPlots || _myLoad != null || !Get.find<AuthController>().plotsEnabled) return;
+    _myLoad = loadMyPlots().whenComplete(() => _myLoad = null);
+  }
+
+  void ensureTypesLoaded() {
+    if (plotTypes.isEmpty && !plotTypesLoading.value) loadPlotTypes();
   }
 
   Future<void> loadPlotTypes() async {

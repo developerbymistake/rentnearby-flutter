@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../controllers/app_version_controller.dart';
 import '../controllers/auth_controller.dart';
@@ -12,7 +13,6 @@ import '../controllers/location_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../controllers/report_controller.dart';
-import '../repositories/config_repository.dart';
 import '../repositories/notification_repository.dart';
 import '../repositories/listing_repository.dart';
 import '../repositories/plot_repository.dart';
@@ -56,6 +56,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Worker? _bannerDistrictWorker;
   Worker? _digestTopicWorker;
   Worker? _tabLeaveWorker;
+  Worker? _tabConfigWorker;
   int _previousTabIndex = AppTabs.home;
 
   final _screens = const [
@@ -71,11 +72,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    Get.put(ConfigRepository());
-    // First network call of the session, deliberately — TabConfigController.onInit() fires
-    // load() itself the moment this Get.put() runs (after first synchronously seeding from
-    // its persisted last-known-good cache), before any tab-scoped controller/hub put below.
-    _tabConfigCtrl = Get.put(TabConfigController());
+    _tabConfigCtrl = TabConfigController.to;
     Get.put(ConfigController());
     _locationCtrl = Get.put(LocationController());
     // GlobalLocationGates (main.dart's builder:) sits above the Navigator and
@@ -157,6 +154,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       }
       _previousTabIndex = newIndex;
     });
+    _tabConfigWorker = ever<int>(_tabConfigCtrl.version, (_) {
+      if (!_tabConfigCtrl.isActiveForIndex(_auth.tabIndex.value)) _auth.switchToTab(AppTabs.home);
+      final route = Get.currentRoute;
+      if (AppRoutes.tabKeyForRoute(route) != null && !_auth.canOpenRoute(route)) {
+        Get.until((r) => r.settings.name == AppRoutes.main);
+      }
+    });
+    if (!_tabConfigCtrl.isActiveForIndex(_auth.tabIndex.value)) _auth.switchToTab(AppTabs.home);
     _auth.refreshProfile();
     // Last, deliberately — needs every controller any tour could reference
     // (LocationController, AuthController) already registered above.
@@ -176,6 +181,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _bannerDistrictWorker?.dispose();
     _digestTopicWorker?.dispose();
     _tabLeaveWorker?.dispose();
+    _tabConfigWorker?.dispose();
     super.dispose();
   }
 
@@ -373,7 +379,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           Obx(() {
             final roomLoading = Get.find<ListingController>().isLoadingNearest.value;
             final plotLoading = Get.find<PlotController>().isLoadingNearest.value;
-            // StayGuestController is lazy; .to registers it so this Obx subscribes.
+            // StayGuestController is lazy and makes no call on put; .to registers it so this Obx subscribes.
             final stayLoading = StayGuestController.to.isLoadingNearest.value;
             if (!roomLoading && !plotLoading && !stayLoading) return const SizedBox.shrink();
             return AppLoadingOverlay.stackChild(
@@ -476,7 +482,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 child: _navItem(AppTabs.stays, Iconsax.building_4, Iconsax.building_45,
                     _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
               ),
-            if (_tabConfigCtrl.isActive(AppTabKeys.jobs))
+            if (_tabConfigCtrl.isActiveForIndex(AppTabs.jobs))
               _navItem(AppTabs.jobs, Iconsax.briefcase, Iconsax.briefcase5,
                   _tabConfigCtrl.displayNameForIndex(AppTabs.jobs, 'Jobs')),
             if (_tabConfigCtrl.isActive(AppTabKeys.taxi))

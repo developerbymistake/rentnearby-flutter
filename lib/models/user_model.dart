@@ -15,6 +15,7 @@ class UserModel {
   final DateTime? nextRoleRequestAt;
   final String? stayStatus;
   final String? taxiStatus;
+  final bool roleTabActive;
 
   UserModel({
     required this.id,
@@ -31,6 +32,7 @@ class UserModel {
     this.nextRoleRequestAt,
     this.stayStatus,
     this.taxiStatus,
+    this.roleTabActive = true,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
@@ -48,6 +50,7 @@ class UserModel {
         nextRoleRequestAt: json['nextRoleRequestAt'] != null ? DateTime.parse(json['nextRoleRequestAt']) : null,
         stayStatus: json['stayStatus'] as String?,
         taxiStatus: json['taxiStatus'] as String?,
+        roleTabActive: json['roleTabActive'] as bool? ?? true,
       );
 
   Map<String, dynamic> toJson() => {
@@ -65,6 +68,7 @@ class UserModel {
         'nextRoleRequestAt': nextRoleRequestAt?.toIso8601String(),
         'stayStatus': stayStatus,
         'taxiStatus': taxiStatus,
+        'roleTabActive': roleTabActive,
       };
 
   String get displayName => name?.trim().isNotEmpty == true ? name! : '+91 $phoneNumber';

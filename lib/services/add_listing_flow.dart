@@ -18,9 +18,14 @@ class AddListingFlow {
 
   static Future<void> start(bool isRooms) async {
     final auth = Get.find<AuthController>();
-    if (!(isRooms ? auth.canListRooms.value : auth.canListPlots.value)) return;
+    if (!(isRooms ? auth.roomsEnabled : auth.plotsEnabled)) return;
     if (checking.value != null) return;
     checking.value = isRooms;
+    if (isRooms) {
+      Get.find<ListingController>().ensureTypesLoaded();
+    } else {
+      Get.find<PlotController>().ensureTypesLoaded();
+    }
     try {
       if (isRooms) {
         await _startRoom();

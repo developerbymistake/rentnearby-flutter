@@ -32,12 +32,19 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
     _load();
   }
 
+  Future<void> _choose() async {
+    final result = await _auth.chooseRole(_selectedKey);
+    if (result == RoleActionResult.unavailable && mounted) _retry();
+  }
+
   Future<void> _load() async {
     final roles = [...await _auth.fetchRoles()]..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     if (!mounted) return;
     setState(() {
       _roles = roles;
-      if (roles.isNotEmpty && !roles.any((r) => r.key == _selectedKey)) _selectedKey = roles.first.key;
+      if (roles.isNotEmpty && !roles.any((r) => r.key == _selectedKey)) {
+        _selectedKey = roles.any((r) => r.key == UserRoleKeys.seeker) ? UserRoleKeys.seeker : roles.first.key;
+      }
       _loading = false;
     });
   }
@@ -98,7 +105,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
                       label: 'Continue',
                       height: 50,
                       isLoading: _auth.isLoading.value,
-                      onPressed: _loading || _roles.isEmpty ? null : () => _auth.chooseRole(_selectedKey),
+                      onPressed: _loading || _roles.isEmpty ? null : _choose,
                     )),
               ],
             ),

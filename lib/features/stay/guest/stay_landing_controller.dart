@@ -4,6 +4,7 @@ import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../models/browse_item.dart';
+import '../stay_types_controller.dart';
 import 'stay_browse_repository.dart';
 
 class StayLandingController extends GetxController {
@@ -109,10 +110,11 @@ class StayLandingController extends GetxController {
   }
 
   void _refreshOwnerStatus() {
-    if (_auth.canListStays.value) unawaited(_auth.refreshProfile());
+    if (_auth.staysEnabled) unawaited(_auth.refreshProfile());
   }
 
   void refreshIfNeeded() {
+    StayTypesController.ensure().ensureLoaded();
     if (_resetInFlight && !_dirty) return;
     final at = _loadedAt;
     final stale = at == null || DateTime.now().difference(at) > _staleAfter;

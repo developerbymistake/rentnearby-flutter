@@ -28,7 +28,7 @@ class LocationsRepository {
     }
 
     try {
-      final res = await ApiService.get('/listings/locations/districts');
+      final res = await ApiService.get('/locations/districts');
       final items = (res['data'] as List)
           .map((e) => DistrictModel.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -65,7 +65,7 @@ class LocationsRepository {
     }
 
     try {
-      final res = await ApiService.get('/listings/locations/cities', params: {'districtId': districtId});
+      final res = await ApiService.get('/locations/cities', params: {'districtId': districtId});
       final items = (res['data'] as List)
           .map((e) => CityModel.fromJson(e as Map<String, dynamic>))
           .toList();

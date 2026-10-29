@@ -39,6 +39,10 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
 
   Future<void> _load() async {
     final ok = await _ctrl.load();
+    if (!ok && mounted && !_auth.taxisEnabled) {
+      _auth.leaveOffTabRoute();
+      return;
+    }
     final t = _ctrl.taxi.value;
     if (!ok || !mounted || _fromMyTaxi || t == null || t.isDraft) return;
     await _auth.refreshProfile();

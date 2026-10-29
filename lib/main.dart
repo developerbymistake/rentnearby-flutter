@@ -9,6 +9,8 @@ import 'config/app_theme.dart';
 import 'config/app_routes.dart';
 import 'controllers/app_version_controller.dart';
 import 'controllers/auth_controller.dart';
+import 'controllers/tab_config_controller.dart';
+import 'repositories/config_repository.dart';
 import 'services/api_service.dart';
 import 'services/deep_link_service.dart';
 import 'services/map_pause_observer.dart';
@@ -40,6 +42,8 @@ Future<void> main() async {
   // will render at phone-like proportions rather than a tailored layout).
   SystemChrome.setPreferredOrientations([]);
 
+  Get.put(ConfigRepository(), permanent: true);
+  Get.put(TabConfigController(), permanent: true);
   Get.put(NotificationService(), permanent: true);
   Get.put(AuthController(), permanent: true);
   Get.put(

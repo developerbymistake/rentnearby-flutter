@@ -1,3 +1,5 @@
+import '../controllers/tab_config_controller.dart' show AppTabKeys;
+
 class UserRoleKeys {
   static const String seeker = 'SEEKER';
   static const String rentOwner = 'RENT_OWNER';
@@ -5,6 +7,14 @@ class UserRoleKeys {
   static const String stayOwner = 'STAY_OWNER';
   static const String taxiDriver = 'TAXI_DRIVER';
   static const String claim = 'role';
+
+  static String? tabKeyOf(String? roleKey) => switch (roleKey) {
+        rentOwner => AppTabKeys.rooms,
+        propertyOwner => AppTabKeys.plots,
+        stayOwner => AppTabKeys.stays,
+        taxiDriver => AppTabKeys.taxi,
+        _ => null,
+      };
 }
 
 class RoleCapabilities {
@@ -48,6 +58,8 @@ class RoleCapabilities {
 class RoleRequestErrorTypes {
   static const String cooldown = 'RoleRequestCooldown';
   static const String liveListing = 'RoleChangeBlockedByLiveListing';
+  static const String unavailable = 'RoleUnavailable';
+  static const String invalidRole = 'InvalidRole';
 }
 
 class RoleRequestStatus {

@@ -472,7 +472,7 @@ class LocationController extends GetxController {
       {bool includeAddress = false}) async {
     try {
       final res = await ApiService.get(
-        '/listings/context',
+        '/locations/context',
         params: {
           'lat': lat,
           'lng': lng,
@@ -544,7 +544,7 @@ class LocationController extends GetxController {
   // district/city can never end up set AFTER the trigger fires: Add
   // Room/Plot's resume-worker reads selectedDistrict/autoCity straight off
   // this controller instead of re-resolving the same coordinates itself
-  // (avoiding a duplicate /listings/context hit), which only stays correct
+  // (avoiding a duplicate /locations/context hit), which only stays correct
   // if those fields are already current by the time the trigger fires.
   void _publishResolvedContext(_LoadContextResult ctx) {
     // Only update if user moved to a different district.

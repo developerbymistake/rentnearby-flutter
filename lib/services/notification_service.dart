@@ -14,6 +14,8 @@ import '../config/app_tabs.dart';
 import '../config/notification_types.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
+import '../controllers/home_controller.dart';
+import '../controllers/tab_config_controller.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
 import '../models/conversation_model.dart';
@@ -374,7 +376,8 @@ class NotificationService extends GetxService {
     AppRoutes.taxiList,
   };
 
-  // A gated Stay Owner's stack is rooted at staySetup, so main is not underneath.
+  // A gated Stay Owner's stack is rooted at staySetup, so main is not underneath. MainScreen puts
+  // HomeController and only logout removes it, so its registration says whether main is mounted.
   static const _stayGateRoutes = {
     AppRoutes.staySetup,
     AppRoutes.stayBasicDetails,
@@ -388,9 +391,16 @@ class NotificationService extends GetxService {
     AppRoutes.roleChange,
   };
 
+  static const _reportTabKeys = {
+    'Room': AppTabKeys.rooms,
+    'Plot': AppTabKeys.plots,
+    'Stay': AppTabKeys.stays,
+    'Taxi': AppTabKeys.taxi,
+  };
+
   static bool _mainIsBelow(String route) =>
       _routesOnTopOfMain.contains(route) &&
-      !(_stayGateRoutes.contains(route) && Get.find<AuthController>().postLoginRoute != AppRoutes.main);
+      (!_stayGateRoutes.contains(route) || Get.isRegistered<HomeController>());
 
   void _handleNotificationTap(RemoteMessage message) {
     if (!StorageService.isLoggedIn) return;
@@ -478,6 +488,11 @@ class NotificationService extends GetxService {
     if (isChatMessage) {
       _navigateToChatConversation(data['conversation_id'] as String);
     } else if (isReportMessage) {
+      final tabKey = _reportTabKeys[reportListingType ?? 'Room'];
+      if (tabKey != null && !TabConfigController.to.isActive(tabKey)) {
+        Get.toNamed(AppRoutes.notifications);
+        return;
+      }
       Get.toNamed(AppRoutes.listingReports, arguments: {
         'listingId': reportListingId,
         'listingType': reportListingType ?? 'Room',

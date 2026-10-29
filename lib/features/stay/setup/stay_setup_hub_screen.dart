@@ -39,6 +39,10 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
 
   Future<void> _load() async {
     final ok = await _ctrl.load();
+    if (!ok && mounted && !_auth.staysEnabled) {
+      _auth.leaveOffTabRoute();
+      return;
+    }
     final s = _ctrl.stay.value;
     if (!ok || !mounted || _fromMyStays || s == null || s.isDraft) return;
     await _auth.refreshProfile();

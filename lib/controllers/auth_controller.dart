@@ -11,6 +11,7 @@ import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../config/user_roles.dart';
 import 'tab_config_controller.dart';
+import 'home_controller.dart';
 import 'location_controller.dart';
 import '../utils/app_toast.dart';
 import '../utils/jwt_claims.dart';
@@ -20,6 +21,8 @@ import '../services/hub_session_manager.dart';
 /// any) toast is shown. Kept as a typed reason rather than booleans so each of the 3 real-world
 /// triggers (explicit tap, account deletion, a server-forced 401) is unambiguous at the call site.
 enum LogoutReason { explicitLogout, accountDeleted, sessionExpired, roleChanged }
+
+enum RoleActionResult { success, unavailable, failed }
 
 class AuthController extends GetxController {
   final isLoading = false.obs;
@@ -44,7 +47,7 @@ class AuthController extends GetxController {
   /// can never land the user on a tab whose entire API surface is now server-rejected.
   /// Home/Profile are always active so they're never redirected.
   void switchToTab(int index) {
-    if (Get.isRegistered<TabConfigController>() && !Get.find<TabConfigController>().isActiveForIndex(index)) {
+    if (!TabConfigController.to.isActiveForIndex(index)) {
       tabIndex.value = AppTabs.home;
       return;
     }
@@ -72,15 +75,35 @@ class AuthController extends GetxController {
 
   bool get isOwner => canListRooms.value || canListPlots.value || canListStays.value || canListTaxis.value;
 
-  bool get roleChangeLocked =>
-      (canListStays.value && (user.value?.stayStatus == 'Approved' || user.value?.stayStatus == 'PendingReview')) ||
-      (canListTaxis.value && (user.value?.taxiStatus == 'Approved' || user.value?.taxiStatus == 'PendingReview'));
+  TabConfigController get _tabs => TabConfigController.to;
 
-  bool canOpenRoute(String route) =>
-      !(AppRoutes.roomOwnerOnly.contains(route) && !canListRooms.value) &&
-      !(AppRoutes.plotOwnerOnly.contains(route) && !canListPlots.value) &&
-      !(AppRoutes.stayOwnerOnly.contains(route) && !canListStays.value) &&
-      !(AppRoutes.taxiDriverOnly.contains(route) && !canListTaxis.value);
+  // Effective capabilities = role AND tab; raw canListX stay for role change/profile/contact visibility.
+  bool get roomsEnabled => canListRooms.value && _tabs.isRoomsActive;
+  bool get plotsEnabled => canListPlots.value && _tabs.isPlotsActive;
+  bool get staysEnabled => canListStays.value && _tabs.isStaysActive;
+  bool get taxisEnabled => canListTaxis.value && _tabs.isTaxiActive;
+  bool get jobsEnabled => staysEnabled && _tabs.isJobsActive;
+  bool get effectiveIsOwner => roomsEnabled || plotsEnabled || staysEnabled || taxisEnabled;
+
+  bool get roleTabActive {
+    final key = UserRoleKeys.tabKeyOf(roleKey.value);
+    return key == null || _tabs.isActive(key);
+  }
+
+  bool get roleChangeLocked =>
+      (staysEnabled && (user.value?.stayStatus == 'Approved' || user.value?.stayStatus == 'PendingReview')) ||
+      (taxisEnabled && (user.value?.taxiStatus == 'Approved' || user.value?.taxiStatus == 'PendingReview'));
+
+  bool canOpenRoute(String route) {
+    if (AppRoutes.roomOwnerOnly.contains(route) && !canListRooms.value) return false;
+    if (AppRoutes.plotOwnerOnly.contains(route) && !canListPlots.value) return false;
+    if (AppRoutes.stayOwnerOnly.contains(route) && !canListStays.value) return false;
+    if (AppRoutes.taxiDriverOnly.contains(route) && !canListTaxis.value) return false;
+    final tabKey = AppRoutes.tabKeyForRoute(route);
+    if (tabKey == null) return true;
+    if (tabKey == AppTabKeys.jobs) return _tabs.isJobsActive && _tabs.isStaysActive;
+    return _tabs.isActive(tabKey);
+  }
 
   void _syncRoleFromToken(String? token) {
     final key = JwtClaims.role(token) ?? UserRoleKeys.seeker;
@@ -92,12 +115,18 @@ class AuthController extends GetxController {
     canListTaxis.value = c.canListTaxis;
   }
 
+  static bool _setupPending(String? status) => status == null || status == 'Draft';
+
+  // Role-only (ignores tab state): true when the tab config alone decides between setup and main.
+  bool get hasPendingSetup =>
+      (user.value?.roleConfirmed ?? false) &&
+      ((canListStays.value && _setupPending(user.value?.stayStatus)) ||
+          (canListTaxis.value && _setupPending(user.value?.taxiStatus)));
+
   String get postLoginRoute {
     if (!(user.value?.roleConfirmed ?? false)) return AppRoutes.roleSelect;
-    final stayStatus = user.value?.stayStatus;
-    if (canListStays.value && (stayStatus == null || stayStatus == 'Draft')) return AppRoutes.staySetup;
-    final taxiStatus = user.value?.taxiStatus;
-    if (canListTaxis.value && (taxiStatus == null || taxiStatus == 'Draft')) return AppRoutes.taxiSetup;
+    if (staysEnabled && _setupPending(user.value?.stayStatus)) return AppRoutes.staySetup;
+    if (taxisEnabled && _setupPending(user.value?.taxiStatus)) return AppRoutes.taxiSetup;
     return AppRoutes.main;
   }
 
@@ -107,6 +136,15 @@ class AuthController extends GetxController {
     _syncRoleFromToken(StorageService.getToken());
     user.value = StorageService.getUser();
     _syncProfileFields(user.value);
+    ever<int>(_tabs.version, (_) => leaveOffTabRoute());
+  }
+
+  /// Gated setup screens have no MainScreen underneath; MainScreen's own worker covers the rest.
+  void leaveOffTabRoute() {
+    final route = Get.currentRoute;
+    if (AppRoutes.tabKeyForRoute(route) == null || canOpenRoute(route)) return;
+    if (Get.isRegistered<HomeController>() || !StorageService.isLoggedIn) return;
+    if (postLoginRoute == AppRoutes.main) Get.offAllNamed(AppRoutes.main);
   }
 
   // ── Phone Login ───────────────────────────────────────────────────────────
@@ -384,19 +422,25 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<void> chooseRole(String roleKey) async {
+  Future<RoleActionResult> chooseRole(String roleKey) async {
     try {
       isLoading.value = true;
       final res = await ApiService.put('/users/me/role-choice', {'role': roleKey});
       await _applySession(res['data'] as Map<String, dynamic>);
       Get.offAllNamed(postLoginRoute);
+      return RoleActionResult.success;
     } catch (e) {
-      if (_isUnauthorized(e)) return;
+      if (_isUnauthorized(e)) return RoleActionResult.failed;
+      if (_isRoleUnavailable(e)) {
+        AppToast.warning('This role is not available right now.');
+        return RoleActionResult.unavailable;
+      }
       if (e is DioException && e.response?.statusCode == 409) {
         await _recoverChosenRole();
       } else {
         AppToast.error(_dioMessage(e, 'Could not save your role.'));
       }
+      return RoleActionResult.failed;
     } finally {
       isLoading.value = false;
     }
@@ -420,14 +464,18 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<bool> requestRoleChange(String roleKey) async {
+  Future<RoleActionResult> requestRoleChange(String roleKey) async {
     try {
       isLoading.value = true;
       await ApiService.post('/users/me/role-request', {'role': roleKey});
       await refreshProfile();
-      return true;
+      return RoleActionResult.success;
     } catch (e) {
-      if (_isUnauthorized(e)) return false;
+      if (_isUnauthorized(e)) return RoleActionResult.failed;
+      if (_isRoleUnavailable(e)) {
+        AppToast.warning('This role is not available right now.');
+        return RoleActionResult.unavailable;
+      }
       if (e is DioException && e.response?.statusCode == 409) {
         final type = e.response?.data?['error']?['type'];
         AppToast.warning(type == RoleRequestErrorTypes.cooldown || type == RoleRequestErrorTypes.liveListing
@@ -437,7 +485,7 @@ class AuthController extends GetxController {
       } else {
         AppToast.error(_dioMessage(e, 'Could not send request.'));
       }
-      return false;
+      return RoleActionResult.failed;
     } finally {
       isLoading.value = false;
     }
@@ -447,6 +495,14 @@ class AuthController extends GetxController {
 
   // The ApiService interceptor already logged out and toasted on a 401.
   static bool _isUnauthorized(dynamic e) => e is DioException && e.response?.statusCode == 401;
+
+  static bool _isRoleUnavailable(dynamic e) {
+    if (e is! DioException || e.response?.statusCode != 400) return false;
+    final data = e.response?.data;
+    final error = data is Map ? data['error'] : null;
+    final type = error is Map ? error['type'] : null;
+    return type == RoleRequestErrorTypes.unavailable || type == RoleRequestErrorTypes.invalidRole;
+  }
 
   static String _retryAfter(DioException e) {
     final raw = e.response?.headers.value('retry-after');

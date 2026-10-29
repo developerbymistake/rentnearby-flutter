@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/tab_config_controller.dart';
 import '../features/stay/guest/stay_tour_steps.dart';
 import '../navigation/tour_keys.dart';
 import 'app_constants.dart';
@@ -45,7 +46,7 @@ class TourDefinition {
   final String label;
   final List<TourStep> Function() stepsBuilder;
   final TourDialogContent? introContent;
-  final TourDialogContent? outroContent;
+  final TourDialogContent Function()? outroBuilder;
 
   const TourDefinition({
     required this.tabIndex,
@@ -53,8 +54,10 @@ class TourDefinition {
     required this.label,
     required this.stepsBuilder,
     this.introContent,
-    this.outroContent,
+    this.outroBuilder,
   });
+
+  TourDialogContent? get outroContent => outroBuilder?.call();
 
   /// Re-invokes [stepsBuilder] on every access rather than caching — cheap
   /// for the static tours (a trivial closure over a fixed list — not
@@ -64,13 +67,49 @@ class TourDefinition {
 
 /// Built as a function so a future Home step can freely depend on live state
 /// without having to change the TourDefinition's shape.
+String _joinNames(List<String> names) => names.length <= 1
+    ? names.join()
+    : '${names.sublist(0, names.length - 1).join(', ')} and ${names.last}';
+
+List<String> _activeBrowseNames() {
+  final tabs = TabConfigController.to;
+  return [
+    if (tabs.isRoomsActive) 'rooms',
+    if (tabs.isPlotsActive) 'plots',
+    if (tabs.isStaysActive) 'stays',
+    if (tabs.isTaxiActive) 'taxis',
+  ];
+}
+
+TourDialogContent _buildHomeOutro() {
+  final tabs = TabConfigController.to;
+  final names = [
+    if (tabs.isRoomsActive) tabs.displayNameForIndex(AppTabs.rooms, 'Rooms'),
+    if (tabs.isPlotsActive) tabs.displayNameForIndex(AppTabs.plots, 'Plots'),
+    if (tabs.isStaysActive) tabs.displayNameForIndex(AppTabs.stays, 'Stays'),
+  ];
+  final body = switch (names.length) {
+    0 => 'Everything you need starts right here on Home.',
+    1 => '${names.first} shows you its own quick tour the first time you open it.',
+    _ => '${_joinNames(names)} each show you their own quick tour the first time you open them — '
+        'try tapping ${names.first} below to see yours.',
+  };
+  return TourDialogContent(
+    phase: TourDialogPhase.outro,
+    title: "You're all set on Home! 🎉",
+    body: body,
+    primaryLabel: 'Start Exploring',
+  );
+}
+
 List<TourStep> _buildHomeSteps() {
   final auth = Get.find<AuthController>();
-  final canRooms = auth.canListRooms.value;
-  final canPlots = auth.canListPlots.value;
-  final canStays = auth.canListStays.value;
-  final canTaxis = auth.canListTaxis.value;
+  final canRooms = auth.roomsEnabled;
+  final canPlots = auth.plotsEnabled;
+  final canStays = auth.staysEnabled;
+  final canTaxis = auth.taxisEnabled;
   final owner = canRooms || canPlots || canStays || canTaxis;
+  final browseNames = _activeBrowseNames();
   return [
     TourStep(
       key: TourKeys.homeManageListingsCard,
@@ -84,7 +123,9 @@ List<TourStep> _buildHomeSteps() {
                   : canStays
                       ? 'Tap this card to manage your stay.'
                       : 'Tap this card to manage your taxi.')
-          : 'This card slides between rooms and plots — tap it to start browsing.',
+          : browseNames.length > 1
+              ? 'This card slides between ${_joinNames(browseNames)} — tap it to start browsing.'
+              : 'Tap this card to start browsing.',
     ),
     if (canRooms)
       TourStep(
@@ -188,11 +229,11 @@ List<TourStep> _buildLandingSteps({required bool rooms}) {
       key: rooms ? TourKeys.roomsLandingLocation : TourKeys.plotsLandingLocation,
       icon: Iconsax.location,
       title: 'Switch your city',
-      body: 'Tap to change your district or city — the list below follows it, shared across Rooms and Plots.',
+      body: 'Tap to change your district or city — the list below follows it.',
     ),
     if (rooms
-        ? Get.find<AuthController>().canListRooms.value
-        : Get.find<AuthController>().canListPlots.value)
+        ? Get.find<AuthController>().roomsEnabled
+        : Get.find<AuthController>().plotsEnabled)
       TourStep(
         key: rooms ? TourKeys.roomsLandingTiles : TourKeys.plotsLandingTiles,
         icon: Icons.grid_view_rounded,
@@ -242,12 +283,7 @@ final Map<int, TourDefinition> tourRegistry = {
       primaryLabel: 'Start Tour',
       secondaryLabel: 'Skip for now',
     ),
-    outroContent: const TourDialogContent(
-      phase: TourDialogPhase.outro,
-      title: "You're all set on Home! 🎉",
-      body: 'Rooms and Plots each show you their own quick tour the first time you open them — try tapping Rooms below to see yours.',
-      primaryLabel: 'Start Exploring',
-    ),
+    outroBuilder: _buildHomeOutro,
     stepsBuilder: _buildHomeSteps,
   ),
   AppTabs.rooms: TourDefinition(

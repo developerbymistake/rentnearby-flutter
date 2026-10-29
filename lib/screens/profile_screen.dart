@@ -272,7 +272,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ? 'Request pending'
           : rejected
               ? (reason != null && reason.isNotEmpty ? reason : (retryText ?? 'Tap to try again'))
-              : (retryText ?? 'Change role');
+              : (retryText ?? (_auth.roleTabActive ? 'Change role' : 'Paused'));
       return GestureDetector(
         onTap: locked ? null : () => Get.toNamed(AppRoutes.roleChange),
         child: Container(

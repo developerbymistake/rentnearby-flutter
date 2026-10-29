@@ -70,9 +70,8 @@ class ConfigRepository {
   bool get _isAppTabsCacheValid =>
       _appTabsCache != null && isCacheValid(_appTabsCacheTime, _appTabsTtl);
 
-  /// GET /config/app-tabs — anonymous, admin-managed master list of the 5 bottom-nav tabs
-  /// (TabConfigController is the one caller; MainScreen fetches this before deciding which
-  /// tab-scoped controllers/hubs to connect). Fails toward "everything active" on any
+  /// GET /config/app-tabs — anonymous, admin-managed master list of the 7 bottom-nav tabs
+  /// (TabConfigController is the one caller, put in main()). Fails toward "everything active" on any
   /// parse/network error or missing row — same fail-open polarity as the backend's own
   /// ConfigHandlers.IsTabActiveCachedAsync, so a network hiccup can never silently hide a real
   /// tab. forceRefresh bypasses the TTL — used on app-resume so a live admin change is picked

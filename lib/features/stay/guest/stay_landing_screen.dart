@@ -61,7 +61,6 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
   @override
   void initState() {
     super.initState();
-    _types.ensureLoaded();
     _ctrl = Get.isRegistered<StayLandingController>(tag: StayLandingController.tag)
         ? Get.find<StayLandingController>(tag: StayLandingController.tag)
         : Get.put(StayLandingController(), tag: StayLandingController.tag);
@@ -293,7 +292,7 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
 
   Widget _buildReviewStrip() {
     return Obx(() {
-      final pending = _auth.canListStays.value && _auth.user.value?.stayStatus == 'PendingReview';
+      final pending = _auth.staysEnabled && _auth.user.value?.stayStatus == 'PendingReview';
       if (!pending) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
@@ -339,23 +338,25 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
       onTap: _openMyStays,
     );
     return Obx(() {
-      if (!_auth.canListStays.value) return const SizedBox.shrink();
+      if (!_auth.staysEnabled) return const SizedBox.shrink();
       final List<Widget> tiles;
       if (_auth.user.value?.stayStatus == 'Approved') {
         tiles = [
           myStays,
-          _OptionTile(
-            label: 'Post a Job',
-            icon: Iconsax.briefcase,
-            gradient: _kGradient,
-            onTap: _postJob,
-          ),
-          _OptionTile(
-            label: 'My Jobs',
-            icon: Iconsax.task_square,
-            gradient: _kMapGradient,
-            onTap: () => Get.toNamed(AppRoutes.myJobs),
-          ),
+          if (_auth.jobsEnabled) ...[
+            _OptionTile(
+              label: 'Post a Job',
+              icon: Iconsax.briefcase,
+              gradient: _kGradient,
+              onTap: _postJob,
+            ),
+            _OptionTile(
+              label: 'My Jobs',
+              icon: Iconsax.task_square,
+              gradient: _kMapGradient,
+              onTap: () => Get.toNamed(AppRoutes.myJobs),
+            ),
+          ],
         ];
       } else {
         final draft = _auth.user.value?.stayStatus == 'Draft';

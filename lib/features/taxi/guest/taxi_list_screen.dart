@@ -280,7 +280,7 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
 
   Widget _buildReviewStrip() {
     return Obx(() {
-      final pending = _auth.canListTaxis.value && _auth.user.value?.taxiStatus == 'PendingReview';
+      final pending = _auth.taxisEnabled && _auth.user.value?.taxiStatus == 'PendingReview';
       if (!pending) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
@@ -315,7 +315,8 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
 
   Widget _buildTiles() {
     return Obx(() {
-      if (!widget.root || !_auth.canListTaxis.value) return const SizedBox.shrink();
+      final enabled = _auth.taxisEnabled;
+      if (!widget.root || !enabled) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
         child: Row(

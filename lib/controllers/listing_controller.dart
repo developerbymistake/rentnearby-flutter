@@ -7,6 +7,7 @@ import '../models/listing_model.dart';
 import '../repositories/listing_repository.dart';
 import '../repositories/wallet_repository.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/tab_config_controller.dart';
 import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../config/app_colors.dart';
@@ -48,11 +49,30 @@ class ListingController extends GetxController {
   /// bare navigation.
   final listingStatusChangedTrigger = 0.obs;
 
+  Worker? _tabWorker;
+
   @override
   void onInit() {
     super.onInit();
-    loadRoomTypes();
-    if (Get.find<AuthController>().canListRooms.value) loadMyListings();
+    _loadMyIfEnabled();
+    _tabWorker = ever<int>(TabConfigController.to.version, (_) => _loadMyIfEnabled());
+  }
+
+  @override
+  void onClose() {
+    _tabWorker?.dispose();
+    super.onClose();
+  }
+
+  Future<bool>? _myLoad;
+
+  void _loadMyIfEnabled() {
+    if (hasLoadedMyListings || _myLoad != null || !Get.find<AuthController>().roomsEnabled) return;
+    _myLoad = loadMyListings().whenComplete(() => _myLoad = null);
+  }
+
+  void ensureTypesLoaded() {
+    if (roomTypes.isEmpty && !roomTypesLoading.value) loadRoomTypes();
   }
 
   Future<void> loadRoomTypes() async {

@@ -12,7 +12,7 @@ class DistrictBoundaryRepository {
     final cached = _memCache[districtId];
     if (cached != null) return cached;
     try {
-      final res = await ApiService.get('/listings/locations/districts/$districtId/boundary');
+      final res = await ApiService.get('/locations/districts/$districtId/boundary');
       final data = res['data'];
       if (data is! Map<String, dynamic>) return null;
       _memCache[districtId] = data;

@@ -10,6 +10,7 @@ import '../../../config/app_shadows.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/chat_controller.dart';
 import '../../../controllers/report_controller.dart';
+import '../../../controllers/tab_config_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
 import '../../../widgets/app_loading_overlay.dart';
@@ -283,17 +284,23 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
                   _infoRow(Iconsax.location, 'Location', s.locality.isEmpty ? '-' : s.locality),
                 ]),
               ),
-              if (s.taxiTarget case final to?) ...[
-                const SizedBox(height: 24),
-                _sectionTitle('Getting there'),
-                const SizedBox(height: 8),
-                StayTaxisSection(
-                  stayCityId: s.cityId,
-                  stayCityName: s.placeName,
-                  toLat: to.lat,
-                  toLng: to.lng,
-                ),
-              ],
+              if (s.taxiTarget case final to?)
+                Obx(() => TabConfigController.to.isTaxiActive
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 24),
+                          _sectionTitle('Getting there'),
+                          const SizedBox(height: 8),
+                          StayTaxisSection(
+                            stayCityId: s.cityId,
+                            stayCityName: s.placeName,
+                            toLat: to.lat,
+                            toLng: to.lng,
+                          ),
+                        ],
+                      )
+                    : const SizedBox.shrink()),
               if (s.facilities.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 _sectionTitle('Facilities'),

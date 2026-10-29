@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../controllers/location_controller.dart';
+import '../../../controllers/tab_config_controller.dart';
 import '../models/taxi_browse_item.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_browse_repository.dart';
@@ -85,7 +86,7 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
 
   Future<void> _load() async {
     final from = _from;
-    if (from == null) return;
+    if (from == null || !TabConfigController.to.isTaxiActive) return;
     final myGen = ++_gen;
     setState(() => _phase = _Phase.loading);
     try {
