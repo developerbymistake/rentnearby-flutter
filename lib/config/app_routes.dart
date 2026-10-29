@@ -24,6 +24,7 @@ import '../screens/role_select_screen.dart';
 import '../screens/role_change_screen.dart';
 import '../features/stay/stay_routes.dart';
 import '../features/jobs/jobs_routes.dart';
+import '../features/taxi/taxi_routes.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -67,9 +68,18 @@ class AppRoutes {
   static const String postJob = '/post-job';
   static const String jobDetail = '/job-detail';
 
+  static const String taxiSetup = '/taxi-setup';
+  static const String taxiVehicle = '/taxi-vehicle';
+  static const String taxiRoutes = '/taxi-routes';
+  static const String taxiSubmit = '/taxi-submit';
+  static const String myTaxi = '/my-taxi';
+  static const String taxiDetail = '/taxi-detail';
+  static const String taxiList = '/taxi-list';
+
   static const Set<String> roomOwnerOnly = {myListings, addListing};
   static const Set<String> plotOwnerOnly = {myPlots, addPlot};
   static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob};
+  static const Set<String> taxiDriverOnly = {taxiSetup, taxiVehicle, taxiRoutes, taxiSubmit, myTaxi};
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
@@ -213,5 +223,6 @@ class AppRoutes {
     ),
     ...stayPages,
     ...jobPages,
+    ...taxiPages,
   ];
 }

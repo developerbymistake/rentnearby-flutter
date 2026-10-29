@@ -19,6 +19,8 @@ import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
 import '../features/stay/setup/stay_flow.dart';
 import '../features/stay/setup/stay_option_sets.dart';
+import '../features/taxi/setup/taxi_flow.dart';
+import '../features/taxi/taxi_option_sets.dart';
 import '../services/add_listing_flow.dart';
 import '../widgets/home_owner_carousel.dart';
 import '../widgets/icon_motion.dart';
@@ -535,7 +537,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final canRooms = _auth.canListRooms.value;
       final canPlots = _auth.canListPlots.value;
       final stays = _auth.canListStays.value;
-      if (!canRooms && !canPlots && !stays) return const SizedBox.shrink();
+      final taxis = _auth.canListTaxis.value;
+      if (!canRooms && !canPlots && !stays && !taxis) return const SizedBox.shrink();
       final rooms = _tabs.isRoomsActive && canRooms;
       final plots = _tabs.isPlotsActive && canPlots;
       final checking = AddListingFlow.checking.value;
@@ -575,7 +578,18 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: StayFlow.start,
             ),
           ),
-        if (rooms || plots || stays)
+        if (taxis)
+          KeyedSubtree(
+            key: TourKeys.homeQuickActionAddTaxi,
+            child: _ownerQuickActionTile(
+              icon: Icons.add_rounded,
+              gradient: TaxiColors.gradient,
+              label: 'Add Taxi',
+              motion: IconMotionStyle.pulse,
+              onTap: () => TaxiFlow.start(),
+            ),
+          ),
+        if (rooms || plots || stays || taxis)
           KeyedSubtree(
             key: TourKeys.homeQuickActionLeads,
             child: _ownerQuickActionTile(
@@ -588,7 +602,13 @@ class _HomeScreenState extends State<HomeScreen> {
               label: 'My Listings',
               motion: IconMotionStyle.grow,
               onTap: () => Get.toNamed(
-                canRooms ? AppRoutes.myListings : canPlots ? AppRoutes.myPlots : AppRoutes.myStays,
+                canRooms
+                    ? AppRoutes.myListings
+                    : canPlots
+                        ? AppRoutes.myPlots
+                        : stays
+                            ? AppRoutes.myStays
+                            : AppRoutes.myTaxi,
               ),
             ),
           ),

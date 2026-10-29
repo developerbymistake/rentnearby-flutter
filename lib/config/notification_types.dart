@@ -9,4 +9,8 @@ class NotificationTypeKeys {
   static const String stayApprovedWire = 'stay_approved';
   static const String stayRejected = 'StayRejected';
   static const String stayRejectedWire = 'stay_rejected';
+  static const String taxiApproved = 'TaxiApproved';
+  static const String taxiApprovedWire = 'taxi_approved';
+  static const String taxiRejected = 'TaxiRejected';
+  static const String taxiRejectedWire = 'taxi_rejected';
 }

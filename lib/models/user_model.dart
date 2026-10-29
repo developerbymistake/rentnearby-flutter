@@ -14,6 +14,7 @@ class UserModel {
   final String? roleRequestReason;
   final DateTime? nextRoleRequestAt;
   final String? stayStatus;
+  final String? taxiStatus;
 
   UserModel({
     required this.id,
@@ -29,6 +30,7 @@ class UserModel {
     this.roleRequestReason,
     this.nextRoleRequestAt,
     this.stayStatus,
+    this.taxiStatus,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
@@ -45,6 +47,7 @@ class UserModel {
         roleRequestReason: json['roleRequestReason'],
         nextRoleRequestAt: json['nextRoleRequestAt'] != null ? DateTime.parse(json['nextRoleRequestAt']) : null,
         stayStatus: json['stayStatus'] as String?,
+        taxiStatus: json['taxiStatus'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -61,6 +64,7 @@ class UserModel {
         'roleRequestReason': roleRequestReason,
         'nextRoleRequestAt': nextRoleRequestAt?.toIso8601String(),
         'stayStatus': stayStatus,
+        'taxiStatus': taxiStatus,
       };
 
   String get displayName => name?.trim().isNotEmpty == true ? name! : '+91 $phoneNumber';

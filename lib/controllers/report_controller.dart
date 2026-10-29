@@ -24,12 +24,13 @@ class ReportController extends GetxController {
   static String _basePath(String listingType) => switch (listingType) {
         'Room' => '/listings',
         'Stay' => '/stays',
+        'Taxi' => '/taxis',
         _ => '/plots',
       };
 
   Future<bool> submitReport({
     required String listingId,
-    required String listingType, // 'Room' | 'Plot' | 'Stay'
+    required String listingType, // 'Room' | 'Plot' | 'Stay' | 'Taxi'
     required String reasonId,
     required String details,
   }) async {

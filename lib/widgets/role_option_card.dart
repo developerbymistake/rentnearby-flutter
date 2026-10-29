@@ -20,10 +20,19 @@ class RoleVisuals {
     colors: [Color(0xFFFBBF24), AppColors.warning],
   );
 
+  static const LinearGradient taxiGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF2DD4BF), Color(0xFF0D9488)],
+  );
+
+  static const Color taxiAccent = Color(0xFF0D9488);
+
   static IconData icon(String key) => switch (key) {
         UserRoleKeys.rentOwner => Iconsax.home_2,
         UserRoleKeys.propertyOwner => Icons.landscape_rounded,
         UserRoleKeys.stayOwner => Iconsax.building_4,
+        UserRoleKeys.taxiDriver => Iconsax.car,
         _ => Iconsax.search_normal,
       };
 
@@ -31,6 +40,7 @@ class RoleVisuals {
         UserRoleKeys.rentOwner => AppColors.primaryGradient,
         UserRoleKeys.propertyOwner => AppColors.plotGradient,
         UserRoleKeys.stayOwner => stayGradient,
+        UserRoleKeys.taxiDriver => taxiGradient,
         _ => seekerGradient,
       };
 
@@ -38,6 +48,7 @@ class RoleVisuals {
         UserRoleKeys.rentOwner => AppColors.primary,
         UserRoleKeys.propertyOwner => AppColors.plot,
         UserRoleKeys.stayOwner => AppColors.warning,
+        UserRoleKeys.taxiDriver => taxiAccent,
         _ => const Color(0xFF0EA5E9),
       };
 
@@ -45,6 +56,7 @@ class RoleVisuals {
         UserRoleKeys.rentOwner => 'Rent Owner',
         UserRoleKeys.propertyOwner => 'Property Owner',
         UserRoleKeys.stayOwner => 'Stay Owner',
+        UserRoleKeys.taxiDriver => 'Taxi Driver',
         _ => 'Seeker',
       };
 }

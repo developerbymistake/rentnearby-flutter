@@ -15,7 +15,7 @@ import '../widgets/listing_share_card.dart';
 /// both channels (image + text) in one native share call — see the plan's "two channels
 /// bundled together whenever Share is tapped" decision.
 ///
-/// [type] is the short URL code ('r' for Room, 'p' for Plot, 's' for Stay) used by both the QR's `/go/`
+/// [type] is the short URL code ('r' for Room, 'p' for Plot, 's' for Stay, 't' for Taxi) used by both the QR's `/go/`
 /// smart link and the shared `/l/` website link.
 Future<void> shareListing({
   required BuildContext context,
@@ -51,9 +51,12 @@ Future<void> shareListing({
             typeLabel: typeLabel,
             locality: locality,
             qrData: goLink,
-            type: type == 'p'
-                ? ShareCardType.plot
-                : (type == 's' ? ShareCardType.stay : ShareCardType.room),
+            type: switch (type) {
+              'p' => ShareCardType.plot,
+              's' => ShareCardType.stay,
+              't' => ShareCardType.taxi,
+              _ => ShareCardType.room,
+            },
             furnishedStatus: furnishedStatus,
           ),
         ),

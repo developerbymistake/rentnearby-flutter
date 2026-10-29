@@ -4,6 +4,7 @@ import 'package:app_links/app_links.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:play_install_referrer/play_install_referrer.dart';
+import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
@@ -17,7 +18,7 @@ import 'storage_service.dart';
 class _DeepLinkTypeConfig {
   final String bySlugPath;
   final int slugSegments;
-  final int tabIndex;
+  final int? tabIndex;
 
   const _DeepLinkTypeConfig(this.bySlugPath, this.slugSegments, this.tabIndex);
 }
@@ -26,6 +27,7 @@ const Map<String, _DeepLinkTypeConfig> _deepLinkTypes = {
   'r': _DeepLinkTypeConfig('/listings/by-slug', 1, AppTabs.rooms),
   'p': _DeepLinkTypeConfig('/plots/by-slug', 1, AppTabs.plots),
   's': _DeepLinkTypeConfig('/stays/by-slug', 1, AppTabs.stays),
+  't': _DeepLinkTypeConfig('/taxis/by-slug', 1, null),
 };
 
 /// Receiver for `developerbymistake.tech/go/{type}/{...slugSegments}` smart-link payloads, from
@@ -190,8 +192,15 @@ class DeepLinkService extends GetxService {
       final data = res['data'];
       if (data is! Map) return;
 
+      final tabIndex = config.tabIndex;
+      if (tabIndex == null) {
+        final id = data['id'];
+        if (id is String) unawaited(Get.toNamed(AppRoutes.taxiDetail, arguments: {'id': id}));
+        return;
+      }
+
       // Switch to the Rooms/Plots tab, then push its map so the shared pin is visible.
-      Get.find<AuthController>().switchToTab(config.tabIndex);
+      Get.find<AuthController>().switchToTab(tabIndex);
       final lat = (data['latitude'] as num?)?.toDouble();
       final lng = (data['longitude'] as num?)?.toDouble();
       if (lat != null && lng != null) {
@@ -200,7 +209,7 @@ class DeepLinkService extends GetxService {
       if (type == 's') {
         unawaited(StayNavigation.openMap());
       } else {
-        unawaited(ExploreNavigation.openMap(config.tabIndex));
+        unawaited(ExploreNavigation.openMap(tabIndex));
       }
     } catch (_) {
       // Unknown/soft-deleted slug (404) or a network failure — nothing to show for a route

@@ -18,6 +18,8 @@ import '../../../widgets/listing_grid_card.dart';
 import '../../../widgets/location_switch_sheet.dart';
 import '../../../widgets/selectable_chip.dart';
 import '../../jobs/controllers/my_jobs_controller.dart';
+import '../../taxi/guest/taxi_navigation.dart';
+import '../../taxi/taxi_option_sets.dart';
 import '../setup/stay_option_sets.dart';
 import '../setup/stay_flow.dart';
 import '../stay_types_controller.dart';
@@ -289,30 +291,32 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
 
   Widget _buildReviewStrip() {
     return Obx(() {
-      if (!_auth.canListStays.value || _auth.user.value?.stayStatus != 'PendingReview') {
-        return const SizedBox.shrink();
-      }
+      final stay = _auth.canListStays.value && _auth.user.value?.stayStatus == 'PendingReview';
+      final taxi = _auth.canListTaxis.value && _auth.user.value?.taxiStatus == 'PendingReview';
+      if (!stay && !taxi) return const SizedBox.shrink();
+      final accent = taxi ? TaxiColors.accent : _kAccent;
+      final accentDark = taxi ? TaxiColors.accentDark : _kAccentDark;
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: _kAccent.withValues(alpha: 0.10),
+            color: accent.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _kAccent.withValues(alpha: 0.35)),
+            border: Border.all(color: accent.withValues(alpha: 0.35)),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Iconsax.clock, size: 20, color: _kAccentDark),
-              SizedBox(width: 10),
+              Icon(Iconsax.clock, size: 20, color: accentDark),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Under review',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _kAccentDark)),
-                    Text('We will notify you',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textMedium)),
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: accentDark)),
+                    Text(taxi ? 'Your taxi is being checked' : 'We will notify you',
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textMedium)),
                   ],
                 ),
               ),
@@ -335,17 +339,33 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
       gradient: _kMineGradient,
       onTap: _openMyStays,
     );
+    final taxi = _OptionTile(
+      label: 'Taxi',
+      icon: Iconsax.car,
+      gradient: TaxiColors.gradient,
+      onTap: () => TaxiNavigation.openList(),
+    );
+    final jobs = _OptionTile(
+      label: 'Jobs',
+      icon: Iconsax.briefcase,
+      gradient: _kGradient,
+      onTap: () => _auth.switchToTab(AppTabs.jobs),
+    );
     return Obx(() {
       final List<Widget> tiles;
-      if (!_auth.canListStays.value) {
+      if (_auth.canListTaxis.value) {
         tiles = [
           _OptionTile(
-            label: 'Jobs',
-            icon: Iconsax.briefcase,
-            gradient: _kGradient,
-            onTap: () => _auth.switchToTab(AppTabs.jobs),
+            label: 'My Taxi',
+            icon: Icons.bar_chart_rounded,
+            gradient: _kMineGradient,
+            onTap: () => Get.toNamed(AppRoutes.myTaxi),
           ),
+          jobs,
+          taxi,
         ];
+      } else if (!_auth.canListStays.value) {
+        tiles = [jobs, taxi];
       } else if (_auth.user.value?.stayStatus == 'Approved') {
         tiles = [
           myStays,
@@ -361,31 +381,34 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
             gradient: _kMapGradient,
             onTap: () => Get.toNamed(AppRoutes.myJobs),
           ),
+          taxi,
         ];
       } else {
-        tiles = const [
-          _OptionTile(
+        tiles = [
+          const _OptionTile(
             label: 'Add Stay',
             icon: Icons.add_rounded,
             gradient: _kGradient,
             onTap: StayFlow.start,
           ),
           myStays,
-          _OptionTile(
+          const _OptionTile(
             label: 'Map view',
             icon: Icons.map_outlined,
             gradient: _kMapGradient,
             onTap: StayNavigation.openMap,
           ),
+          taxi,
         ];
       }
+      final slots = tiles.length > 3 ? tiles.length : 3;
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
         child: KeyedSubtree(
           key: TourKeys.staysLandingTiles,
           child: Row(
             children: [
-              for (var i = 0; i < 3; i++) ...[
+              for (var i = 0; i < slots; i++) ...[
                 if (i > 0) const SizedBox(width: 10),
                 Expanded(child: i < tiles.length ? tiles[i] : const SizedBox.shrink()),
               ],

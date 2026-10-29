@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
@@ -16,7 +17,7 @@ import 'pulse_once.dart';
 import 'role_option_card.dart';
 import 'sweep_highlight.dart';
 
-enum _Slide { rooms, plots, stay }
+enum _Slide { rooms, plots, stay, taxi }
 
 class HomeOwnerCarousel extends StatefulWidget {
   const HomeOwnerCarousel({super.key});
@@ -115,11 +116,13 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
       final canRooms = _auth.canListRooms.value;
       final canPlots = _auth.canListPlots.value;
       final canStays = _auth.canListStays.value;
-      final owner = canRooms || canPlots || canStays;
+      final canTaxis = _auth.canListTaxis.value;
+      final owner = canRooms || canPlots || canStays || canTaxis;
       final slides = <_Slide>[
         if (_tabs.isRoomsActive && (!owner || canRooms)) _Slide.rooms,
         if (_tabs.isPlotsActive && (!owner || canPlots)) _Slide.plots,
         if (canStays) _Slide.stay,
+        if (canTaxis) _Slide.taxi,
       ];
       if (slides.length != _count) _onCountChanged(slides.length);
       if (slides.isEmpty) return const SizedBox.shrink();
@@ -186,12 +189,14 @@ class _OwnerBanner extends StatelessWidget {
         _Slide.rooms => AppColors.primary,
         _Slide.plots => AppColors.plot,
         _Slide.stay => RoleVisuals.accent(UserRoleKeys.stayOwner),
+        _Slide.taxi => RoleVisuals.accent(UserRoleKeys.taxiDriver),
       };
 
   @override
   Widget build(BuildContext context) {
     final isRooms = slide != _Slide.plots;
     final isStay = slide == _Slide.stay;
+    final isTaxi = slide == _Slide.taxi;
     final accent = accentOf(slide);
     final imageGlowColor = slide == _Slide.plots ? AppColors.success : accent;
     return Container(
@@ -243,13 +248,26 @@ class _OwnerBanner extends StatelessWidget {
                 ),
                 FloatingLoop(
                   child: SizedBox.expand(
-                    child: Image.asset(
-                      isRooms
-                          ? 'assets/images/owner_cta/house.png'
-                          : 'assets/images/owner_cta/plot.png',
-                      fit: BoxFit.contain,
-                      alignment: Alignment.centerRight,
-                    ),
+                    child: isTaxi
+                        ? Align(
+                            alignment: const Alignment(0.6, 0),
+                            child: Container(
+                              width: 96,
+                              height: 96,
+                              decoration: const BoxDecoration(
+                                gradient: RoleVisuals.taxiGradient,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Iconsax.car, size: 48, color: Colors.white),
+                            ),
+                          )
+                        : Image.asset(
+                            isRooms
+                                ? 'assets/images/owner_cta/house.png'
+                                : 'assets/images/owner_cta/plot.png',
+                            fit: BoxFit.contain,
+                            alignment: Alignment.centerRight,
+                          ),
                   ),
                 ),
               ],
@@ -274,6 +292,7 @@ class _OwnerBanner extends StatelessWidget {
                             _Slide.rooms => UserRoleKeys.rentOwner,
                             _Slide.plots => UserRoleKeys.propertyOwner,
                             _Slide.stay => UserRoleKeys.stayOwner,
+                            _Slide.taxi => UserRoleKeys.taxiDriver,
                           })
                         : (isRooms ? 'Looking for a room?' : 'Looking for a plot?'),
                     maxLines: 1,
@@ -289,7 +308,13 @@ class _OwnerBanner extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   isOwner
-                      ? (isStay ? 'List your stay' : isRooms ? 'List your room' : 'List your plot')
+                      ? (isTaxi
+                          ? 'List your taxi'
+                          : isStay
+                              ? 'List your stay'
+                              : isRooms
+                                  ? 'List your room'
+                                  : 'List your plot')
                       : (isRooms ? 'Find your room' : 'Find your plot'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -318,11 +343,13 @@ class _OwnerBanner extends StatelessWidget {
                 GestureDetector(
                   onTap: isOwner
                       ? () => Get.toNamed(
-                            isStay
-                                ? AppRoutes.myStays
-                                : isRooms
-                                    ? AppRoutes.myListings
-                                    : AppRoutes.myPlots,
+                            isTaxi
+                                ? AppRoutes.myTaxi
+                                : isStay
+                                    ? AppRoutes.myStays
+                                    : isRooms
+                                        ? AppRoutes.myListings
+                                        : AppRoutes.myPlots,
                           )
                       : () => Get.find<AuthController>().switchToTab(
                             isRooms ? AppTabs.rooms : AppTabs.plots,

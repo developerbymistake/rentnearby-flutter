@@ -18,6 +18,8 @@ import '../../../widgets/detail_header.dart';
 import '../../../widgets/report_listing_sheet.dart';
 import '../models/stay_detail_model.dart';
 import '../models/stay_owner_model.dart';
+import '../../taxi/guest/taxi_navigation.dart';
+import '../../taxi/taxi_option_sets.dart';
 import '../setup/stay_option_sets.dart';
 import 'stay_guest_controller.dart';
 
@@ -281,6 +283,12 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
                   _infoRow(Iconsax.location, 'Location', s.locality.isEmpty ? '-' : s.locality),
                 ]),
               ),
+              if (s.latitude != null && s.longitude != null) ...[
+                const SizedBox(height: 24),
+                _sectionTitle('Getting there'),
+                const SizedBox(height: 8),
+                _gettingThereRow(s),
+              ],
               if (s.facilities.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 _sectionTitle('Facilities'),
@@ -316,6 +324,45 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _gettingThereRow(StayDetailModel s) {
+    final from = s.cityName?.isNotEmpty == true
+        ? s.cityName!
+        : (s.districtName?.isNotEmpty == true ? s.districtName! : 'this stay');
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => TaxiNavigation.openList(fromName: from, fromLat: s.latitude, fromLng: s.longitude),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: TaxiColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: TaxiColors.accent.withValues(alpha: 0.25)),
+        ),
+        child: Row(children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(gradient: TaxiColors.gradient, borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Iconsax.car, size: 20, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Local taxis',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+              Text('From $from',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+            ]),
+          ),
+          const Text('See ›',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: TaxiColors.accentDark)),
+        ]),
+      ),
     );
   }
 

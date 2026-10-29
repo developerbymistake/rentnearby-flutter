@@ -10,6 +10,7 @@ class TourKeys {
   static final homeQuickActionAddRoom = GlobalKey();
   static final homeQuickActionAddPlot = GlobalKey();
   static final homeQuickActionAddStay = GlobalKey();
+  static final homeQuickActionAddTaxi = GlobalKey();
   static final homeQuickActionLeads = GlobalKey();
   static final homeInstagramCard = GlobalKey();
   static final homeActionMenu = GlobalKey();

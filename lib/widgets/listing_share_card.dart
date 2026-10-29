@@ -5,7 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../config/app_colors.dart';
 
 /// Which listing type the card is branded for — drives gradient, ribbon text, and tagline.
-enum ShareCardType { room, plot, stay }
+enum ShareCardType { room, plot, stay, taxi }
 
 /// The image captured and shared by [shareListing] (`lib/services/listing_share_service.dart`)
 /// — a Room/Plot equivalent of `rentnearby_Admin`'s `AppShareScreen._buildPosterCard`, but
@@ -40,14 +40,25 @@ class ListingShareCard extends StatelessWidget {
 
   bool get _isPlot => type == ShareCardType.plot;
   bool get _isStay => type == ShareCardType.stay;
+  bool get _isTaxi => type == ShareCardType.taxi;
   static const _stayGradient = LinearGradient(colors: [AppColors.warning, Color(0xFFD97706)]);
-  LinearGradient get _gradient =>
-      _isStay ? _stayGradient : (_isPlot ? AppColors.plotGradient : AppColors.primaryGradient);
-  Color get _typeColor => _isStay ? const Color(0xFFD97706) : (_isPlot ? AppColors.plot : AppColors.primary);
-  String get _tagline => _isStay
-      ? 'Find stays near you.'
-      : (_isPlot ? 'Find plots for sale near you.' : 'Find rooms for rent near you.');
-  String get _ribbonText => _isStay ? 'FOR STAY' : (_isPlot ? 'FOR SALE' : 'FOR RENT');
+  static const _taxiGradient = LinearGradient(colors: [Color(0xFF2DD4BF), Color(0xFF0D9488)]);
+  LinearGradient get _gradient => _isTaxi
+      ? _taxiGradient
+      : _isStay
+          ? _stayGradient
+          : (_isPlot ? AppColors.plotGradient : AppColors.primaryGradient);
+  Color get _typeColor => _isTaxi
+      ? const Color(0xFF0D9488)
+      : _isStay
+          ? const Color(0xFFD97706)
+          : (_isPlot ? AppColors.plot : AppColors.primary);
+  String get _tagline => _isTaxi
+      ? 'Find local taxis near you.'
+      : _isStay
+          ? 'Find stays near you.'
+          : (_isPlot ? 'Find plots for sale near you.' : 'Find rooms for rent near you.');
+  String get _ribbonText => _isTaxi ? 'TAXI' : _isStay ? 'FOR STAY' : (_isPlot ? 'FOR SALE' : 'FOR RENT');
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +129,9 @@ class ListingShareCard extends StatelessWidget {
                             decoration: BoxDecoration(gradient: _gradient),
                             child: Center(
                               child: Icon(
-                                _isPlot ? Icons.landscape_rounded : Icons.home_rounded,
+                                _isTaxi
+                                    ? Icons.local_taxi_rounded
+                                    : (_isPlot ? Icons.landscape_rounded : Icons.home_rounded),
                                 size: 48,
                                 color: Colors.white38,
                               ),

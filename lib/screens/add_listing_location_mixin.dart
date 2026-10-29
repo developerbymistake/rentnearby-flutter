@@ -86,6 +86,8 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
   LatLng? get pinnedOrLiveLocation => _selectedLocation ?? _userLocation;
   String? get selectedDistrictId => _resolvedDistrict?.id;
   String? get resolvedCityId => _resolvedCity?.id;
+  String? get resolvedDistrictName => _resolvedDistrict?.name;
+  String? get resolvedCityName => _resolvedCity?.name;
   bool get isResolvingDistrict => _isResolvingDistrict;
   bool get showAddressResolveOverlay => _showAddressResolveOverlay;
   String get trimmedAddress => _addressCtrl.text.trim();

@@ -15,6 +15,7 @@ import '../config/notification_types.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../features/stay/stay_status_sync.dart';
+import '../features/taxi/taxi_status_sync.dart';
 import '../models/conversation_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
@@ -203,6 +204,9 @@ class NotificationService extends GetxService {
       } else if (notificationType == NotificationTypeKeys.stayApprovedWire ||
           notificationType == NotificationTypeKeys.stayRejectedWire) {
         StayStatusSync.onReviewResult();
+      } else if (notificationType == NotificationTypeKeys.taxiApprovedWire ||
+          notificationType == NotificationTypeKeys.taxiRejectedWire) {
+        TaxiStatusSync.onReviewResult();
       }
 
       // Every other push (admin broadcast, report-filed)
@@ -361,6 +365,13 @@ class NotificationService extends GetxService {
     AppRoutes.myJobs,
     AppRoutes.postJob,
     AppRoutes.jobDetail,
+    AppRoutes.myTaxi,
+    AppRoutes.taxiDetail,
+    AppRoutes.taxiVehicle,
+    AppRoutes.taxiRoutes,
+    AppRoutes.taxiSubmit,
+    AppRoutes.taxiSetup,
+    AppRoutes.taxiList,
   };
 
   // A gated Stay Owner's stack is rooted at staySetup, so main is not underneath.
@@ -370,6 +381,10 @@ class NotificationService extends GetxService {
     AppRoutes.stayRooms,
     AppRoutes.stayRules,
     AppRoutes.staySubmit,
+    AppRoutes.taxiSetup,
+    AppRoutes.taxiVehicle,
+    AppRoutes.taxiRoutes,
+    AppRoutes.taxiSubmit,
     AppRoutes.roleChange,
   };
 

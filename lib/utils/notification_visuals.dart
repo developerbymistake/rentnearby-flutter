@@ -35,6 +35,7 @@ abstract final class NotificationVisuals {
         AppRoutes.myPlots => 'PLOT',
         AppRoutes.myListings => 'ROOM',
         AppRoutes.myStays => 'STAY',
+        AppRoutes.myTaxi => 'TAXI',
         _ => null,
       };
 }

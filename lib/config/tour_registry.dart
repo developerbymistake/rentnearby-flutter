@@ -69,7 +69,8 @@ List<TourStep> _buildHomeSteps() {
   final canRooms = auth.canListRooms.value;
   final canPlots = auth.canListPlots.value;
   final canStays = auth.canListStays.value;
-  final owner = canRooms || canPlots || canStays;
+  final canTaxis = auth.canListTaxis.value;
+  final owner = canRooms || canPlots || canStays || canTaxis;
   return [
     TourStep(
       key: TourKeys.homeManageListingsCard,
@@ -80,7 +81,9 @@ List<TourStep> _buildHomeSteps() {
               ? 'Got a room to rent out? Tap this card to list yours and reach genuine tenants in minutes.'
               : canPlots
                   ? 'Got a plot to sell? Tap this card to list yours and reach genuine buyers in minutes.'
-                  : 'Tap this card to manage your stay.')
+                  : canStays
+                      ? 'Tap this card to manage your stay.'
+                      : 'Tap this card to manage your taxi.')
           : 'This card slides between rooms and plots — tap it to start browsing.',
     ),
     if (canRooms)
@@ -104,7 +107,14 @@ List<TourStep> _buildHomeSteps() {
         title: 'Add your stay',
         body: 'Set up or finish your stay in one tap.',
       ),
-    if (canRooms || canPlots || canStays)
+    if (canTaxis)
+      TourStep(
+        key: TourKeys.homeQuickActionAddTaxi,
+        icon: Icons.add_rounded,
+        title: 'Add your taxi',
+        body: 'Set up or finish your taxi in one tap.',
+      ),
+    if (canRooms || canPlots || canStays || canTaxis)
       TourStep(
         key: TourKeys.homeQuickActionLeads,
         icon: Icons.bar_chart_rounded,
@@ -113,7 +123,9 @@ List<TourStep> _buildHomeSteps() {
             ? 'Jump straight to the rooms you have posted.'
             : canPlots
                 ? 'Jump straight to the plots you have posted.'
-                : 'Jump straight to your stay.',
+                : canStays
+                    ? 'Jump straight to your stay.'
+                    : 'Jump straight to your taxi.',
       ),
     TourStep(
       key: TourKeys.homeInstagramCard,
