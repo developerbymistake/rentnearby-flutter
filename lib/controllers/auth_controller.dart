@@ -16,6 +16,8 @@ import 'location_controller.dart';
 import '../utils/app_toast.dart';
 import '../utils/jwt_claims.dart';
 import '../services/hub_session_manager.dart';
+import '../features/stay/setup/stay_setup_controller.dart';
+import '../features/taxi/setup/taxi_setup_controller.dart';
 
 /// What triggered a logout — decides whether the server-side revoke call fires and which (if
 /// any) toast is shown. Kept as a typed reason rather than booleans so each of the 3 real-world
@@ -91,8 +93,9 @@ class AuthController extends GetxController {
   }
 
   bool get roleChangeLocked =>
-      (staysEnabled && (user.value?.stayStatus == 'Approved' || user.value?.stayStatus == 'PendingReview')) ||
-      (taxisEnabled && (user.value?.taxiStatus == 'Approved' || user.value?.taxiStatus == 'PendingReview'));
+      (user.value?.roleLocked ?? false) ||
+      (user.value?.stayStatus == 'Approved' || user.value?.stayStatus == 'PendingReview') ||
+      (user.value?.taxiStatus == 'Approved' || user.value?.taxiStatus == 'PendingReview');
 
   bool canOpenRoute(String route) {
     if (AppRoutes.roomOwnerOnly.contains(route) && !canListRooms.value) return false;
@@ -461,6 +464,33 @@ class AuthController extends GetxController {
     } catch (e) {
       if (_isUnauthorized(e)) return;
       AppToast.error(_dioMessage(e, 'Could not save your role.'));
+    }
+  }
+
+  Future<RoleActionResult> correctRole(String roleKey) async {
+    try {
+      isLoading.value = true;
+      final res = await ApiService.put('/users/me/role-correction', {'role': roleKey});
+      await _applySession(res['data'] as Map<String, dynamic>);
+      if (Get.isRegistered<StaySetupController>()) Get.find<StaySetupController>().clear();
+      if (Get.isRegistered<TaxiSetupController>()) Get.find<TaxiSetupController>().clear();
+      Get.offAllNamed(postLoginRoute);
+      return RoleActionResult.success;
+    } catch (e) {
+      if (_isUnauthorized(e)) return RoleActionResult.failed;
+      if (_isRoleUnavailable(e)) {
+        AppToast.warning('This role is not available right now.');
+        return RoleActionResult.unavailable;
+      }
+      if (e is DioException && e.response?.statusCode == 409) {
+        AppToast.warning(_dioMessage(e, 'Could not change role.'));
+        await _recoverChosenRole();
+      } else {
+        AppToast.error(_dioMessage(e, 'Could not change role.'));
+      }
+      return RoleActionResult.failed;
+    } finally {
+      isLoading.value = false;
     }
   }
 

@@ -154,6 +154,14 @@ class StayOwnerModel {
   bool get isRejected => status == StayStatus.rejected;
   bool get canEditSetup => isDraft || isRejected;
 
+  int get setupPercent {
+    final d1 = step1Done;
+    final d2 = d1 && roomsDone;
+    final d3 = d2 && rulesDone;
+    final d4 = d3 && (isPendingReview || isApproved);
+    return (d1 ? 40 : 0) + (d2 ? 30 : 0) + (d3 ? 20 : 0) + (d4 ? 10 : 0);
+  }
+
   String get locality =>
       [cityName, districtName].where((e) => e != null && e.isNotEmpty).join(', ');
 
