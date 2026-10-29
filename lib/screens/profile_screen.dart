@@ -261,8 +261,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Obx(() {
       final roleKey = _auth.roleKey.value;
       final u = _auth.user.value;
-      final pending = u?.hasPendingRoleRequest ?? false;
-      final rejected = u?.hasRejectedRoleRequest ?? false;
+      final locked = _auth.roleChangeLocked;
+      final pending = !locked && (u?.hasPendingRoleRequest ?? false);
+      final rejected = !locked && (u?.hasRejectedRoleRequest ?? false);
       final reason = u?.roleRequestReason;
       final blockedUntil = u?.roleRequestBlockedUntil;
       final retryText = blockedUntil != null ? 'Try again after ${AppDateFormat.dateTime(blockedUntil)}' : null;
@@ -273,7 +274,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ? (reason != null && reason.isNotEmpty ? reason : (retryText ?? 'Tap to try again'))
               : (retryText ?? 'Change role');
       return GestureDetector(
-        onTap: () => Get.toNamed(AppRoutes.roleChange),
+        onTap: locked ? null : () => Get.toNamed(AppRoutes.roleChange),
         child: Container(
           margin: const EdgeInsets.fromLTRB(20, 18, 20, 0),
           padding: const EdgeInsets.all(14),
@@ -306,15 +307,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Text(title,
                         style: const TextStyle(
                             fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                    const SizedBox(height: 2),
-                    Text(subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                    if (!locked) ...[
+                      const SizedBox(height: 2),
+                      Text(subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                    ],
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),
+              if (!locked) const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),
             ],
           ),
         ),

@@ -118,7 +118,7 @@ List<TourStep> _buildHomeSteps() {
       TourStep(
         key: TourKeys.homeQuickActionLeads,
         icon: Icons.bar_chart_rounded,
-        title: 'My Listings',
+        title: canStays ? 'My Stays' : 'My Listings',
         body: canRooms
             ? 'Jump straight to the rooms you have posted.'
             : canPlots

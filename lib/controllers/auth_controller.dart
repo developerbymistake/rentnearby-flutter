@@ -72,6 +72,10 @@ class AuthController extends GetxController {
 
   bool get isOwner => canListRooms.value || canListPlots.value || canListStays.value || canListTaxis.value;
 
+  bool get roleChangeLocked =>
+      (canListStays.value && (user.value?.stayStatus == 'Approved' || user.value?.stayStatus == 'PendingReview')) ||
+      (canListTaxis.value && (user.value?.taxiStatus == 'Approved' || user.value?.taxiStatus == 'PendingReview'));
+
   bool canOpenRoute(String route) =>
       !(AppRoutes.roomOwnerOnly.contains(route) && !canListRooms.value) &&
       !(AppRoutes.plotOwnerOnly.contains(route) && !canListPlots.value) &&
