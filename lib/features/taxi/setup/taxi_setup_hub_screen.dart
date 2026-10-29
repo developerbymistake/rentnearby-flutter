@@ -44,7 +44,11 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
       return;
     }
     final t = _ctrl.taxi.value;
-    if (!ok || !mounted || _fromMyTaxi || t == null || t.isDraft) return;
+    if (!ok || !mounted || _fromMyTaxi) return;
+    if (t == null || t.isDraft) {
+      _auth.refreshProfile();
+      return;
+    }
     await _auth.refreshProfile();
     Get.offAllNamed(AppRoutes.main);
   }
@@ -79,6 +83,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
     return Obx(() {
       final gated = _gated;
       final taxi = _ctrl.taxi.value;
+      final canCorrect = gated && (taxi == null || taxi.isDraft) && (_auth.user.value?.canCorrectRole ?? false);
       final loading = _ctrl.isLoading.value;
       final loaded = _ctrl.hasLoaded.value;
       final failed = _ctrl.loadFailed.value;
@@ -87,7 +92,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
         child: Scaffold(
           backgroundColor: AppColors.scaffoldBg,
           body: Column(children: [
-            _header(gated),
+            _header(gated, canCorrect),
             Expanded(
               child: !loaded && loading
                   ? const Center(child: CircularProgressIndicator(color: TaxiColors.accent, strokeWidth: 2))
@@ -99,7 +104,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
                           child: ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.all(16),
-                            children: _content(taxi),
+                            children: _content(taxi, gated),
                           ),
                         ),
             ),
@@ -109,7 +114,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
     });
   }
 
-  Widget _header(bool gated) => Container(
+  Widget _header(bool gated, bool canCorrect) => Container(
         decoration: const BoxDecoration(gradient: TaxiColors.gradient),
         child: SafeArea(
           bottom: false,
@@ -137,11 +142,12 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
                       _auth.logout();
                     }
                   },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                        value: 'role',
-                        child: Text('Change role', style: TextStyle(fontFamily: 'Poppins', fontSize: 14))),
-                    PopupMenuItem(
+                  itemBuilder: (_) => [
+                    if (!canCorrect)
+                      const PopupMenuItem(
+                          value: 'role',
+                          child: Text('Change role', style: TextStyle(fontFamily: 'Poppins', fontSize: 14))),
+                    const PopupMenuItem(
                         value: 'logout',
                         child: Text('Log out', style: TextStyle(fontFamily: 'Poppins', fontSize: 14))),
                   ],
@@ -151,13 +157,14 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
         ),
       );
 
-  List<Widget> _content(TaxiOwnerModel? t) {
+  List<Widget> _content(TaxiOwnerModel? t, bool gated) {
     final d1 = t?.step1Done ?? false;
     final u2 = d1;
     final d2 = u2 && (t?.routesDone ?? false);
     final u3 = d2;
     final d3 = u3 && (t != null && (t.isPendingReview || t.isApproved));
     final percent = t?.percent ?? 0;
+    final canCorrect = gated && (t == null || t.isDraft) && (_auth.user.value?.canCorrectRole ?? false);
 
     StayStepState state(bool unlocked, bool done) =>
         !unlocked ? StayStepState.locked : (done ? StayStepState.done : StayStepState.current);
@@ -166,6 +173,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
       if (t != null && t.isRejected) _rejectedStrip(t),
       if (t != null && t.isPendingReview) _pendingStrip(),
       _scoreCard(percent),
+      if (canCorrect) _wrongRoleLink(percent),
       const SizedBox(height: 16),
       StayStepRow(
         number: 1,
@@ -199,6 +207,15 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
       ),
     ];
   }
+
+  Widget _wrongRoleLink(int percent) => Center(
+        child: TextButton(
+          onPressed: () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent}),
+          child: const Text('Wrong role? Change it',
+              style: TextStyle(
+                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: TaxiColors.accentDark)),
+        ),
+      );
 
   Widget _scoreCard(int percent) {
     final reduceMotion = MediaQuery.of(context).disableAnimations;

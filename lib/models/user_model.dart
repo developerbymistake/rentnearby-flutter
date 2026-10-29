@@ -16,6 +16,9 @@ class UserModel {
   final String? stayStatus;
   final String? taxiStatus;
   final bool roleTabActive;
+  final bool roleCorrectionUsed;
+  final bool canCorrectRole;
+  final bool roleLocked;
 
   UserModel({
     required this.id,
@@ -33,6 +36,9 @@ class UserModel {
     this.stayStatus,
     this.taxiStatus,
     this.roleTabActive = true,
+    this.roleCorrectionUsed = false,
+    this.canCorrectRole = false,
+    this.roleLocked = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
@@ -51,6 +57,9 @@ class UserModel {
         stayStatus: json['stayStatus'] as String?,
         taxiStatus: json['taxiStatus'] as String?,
         roleTabActive: json['roleTabActive'] as bool? ?? true,
+        roleCorrectionUsed: json['roleCorrectionUsed'] as bool? ?? false,
+        canCorrectRole: json['canCorrectRole'] as bool? ?? false,
+        roleLocked: json['roleLocked'] as bool? ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -69,6 +78,9 @@ class UserModel {
         'stayStatus': stayStatus,
         'taxiStatus': taxiStatus,
         'roleTabActive': roleTabActive,
+        'roleCorrectionUsed': roleCorrectionUsed,
+        'canCorrectRole': canCorrectRole,
+        'roleLocked': roleLocked,
       };
 
   String get displayName => name?.trim().isNotEmpty == true ? name! : '+91 $phoneNumber';

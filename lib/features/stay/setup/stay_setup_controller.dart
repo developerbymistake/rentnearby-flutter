@@ -21,6 +21,11 @@ class StaySetupController extends GetxController {
 
   static const _stayErrorTypes = {'StayStepLocked', 'StayLocked', 'StayNotApproved', 'StayAlreadyExists', 'StayRoomLimit'};
 
+  void clear() {
+    stay.value = null;
+    hasLoaded.value = false;
+  }
+
   Future<bool> load() async {
     try {
       isLoading.value = true;

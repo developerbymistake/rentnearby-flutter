@@ -30,6 +30,11 @@ class TaxiSetupController extends GetxController {
     'TaxiBaseOutsideDistrict',
   };
 
+  void clear() {
+    taxi.value = null;
+    hasLoaded.value = false;
+  }
+
   Future<bool> load() async {
     try {
       isLoading.value = true;

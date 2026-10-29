@@ -60,6 +60,9 @@ class RoleRequestErrorTypes {
   static const String liveListing = 'RoleChangeBlockedByLiveListing';
   static const String unavailable = 'RoleUnavailable';
   static const String invalidRole = 'InvalidRole';
+  static const String correctionUsed = 'RoleCorrectionUsed';
+  static const String correctionNotAllowed = 'RoleCorrectionNotAllowed';
+  static const String requestPending = 'RoleRequestPending';
 }
 
 class RoleRequestStatus {

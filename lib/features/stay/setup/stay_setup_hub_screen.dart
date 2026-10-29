@@ -44,7 +44,11 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
       return;
     }
     final s = _ctrl.stay.value;
-    if (!ok || !mounted || _fromMyStays || s == null || s.isDraft) return;
+    if (!ok || !mounted || _fromMyStays) return;
+    if (s == null || s.isDraft) {
+      _auth.refreshProfile();
+      return;
+    }
     await _auth.refreshProfile();
     Get.offAllNamed(AppRoutes.main);
   }
@@ -70,6 +74,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
     return Obx(() {
       final gated = _gated;
       final stay = _ctrl.stay.value;
+      final canCorrect = gated && (stay == null || stay.isDraft) && (_auth.user.value?.canCorrectRole ?? false);
       final loading = _ctrl.isLoading.value;
       final loaded = _ctrl.hasLoaded.value;
       final failed = _ctrl.loadFailed.value;
@@ -78,7 +83,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         child: Scaffold(
           backgroundColor: AppColors.scaffoldBg,
           body: Column(children: [
-            _header(gated),
+            _header(gated, canCorrect),
             Expanded(
               child: !loaded && loading
                   ? const Center(child: CircularProgressIndicator(color: StayColors.accent, strokeWidth: 2))
@@ -90,7 +95,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
                           child: ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.all(16),
-                            children: _content(stay),
+                            children: _content(stay, gated),
                           ),
                         ),
             ),
@@ -100,7 +105,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
     });
   }
 
-  Widget _header(bool gated) => Container(
+  Widget _header(bool gated, bool canCorrect) => Container(
         decoration: const BoxDecoration(gradient: StayColors.gradient),
         child: SafeArea(
           bottom: false,
@@ -128,11 +133,12 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
                       _auth.logout();
                     }
                   },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                        value: 'role',
-                        child: Text('Change role', style: TextStyle(fontFamily: 'Poppins', fontSize: 14))),
-                    PopupMenuItem(
+                  itemBuilder: (_) => [
+                    if (!canCorrect)
+                      const PopupMenuItem(
+                          value: 'role',
+                          child: Text('Change role', style: TextStyle(fontFamily: 'Poppins', fontSize: 14))),
+                    const PopupMenuItem(
                         value: 'logout',
                         child: Text('Log out', style: TextStyle(fontFamily: 'Poppins', fontSize: 14))),
                   ],
@@ -142,7 +148,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         ),
       );
 
-  List<Widget> _content(StayOwnerModel? s) {
+  List<Widget> _content(StayOwnerModel? s, bool gated) {
     final d1 = s?.step1Done ?? false;
     final u2 = d1;
     final d2 = u2 && (s?.roomsDone ?? false);
@@ -150,7 +156,8 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
     final d3 = u3 && (s?.rulesDone ?? false);
     final u4 = d3;
     final d4 = u4 && (s != null && (s.isPendingReview || s.isApproved));
-    final percent = (d1 ? 40 : 0) + (d2 ? 30 : 0) + (d3 ? 20 : 0) + (d4 ? 10 : 0);
+    final percent = s?.setupPercent ?? 0;
+    final canCorrect = gated && (s == null || s.isDraft) && (_auth.user.value?.canCorrectRole ?? false);
 
     StayStepState state(bool unlocked, bool done) =>
         !unlocked ? StayStepState.locked : (done ? StayStepState.done : StayStepState.current);
@@ -159,6 +166,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
       if (s != null && s.isRejected) _rejectedStrip(s),
       if (s != null && s.isPendingReview) _pendingStrip(),
       _scoreCard(percent),
+      if (canCorrect) _wrongRoleLink(percent),
       const SizedBox(height: 16),
       StayStepRow(
         number: 1,
@@ -200,6 +208,15 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
       ),
     ];
   }
+
+  Widget _wrongRoleLink(int percent) => Center(
+        child: TextButton(
+          onPressed: () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent}),
+          child: const Text('Wrong role? Change it',
+              style: TextStyle(
+                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+        ),
+      );
 
   Widget _scoreCard(int percent) {
     final reduceMotion = MediaQuery.of(context).disableAnimations;
