@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Flutter app for the "Bakhli" rental/plot marketplace (Uttarakhand-focused; the Flutter project name
 `bakhli` and internal branding are current — the repo directory name, Android `applicationId`
 (`com.rentnearby.rentnearby`), and iOS bundle id are legacy `rentnearby` naming that was never
-renamed). No brokers/commission — lists rental rooms and plots, in-app chat between owner/seeker,
-and paid listing plans via Razorpay.
+renamed). No brokers/commission — lists rental rooms, plots, stays (homestays), stay jobs and local
+taxis, in-app chat between owner/seeker, and paid listing plans via Razorpay.
 
 ## Commands
 
@@ -54,7 +54,8 @@ explicitly:
 
 **Navigation**: `GetMaterialApp` + named routes declared in `lib/config/app_routes.dart`
 (`AppRoutes.routes`, a flat `List<GetPage>` with per-route transitions). The bottom-nav tabs
-(`lib/config/app_tabs.dart`: `home(0) / rooms(1) / plots(2) / stays(3) / jobs(4) / taxi(5) / profile(6)`, `count = 7`; Chat is not a
+(`lib/config/app_tabs.dart`: `home(0) / rooms(1) / plots(2) / stays(3) / jobs(4) / taxi(5) / profile(6)`, `count = 7`, labels and
+on/off from the admin tab config via `TabConfigController`; Chat is not a
 bottom-nav tab, reached instead via a header icon on Home) are NOT part of this
 route table: `MainScreen` renders them as an `IndexedStack` of `TabNavigator` widgets
 (`lib/navigation/tab_router.dart`), each wrapping its tab root screen in its own nested `Navigator`
@@ -77,8 +78,9 @@ sorts), page size 20, first page kept in memory and refetched only when older th
 pull-to-refresh — never on `exploreRefreshTrigger` (bumped on every nav tap). It loads lazily, only once its tab is
 active. The map (`ExploreScreen`/`ExplorePlotsScreen`) is a second view pushed on that tab's nested navigator via
 `ExploreNavigation.openMap`. There is no View All screen or route any more: Home's "View all" calls
-`switchToTab(rooms|plots)`. Home has no Rooms|Plots toggle; its banner is an auto-sliding room/plot carousel (`home_owner_carousel.dart`) whose
-slides and copy follow the role (see "Roles").
+`switchToTab(rooms|plots)`. Home has no Rooms|Plots toggle; its banner is an auto-sliding carousel (`home_owner_carousel.dart`, room/plot/stay/taxi
+slides, active tabs only) whose slides and copy follow the role (see "Roles"). `HomeController` loads everything with one `GET /home/feed`, requesting only the
+sections of active tabs (`HomeSectionKeys`): near-you rails Rooms / Plots / Stays / Taxis plus recently added rooms/plots/stays.
 
 Because `IndexedStack` never disposes inactive tabs, a `showModalBottomSheet` opened from a tab-root
 screen's own `context` (e.g. `LocationSwitchSheet`, `LocationSearchSheet`, the listing/plot detail
@@ -172,21 +174,24 @@ comments in `NotificationService._handleNotificationTap`/`_navigateToChatConvers
 navigation-on-tap behavior. A push with an `action_route` goes through `AuthController.canOpenRoute`; a route the
 role cannot open lands on the notifications screen instead (same guard in `notifications_screen.dart`).
 
-**Roles (Seeker / Rent Owner / Property Owner)**: one account, one role; spec in `F:\Dhasu\ROLE_FEATURE.md`.
-- **Stay Owner (4th role, uncompiled)**: `UserRoleKeys.stayOwner`/`canListStays`; `AppTabs.stays = 3` (Stays is the third module tab); gated owner goes to `/stay-setup` until submit (`postLoginRoute`). Code in `lib/features/stay/`. Rooms have a fixed room name (no bathroom). Jobs (`lib/features/jobs/`, Jobs tab `AppTabs.jobs`): all fields required, own phone + WhatsApp on the job, detail bar is the shared `DetailActionBar` with `showDirections: false`, `whatsAppPhone`, `callLabel`, `reportLabel`, `safetyText` (defaults keep Rooms/Plots/Stay unchanged), no Chat; experience is years with Fresher / N+ yrs tags and filter buckets. Seeker push opens `/job-detail` through the generic `action_route` path. Spec: `F:\Dhasu\STAY_FEATURE.md`, `F:\Dhasu\STAY_JOBS_FEATURE.md`.
-- **Taxi Driver (5th role, uncompiled)**: `UserRoleKeys.taxiDriver`/`canListTaxis` (counts as owner everywhere); Taxi tab `AppTabs.taxi` (root `TaxiListScreen(root: true)`, tag `taxi`; pushed copy tag `taxi-push`), no Taxi tile on the Stays landing. The stay detail "Getting there" row searches From = traveller's current GPS city (`travellerCity`, never the browsing city) to To = stay city centroid; See all pushes the Taxi list prefilled. Gated driver goes to `/taxi-setup` until submit (`postLoginRoute`). Code in `lib/features/taxi/`. Taxi list From/To use `LocationSwitchSheet.pick`; driver route From/To use `LocationSearchSheet` (Photon, bbox limits it to roughly Uttarakhand). Share link type `t` opens `/taxi-detail` directly. Spec: `F:\Dhasu\TAXI_FEATURE.md`.
+**Roles (Seeker / Rent Owner / Property Owner / Stay Owner / Taxi Driver)**: one account, one role; spec in `F:\Dhasu\ROLE_FEATURE.md`.
+- **Stay Owner (4th role)**: `UserRoleKeys.stayOwner`/`canListStays`; Stays tab `AppTabs.stays`; gated owner goes to `/stay-setup` until submit (`postLoginRoute`). Code in `lib/features/stay/`. Rooms have a fixed room name (no bathroom); room type is picked from a bottom-sheet dropdown (`stay_rooms_screen.dart`). Home shows a Stay Owner the tiles Add Stay, My Stays, Post Job, My Jobs. Spec: `F:\Dhasu\STAY_FEATURE.md`.
+- **Stay Jobs** (`lib/features/jobs/`, Jobs tab `AppTabs.jobs`, needs both JOBS and STAYS on): posted by a Stay Owner, browsed by everyone. The landing has the same location Search pill as Rooms/Stays (`ExploreLocationSearchMixin`); job detail shows the stay's cover photo. Post Job (`post_job_screen.dart`) is 3 pages: Basics (incl. department + role), Details, Extras; all fields required, own phone + WhatsApp on the job. Detail bar is the shared `DetailActionBar` with `showDirections: false`, `whatsAppPhone`, `callLabel`, `reportLabel`, `safetyText` (defaults keep Rooms/Plots/Stay unchanged), no Chat; experience is years with Fresher / N+ yrs tags and filter buckets. Seeker push opens `/job-detail` through the generic `action_route` path. Spec: `F:\Dhasu\STAY_JOBS_FEATURE.md`.
+- **Taxi Driver (5th role)**: `UserRoleKeys.taxiDriver`/`canListTaxis` (counts as owner everywhere); gated driver goes to `/taxi-setup` until submit (`postLoginRoute`). Code in `lib/features/taxi/`. Taxi tab `AppTabs.taxi` (root `TaxiListScreen(root: true)`, tag `taxi`; pushed copy tag `taxi-push`): no main city switch and no text input, only From/To selectors via `LocationSwitchSheet.pick` (From defaults to the current city); To empty = local taxis, To set = route search. Driver route From/To use `LocationSearchSheet` (Photon, bbox limits it to roughly Uttarakhand). The stay detail "Getting there" row (`stay_taxis_section.dart`) shows taxis from the traveller's current GPS city (`travellerCity`, never the browsing city) to the stay's city; See all pushes the Taxi list with To prefilled and From = current city. Share link type `t` opens `/taxi-detail` directly. Spec: `F:\Dhasu\TAXI_FEATURE.md`.
 - `lib/config/user_roles.dart` is the single capability map: `UserRoleKeys` (`SEEKER`/`RENT_OWNER`/
-  `PROPERTY_OWNER`, `claim = 'role'`; names via `RoleVisuals.displayName` in `role_option_card.dart`), `RoleCapabilities.byRole` (role key -> `canListRooms`,
-  `canListPlots`; Seeker has neither, an unknown key falls back to none), `RoleRequestErrorTypes` and
+  `PROPERTY_OWNER`/`STAY_OWNER`/`TAXI_DRIVER`, `claim = 'role'`; names via `RoleVisuals.displayName` in `role_option_card.dart`), `RoleCapabilities.byRole` (role key -> `canListRooms`,
+  `canListPlots`, `canListStays`, `canListTaxis`; Seeker has none, an unknown key falls back to none), `RoleRequestErrorTypes` and
   `RoleRequestStatus`. Add a role there, never as scattered `== 'RENT_OWNER'` checks.
 - `AuthController` reads the `role` claim from the stored JWT (`_syncRoleFromToken`, via `JwtClaims.role`) and
-  exposes reactive `roleKey`, `canListRooms`, `canListPlots`, plus `isOwner` (derived convenience only) and
-  `canOpenRoute(route)` (checks `AppRoutes.roomOwnerOnly` = `myListings`/`addListing`, `plotOwnerOnly` =
-  `myPlots`/`addPlot`). `chooseRole` calls `PUT /users/me/role-choice` and stores the returned token;
+  exposes reactive `roleKey`, `canListRooms`, `canListPlots`, `canListStays`, `canListTaxis`, plus `isOwner` (derived convenience only) and
+  `canOpenRoute(route)` (checks `AppRoutes.roomOwnerOnly`, `plotOwnerOnly`, `stayOwnerOnly`, `taxiDriverOnly`).
+  `chooseRole` calls `PUT /users/me/role-choice` and stores the returned token;
   `requestRoleChange` posts `/users/me/role-request` and shows the server's cooldown/live-listing message.
+- Role lock: `AuthController.roleChangeLocked` is true while the user's stay or taxi is Approved or PendingReview (and that
+  tab is on); Profile's role card and `RoleChangeScreen` then block a change request.
 - Post-login routing: `AuthController.postLoginRoute` = `AppRoutes.main` once `user.roleConfirmed`, else
   `AppRoutes.roleSelect`; splash and the login/OTP flows navigate to it, and a cold-start notification tap is ignored while it is `roleSelect`.
-- Pages: `RoleSelectScreen` (first login, 3 cards from `GET /roles`, Seeker preselected, applies immediately) and
+- Pages: `RoleSelectScreen` (first login, one card per role from the server-filtered `GET /roles` (roles of off tabs are omitted), Seeker preselected, applies immediately) and
   `RoleChangeScreen` (from Profile's role card, sends an admin-approval request); cards and per-role colors/icons
   live in `widgets/role_option_card.dart` (`RoleVisuals`, `RoleOptionCard`). Approval revokes the session: the
   `role_request_approved` push or hub event calls `forceLogout(reason: LogoutReason.roleChanged)`.
@@ -271,6 +276,8 @@ sites.
   screens rather than a common base class
 - `widgets/` — reusable presentational components (cards, sheets, pins, bottom-sheet action bars)
 - `navigation/` — the per-tab nested-Navigator machinery described above
+- `features/` — the newer modules, each self-contained (screens, controllers, models, routes, colors): `stay/`
+  (`guest/` browse + `setup/` owner flow), `jobs/`, `taxi/` (`guest/` + `setup/`)
 - `utils/` — small helpers (e.g. `app_toast.dart` wraps `toastification` for consistent toast styling;
   `input_formatters.dart` exports `noEmojiInputFormatters`, applied to every genuine free-text
   `TextField`/`TextFormField` in the app — city search, descriptions, addresses, report details, chat
@@ -278,8 +285,9 @@ sites.
   phone/OTP) use their own digit-only formatters instead and don't need it)
 
 **Tab gating (admin turns a tab off)**: spec `F:\Dhasu\TAB_GATING_FEATURE.md`; the backend is the real gate
-(403 `TabInactive` on `/listings`, `/plots`, `/stays`, `/taxis`, `/stay-jobs`). `TabConfigController` is the one
-client snapshot: seeded from storage, fetched once in `onInit`, `ready` (splash waits on it with the version check),
+(403 `TabInactive` on `/listings`, `/plots`, `/stays`, `/taxis`, `/stay-jobs`). An off tab makes zero API calls: its root
+is never built and every module controller fetches lazily, only once its tab is active. `TabConfigController` is the one
+client snapshot, put in `main()`: seeded from storage, fetched once in `onInit`, `ready` (splash waits on it with the version check),
 `version` (bumped only on a real change; its getters read it, so any `Obx` using them rebuilds), single-flight `load`,
 `isActiveForIndex` (Jobs needs JOBS and STAYS), `activeSectionKeys` for `/home/feed`. `AuthController` exposes
 effective capabilities `roomsEnabled`/`plotsEnabled`/`staysEnabled`/`taxisEnabled`/`jobsEnabled`/`effectiveIsOwner`
@@ -289,16 +297,21 @@ flows, tiles, tours and my-list loads use them, raw `canListX` stay for role cha
 flow) and my-lists only when enabled; `StayTypesController` loads from `StayLandingController.refreshIfNeeded`.
 `MainScreen` has one `ever(version)` worker that leaves an inactive current tab for Home. The `ApiService` error
 interceptor calls `TabConfigController.load(forceRefresh: true)` on a 403 `TabInactive`. Deep links check the tab
-before the by-slug call. Role screens trust the server-filtered `GET /roles`; `chooseRole`/`requestRoleChange`
-return `RoleActionResult.unavailable` on 400 `RoleUnavailable` and the screen reloads. App-wide location calls use
+before the by-slug call. Role screens trust the server-filtered `GET /roles` (roles of off tabs hidden); `chooseRole`/`requestRoleChange`
+return `RoleActionResult.unavailable` on 400 `RoleUnavailable` and the screen reloads. Existing holders of an off tab's role keep
+their role (`roleTabActive` false; Profile's role card shows "Paused"). App-wide location calls use
 the ungated `/locations/context`, `/locations/districts`, `/locations/districts/{id}/boundary`, `/locations/cities`.
 
 **Theming**: single fixed light theme (`lib/config/app_theme.dart` + `app_colors.dart`), Material 3,
 Poppins font family declared in `pubspec.yaml`. No dark mode, no localization/i18n setup — all UI
-strings are hard-coded English inline in widgets. Module palettes (rooms / plots / stays / jobs / taxi) live in
-`config/app_colors.dart` + `config/module_palette.dart`; `LocationSwitchSheet`, `LocationSearchSheet` and `LocationPill`
-take a `ModulePalette` (the tab they open from), and `LocationSwitchSheet.pick` returns a `PickedPlace` without
-touching the browsing city. No raw hex outside `app_colors.dart`.
+strings are hard-coded English inline in widgets. Module colors: Rooms = `primary`, Plots = coral `plot`, Stay = pink
+`stay`, Jobs = purple `job`, Taxi = teal `taxi` (each with `Dark`/`Light`/`Surface`/`Gradient` tokens in `config/app_colors.dart`),
+wrapped as `ModulePalette.rooms|plots|stays|jobs|taxi` (`config/module_palette.dart`) and per-module `StayColors`
+(`stay_option_sets.dart`), `JobColors` (`jobs_colors.dart`), `TaxiColors` (`taxi_option_sets.dart`). Shared sheets and pills
+(`LocationSwitchSheet`, `LocationSearchSheet`, `LocationPill`, `FilterSortSheet`, `ReportListingSheet`, nearest sheets) take
+the palette of the module they open from; Stay and Jobs have their own filter sheets in the same colors.
+`LocationSwitchSheet.pick` returns a `PickedPlace` without touching the browsing city. Use the tokens, never a raw hex for a
+module color (only `app_intro_screen.dart` and the add-listing pin painter still carry legacy literals).
 
 **Conventions worth matching**:
 - Older controllers/services (`AuthController`, `LocationController`, `NotificationService`,
