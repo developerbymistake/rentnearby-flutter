@@ -3,13 +3,13 @@ import 'package:get/get.dart';
 import '../../../config/app_colors.dart';
 import '../../../widgets/gradient_button.dart';
 import '../../stay/setup/stay_option_grid.dart';
-import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/jobs_list_controller.dart';
+import '../jobs_colors.dart';
 import '../models/job_experience_bucket.dart';
 import '../models/job_lookups_model.dart';
 
-const _kGradient = StayColors.gradient;
-const _kActive = StayColors.accent;
+const _kGradient = JobColors.gradient;
+const _kActive = JobColors.accent;
 
 class JobsFilterSheet extends StatefulWidget {
   final JobsListController controller;
@@ -115,6 +115,7 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
                         StayOptionGrid(
                           crossAxisCount: 3,
                           childAspectRatio: 2.6,
+                          accent: _kActive,
                           labels: ['All', for (final d in departments) d.name],
                           isActive: (i) => _departmentId == (i == 0 ? null : departments[i - 1].id),
                           onTap: (i) => setState(() => _departmentId = i == 0 ? null : departments[i - 1].id),
@@ -128,6 +129,7 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
                 StayOptionGrid(
                   crossAxisCount: 3,
                   childAspectRatio: 2.6,
+                  accent: _kActive,
                   labels: ['Any', for (final b in JobExperienceBucket.all) b.label],
                   isActive: (i) => _experience == _experienceAt(i),
                   onTap: (i) => setState(() => _experience = _experienceAt(i)),
@@ -138,6 +140,7 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
                 StayOptionGrid(
                   crossAxisCount: 3,
                   childAspectRatio: 2.6,
+                  accent: _kActive,
                   labels: [for (final o in JobsFilterSheet.salaryOptions) o.label],
                   isActive: (i) => _minSalary == JobsFilterSheet.salaryOptions[i].value,
                   onTap: (i) => setState(() => _minSalary = JobsFilterSheet.salaryOptions[i].value),

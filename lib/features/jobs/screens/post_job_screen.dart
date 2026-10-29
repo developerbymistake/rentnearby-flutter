@@ -8,15 +8,15 @@ import '../../../utils/input_formatters.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/gradient_button.dart';
 import '../../stay/setup/stay_option_grid.dart';
-import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/post_job_controller.dart';
+import '../jobs_colors.dart';
 import '../models/job_lookups_model.dart';
 
-const _kAccent = StayColors.accent;
-const _kAccentDark = StayColors.accentDark;
-const _kGradient = StayColors.gradient;
-const _kWarnBg = Color(0xFFFEF3C7);
-const _kWarnText = Color(0xFF92400E);
+const _kAccent = JobColors.accent;
+const _kAccentDark = JobColors.accentDark;
+const _kGradient = JobColors.gradient;
+const _kWarnBg = AppColors.warningSurface;
+const _kWarnText = AppColors.warningText;
 
 class PostJobScreen extends StatefulWidget {
   const PostJobScreen({super.key});
@@ -115,6 +115,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
         body: Obx(() => AppLoadingOverlay(
               isLoading: _ctrl.isSubmitting.value,
               message: 'Posting...',
+              indicatorColor: JobColors.accent,
               child: Column(children: [
                 _header(),
                 _progress(),
@@ -311,7 +312,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
         prefixText: prefix,
         prefixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
         filled: true,
-        fillColor: StayColors.surface,
+        fillColor: JobColors.surface,
         counterText: '',
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -328,7 +329,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
   }) {
     final enabled = onTap != null;
     return Material(
-      color: StayColors.surface,
+      color: JobColors.surface,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -411,7 +412,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
               shrinkWrap: true,
               padding: EdgeInsets.only(bottom: AppInsets.bottomViewPadding(sheetCtx) + 12),
               itemCount: labels.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, indent: 20, endIndent: 20, color: AppColors.divider),
+              separatorBuilder: (_, _) => const Divider(height: 1, indent: 20, endIndent: 20, color: AppColors.divider),
               itemBuilder: (_, i) {
                 final selected = i == selectedIndex;
                 return InkWell(
@@ -530,6 +531,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
           child: StayOptionGrid(
             crossAxisCount: 3,
             childAspectRatio: 2.6,
+            accent: _kAccent,
             labels: l.salaryTypes.map((e) => e.name).toList(),
             isActive: (i) => salaryTypeId == l.salaryTypes[i].id,
             onTap: (i) => _ctrl.salaryTypeId.value = l.salaryTypes[i].id,
@@ -613,6 +615,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
           child: StayOptionGrid(
             crossAxisCount: 2,
             childAspectRatio: 3.9,
+            accent: _kAccent,
             labels: l.jobTypes.map((e) => e.name).toList(),
             isActive: (i) => jobTypeId == l.jobTypes[i].id,
             onTap: (i) => _ctrl.jobTypeId.value = l.jobTypes[i].id,
@@ -623,6 +626,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
           child: StayOptionGrid(
             crossAxisCount: 2,
             childAspectRatio: 3.9,
+            accent: _kAccent,
             labels: l.shiftTypes.map((e) => _shiftLabel(e.name)).toList(),
             isActive: (i) => shiftId == l.shiftTypes[i].id,
             onTap: (i) => _ctrl.shiftTypeId.value = l.shiftTypes[i].id,

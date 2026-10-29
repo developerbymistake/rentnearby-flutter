@@ -6,6 +6,7 @@ import '../screens/explore_landing_screen.dart';
 import '../screens/profile_screen.dart';
 import '../features/stay/guest/stay_landing_screen.dart';
 import '../features/jobs/screens/jobs_landing_screen.dart';
+import '../features/taxi/guest/taxi_list_screen.dart';
 import 'tab_keys.dart';
 
 Widget _rootScreen(int tabId) {
@@ -15,6 +16,7 @@ Widget _rootScreen(int tabId) {
     case AppTabs.plots: return const ExploreLandingScreen(kind: ExploreKind.plots);
     case AppTabs.stays: return const StayLandingScreen();
     case AppTabs.jobs: return const JobsLandingScreen();
+    case AppTabs.taxi: return const TaxiListScreen(root: true);
     case AppTabs.profile: return const ProfileScreen();
     default: return const SizedBox.shrink();
   }

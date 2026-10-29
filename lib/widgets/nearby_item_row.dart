@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_shadows.dart';
+import '../config/module_palette.dart';
 
 class NearbyItemRow extends StatelessWidget {
   final String? thumbnailUrl;
@@ -12,7 +13,7 @@ class NearbyItemRow extends StatelessWidget {
   final String caption;
   final String value;
   final String unit;
-  final bool isPlot;
+  final ModulePalette palette;
   final IconData placeholderIcon;
   final bool elevated;
   final VoidCallback onTap;
@@ -26,7 +27,7 @@ class NearbyItemRow extends StatelessWidget {
     required this.caption,
     required this.value,
     this.unit = '',
-    required this.isPlot,
+    this.palette = ModulePalette.rooms,
     required this.placeholderIcon,
     required this.onTap,
     this.elevated = false,
@@ -34,7 +35,7 @@ class NearbyItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = AppColors.accentFor(isPlot);
+    final accent = palette.accent;
     final size = elevated ? 64.0 : 54.0;
     return GestureDetector(
       onTap: onTap,
@@ -118,7 +119,7 @@ class NearbyItemRow extends StatelessWidget {
   }
 
   Widget _placeholder(Color accent) => Container(
-        decoration: BoxDecoration(gradient: AppColors.gradientFor(isPlot)),
+        decoration: BoxDecoration(gradient: palette.gradient),
         child: Center(child: Icon(placeholderIcon, size: 22, color: Colors.white70)),
       );
 }

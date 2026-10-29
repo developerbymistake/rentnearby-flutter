@@ -158,6 +158,12 @@ List<TourStep> _buildHomeSteps() {
       body: 'Tap here anytime to browse stays near you.',
     ),
     TourStep(
+      key: TourKeys.homeTaxiNavIcon,
+      icon: Iconsax.car,
+      title: 'Need a taxi?',
+      body: 'Find local taxis or search city to city.',
+    ),
+    TourStep(
       key: TourKeys.homeProfileNavIcon,
       icon: Iconsax.user,
       title: 'Your account lives here',

@@ -9,6 +9,7 @@ import '../config/app_constants.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
+import '../config/module_palette.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
@@ -18,6 +19,7 @@ import '../models/browse_item.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
 import '../features/jobs/controllers/my_jobs_controller.dart';
+import '../features/jobs/jobs_colors.dart';
 import '../features/stay/setup/stay_flow.dart';
 import '../features/stay/setup/stay_option_sets.dart';
 import '../features/taxi/setup/taxi_flow.dart';
@@ -606,11 +608,7 @@ class _HomeScreenState extends State<HomeScreen> {
             key: TourKeys.homeQuickActionLeads,
             child: _ownerQuickActionTile(
               icon: Icons.bar_chart_rounded,
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFBBF24), AppColors.warning],
-              ),
+              gradient: AppColors.warningGradient,
               label: stays ? 'My Stays' : 'My Listings',
               motion: IconMotionStyle.grow,
               compact: stays,
@@ -628,18 +626,14 @@ class _HomeScreenState extends State<HomeScreen> {
         if (stays) ...[
           _ownerQuickActionTile(
             icon: Iconsax.briefcase,
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.accentLight, AppColors.accent],
-            ),
+            gradient: JobColors.gradient,
             label: 'Post Job',
             compact: true,
             onTap: _postJob,
           ),
           _ownerQuickActionTile(
             icon: Iconsax.task_square,
-            gradient: AppColors.primaryGradient,
+            gradient: JobColors.gradient,
             label: 'My Jobs',
             compact: true,
             onTap: () => Get.toNamed(AppRoutes.myJobs),
@@ -826,7 +820,6 @@ class _HomeScreenState extends State<HomeScreen> {
         caption: 'MONTHLY RENT',
         value: BrowseItem.inr(r.priceMonthly),
         unit: '/mo',
-        isPlot: false,
         placeholderIcon: Icons.home_rounded,
         onTap: () => Get.toNamed(AppRoutes.listingDetail, arguments: {'id': r.id}),
       );
@@ -842,7 +835,7 @@ class _HomeScreenState extends State<HomeScreen> {
       subtitle: p.districtName,
       caption: 'PLOT AREA',
       value: '$area ${p.areaUnit}'.trim(),
-      isPlot: true,
+      palette: ModulePalette.plots,
       placeholderIcon: Icons.landscape_rounded,
       onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id}),
     );

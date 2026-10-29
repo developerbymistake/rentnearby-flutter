@@ -6,6 +6,7 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
 import '../../../config/app_shadows.dart';
 import '../../../config/app_tabs.dart';
+import '../../../config/module_palette.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
@@ -18,8 +19,6 @@ import '../../../widgets/listing_grid_card.dart';
 import '../../../widgets/location_switch_sheet.dart';
 import '../../../widgets/selectable_chip.dart';
 import '../../jobs/controllers/my_jobs_controller.dart';
-import '../../taxi/guest/taxi_navigation.dart';
-import '../../taxi/taxi_option_sets.dart';
 import '../setup/stay_option_sets.dart';
 import '../setup/stay_flow.dart';
 import '../stay_types_controller.dart';
@@ -42,7 +41,7 @@ const _kMapGradient = LinearGradient(
   end: Alignment.bottomRight,
   colors: [AppColors.accentLight, AppColors.accent],
 );
-const _kMineGradient = AppColors.primaryGradient;
+const _kMineGradient = AppColors.warningGradient;
 
 void _openMyStays() => Get.toNamed(AppRoutes.myStays);
 
@@ -81,6 +80,9 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
     final p = _scroll.position;
     if (p.maxScrollExtent > 0 && p.pixels >= p.maxScrollExtent * 0.7) _ctrl.loadNextPage();
   }
+
+  @override
+  ModulePalette get searchPalette => StayColors.palette;
 
   void _viewDetails(BrowseItem item) => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': item.id});
 
@@ -254,7 +256,7 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
             ];
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: searching ? null : () => LocationSwitchSheet.show(context, plots: false),
+        onTap: searching ? null : () => LocationSwitchSheet.show(context, palette: StayColors.palette),
         child: Container(
           height: 46,
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -279,7 +281,7 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
                 Container(
                   width: 26,
                   height: 26,
-                  decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                  decoration: const BoxDecoration(color: AppColors.neutralChip, shape: BoxShape.circle),
                   child: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: _kAccentDark),
                 ),
             ],
@@ -291,32 +293,29 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
 
   Widget _buildReviewStrip() {
     return Obx(() {
-      final stay = _auth.canListStays.value && _auth.user.value?.stayStatus == 'PendingReview';
-      final taxi = _auth.canListTaxis.value && _auth.user.value?.taxiStatus == 'PendingReview';
-      if (!stay && !taxi) return const SizedBox.shrink();
-      final accent = taxi ? TaxiColors.accent : _kAccent;
-      final accentDark = taxi ? TaxiColors.accentDark : _kAccentDark;
+      final pending = _auth.canListStays.value && _auth.user.value?.stayStatus == 'PendingReview';
+      if (!pending) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: accent.withValues(alpha: 0.10),
+            color: _kAccent.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: accent.withValues(alpha: 0.35)),
+            border: Border.all(color: _kAccent.withValues(alpha: 0.35)),
           ),
-          child: Row(
+          child: const Row(
             children: [
-              Icon(Iconsax.clock, size: 20, color: accentDark),
-              const SizedBox(width: 10),
+              Icon(Iconsax.clock, size: 20, color: _kAccentDark),
+              SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Under review',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: accentDark)),
-                    Text(taxi ? 'Your taxi is being checked' : 'We will notify you',
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textMedium)),
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: _kAccentDark)),
+                    Text('We will notify you',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textMedium)),
                   ],
                 ),
               ),
@@ -339,34 +338,10 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
       gradient: _kMineGradient,
       onTap: _openMyStays,
     );
-    final taxi = _OptionTile(
-      label: 'Taxi',
-      icon: Iconsax.car,
-      gradient: TaxiColors.gradient,
-      onTap: () => TaxiNavigation.openList(),
-    );
-    final jobs = _OptionTile(
-      label: 'Jobs',
-      icon: Iconsax.briefcase,
-      gradient: _kGradient,
-      onTap: () => _auth.switchToTab(AppTabs.jobs),
-    );
     return Obx(() {
+      if (!_auth.canListStays.value) return const SizedBox.shrink();
       final List<Widget> tiles;
-      if (_auth.canListTaxis.value) {
-        tiles = [
-          _OptionTile(
-            label: 'My Taxi',
-            icon: Iconsax.car,
-            gradient: TaxiColors.gradient,
-            onTap: () => Get.toNamed(AppRoutes.myTaxi),
-          ),
-          jobs,
-          taxi,
-        ];
-      } else if (!_auth.canListStays.value) {
-        tiles = [jobs, taxi];
-      } else if (_auth.user.value?.stayStatus == 'Approved') {
+      if (_auth.user.value?.stayStatus == 'Approved') {
         tiles = [
           myStays,
           _OptionTile(
@@ -381,7 +356,6 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
             gradient: _kMapGradient,
             onTap: () => Get.toNamed(AppRoutes.myJobs),
           ),
-          taxi,
         ];
       } else {
         final draft = _auth.user.value?.stayStatus == 'Draft';
@@ -393,23 +367,11 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
             onTap: StayFlow.start,
           ),
           myStays,
-          taxi,
         ];
       }
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-        child: KeyedSubtree(
-          key: TourKeys.staysLandingTiles,
-          child: tiles.length == 4
-              ? Column(
-                  children: [
-                    _tileRow(tiles.sublist(0, 2)),
-                    const SizedBox(height: 10),
-                    _tileRow(tiles.sublist(2)),
-                  ],
-                )
-              : _tileRow(tiles),
-        ),
+        child: KeyedSubtree(key: TourKeys.staysLandingTiles, child: _tileRow(tiles)),
       );
     });
   }

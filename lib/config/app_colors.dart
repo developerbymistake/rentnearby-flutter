@@ -13,10 +13,34 @@ class AppColors {
   static const Color plotSurface = Color(0xFFF0FDF4);
   static const Color gold = Color(0xFFB8862E);
 
-  /// Hex string for native MapLibre layer APIs, which require a String not a Color —
-  /// derived from [plot] so it can never drift out of sync with it.
-  static String get plotHex =>
-      '#${(plot.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+  // Stay palette
+  static const Color stay = Color(0xFFDB2777);
+  static const Color stayDark = Color(0xFFBE185D);
+  static const Color stayLight = Color(0xFFF472B6);
+  static const Color staySurface = Color(0xFFFDF2F8);
+
+  // Jobs palette
+  static const Color job = Color(0xFF7C3AED);
+  static const Color jobDark = Color(0xFF6D28D9);
+  static const Color jobLight = Color(0xFFA78BFA);
+  static const Color jobSurface = Color(0xFFF5F3FF);
+
+  // Taxi palette
+  static const Color taxi = Color(0xFF0D9488);
+  static const Color taxiDark = Color(0xFF0F766E);
+  static const Color taxiLight = Color(0xFF2DD4BF);
+  static const Color taxiSurface = Color(0xFFF0FDFA);
+  static const Color taxiHeroEnd = Color(0xFF5EEAD4);
+
+  // Hex strings for native MapLibre layer APIs, which require a String not a Color.
+  static String hexOf(Color c) =>
+      '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+  static String get primaryHex => hexOf(primary);
+  static String get plotHex => hexOf(plot);
+  static String get stayHex => hexOf(stay);
+  static String get jobHex => hexOf(job);
+  static String get taxiHex => hexOf(taxi);
+  static String get userDotHex => hexOf(userDot);
 
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(
@@ -32,6 +56,30 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [Color(0xFF15803D), Color(0xFF166534)],
+  );
+
+  static const LinearGradient stayGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [stayLight, stay],
+  );
+
+  static const LinearGradient jobGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [jobLight, job],
+  );
+
+  static const LinearGradient taxiGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [taxiLight, taxi],
+  );
+
+  static const LinearGradient warningGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFBBF24), warning],
   );
 
   static const LinearGradient cardGradient = LinearGradient(
@@ -65,6 +113,22 @@ class AppColors {
   static const Color warning = Color(0xFFF59E0B);
   static const Color error = Color(0xFFEF4444);
   static const Color reportAlert = Color(0xFFEA580C); // burnt-orange — distinct from warning/error
+  static const Color warningSurface = Color(0xFFFEF3C7);
+  static const Color warningText = Color(0xFF92400E);
+  static const Color successSurface = Color(0xFFDCFCE7);
+  static const Color successText = Color(0xFF166534);
+  static const Color successDark = Color(0xFF059669);
+  static const Color successTrack = Color(0xFFD1FAE5);
+  static const Color errorSurface = Color(0xFFFEE2E2);
+  static const Color errorText = Color(0xFF991B1B);
+  static const Color errorDark = Color(0xFFDC2626);
+
+  // Neutral chips / brand
+  static const Color neutralChip = Color(0xFFF1F5F9);
+  static const Color neutralChipText = Color(0xFF475569);
+  static const Color whatsApp = Color(0xFF25D366);
+  static const Color userDot = Color(0xFF1E88E5);
+  static const Color furnished = Color(0xFF8B5CF6);
 
   // Misc
   static const Color divider = Color(0xFFE2E8F0);

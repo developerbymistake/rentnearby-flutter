@@ -73,5 +73,8 @@ class AppTabKeys {
   static const home = 'HOME';
   static const rooms = 'ROOMS';
   static const plots = 'PLOTS';
+  static const stays = 'STAYS';
+  static const jobs = 'JOBS';
+  static const taxi = 'TAXI';
   static const profile = 'PROFILE';
 }

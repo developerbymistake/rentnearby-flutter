@@ -132,7 +132,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
     _picking = true;
     FocusScope.of(context).unfocus();
     try {
-      final picked = await LocationSearchSheet.show(context, bias: _bias);
+      final picked = await LocationSearchSheet.show(context, bias: _bias, palette: TaxiColors.palette);
       if (picked == null || !mounted) return;
       setState(() {
         if (isFrom) {

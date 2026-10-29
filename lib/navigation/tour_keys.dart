@@ -17,6 +17,7 @@ class TourKeys {
   static final homeRoomsNavIcon = GlobalKey();
   static final homePlotsNavIcon = GlobalKey();
   static final homeStaysNavIcon = GlobalKey();
+  static final homeTaxiNavIcon = GlobalKey();
   static final homeProfileNavIcon = GlobalKey();
 
   // Rooms landing

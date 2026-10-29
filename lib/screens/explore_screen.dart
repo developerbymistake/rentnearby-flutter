@@ -12,6 +12,7 @@ import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../config/app_map_state.dart';
+import '../config/module_palette.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../models/browse_item.dart';
@@ -429,7 +430,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     _nativeUserDot = await ctrl.addCircle(CircleOptions(
       geometry: loc,
       circleRadius: 8.0,
-      circleColor: '#1E88E5',
+      circleColor: AppColors.userDotHex,
       circleOpacity: 1.0,
       circleStrokeColor: '#FFFFFF',
       circleStrokeWidth: 2.5,
@@ -572,7 +573,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         builder: (context2, child2) => CustomPaint(
           painter: _RadarPainter(
               progress: _radarController.value,
-              color: const Color(0xFF1E88E5)),
+              color: AppColors.userDot),
         ),
       ),
     );
@@ -1056,7 +1057,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                           Expanded(
                             child: SizedBox(
                               height: 40,
-                              child: LocationPill(key: TourKeys.roomsLocationPill, accentColor: AppColors.primary),
+                              child: LocationPill(key: TourKeys.roomsLocationPill, palette: ModulePalette.rooms),
                             ),
                           ),
                         ]),
@@ -1149,7 +1150,6 @@ class _ExploreScreenState extends State<ExploreScreen>
                     if (idx < total - 1) _listingCtrl.nearestFocusIndex.value = idx + 1;
                   },
                   onCancel: () => _listingCtrl.nearestActive.value = false,
-                  isPlot: false,
                 ),
               ),
             );
@@ -1497,7 +1497,6 @@ class _ExploreScreenState extends State<ExploreScreen>
       caption: 'MONTHLY RENT',
       value: l.priceMonthly != null ? BrowseItem.inr(l.priceMonthly!) : 'On request',
       unit: l.priceMonthly != null ? '/mo' : '',
-      isPlot: false,
       placeholderIcon: Icons.home_rounded,
       elevated: elevated,
       onTap: () => Get.toNamed(AppRoutes.listingDetail, arguments: {'id': l.id, 'distanceKm': l.distanceKm}),

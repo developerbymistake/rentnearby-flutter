@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import '../config/module_palette.dart';
 import '../controllers/location_controller.dart';
 import '../models/location_context.dart';
 import '../models/place_result_model.dart';
@@ -24,7 +25,7 @@ mixin ExploreLocationSearchMixin<T extends StatefulWidget> on State<T> {
   bool get isSearchActive => _locSearchCtrl.searchPinOverride.value != null;
   String? get searchOverrideLabel => _locSearchCtrl.searchPinLabel.value;
   bool get searchResolving => _locSearchCtrl.searchResolving.value;
-  bool get searchPlotsTheme => false;
+  ModulePalette get searchPalette => ModulePalette.rooms;
 
   /// Tap handler for the search toggle button.
   Future<void> onSearchToggleTap(BuildContext context) async {
@@ -33,7 +34,7 @@ mixin ExploreLocationSearchMixin<T extends StatefulWidget> on State<T> {
       _locSearchCtrl.endSearchOverride();
       return;
     }
-    final picked = await LocationSearchSheet.show(context, bias: searchCenter, plots: searchPlotsTheme);
+    final picked = await LocationSearchSheet.show(context, bias: searchCenter, palette: searchPalette);
     if (picked == null || !mounted) return;
     await _applyPickedPlace(picked);
   }

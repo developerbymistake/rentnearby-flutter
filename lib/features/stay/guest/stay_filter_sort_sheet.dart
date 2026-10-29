@@ -7,8 +7,6 @@ import '../setup/stay_option_sets.dart';
 import '../stay_types_controller.dart';
 import 'stay_landing_controller.dart';
 
-const _kGradient = StayColors.gradient;
-const _kActive = StayColors.accent;
 const _kSortChipPadding = EdgeInsets.symmetric(vertical: 13, horizontal: 10);
 
 class StayFilterSortSheet extends StatefulWidget {
@@ -89,7 +87,7 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
             decoration: const BoxDecoration(
-              gradient: _kGradient,
+              gradient: StayColors.gradient,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Column(
@@ -134,7 +132,7 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
                         .map((o) => SelectableChip(
                               label: o.label,
                               selected: _meals == o.value,
-                              activeColor: _kActive,
+                              activeColor: StayColors.accent,
                               onTap: () => setState(() => _meals = _meals == o.value ? null : o.value),
                             ))
                         .toList(),
@@ -147,7 +145,7 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
                     child: SelectableChip(
                       label: _sortOptions[0].label,
                       selected: _sort == _sortOptions[0].value,
-                      activeColor: _kActive,
+                      activeColor: StayColors.accent,
                       padding: _kSortChipPadding,
                       onTap: () => setState(() => _sort = _sortOptions[0].value),
                     ),
@@ -162,7 +160,7 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
                                 child: SelectableChip(
                                   label: o.label,
                                   selected: _sort == o.value,
-                                  activeColor: _kActive,
+                                  activeColor: StayColors.accent,
                                   padding: _kSortChipPadding,
                                   onTap: () => setState(() => _sort = o.value),
                                 ),
@@ -201,8 +199,8 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
                   child: GradientButton(
                     label: 'Apply',
                     height: 46,
-                    gradient: _kGradient,
-                    shadowColor: _kActive,
+                    gradient: StayColors.gradient,
+                    shadowColor: StayColors.accent,
                     onPressed: () {
                       _closing = true;
                       Navigator.of(context).pop();
@@ -235,7 +233,7 @@ class _StayFilterSortSheetState extends State<StayFilterSortSheet> {
             .map((t) => SelectableChip(
                   label: t.name,
                   selected: _stayTypeId == t.id,
-                  activeColor: _kActive,
+                  activeColor: StayColors.accent,
                   onTap: () => setState(() => _stayTypeId = t.id),
                 ))
             .toList(),

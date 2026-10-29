@@ -54,7 +54,7 @@ explicitly:
 
 **Navigation**: `GetMaterialApp` + named routes declared in `lib/config/app_routes.dart`
 (`AppRoutes.routes`, a flat `List<GetPage>` with per-route transitions). The bottom-nav tabs
-(`lib/config/app_tabs.dart`: `home(0) / rooms(1) / plots(2) / profile(3)`, `count = 4`; Chat is not a
+(`lib/config/app_tabs.dart`: `home(0) / rooms(1) / plots(2) / stays(3) / jobs(4) / taxi(5) / profile(6)`, `count = 7`; Chat is not a
 bottom-nav tab, reached instead via a header icon on Home) are NOT part of this
 route table: `MainScreen` renders them as an `IndexedStack` of `TabNavigator` widgets
 (`lib/navigation/tab_router.dart`), each wrapping its tab root screen in its own nested `Navigator`
@@ -171,8 +171,8 @@ navigation-on-tap behavior. A push with an `action_route` goes through `AuthCont
 role cannot open lands on the notifications screen instead (same guard in `notifications_screen.dart`).
 
 **Roles (Seeker / Rent Owner / Property Owner)**: one account, one role; spec in `F:\Dhasu\ROLE_FEATURE.md`.
-- **Stay Owner (4th role, uncompiled)**: `UserRoleKeys.stayOwner`/`canListStays`; `AppTabs.stays = 3` (count 5, Stays is the third module tab); gated owner goes to `/stay-setup` until submit (`postLoginRoute`). Code in `lib/features/stay/`. Rooms have a fixed room name (no bathroom). Jobs (`lib/features/jobs/`, Jobs tab `AppTabs.jobs`): all fields required, own phone + WhatsApp on the job, detail bar is the shared `DetailActionBar` with `showDirections: false`, `whatsAppPhone`, `callLabel`, `reportLabel`, `safetyText` (defaults keep Rooms/Plots/Stay unchanged), no Chat; experience is years with Fresher / N+ yrs tags and filter buckets. Seeker push opens `/job-detail` through the generic `action_route` path. Spec: `F:\Dhasu\STAY_FEATURE.md`, `F:\Dhasu\STAY_JOBS_FEATURE.md`.
-- **Taxi Driver (5th role, uncompiled)**: `UserRoleKeys.taxiDriver`/`canListTaxis` (counts as owner everywhere); no new tab, Taxi tile on the Stays landing and a "Getting there" row on the stay detail; gated driver goes to `/taxi-setup` until submit (`postLoginRoute`). Code in `lib/features/taxi/`. From/To come from `LocationSearchSheet` (Photon, bbox limits it to roughly Uttarakhand). Share link type `t` opens `/taxi-detail` directly. Spec: `F:\Dhasu\TAXI_FEATURE.md`.
+- **Stay Owner (4th role, uncompiled)**: `UserRoleKeys.stayOwner`/`canListStays`; `AppTabs.stays = 3` (Stays is the third module tab); gated owner goes to `/stay-setup` until submit (`postLoginRoute`). Code in `lib/features/stay/`. Rooms have a fixed room name (no bathroom). Jobs (`lib/features/jobs/`, Jobs tab `AppTabs.jobs`): all fields required, own phone + WhatsApp on the job, detail bar is the shared `DetailActionBar` with `showDirections: false`, `whatsAppPhone`, `callLabel`, `reportLabel`, `safetyText` (defaults keep Rooms/Plots/Stay unchanged), no Chat; experience is years with Fresher / N+ yrs tags and filter buckets. Seeker push opens `/job-detail` through the generic `action_route` path. Spec: `F:\Dhasu\STAY_FEATURE.md`, `F:\Dhasu\STAY_JOBS_FEATURE.md`.
+- **Taxi Driver (5th role, uncompiled)**: `UserRoleKeys.taxiDriver`/`canListTaxis` (counts as owner everywhere); Taxi tab `AppTabs.taxi` (root `TaxiListScreen(root: true)`, tag `taxi`; pushed copy tag `taxi-push`), no Taxi tile on the Stays landing. The stay detail "Getting there" row searches From = traveller's current GPS city (`travellerCity`, never the browsing city) to To = stay city centroid; See all pushes the Taxi list prefilled. Gated driver goes to `/taxi-setup` until submit (`postLoginRoute`). Code in `lib/features/taxi/`. Taxi list From/To use `LocationSwitchSheet.pick`; driver route From/To use `LocationSearchSheet` (Photon, bbox limits it to roughly Uttarakhand). Share link type `t` opens `/taxi-detail` directly. Spec: `F:\Dhasu\TAXI_FEATURE.md`.
 - `lib/config/user_roles.dart` is the single capability map: `UserRoleKeys` (`SEEKER`/`RENT_OWNER`/
   `PROPERTY_OWNER`, `claim = 'role'`; names via `RoleVisuals.displayName` in `role_option_card.dart`), `RoleCapabilities.byRole` (role key -> `canListRooms`,
   `canListPlots`; Seeker has neither, an unknown key falls back to none), `RoleRequestErrorTypes` and
@@ -277,7 +277,10 @@ sites.
 
 **Theming**: single fixed light theme (`lib/config/app_theme.dart` + `app_colors.dart`), Material 3,
 Poppins font family declared in `pubspec.yaml`. No dark mode, no localization/i18n setup — all UI
-strings are hard-coded English inline in widgets.
+strings are hard-coded English inline in widgets. Module palettes (rooms / plots / stays / jobs / taxi) live in
+`config/app_colors.dart` + `config/module_palette.dart`; `LocationSwitchSheet`, `LocationSearchSheet` and `LocationPill`
+take a `ModulePalette` (the tab they open from), and `LocationSwitchSheet.pick` returns a `PickedPlace` without
+touching the browsing city. No raw hex outside `app_colors.dart`.
 
 **Conventions worth matching**:
 - Older controllers/services (`AuthController`, `LocationController`, `NotificationService`,

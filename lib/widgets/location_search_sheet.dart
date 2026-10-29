@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../config/app_colors.dart';
+import '../config/module_palette.dart';
 import '../models/place_result_model.dart';
 import '../services/photon_service.dart';
 import '../utils/input_formatters.dart';
@@ -15,10 +16,11 @@ import '../utils/input_formatters.dart';
 /// either screen's location state to the other.
 class LocationSearchSheet extends StatefulWidget {
   final LatLng? bias;
-  final bool plots;
-  const LocationSearchSheet({super.key, this.bias, this.plots = false});
+  final ModulePalette palette;
+  const LocationSearchSheet({super.key, this.bias, this.palette = ModulePalette.rooms});
 
-  static Future<PlaceResult?> show(BuildContext context, {LatLng? bias, bool plots = false}) {
+  static Future<PlaceResult?> show(BuildContext context,
+      {LatLng? bias, ModulePalette palette = ModulePalette.rooms}) {
     return showModalBottomSheet<PlaceResult>(
       context: context,
       isScrollControlled: true,
@@ -26,7 +28,7 @@ class LocationSearchSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => LocationSearchSheet(bias: bias, plots: plots),
+      builder: (_) => LocationSearchSheet(bias: bias, palette: palette),
     );
   }
 
@@ -35,8 +37,8 @@ class LocationSearchSheet extends StatefulWidget {
 }
 
 class _LocationSearchSheetState extends State<LocationSearchSheet> {
-  Color get _accent => widget.plots ? AppColors.plot : AppColors.primary;
-  Gradient get _gradient => widget.plots ? AppColors.plotGradient : AppColors.primaryGradient;
+  Color get _accent => widget.palette.accent;
+  Gradient get _gradient => widget.palette.gradient;
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
 
@@ -179,19 +181,17 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
           prefixIcon: const Icon(Icons.search_rounded,
               size: 20, color: AppColors.textHint),
           filled: true,
-          fillColor: widget.plots ? AppColors.plotSurface : AppColors.surface,
+          fillColor: widget.palette.surface,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
-          focusedBorder: widget.plots
-              ? OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.plot, width: 1.5),
-                )
-              : null,
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: _accent, width: 1.5),
+          ),
         ),
       ),
     );
@@ -257,7 +257,7 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: widget.palette.surface,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(

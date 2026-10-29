@@ -255,7 +255,7 @@ class _OwnerBanner extends StatelessWidget {
                               width: 96,
                               height: 96,
                               decoration: const BoxDecoration(
-                                gradient: RoleVisuals.taxiGradient,
+                                gradient: AppColors.taxiGradient,
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(Iconsax.car, size: 48, color: Colors.white),
@@ -352,7 +352,13 @@ class _OwnerBanner extends StatelessWidget {
                                         : AppRoutes.myPlots,
                           )
                       : () => Get.find<AuthController>().switchToTab(
-                            isRooms ? AppTabs.rooms : AppTabs.plots,
+                            isTaxi
+                                ? AppTabs.taxi
+                                : isStay
+                                    ? AppTabs.stays
+                                    : isRooms
+                                        ? AppTabs.rooms
+                                        : AppTabs.plots,
                           ),
                   child: PulseOnce(
                     child: SweepHighlight(

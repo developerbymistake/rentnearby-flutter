@@ -111,7 +111,7 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> {
         ]),
       ),
       Obx(() => _ctrl.isSaving.value
-          ? AppLoadingOverlay.stackChild(message: 'Submitting...')
+          ? AppLoadingOverlay.stackChild(message: 'Submitting...', indicatorColor: StayColors.accent)
           : const SizedBox.shrink()),
     ]);
     return Obx(() => PopScope(canPop: !_ctrl.isSaving.value, child: body));

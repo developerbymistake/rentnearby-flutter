@@ -7,8 +7,6 @@ import '../../../models/browse_item.dart';
 import '../models/taxi_browse_item.dart';
 import '../taxi_option_sets.dart';
 
-const _kWhatsApp = Color(0xFF25D366);
-
 class TaxiCard extends StatelessWidget {
   final TaxiBrowseItem item;
   final VoidCallback onOpen;
@@ -112,9 +110,9 @@ class TaxiCard extends StatelessWidget {
                     icon: Image.asset('assets/images/whatsapp_icon.png',
                         width: 14,
                         height: 14,
-                        errorBuilder: (_, _, _) => const Icon(Icons.chat, color: _kWhatsApp, size: 14)),
+                        errorBuilder: (_, _, _) => const Icon(Icons.chat, color: AppColors.whatsApp, size: 14)),
                     label: 'WhatsApp',
-                    color: _kWhatsApp,
+                    color: AppColors.whatsApp,
                   ),
                 ),
               ]),
@@ -194,14 +192,14 @@ class _AvailablePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(999)),
+        decoration: BoxDecoration(color: AppColors.successSurface, borderRadius: BorderRadius.circular(999)),
         child: const Text('AVAILABLE',
             style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.4,
-                color: Color(0xFF166534))),
+                color: AppColors.successText)),
       );
 }
 

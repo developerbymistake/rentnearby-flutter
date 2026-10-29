@@ -62,8 +62,8 @@ class TaxiOwnerCard extends StatelessWidget {
           ),
         if (taxi.isPendingReview)
           _bottomStrip(
-            color: const Color(0xFFFEF3C7),
-            foreground: const Color(0xFF92400E),
+            color: AppColors.warningSurface,
+            foreground: AppColors.warningText,
             icon: Iconsax.clock,
             text: 'Under review · We will notify you',
           ),
@@ -158,13 +158,7 @@ class TaxiOwnerCard extends StatelessWidget {
       child: Container(
         height: 100,
         width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [TaxiColors.surface, Color(0xFF5EEAD4)],
-          ),
-        ),
+        decoration: const BoxDecoration(gradient: TaxiColors.heroGradient),
         child: Stack(children: [
           const Center(child: Icon(Iconsax.car, size: 40, color: TaxiColors.accent)),
           Positioned(
@@ -186,11 +180,11 @@ class TaxiOwnerCard extends StatelessWidget {
 
   Widget _statusBadge() {
     final (String label, Color bg, Color fg) = switch (taxi.status) {
-      TaxiStatus.approved when taxi.isAvailable => ('LIVE', const Color(0xFFDCFCE7), const Color(0xFF166534)),
-      TaxiStatus.approved => ('OFFLINE', AppColors.surface, AppColors.textLight),
-      TaxiStatus.pendingReview => ('UNDER REVIEW', const Color(0xFFFEF3C7), const Color(0xFF92400E)),
-      TaxiStatus.rejected => ('REJECTED', const Color(0xFFFEE2E2), const Color(0xFF991B1B)),
-      _ => ('DRAFT', AppColors.surface, AppColors.textLight),
+      TaxiStatus.approved when taxi.isAvailable => ('LIVE', AppColors.successSurface, AppColors.successText),
+      TaxiStatus.approved => ('OFFLINE', AppColors.neutralChip, AppColors.textLight),
+      TaxiStatus.pendingReview => ('UNDER REVIEW', AppColors.warningSurface, AppColors.warningText),
+      TaxiStatus.rejected => ('REJECTED', AppColors.errorSurface, AppColors.errorText),
+      _ => ('DRAFT', AppColors.neutralChip, AppColors.textLight),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -259,8 +253,8 @@ class TaxiOwnerCard extends StatelessWidget {
               Switch(
                 value: approved && taxi.isAvailable,
                 onChanged: approved ? onAvailableChanged : null,
-                activeThumbColor: const Color(0xFF10B981),
-                activeTrackColor: const Color(0xFFD1FAE5),
+                activeThumbColor: AppColors.success,
+                activeTrackColor: AppColors.successTrack,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ]),

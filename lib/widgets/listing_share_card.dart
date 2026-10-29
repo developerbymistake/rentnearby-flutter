@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../config/app_colors.dart';
+import '../config/module_palette.dart';
 
 /// Which listing type the card is branded for — drives gradient, ribbon text, and tagline.
 enum ShareCardType { room, plot, stay, taxi }
@@ -41,18 +42,14 @@ class ListingShareCard extends StatelessWidget {
   bool get _isPlot => type == ShareCardType.plot;
   bool get _isStay => type == ShareCardType.stay;
   bool get _isTaxi => type == ShareCardType.taxi;
-  static const _stayGradient = LinearGradient(colors: [AppColors.warning, Color(0xFFD97706)]);
-  static const _taxiGradient = LinearGradient(colors: [Color(0xFF2DD4BF), Color(0xFF0D9488)]);
-  LinearGradient get _gradient => _isTaxi
-      ? _taxiGradient
-      : _isStay
-          ? _stayGradient
-          : (_isPlot ? AppColors.plotGradient : AppColors.primaryGradient);
-  Color get _typeColor => _isTaxi
-      ? const Color(0xFF0D9488)
-      : _isStay
-          ? const Color(0xFFD97706)
-          : (_isPlot ? AppColors.plot : AppColors.primary);
+  ModulePalette get _palette => switch (type) {
+        ShareCardType.room => ModulePalette.rooms,
+        ShareCardType.plot => ModulePalette.plots,
+        ShareCardType.stay => ModulePalette.stays,
+        ShareCardType.taxi => ModulePalette.taxi,
+      };
+  LinearGradient get _gradient => _palette.gradient;
+  Color get _typeColor => _palette.accent;
   String get _tagline => _isTaxi
       ? 'Find local taxis near you.'
       : _isStay
@@ -283,12 +280,12 @@ class _FurnishedBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+        color: AppColors.furnished.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: const Text(
         'Furnished',
-        style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF8B5CF6)),
+        style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.furnished),
       ),
     );
   }

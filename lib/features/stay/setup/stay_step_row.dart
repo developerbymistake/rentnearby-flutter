@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../widgets/pulse_once.dart';
-import 'stay_option_sets.dart';
 
 enum StayStepState { locked, current, done }
 
@@ -21,7 +20,7 @@ class StayStepRow extends StatelessWidget {
     required this.subtitle,
     required this.state,
     this.onTap,
-    this.accent = StayColors.accent,
+    required this.accent,
   });
 
   @override

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/app_colors.dart';
+import '../config/module_palette.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../controllers/explore_landing_controller.dart';
 import 'gradient_button.dart';
 import 'selectable_chip.dart';
-
-const _kPlotGradient = AppColors.plotGradient;
-const _kPlotColor = AppColors.plot;
 
 // Sort options render one-per-row (full-width Newest, then a 2-up pair) so
 // they read as real buttons — taller than the dense room/plot type grid's
@@ -86,8 +84,9 @@ class _FilterSortSheetState extends State<FilterSortSheet> {
   }
 
   bool get _isRooms => widget.controller.isRooms;
-  Color get _activeColor => _isRooms ? AppColors.primary : _kPlotColor;
-  Gradient get _headerGradient => _isRooms ? AppColors.primaryGradient : _kPlotGradient;
+  ModulePalette get _palette => _isRooms ? ModulePalette.rooms : ModulePalette.plots;
+  Color get _activeColor => _palette.accent;
+  Gradient get _headerGradient => _palette.gradient;
 
   List<_SortOption> get _sortOptions => _isRooms
       ? const [

@@ -18,7 +18,7 @@ import 'storage_service.dart';
 class _DeepLinkTypeConfig {
   final String bySlugPath;
   final int slugSegments;
-  final int? tabIndex;
+  final int tabIndex;
 
   const _DeepLinkTypeConfig(this.bySlugPath, this.slugSegments, this.tabIndex);
 }
@@ -27,7 +27,7 @@ const Map<String, _DeepLinkTypeConfig> _deepLinkTypes = {
   'r': _DeepLinkTypeConfig('/listings/by-slug', 1, AppTabs.rooms),
   'p': _DeepLinkTypeConfig('/plots/by-slug', 1, AppTabs.plots),
   's': _DeepLinkTypeConfig('/stays/by-slug', 1, AppTabs.stays),
-  't': _DeepLinkTypeConfig('/taxis/by-slug', 1, null),
+  't': _DeepLinkTypeConfig('/taxis/by-slug', 1, AppTabs.taxi),
 };
 
 /// Receiver for `developerbymistake.tech/go/{type}/{...slugSegments}` smart-link payloads, from
@@ -193,9 +193,11 @@ class DeepLinkService extends GetxService {
       if (data is! Map) return;
 
       final tabIndex = config.tabIndex;
-      if (tabIndex == null) {
+      if (type == 't') {
         final id = data['id'];
-        if (id is String) unawaited(Get.toNamed(AppRoutes.taxiDetail, arguments: {'id': id}));
+        if (id is! String) return;
+        Get.find<AuthController>().switchToTab(tabIndex);
+        unawaited(Get.toNamed(AppRoutes.taxiDetail, arguments: {'id': id}));
         return;
       }
 

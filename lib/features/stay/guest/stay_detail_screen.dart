@@ -82,6 +82,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
       body: Obx(() => AppLoadingOverlay(
             isLoading: _isSharing.value,
             message: 'Sharing...',
+            indicatorColor: StayColors.accent,
             child: _loading ? _buildLoader() : _buildContent(),
           )),
       bottomNavigationBar: _loading || _stay == null ? null : _buildActionBar(),
@@ -204,9 +205,9 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
                         itemBuilder: (_, i) => CachedNetworkImage(
                           imageUrl: s.photos[i],
                           fit: BoxFit.cover,
-                          placeholder: (ctx, url) => Container(color: AppColors.surface),
+                          placeholder: (ctx, url) => Container(color: AppColors.shimmerBase),
                           errorWidget: (ctx, url, err) => Container(
-                            color: AppColors.surface,
+                            color: AppColors.shimmerBase,
                             child: const Icon(Icons.broken_image_rounded, size: 48, color: AppColors.textHint),
                           ),
                         ),
@@ -282,15 +283,15 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
                   _infoRow(Iconsax.location, 'Location', s.locality.isEmpty ? '-' : s.locality),
                 ]),
               ),
-              if (s.latitude != null && s.longitude != null) ...[
+              if (s.taxiTarget case final to?) ...[
                 const SizedBox(height: 24),
                 _sectionTitle('Getting there'),
                 const SizedBox(height: 8),
                 StayTaxisSection(
-                  stayLat: s.latitude!,
-                  stayLng: s.longitude!,
-                  stayCityName: s.cityName ?? '',
-                  stayDistrictName: s.districtName ?? '',
+                  stayCityId: s.cityId,
+                  stayCityName: s.placeName,
+                  toLat: to.lat,
+                  toLng: to.lng,
                 ),
               ],
               if (s.facilities.isNotEmpty) ...[
@@ -452,9 +453,9 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
           longitude: s.longitude,
           ownerPhone: _isOwner ? null : s.ownerPhone,
           isOwner: _isOwner,
-          onReport: reported ? null : () => ReportListingSheet.show(context, listingId: s.id, listingType: 'Stay'),
+          onReport: reported ? null : () => ReportListingSheet.show(context, listingId: s.id, listingType: 'Stay', palette: StayColors.palette),
           onChat: _isOwner ? null : () => _openChat(s),
-          accent: _kAccent,
+          palette: StayColors.palette,
         );
     });
   }

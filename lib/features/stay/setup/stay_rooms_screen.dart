@@ -244,7 +244,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
           ]),
         ),
         Obx(() => _ctrl.isSaving.value
-            ? AppLoadingOverlay.stackChild(message: 'Saving rooms...')
+            ? AppLoadingOverlay.stackChild(message: 'Saving rooms...', indicatorColor: StayColors.accent)
             : const SizedBox.shrink()),
       ]),
     );
@@ -287,7 +287,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w500, color: AppColors.textDark)),
         ),
         _squareAction(Iconsax.edit_2, StayColors.surface, StayColors.accent, () => _editRoom(i)),
-        _squareAction(Iconsax.close_circle, const Color(0xFFFEE2E2), const Color(0xFF991B1B), () => _removeRoom(i)),
+        _squareAction(Iconsax.close_circle, AppColors.errorSurface, AppColors.errorText, () => _removeRoom(i)),
       ]),
     );
   }
@@ -354,6 +354,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
           crossAxisCount: 4,
           childAspectRatio: 1.9,
           labels: StayOptionSets.maxGuests.map(StayOptionSets.guestsLabel).toList(),
+          accent: StayColors.accent,
           isActive: (i) => _guests == StayOptionSets.maxGuests[i],
           onTap: (i) => setState(() {
             _guests = StayOptionSets.maxGuests[i];
@@ -365,6 +366,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
           crossAxisCount: 3,
           childAspectRatio: 2.6,
           labels: StayOptionSets.meals.map((o) => o.label).toList(),
+          accent: StayColors.accent,
           isActive: (i) => _meals == StayOptionSets.meals[i].value,
           onTap: (i) => setState(() {
             _meals = StayOptionSets.meals[i].value;
@@ -382,6 +384,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       counter: full ? '$_count of $_max · limit reached' : '$_count of $_max',
       enabled: !full,
       onTap: _addAnother,
+      accent: StayColors.accent,
     );
   }
 

@@ -39,6 +39,7 @@ import '../controllers/tour_controller.dart';
 import '../features/stay/guest/stay_landing_controller.dart';
 import '../features/stay/guest/stay_guest_controller.dart';
 import '../features/jobs/controllers/jobs_list_controller.dart';
+import '../features/taxi/guest/taxi_list_controller.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -63,6 +64,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     TabNavigator(tabId: AppTabs.plots),
     TabNavigator(tabId: AppTabs.stays),
     TabNavigator(tabId: AppTabs.jobs),
+    TabNavigator(tabId: AppTabs.taxi),
     TabNavigator(tabId: AppTabs.profile),
   ];
 
@@ -446,9 +448,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + bottomInset),
+        padding: EdgeInsets.fromLTRB(4, 8, 4, 8 + bottomInset),
         // Home/Profile are always active (structural, never admin-deactivatable) so they're
-        // unconditional; Rooms/Plots drop out of the row entirely (not just hidden —
+        // unconditional; every other tab drops out of the row entirely (not just hidden —
         // Expanded would otherwise still reserve their flex slot) the moment the master table
         // marks them inactive. _buildBottomNav() is already called from inside an Obx (see
         // bottomNavigationBar above), so these reactive reads make the whole row rebuild live.
@@ -468,13 +470,21 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 child: _navItem(AppTabs.plots, Iconsax.location, Iconsax.location5,
                     _tabConfigCtrl.displayNameForIndex(AppTabs.plots, 'Plots')),
               ),
-            KeyedSubtree(
-              key: TourKeys.homeStaysNavIcon,
-              child: _navItem(AppTabs.stays, Iconsax.building_4, Iconsax.building_45,
-                  _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
-            ),
-            _navItem(AppTabs.jobs, Iconsax.briefcase, Iconsax.briefcase5,
-                _tabConfigCtrl.displayNameForIndex(AppTabs.jobs, 'Jobs')),
+            if (_tabConfigCtrl.isActive(AppTabKeys.stays))
+              KeyedSubtree(
+                key: TourKeys.homeStaysNavIcon,
+                child: _navItem(AppTabs.stays, Iconsax.building_4, Iconsax.building_45,
+                    _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
+              ),
+            if (_tabConfigCtrl.isActive(AppTabKeys.jobs))
+              _navItem(AppTabs.jobs, Iconsax.briefcase, Iconsax.briefcase5,
+                  _tabConfigCtrl.displayNameForIndex(AppTabs.jobs, 'Jobs')),
+            if (_tabConfigCtrl.isActive(AppTabKeys.taxi))
+              KeyedSubtree(
+                key: TourKeys.homeTaxiNavIcon,
+                child: _navItem(AppTabs.taxi, Iconsax.car, Iconsax.car5,
+                    _tabConfigCtrl.displayNameForIndex(AppTabs.taxi, 'Taxi')),
+              ),
             KeyedSubtree(
               key: TourKeys.homeProfileNavIcon,
               child: _navItem(AppTabs.profile, Iconsax.user, Iconsax.user5,
@@ -509,6 +519,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           if (index == AppTabs.jobs && _auth.tabIndex.value != AppTabs.jobs) {
             jobs?.exploreRefreshTrigger.value++;
           }
+          if (index == AppTabs.taxi && Get.isRegistered<TaxiListController>(tag: TaxiListController.tag)) {
+            Get.find<TaxiListController>(tag: TaxiListController.tag).refreshIfStale();
+          }
           if (index == AppTabs.profile && _auth.tabIndex.value != AppTabs.profile) _auth.profileTabTrigger.value++;
           Get.find<ListingController>().filterResetTrigger.value++;
           Get.find<PlotController>().filterResetTrigger.value++;
@@ -535,7 +548,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                     isActive ? activeIcon : icon,
                     key: ValueKey(isActive),
                     color: isActive ? AppColors.primary : AppColors.textHint,
-                    size: 24,
+                    size: 22,
                   ),
                 ),
                 if (badgeCount > 0)
@@ -558,11 +571,22 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 duration: const Duration(milliseconds: 200),
                 style: TextStyle(
                   fontFamily: 'Poppins',
-                  fontSize: 11,
+                  fontSize: 10.5,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                   color: isActive ? AppColors.primary : AppColors.textHint,
                 ),
-                child: Text(label),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      softWrap: false,
+                      textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

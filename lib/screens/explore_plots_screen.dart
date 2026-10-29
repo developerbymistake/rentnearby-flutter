@@ -11,6 +11,7 @@ import '../config/app_insets.dart';
 import '../config/app_constants.dart';
 import '../config/app_map_state.dart';
 import '../config/app_tabs.dart';
+import '../config/module_palette.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
@@ -35,7 +36,7 @@ class ExplorePlotsScreen extends StatefulWidget {
 class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver, ExploreLocationSearchMixin<ExplorePlotsScreen> {
   @override
-  bool get searchPlotsTheme => true;
+  ModulePalette get searchPalette => ModulePalette.plots;
 
   // ── Map ──────────────────────────────────────────────────────────────────
   MapLibreMapController? _mapController;
@@ -392,7 +393,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     NearestConfirmSheet.show(
       context,
       itemLabel: 'plots',
-      isPlot: true,
+      palette: ModulePalette.plots,
       onConfirm: () => _plotCtrl.loadNearest(center.latitude, center.longitude, district.id),
     );
   }
@@ -1007,7 +1008,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                               Expanded(
                                 child: SizedBox(
                                   height: 40,
-                                  child: LocationPill(key: TourKeys.plotsLocationPill, accentColor: AppColors.plot),
+                                  child: LocationPill(key: TourKeys.plotsLocationPill, palette: ModulePalette.plots),
                                 ),
                               ),
                             ]),
@@ -1101,7 +1102,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
                         if (idx < total - 1) _plotCtrl.nearestFocusIndex.value = idx + 1;
                       },
                       onCancel: () => _plotCtrl.nearestActive.value = false,
-                      isPlot: true,
+                      palette: ModulePalette.plots,
                     ),
                   ),
                 );
@@ -1425,7 +1426,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
       subtitle: '${p.distanceKm.toStringAsFixed(1)} km away',
       caption: 'PLOT AREA',
       value: p.areaDisplay,
-      isPlot: true,
+      palette: ModulePalette.plots,
       placeholderIcon: Icons.landscape_rounded,
       elevated: elevated,
       onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id, 'distanceKm': p.distanceKm}),

@@ -11,22 +11,12 @@ class RoleVisuals {
   static const LinearGradient seekerGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF38BDF8), Color(0xFF0EA5E9)],
+    colors: [AppColors.accentLight, AppColors.accent],
   );
 
-  static const LinearGradient stayGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFFBBF24), AppColors.warning],
-  );
+  static const LinearGradient stayGradient = AppColors.stayGradient;
 
-  static const LinearGradient taxiGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF2DD4BF), Color(0xFF0D9488)],
-  );
-
-  static const Color taxiAccent = Color(0xFF0D9488);
+  static const LinearGradient taxiGradient = AppColors.taxiGradient;
 
   static IconData icon(String key) => switch (key) {
         UserRoleKeys.rentOwner => Iconsax.home_2,
@@ -47,9 +37,9 @@ class RoleVisuals {
   static Color accent(String key) => switch (key) {
         UserRoleKeys.rentOwner => AppColors.primary,
         UserRoleKeys.propertyOwner => AppColors.plot,
-        UserRoleKeys.stayOwner => AppColors.warning,
-        UserRoleKeys.taxiDriver => taxiAccent,
-        _ => const Color(0xFF0EA5E9),
+        UserRoleKeys.stayOwner => AppColors.stay,
+        UserRoleKeys.taxiDriver => AppColors.taxi,
+        _ => AppColors.accent,
       };
 
   static String displayName(String key) => switch (key) {

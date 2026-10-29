@@ -58,9 +58,9 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   String _initWhatsApp = '';
   LatLng? _initPin;
 
-  static const _locationStyle = LocationStepStyle(
-    circleColorHex: '#0D9488',
-    userDotColorHex: '#1E88E5',
+  static final _locationStyle = LocationStepStyle(
+    circleColorHex: AppColors.taxiHex,
+    userDotColorHex: AppColors.userDotHex,
     accentColor: TaxiColors.accent,
     addressSpinnerColor: TaxiColors.accent,
     addressPrefixIcon: Iconsax.car,

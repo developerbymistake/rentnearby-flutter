@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
-import 'stay_option_sets.dart';
 
 class DashedAddRow extends StatelessWidget {
   final String label;
@@ -16,7 +15,7 @@ class DashedAddRow extends StatelessWidget {
     required this.counter,
     required this.enabled,
     required this.onTap,
-    this.accent = StayColors.accent,
+    required this.accent,
   });
 
   @override

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,13 +16,17 @@ import '../../../widgets/detail_action_bar.dart';
 import '../../../widgets/detail_header.dart';
 import '../../../widgets/gradient_button.dart';
 import '../../../widgets/report_listing_sheet.dart';
-import '../../stay/setup/stay_option_sets.dart';
 import '../data/jobs_repository.dart';
+import '../jobs_colors.dart';
 import '../models/job_detail_model.dart';
 
-const _kAccent = StayColors.accent;
-const _kAccentDark = StayColors.accentDark;
-const _kGradient = StayColors.gradient;
+const _kAccent = JobColors.accent;
+const _kAccentDark = JobColors.accentDark;
+const _kGradient = JobColors.gradient;
+const _kHeroFallback = DecoratedBox(
+  decoration: BoxDecoration(gradient: _kGradient),
+  child: Center(child: Icon(Iconsax.briefcase, size: 56, color: Colors.white)),
+);
 const _kDivider = Padding(
   padding: EdgeInsets.symmetric(vertical: 10),
   child: Divider(height: 1, color: AppColors.divider),
@@ -101,7 +106,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(height: 140 + MediaQuery.of(context).padding.top, color: Colors.white),
+                    Container(height: 240 + MediaQuery.of(context).padding.top, color: Colors.white),
                     Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -156,16 +161,11 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 140,
+          expandedHeight: 240,
           pinned: true,
           backgroundColor: _kAccent,
           leading: _backButton(margin: const EdgeInsets.all(8)),
-          flexibleSpace: const FlexibleSpaceBar(
-            background: DecoratedBox(
-              decoration: BoxDecoration(gradient: _kGradient),
-              child: Center(child: Icon(Iconsax.briefcase, size: 56, color: Colors.white)),
-            ),
-          ),
+          flexibleSpace: FlexibleSpaceBar(background: _buildHero(j)),
         ),
         SliverToBoxAdapter(
           child: Padding(
@@ -213,6 +213,38 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
+  void _openStay(JobDetailModel j) => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': j.stayListingId});
+
+  Widget _buildHero(JobDetailModel j) {
+    final url = j.coverPhotoUrl;
+    return GestureDetector(
+      onTap: j.stayListingId.isEmpty ? null : () => _openStay(j),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (url != null && url.isNotEmpty)
+            CachedNetworkImage(
+              imageUrl: url,
+              fit: BoxFit.cover,
+              placeholder: (_, _) => const ColoredBox(color: AppColors.shimmerBase),
+              errorWidget: (_, _, _) => _kHeroFallback,
+            )
+          else
+            _kHeroFallback,
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.center,
+                colors: [Colors.black45, Colors.transparent],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _closedBanner() => Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -229,9 +261,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         Iconsax.house_2,
         'Stay',
         j.stayName,
-        onTap: j.stayListingId.isEmpty
-            ? null
-            : () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': j.stayListingId}),
+        onTap: j.stayListingId.isEmpty ? null : () => _openStay(j),
       ),
       _infoRow(Iconsax.location, 'Location', j.placeLabel),
       _infoRow(Iconsax.timer_1, 'Experience', j.experienceDetail),
@@ -304,8 +334,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         safetyText: 'Never pay to get a job. Visit the stay before joining.',
         onReport: reported
             ? null
-            : () => ReportListingSheet.show(context, listingId: j.stayListingId, listingType: 'Stay'),
-        accent: _kAccent,
+            : () => ReportListingSheet.show(context, listingId: j.stayListingId, listingType: 'Stay', palette: JobColors.palette),
+        palette: JobColors.palette,
       );
     });
   }

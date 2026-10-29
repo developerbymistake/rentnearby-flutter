@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
-import '../../../controllers/location_controller.dart';
+import '../../../config/app_routes.dart';
+import '../../../config/app_shadows.dart';
+import '../../../config/app_tabs.dart';
+import '../../../controllers/auth_controller.dart';
+import '../../../controllers/tab_config_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/gradient_button.dart';
-import '../../../widgets/location_search_sheet.dart';
-import '../../../widgets/selectable_chip.dart';
+import '../../../widgets/location_switch_sheet.dart';
 import '../models/taxi_browse_item.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_card.dart';
@@ -14,7 +17,8 @@ import 'taxi_list_controller.dart';
 import 'taxi_navigation.dart';
 
 class TaxiListScreen extends StatefulWidget {
-  const TaxiListScreen({super.key});
+  final bool root;
+  const TaxiListScreen({super.key, this.root = false});
 
   @override
   State<TaxiListScreen> createState() => _TaxiListScreenState();
@@ -22,15 +26,27 @@ class TaxiListScreen extends StatefulWidget {
 
 class _TaxiListScreenState extends State<TaxiListScreen> {
   late final TaxiListController _ctrl;
+  late final String _tag;
+  final _auth = Get.find<AuthController>();
   final _scroll = ScrollController();
   bool _picking = false;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = Get.isRegistered<TaxiListController>(tag: TaxiListController.tag)
-        ? Get.find<TaxiListController>(tag: TaxiListController.tag)
-        : Get.put(TaxiListController(), tag: TaxiListController.tag);
+    _tag = widget.root ? TaxiListController.tag : TaxiListController.pushTag;
+    if (Get.isRegistered<TaxiListController>(tag: _tag)) {
+      _ctrl = Get.find<TaxiListController>(tag: _tag);
+      if (!widget.root) {
+        final preset = TaxiPreset.fromArgs(Get.arguments);
+        if (preset != null) _ctrl.applyPreset(preset);
+      }
+    } else {
+      _ctrl = Get.put(
+        TaxiListController(root: widget.root, preset: widget.root ? null : TaxiPreset.fromArgs(Get.arguments)),
+        tag: _tag,
+      );
+    }
     _scroll.addListener(_onScroll);
   }
 
@@ -38,7 +54,7 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
   void dispose() {
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
-    Get.delete<TaxiListController>(tag: TaxiListController.tag);
+    Get.delete<TaxiListController>(tag: _tag);
     super.dispose();
   }
 
@@ -57,24 +73,21 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
     if (_picking) return;
     _picking = true;
     try {
-      final picked = await LocationSearchSheet.show(
+      final picked = await LocationSwitchSheet.pick(
         context,
-        bias: _ctrl.from.value?.latLng ?? Get.find<LocationController>().userLocation.value,
+        palette: TaxiColors.palette,
+        title: isFrom ? 'From city' : 'To city',
       );
       if (picked == null || !mounted) return;
-      if (picked.name.trim().isEmpty) {
-        AppToast.warning('Pick a place from the list');
-        return;
-      }
       final other = isFrom ? _ctrl.to.value : _ctrl.from.value;
-      if (_ctrl.isTooClose(picked, other)) {
+      if (_ctrl.isTooClose(TaxiListController.placeOf(picked), other)) {
         AppToast.warning('From and To must be different places');
         return;
       }
       if (isFrom) {
-        _ctrl.setFrom(picked);
+        _ctrl.setFromCity(picked);
       } else {
-        _ctrl.setTo(picked);
+        _ctrl.setToCity(picked);
       }
     } finally {
       _picking = false;
@@ -93,8 +106,9 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(child: _buildHeader(context)),
-            SliverToBoxAdapter(child: _buildPlaceRows()),
-            SliverToBoxAdapter(child: _buildCategoryChips()),
+            SliverToBoxAdapter(child: _buildReviewStrip()),
+            SliverToBoxAdapter(child: _buildTiles()),
+            SliverToBoxAdapter(child: _buildListHeader()),
             _buildBody(),
             SliverToBoxAdapter(child: _buildFooter()),
           ],
@@ -105,154 +119,234 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
 
   Widget _buildHeader(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
+    final subtitle = Obx(() => Text(
+          _ctrl.to.value != null ? 'Taxis for your route' : 'Local taxis near you',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
+        ));
+    const titleStyle = TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white);
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: TaxiColors.gradient,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
-      padding: EdgeInsets.fromLTRB(12, top + 8, 20, 16),
-      child: Row(children: [
-        IconButton(
-          onPressed: () => Get.back(),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-        ),
-        const SizedBox(width: 2),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text(
-              'Taxi',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),
+      padding: EdgeInsets.fromLTRB(widget.root ? 20 : 12, top + (widget.root ? 16 : 8), 20, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            if (!widget.root) ...[
+              IconButton(
+                onPressed: () => Get.back(),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 2),
+            ],
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                widget.root
+                    ? Obx(() => Text(
+                          Get.find<TabConfigController>().displayNameForIndex(AppTabs.taxi, 'Taxi'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: titleStyle,
+                        ))
+                    : const Text('Taxi', maxLines: 1, overflow: TextOverflow.ellipsis, style: titleStyle),
+                const SizedBox(height: 2),
+                subtitle,
+              ]),
             ),
-            Obx(() => Text(
-                  _ctrl.to.value != null ? 'Taxis for your route' : 'Local taxis near you',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
-                )),
           ]),
+          SizedBox(height: widget.root ? 18 : 12),
+          Padding(
+            padding: EdgeInsets.only(left: widget.root ? 0 : 8),
+            child: _buildSelectors(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectors() {
+    return Obx(() {
+      final f = _ctrl.from.value;
+      final t = _ctrl.to.value;
+      return Column(children: [
+        _selector(
+          label: 'From',
+          icon: Icons.my_location_rounded,
+          value: f?.name,
+          placeholder: 'Pick a city',
+          onTap: () => _pick(isFrom: true),
+          trailing: _ctrl.fromIsCurrent.value || f == null && _ctrl.isLoading.value
+              ? null
+              : _trailingButton(Iconsax.gps, _ctrl.useCurrentFrom),
         ),
-      ]),
-    );
+        const SizedBox(height: 10),
+        _selector(
+          label: 'To',
+          icon: Icons.location_on_outlined,
+          value: t?.name,
+          placeholder: 'Anywhere / pick a city',
+          onTap: () => _pick(isFrom: false),
+          trailing: t != null ? _trailingButton(Iconsax.close_circle, _ctrl.clearTo) : null,
+        ),
+      ]);
+    });
   }
 
-  Widget _buildPlaceRows() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Obx(() {
-        final f = _ctrl.from.value;
-        final t = _ctrl.to.value;
-        return Column(children: [
-          _placeRow(
-            icon: Iconsax.location,
-            text: f != null ? 'From: ${f.name}' : 'From: Select start',
-            isSet: f != null,
-            onTap: () => _pick(isFrom: true),
-          ),
-          const SizedBox(height: 8),
-          _placeRow(
-            icon: Iconsax.search_normal,
-            text: t != null ? 'To: ${t.name}' : 'To: Select destination',
-            isSet: t != null,
-            onTap: () => _pick(isFrom: false),
-            onClear: t != null ? _ctrl.clearTo : null,
-          ),
-        ]);
-      }),
-    );
-  }
-
-  Widget _buildCategoryChips() {
-    const options = TaxiOptionSets.categories;
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
+  Widget _trailingButton(IconData icon, VoidCallback onTap) {
+    return InkResponse(
+      onTap: onTap,
+      radius: 22,
       child: SizedBox(
-        height: 17 + MediaQuery.textScalerOf(context).scale(17),
-        child: Obx(() {
-          final selected = _ctrl.category.value;
-          return ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: options.length + 1,
-            separatorBuilder: (_, _) => const SizedBox(width: 6),
-            itemBuilder: (_, i) {
-              final value = i == 0 ? null : options[i - 1].value;
-              return SelectableChip(
-                label: i == 0 ? 'All' : options[i - 1].label,
-                selected: selected == value,
-                activeColor: TaxiColors.accent,
-                padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 14),
-                onTap: () => _ctrl.setCategory(value),
-              );
-            },
-          );
-        }),
+        width: 36,
+        height: 40,
+        child: Icon(icon, size: 18, color: TaxiColors.accentDark),
       ),
     );
   }
 
-  Widget _placeRow({
+  Widget _selector({
+    required String label,
     required IconData icon,
-    required String text,
-    required bool isSet,
+    required String? value,
+    required String placeholder,
     required VoidCallback onTap,
-    VoidCallback? onClear,
+    Widget? trailing,
   }) {
-    return Material(
-      color: TaxiColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppColors.divider),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 50),
-          child: Padding(
-            padding: EdgeInsets.only(left: 14, right: onClear != null ? 8 : 14),
-            child: Row(children: [
-              Icon(icon, size: 18, color: TaxiColors.accent),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: isSet ? AppColors.textDark : AppColors.textHint,
+    final isSet = value != null;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 50),
+        padding: EdgeInsets.only(left: 14, right: trailing != null ? 4 : 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: AppShadows.premium(TaxiColors.accent, alpha: 0.16, blur: 16, offset: const Offset(0, 6)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 17, color: TaxiColors.accentDark),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
                     ),
-                  ),
+                    Text(
+                      value ?? placeholder,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: isSet ? FontWeight.w700 : FontWeight.w500,
+                        color: isSet ? TaxiColors.accentDark : AppColors.textHint,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              if (onClear != null)
-                InkResponse(
-                  onTap: onClear,
-                  radius: 22,
-                  child: const SizedBox(
-                    width: 36,
-                    height: 44,
-                    child: Icon(Iconsax.close_circle, size: 18, color: AppColors.textHint),
-                  ),
+            ),
+            const SizedBox(width: 6),
+            trailing ??
+                Container(
+                  width: 26,
+                  height: 26,
+                  decoration: const BoxDecoration(color: AppColors.neutralChip, shape: BoxShape.circle),
+                  child: Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: TaxiColors.accentDark),
                 ),
-              const SizedBox(width: 4),
-              Icon(Iconsax.gps, size: 18, color: TaxiColors.accentDark),
-              if (onClear != null) const SizedBox(width: 6),
-            ]),
-          ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildReviewStrip() {
+    return Obx(() {
+      final pending = _auth.canListTaxis.value && _auth.user.value?.taxiStatus == 'PendingReview';
+      if (!pending) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: TaxiColors.accent.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: TaxiColors.accent.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            children: [
+              Icon(Iconsax.clock, size: 20, color: TaxiColors.accentDark),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Under review',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: TaxiColors.accentDark)),
+                    const Text('Your taxi is being checked',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textMedium)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildTiles() {
+    return Obx(() {
+      if (!widget.root || !_auth.canListTaxis.value) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+        child: Row(
+          children: [
+            Expanded(
+              child: _OptionTile(
+                label: 'My Taxi',
+                icon: Iconsax.car,
+                gradient: AppColors.warningGradient,
+                onTap: () => Get.toNamed(AppRoutes.myTaxi),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Spacer(),
+            const SizedBox(width: 10),
+            const Spacer(),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildListHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Obx(() => Text(
+            _ctrl.to.value != null ? 'Route taxis' : 'Taxis near you',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+          )),
     );
   }
 
@@ -266,19 +360,12 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
             child: _buildMessage(
               icon: Iconsax.location,
               title: 'Pick where you start',
-              subtitle: 'Tap From to choose a place',
+              subtitle: 'Tap From to choose a city',
             ),
           );
         }
         final failed = _ctrl.loadFailed.value;
-        final String hint;
-        if (_ctrl.category.value != null) {
-          hint = 'Try another vehicle type';
-        } else if (_ctrl.to.value != null) {
-          hint = 'Try another destination';
-        } else {
-          hint = 'Set To to see route taxis';
-        }
+        final hint = _ctrl.to.value != null ? 'Try another city' : 'Pick a To city for route taxis';
         return SliverToBoxAdapter(
           child: _buildMessage(
             icon: failed ? Iconsax.cloud_cross : Iconsax.car,
@@ -377,5 +464,62 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
         child: SizedBox(height: 36, child: child),
       );
     });
+  }
+}
+
+class _OptionTile extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Gradient gradient;
+  final VoidCallback onTap;
+
+  const _OptionTile({
+    required this.label,
+    required this.icon,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.divider.withValues(alpha: 0.7)),
+          boxShadow: AppShadows.premium(TaxiColors.accent, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: gradient,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 1),
+              ),
+              child: Icon(icon, size: 26, color: Colors.white),
+            ),
+            const SizedBox(height: 6),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                softWrap: false,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

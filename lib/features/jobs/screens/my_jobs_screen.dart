@@ -7,8 +7,8 @@ import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/gradient_button.dart';
-import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/my_jobs_controller.dart';
+import '../jobs_colors.dart';
 import '../models/my_job_model.dart';
 import '../widgets/my_job_card.dart';
 
@@ -47,6 +47,7 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
       body: Obx(() => AppLoadingOverlay(
             isLoading: _ctrl.isSaving.value,
             message: 'Updating...',
+            indicatorColor: JobColors.accent,
             child: Column(children: [
               _header(),
               Expanded(
@@ -54,7 +55,7 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
                   final page = _ctrl.page.value;
                   if (!_ctrl.hasLoaded.value && _ctrl.isLoading.value) return _shimmer();
                   return RefreshIndicator(
-                    color: StayColors.accent,
+                    color: JobColors.accent,
                     onRefresh: _ctrl.load,
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
@@ -86,7 +87,7 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
   Widget _header() {
     final page = _ctrl.page.value;
     return Container(
-      decoration: const BoxDecoration(gradient: StayColors.gradient),
+      decoration: const BoxDecoration(gradient: JobColors.gradient),
       child: SafeArea(
         bottom: false,
         child: Padding(
@@ -122,8 +123,8 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
         Container(
           width: 90,
           height: 90,
-          decoration: const BoxDecoration(color: StayColors.surface, shape: BoxShape.circle),
-          child: const Icon(Iconsax.briefcase, size: 40, color: StayColors.accent),
+          decoration: const BoxDecoration(color: JobColors.surface, shape: BoxShape.circle),
+          child: const Icon(Iconsax.briefcase, size: 40, color: JobColors.accent),
         ),
         const SizedBox(height: 20),
         const Text('No jobs yet',
@@ -137,8 +138,8 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
         GradientButton(
           onPressed: page.canPost ? _openForm : null,
           label: 'Post a Job',
-          gradient: StayColors.gradient,
-          shadowColor: StayColors.accent,
+          gradient: JobColors.gradient,
+          shadowColor: JobColors.accent,
         ),
         if (hint != null) ...[
           const SizedBox(height: 8),
@@ -163,8 +164,8 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
             child: GradientButton(
               label: 'Retry',
               height: 42,
-              gradient: StayColors.gradient,
-              shadowColor: StayColors.accent,
+              gradient: JobColors.gradient,
+              shadowColor: JobColors.accent,
               onPressed: _ctrl.load,
             ),
           ),

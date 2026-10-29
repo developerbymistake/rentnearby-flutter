@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/app_colors.dart';
+import '../config/module_palette.dart';
 import '../controllers/report_controller.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
@@ -9,17 +10,20 @@ import 'gradient_button.dart';
 class ReportListingSheet extends StatefulWidget {
   final String listingId;
   final String listingType; // 'Room' | 'Plot' | 'Stay' | 'Taxi'
+  final ModulePalette palette;
 
   const ReportListingSheet({
     super.key,
     required this.listingId,
     required this.listingType,
+    this.palette = ModulePalette.rooms,
   });
 
   static Future<void> show(
     BuildContext context, {
     required String listingId,
     required String listingType,
+    ModulePalette palette = ModulePalette.rooms,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -35,6 +39,7 @@ class ReportListingSheet extends StatefulWidget {
         child: ReportListingSheet(
           listingId: listingId,
           listingType: listingType,
+          palette: palette,
         ),
       ),
     );
@@ -61,7 +66,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
       color: AppColors.textHint,
     ),
     filled: true,
-    fillColor: AppColors.surface,
+    fillColor: widget.palette.surface,
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
@@ -73,7 +78,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+      borderSide: BorderSide(color: widget.palette.accent, width: 1.5),
     ),
   );
 
@@ -113,11 +118,11 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(
+            child: Text(
               'Cancel',
               style: TextStyle(
                 fontFamily: 'Poppins',
-                color: AppColors.primary,
+                color: widget.palette.accent,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -193,7 +198,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
             color: AppColors.textHint,
           ),
           filled: true,
-          fillColor: AppColors.surface,
+          fillColor: widget.palette.surface,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
@@ -206,7 +211,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+            borderSide: BorderSide(color: widget.palette.accent, width: 1.5),
           ),
         ),
         menuStyle: MenuStyle(
@@ -258,8 +263,8 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
         children: [
           Container(
             padding: const EdgeInsets.fromLTRB(24, 14, 24, 22),
-            decoration: const BoxDecoration(
-              gradient: AppColors.primaryGradient,
+            decoration: BoxDecoration(
+              gradient: widget.palette.gradient,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Column(

@@ -1,4 +1,11 @@
+import '../../../config/app_constants.dart';
 import '../../../models/browse_item.dart';
+
+String? jobPhotoUrl(Object? raw) {
+  final u = raw as String?;
+  if (u == null || u.isEmpty) return null;
+  return u.startsWith('http') ? u : '${AppConstants.serverUrl}$u';
+}
 
 String jobSalaryLabel(int min, int max) =>
     min == max ? BrowseItem.inr(min) : '${BrowseItem.inr(min)} - ${BrowseItem.inr(max).substring(1)}';
@@ -94,7 +101,7 @@ class JobSummaryModel {
         stayListingId: json['stayListingId'] as String? ?? '',
         stayName: json['stayName'] as String? ?? 'Stay',
         stayTypeName: json['stayTypeName'] as String?,
-        coverPhotoUrl: json['coverPhotoUrl'] as String?,
+        coverPhotoUrl: jobPhotoUrl(json['coverPhotoUrl']),
         title: json['title'] as String? ?? '',
         departmentName: json['departmentName'] as String? ?? '',
         roleName: json['roleName'] as String? ?? '',
