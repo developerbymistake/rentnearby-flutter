@@ -17,6 +17,8 @@ import '../controllers/tab_config_controller.dart';
 import '../models/browse_item.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
+import '../features/stay/setup/stay_flow.dart';
+import '../features/stay/setup/stay_option_sets.dart';
 import '../services/add_listing_flow.dart';
 import '../widgets/home_owner_carousel.dart';
 import '../widgets/icon_motion.dart';
@@ -532,7 +534,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Obx(() {
       final canRooms = _auth.canListRooms.value;
       final canPlots = _auth.canListPlots.value;
-      if (!canRooms && !canPlots) return const SizedBox.shrink();
+      final stays = _auth.canListStays.value;
+      if (!canRooms && !canPlots && !stays) return const SizedBox.shrink();
       final rooms = _tabs.isRoomsActive && canRooms;
       final plots = _tabs.isPlotsActive && canPlots;
       final checking = AddListingFlow.checking.value;
@@ -561,7 +564,18 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: checking != null ? null : () => AddListingFlow.start(false),
             ),
           ),
-        if (rooms || plots)
+        if (stays)
+          KeyedSubtree(
+            key: TourKeys.homeQuickActionAddStay,
+            child: _ownerQuickActionTile(
+              icon: Icons.add_rounded,
+              gradient: StayColors.gradient,
+              label: 'Add Stay',
+              motion: IconMotionStyle.pulse,
+              onTap: StayFlow.start,
+            ),
+          ),
+        if (rooms || plots || stays)
           KeyedSubtree(
             key: TourKeys.homeQuickActionLeads,
             child: _ownerQuickActionTile(
@@ -574,7 +588,7 @@ class _HomeScreenState extends State<HomeScreen> {
               label: 'My Listings',
               motion: IconMotionStyle.grow,
               onTap: () => Get.toNamed(
-                canRooms ? AppRoutes.myListings : AppRoutes.myPlots,
+                canRooms ? AppRoutes.myListings : canPlots ? AppRoutes.myPlots : AppRoutes.myStays,
               ),
             ),
           ),

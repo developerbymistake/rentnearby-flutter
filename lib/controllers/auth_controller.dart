@@ -11,6 +11,7 @@ import '../config/app_routes.dart';
 import '../config/app_tabs.dart';
 import '../config/user_roles.dart';
 import 'tab_config_controller.dart';
+import 'location_controller.dart';
 import '../utils/app_toast.dart';
 import '../utils/jwt_claims.dart';
 import '../services/hub_session_manager.dart';
@@ -32,6 +33,7 @@ class AuthController extends GetxController {
   final roleKey = UserRoleKeys.seeker.obs;
   final canListRooms = false.obs;
   final canListPlots = false.obs;
+  final canListStays = false.obs;
   final tabIndex = AppTabs.home.obs;
   final profileTabTrigger = 0.obs;
 
@@ -67,11 +69,12 @@ class AuthController extends GetxController {
     profilePhoneChangeLocked.value = u?.hasUsedPhoneChange ?? false;
   }
 
-  bool get isOwner => canListRooms.value || canListPlots.value;
+  bool get isOwner => canListRooms.value || canListPlots.value || canListStays.value;
 
   bool canOpenRoute(String route) =>
       !(AppRoutes.roomOwnerOnly.contains(route) && !canListRooms.value) &&
-      !(AppRoutes.plotOwnerOnly.contains(route) && !canListPlots.value);
+      !(AppRoutes.plotOwnerOnly.contains(route) && !canListPlots.value) &&
+      !(AppRoutes.stayOwnerOnly.contains(route) && !canListStays.value);
 
   void _syncRoleFromToken(String? token) {
     final key = JwtClaims.role(token) ?? UserRoleKeys.seeker;
@@ -79,9 +82,15 @@ class AuthController extends GetxController {
     final c = RoleCapabilities.of(key);
     canListRooms.value = c.canListRooms;
     canListPlots.value = c.canListPlots;
+    canListStays.value = c.canListStays;
   }
 
-  String get postLoginRoute => (user.value?.roleConfirmed ?? false) ? AppRoutes.main : AppRoutes.roleSelect;
+  String get postLoginRoute {
+    if (!(user.value?.roleConfirmed ?? false)) return AppRoutes.roleSelect;
+    final stayStatus = user.value?.stayStatus;
+    if (canListStays.value && (stayStatus == null || stayStatus == 'Draft')) return AppRoutes.staySetup;
+    return AppRoutes.main;
+  }
 
   @override
   void onInit() {
@@ -247,6 +256,7 @@ class AuthController extends GetxController {
     roleKey.value = UserRoleKeys.seeker;
     canListRooms.value = false;
     canListPlots.value = false;
+    canListStays.value = false;
     _syncProfileFields(null);
     if (reason == LogoutReason.sessionExpired) {
       try {
@@ -266,6 +276,8 @@ class AuthController extends GetxController {
     // registered in MainScreen.initState() — still gets wiped. This is the single place that
     // guarantees the next login on the same device never inherits a prior account's in-memory
     // state, without having to remember to hand-add a reset call per controller.
+    // The stay setup hub registers LocationController as permanent.
+    if (Get.isRegistered<LocationController>()) Get.delete<LocationController>(force: true);
     Get.deleteAll();
   }
 
@@ -367,7 +379,7 @@ class AuthController extends GetxController {
       isLoading.value = true;
       final res = await ApiService.put('/users/me/role-choice', {'role': roleKey});
       await _applySession(res['data'] as Map<String, dynamic>);
-      Get.offAllNamed(AppRoutes.main);
+      Get.offAllNamed(postLoginRoute);
     } catch (e) {
       if (_isUnauthorized(e)) return;
       if (e is DioException && e.response?.statusCode == 409) {
@@ -391,7 +403,7 @@ class AuthController extends GetxController {
     try {
       final res = await ApiService.put('/users/me/role-choice', {'role': current.role});
       await _applySession(res['data'] as Map<String, dynamic>);
-      Get.offAllNamed(AppRoutes.main);
+      Get.offAllNamed(postLoginRoute);
     } catch (e) {
       if (_isUnauthorized(e)) return;
       AppToast.error(_dioMessage(e, 'Could not save your role.'));

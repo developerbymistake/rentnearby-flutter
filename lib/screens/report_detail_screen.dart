@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../models/listing_report_model.dart';
 import '../utils/app_date_format.dart';
+import '../utils/listing_kind_visuals.dart';
 
 class ReportDetailScreen extends StatelessWidget {
   const ReportDetailScreen({super.key});
@@ -12,13 +13,12 @@ class ReportDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final r = Get.arguments as ListingReportModel;
     final isPending = r.status == 'Pending';
-    final isPlot = r.listingType == 'Plot';
-    final accent = AppColors.accentFor(isPlot);
+    final accent = ListingKindVisuals.accentOf(r.listingType);
 
     return Scaffold(
       body: Column(children: [
         Container(
-          decoration: BoxDecoration(gradient: AppColors.gradientFor(isPlot)),
+          decoration: BoxDecoration(gradient: ListingKindVisuals.gradientOf(r.listingType)),
           child: SafeArea(
             bottom: false,
             child: Padding(
@@ -42,7 +42,7 @@ class ReportDetailScreen extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                 decoration: BoxDecoration(color: accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)),
-                child: Text(isPlot ? 'PLOT' : 'ROOM',
+                child: Text(ListingKindVisuals.labelOf(r.listingType),
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: accent)),
               ),
               Container(

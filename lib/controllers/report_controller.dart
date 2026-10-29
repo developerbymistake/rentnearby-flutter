@@ -21,14 +21,20 @@ class ReportController extends GetxController {
     } catch (_) {}
   }
 
+  static String _basePath(String listingType) => switch (listingType) {
+        'Room' => '/listings',
+        'Stay' => '/stays',
+        _ => '/plots',
+      };
+
   Future<bool> submitReport({
     required String listingId,
-    required String listingType, // 'Room' | 'Plot'
+    required String listingType, // 'Room' | 'Plot' | 'Stay'
     required String reasonId,
     required String details,
   }) async {
     try {
-      final path = listingType == 'Room' ? '/listings/$listingId/report' : '/plots/$listingId/report';
+      final path = '${_basePath(listingType)}/$listingId/report';
       await ApiService.post(path, {'reasonId': reasonId, 'details': details});
       reportedListingIds.add(listingId);
       return true;
@@ -40,7 +46,7 @@ class ReportController extends GetxController {
 
   Future<List<ListingReportModel>> fetchListingReports(String listingId, String listingType) async {
     try {
-      final path = listingType == 'Room' ? '/listings/$listingId/reports' : '/plots/$listingId/reports';
+      final path = '${_basePath(listingType)}/$listingId/reports';
       final res = await ApiService.get(path);
       return (res['data']['items'] as List).map((e) => ListingReportModel.fromJson(e)).toList();
     } catch (e) {

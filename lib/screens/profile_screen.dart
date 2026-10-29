@@ -771,7 +771,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
                   ),
                   child: const Text(
-                    'This will permanently delete your account, all listings, plots, photos, and wallet credit balance. This action cannot be undone.',
+                    'This will permanently delete your account, all your listings, photos, and wallet credit balance. This action cannot be undone.',
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.error, height: 1.55),
                   ),
                 ),

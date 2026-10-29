@@ -9,11 +9,13 @@ class TourKeys {
   static final homeManageListingsCard = GlobalKey();
   static final homeQuickActionAddRoom = GlobalKey();
   static final homeQuickActionAddPlot = GlobalKey();
+  static final homeQuickActionAddStay = GlobalKey();
   static final homeQuickActionLeads = GlobalKey();
   static final homeInstagramCard = GlobalKey();
   static final homeActionMenu = GlobalKey();
   static final homeRoomsNavIcon = GlobalKey();
   static final homePlotsNavIcon = GlobalKey();
+  static final homeStaysNavIcon = GlobalKey();
   static final homeProfileNavIcon = GlobalKey();
 
   // Rooms landing
@@ -33,6 +35,15 @@ class TourKeys {
   static final plotsLandingSort = GlobalKey();
   static final plotsLandingList = GlobalKey();
   static final plotsLandingMapPill = GlobalKey();
+
+  // Stays landing
+  static final staysLandingLocation = GlobalKey();
+  static final staysLandingSearch = GlobalKey();
+  static final staysLandingTiles = GlobalKey();
+  static final staysLandingFilters = GlobalKey();
+  static final staysLandingSort = GlobalKey();
+  static final staysLandingList = GlobalKey();
+  static final staysLandingMapPill = GlobalKey();
 
   // Rooms map
   static final roomsLocationPill = GlobalKey();

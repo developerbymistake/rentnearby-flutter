@@ -5,7 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../config/app_colors.dart';
 
 /// Which listing type the card is branded for — drives gradient, ribbon text, and tagline.
-enum ShareCardType { room, plot }
+enum ShareCardType { room, plot, stay }
 
 /// The image captured and shared by [shareListing] (`lib/services/listing_share_service.dart`)
 /// — a Room/Plot equivalent of `rentnearby_Admin`'s `AppShareScreen._buildPosterCard`, but
@@ -39,10 +39,15 @@ class ListingShareCard extends StatelessWidget {
   });
 
   bool get _isPlot => type == ShareCardType.plot;
-  LinearGradient get _gradient => _isPlot ? AppColors.plotGradient : AppColors.primaryGradient;
-  Color get _typeColor => _isPlot ? AppColors.plot : AppColors.primary;
-  String get _tagline => _isPlot ? 'Find plots for sale near you.' : 'Find rooms for rent near you.';
-  String get _ribbonText => _isPlot ? 'FOR SALE' : 'FOR RENT';
+  bool get _isStay => type == ShareCardType.stay;
+  static const _stayGradient = LinearGradient(colors: [AppColors.warning, Color(0xFFD97706)]);
+  LinearGradient get _gradient =>
+      _isStay ? _stayGradient : (_isPlot ? AppColors.plotGradient : AppColors.primaryGradient);
+  Color get _typeColor => _isStay ? const Color(0xFFD97706) : (_isPlot ? AppColors.plot : AppColors.primary);
+  String get _tagline => _isStay
+      ? 'Find stays near you.'
+      : (_isPlot ? 'Find plots for sale near you.' : 'Find rooms for rent near you.');
+  String get _ribbonText => _isStay ? 'FOR STAY' : (_isPlot ? 'FOR SALE' : 'FOR RENT');
 
   @override
   Widget build(BuildContext context) {

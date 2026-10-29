@@ -63,6 +63,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
   Worker? _userLocationWorker;
   Worker? _resumeRefreshWorker;
   LatLng? _selectedLocation;
+  LatLng? _prefilledPin;
   LatLng? _userLocation;
   Circle? _userDot;
   final _locationCtrl = Get.find<LocationController>();
@@ -94,6 +95,14 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
 
   void focusAddressField() => _addressFocusNode.requestFocus();
 
+  // Edit flows: call after initLocationTracking to restore a saved pin and address.
+  void prefillLocation(LatLng pin, String? address) {
+    _pinManuallyPlaced = true;
+    _prefilledPin = pin;
+    _selectedLocation = pin;
+    if (address != null && address.isNotEmpty) _addressCtrl.text = address;
+  }
+
   void snapLocationToUserIfUnset() {
     if (_selectedLocation == null) setState(() => _selectedLocation = _userLocation);
   }
@@ -117,10 +126,10 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     // manually-placed pin — see _onUserLocationChanged's doc comment.
     _resumeRefreshWorker = ever<int>(_locationCtrl.resumeLocationRefreshedTrigger, (_) {
       if (!mounted) return;
-      _pinManuallyPlaced = false;
+      if (_prefilledPin == null) _pinManuallyPlaced = false;
       final newLoc = _locationCtrl.userLocation.value;
       _onUserLocationChanged(newLoc);
-      if (newLoc != null) _resolveDistrictForPin(newLoc);
+      if (newLoc != null && _prefilledPin == null) _resolveDistrictForPin(newLoc);
       onLocationStale?.call();
     });
     // Covers district resolution completing (or changing) after the Location
@@ -375,7 +384,10 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
         _showAddressResolveOverlay = false;
       });
       final displayName = ctx.address;
-      if (displayName != null && displayName.isNotEmpty) {
+      final keepSavedAddress = pos.latitude == _prefilledPin?.latitude &&
+          pos.longitude == _prefilledPin?.longitude &&
+          _addressCtrl.text.trim().isNotEmpty;
+      if (!keepSavedAddress && displayName != null && displayName.isNotEmpty) {
         final parts = displayName.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
         _addressCtrl.text = parts.take(3).join(', ');
       }

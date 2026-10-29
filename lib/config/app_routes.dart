@@ -22,6 +22,8 @@ import '../screens/wallet_ledger_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/role_select_screen.dart';
 import '../screens/role_change_screen.dart';
+import '../features/stay/stay_routes.dart';
+import '../features/jobs/jobs_routes.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -53,8 +55,21 @@ class AppRoutes {
   static const String roleSelect = '/role-select';
   static const String roleChange = '/role-change';
 
+  static const String staySetup = '/stay-setup';
+  static const String stayBasicDetails = '/stay-basic-details';
+  static const String stayRooms = '/stay-rooms';
+  static const String stayRules = '/stay-rules';
+  static const String staySubmit = '/stay-submit';
+  static const String myStays = '/my-stays';
+  static const String stayDetail = '/stay-detail';
+
+  static const String myJobs = '/my-jobs';
+  static const String postJob = '/post-job';
+  static const String jobDetail = '/job-detail';
+
   static const Set<String> roomOwnerOnly = {myListings, addListing};
   static const Set<String> plotOwnerOnly = {myPlots, addPlot};
+  static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob};
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
@@ -196,5 +211,7 @@ class AppRoutes {
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),
+    ...stayPages,
+    ...jobPages,
   ];
 }

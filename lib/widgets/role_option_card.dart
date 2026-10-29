@@ -14,27 +14,37 @@ class RoleVisuals {
     colors: [Color(0xFF38BDF8), Color(0xFF0EA5E9)],
   );
 
+  static const LinearGradient stayGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFBBF24), AppColors.warning],
+  );
+
   static IconData icon(String key) => switch (key) {
         UserRoleKeys.rentOwner => Iconsax.home_2,
         UserRoleKeys.propertyOwner => Icons.landscape_rounded,
+        UserRoleKeys.stayOwner => Iconsax.building_4,
         _ => Iconsax.search_normal,
       };
 
   static LinearGradient gradient(String key) => switch (key) {
         UserRoleKeys.rentOwner => AppColors.primaryGradient,
         UserRoleKeys.propertyOwner => AppColors.plotGradient,
+        UserRoleKeys.stayOwner => stayGradient,
         _ => seekerGradient,
       };
 
   static Color accent(String key) => switch (key) {
         UserRoleKeys.rentOwner => AppColors.primary,
         UserRoleKeys.propertyOwner => AppColors.plot,
+        UserRoleKeys.stayOwner => AppColors.warning,
         _ => const Color(0xFF0EA5E9),
       };
 
   static String displayName(String key) => switch (key) {
         UserRoleKeys.rentOwner => 'Rent Owner',
         UserRoleKeys.propertyOwner => 'Property Owner',
+        UserRoleKeys.stayOwner => 'Stay Owner',
         _ => 'Seeker',
       };
 }

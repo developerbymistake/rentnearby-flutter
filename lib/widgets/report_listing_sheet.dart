@@ -8,7 +8,7 @@ import 'gradient_button.dart';
 
 class ReportListingSheet extends StatefulWidget {
   final String listingId;
-  final String listingType; // 'Room' | 'Plot'
+  final String listingType; // 'Room' | 'Plot' | 'Stay'
 
   const ReportListingSheet({
     super.key,

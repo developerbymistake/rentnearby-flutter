@@ -7,6 +7,7 @@ import 'package:play_install_referrer/play_install_referrer.dart';
 import '../config/app_tabs.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
+import '../features/stay/guest/stay_navigation.dart';
 import 'api_service.dart';
 import 'explore_navigation.dart';
 import 'storage_service.dart';
@@ -24,6 +25,7 @@ class _DeepLinkTypeConfig {
 const Map<String, _DeepLinkTypeConfig> _deepLinkTypes = {
   'r': _DeepLinkTypeConfig('/listings/by-slug', 1, AppTabs.rooms),
   'p': _DeepLinkTypeConfig('/plots/by-slug', 1, AppTabs.plots),
+  's': _DeepLinkTypeConfig('/stays/by-slug', 1, AppTabs.stays),
 };
 
 /// Receiver for `developerbymistake.tech/go/{type}/{...slugSegments}` smart-link payloads, from
@@ -195,7 +197,11 @@ class DeepLinkService extends GetxService {
       if (lat != null && lng != null) {
         unawaited(_applySearchPin(lat, lng, data['address'] as String?));
       }
-      unawaited(ExploreNavigation.openMap(config.tabIndex));
+      if (type == 's') {
+        unawaited(StayNavigation.openMap());
+      } else {
+        unawaited(ExploreNavigation.openMap(config.tabIndex));
+      }
     } catch (_) {
       // Unknown/soft-deleted slug (404) or a network failure — nothing to show for a route
       // the user didn't explicitly navigate to inside the app, so fail silently rather than

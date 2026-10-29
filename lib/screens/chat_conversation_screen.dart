@@ -9,6 +9,7 @@ import '../models/message_model.dart';
 import '../models/question_template_model.dart';
 import '../services/chat_hub_service.dart';
 import '../services/notification_service.dart';
+import '../utils/listing_kind_visuals.dart';
 import '../widgets/chat_message_bubble.dart';
 import '../widgets/chat_next_slot_bubble.dart';
 import '../widgets/chat_plus_menu_sheet.dart';
@@ -26,10 +27,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
 
   late final String _conversationId;
   late final String _listingType;
-  bool get _isPlot => _listingType != 'Room';
-  Color get _accent => AppColors.accentFor(_isPlot);
+  Color get _accent => ListingKindVisuals.accentOf(_listingType);
   late final String? _roomTypeId;
   late final String? _plotTypeId;
+  late final String? _stayTypeId;
   late final String _otherPartyId;
   late final String _otherPartyName;
   late final String _listingTitle;
@@ -85,6 +86,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     _listingType = args['listingType'] as String;
     _roomTypeId = args['roomTypeId'] as String?;
     _plotTypeId = args['plotTypeId'] as String?;
+    _stayTypeId = args['stayTypeId'] as String?;
     _otherPartyId = args['otherPartyId'] as String? ?? '';
     _otherPartyName = args['otherPartyName'] as String? ?? 'User';
     _listingTitle = args['listingTitle'] as String? ?? '';
@@ -382,6 +384,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                     _listingType,
                     targetRoomTypeId: _roomTypeId,
                     targetPlotTypeId: _plotTypeId,
+                    targetStayTypeId: _stayTypeId,
                   ),
                 )
                 .toList();
@@ -711,7 +714,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     // Row's content gets padded down to clear it. This is what makes the status bar read as
     // "part of the navy header" instead of a separate light strip above it.
     return Container(
-      decoration: BoxDecoration(gradient: AppColors.gradientFor(_isPlot)),
+      decoration: BoxDecoration(gradient: ListingKindVisuals.gradientOf(_listingType)),
       child: SafeArea(
         bottom: false,
         child: Padding(
@@ -753,7 +756,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                       ),
                     ),
                     Text(
-                      '${_listingType == 'Room' ? '🏠' : '📍'} $_listingTitle'
+                      '${_listingType == 'Plot' ? '📍' : _listingType == 'Stay' ? '🏡' : '🏠'} $_listingTitle'
                       '${_area != null && _area.isNotEmpty ? ' · $_area' : ''}',
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

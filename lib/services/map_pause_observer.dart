@@ -15,6 +15,13 @@ const _pauseRoutes = {
   '/listing-reports',
   '/report-detail',
   '/my-filed-reports',
+  '/stay-setup',
+  '/stay-basic-details',
+  '/stay-rooms',
+  '/stay-rules',
+  '/stay-submit',
+  '/stay-detail',
+  '/my-stays',
 };
 
 class MapPauseObserver extends NavigatorObserver {
