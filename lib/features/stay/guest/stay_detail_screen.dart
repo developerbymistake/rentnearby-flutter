@@ -18,6 +18,7 @@ import '../../../widgets/detail_header.dart';
 import '../../../widgets/report_listing_sheet.dart';
 import '../models/stay_detail_model.dart';
 import '../models/stay_owner_model.dart';
+import '../../taxi/guest/stay_taxis_section.dart';
 import '../../taxi/guest/taxi_navigation.dart';
 import '../../taxi/taxi_option_sets.dart';
 import '../setup/stay_option_sets.dart';
@@ -287,7 +288,12 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
                 const SizedBox(height: 24),
                 _sectionTitle('Getting there'),
                 const SizedBox(height: 8),
-                _gettingThereRow(s),
+                StayTaxisSection(
+                  stayPlace: s.cityName?.isNotEmpty == true ? s.cityName! : (s.districtName ?? 'this stay'),
+                  stayLat: s.latitude!,
+                  stayLng: s.longitude!,
+                  fallback: _gettingThereRow(s),
+                ),
               ],
               if (s.facilities.isNotEmpty) ...[
                 const SizedBox(height: 24),

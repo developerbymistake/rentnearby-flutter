@@ -67,6 +67,12 @@ class TaxiListController extends GetxController {
     final lng = args['fromLng'];
     if (name is! String || name.isEmpty || lat is! num || lng is! num) return;
     from.value = PlaceResult(name: name, subtitle: '', latLng: LatLng(lat.toDouble(), lng.toDouble()));
+    final toName = args['toName'];
+    final toLat = args['toLat'];
+    final toLng = args['toLng'];
+    if (toName is String && toName.isNotEmpty && toLat is num && toLng is num) {
+      to.value = PlaceResult(name: toName, subtitle: '', latLng: LatLng(toLat.toDouble(), toLng.toDouble()));
+    }
   }
 
   void _queueLocationCheck() {

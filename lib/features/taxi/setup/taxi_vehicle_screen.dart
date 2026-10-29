@@ -490,7 +490,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                       onPressed: _onBack,
                       icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
                     ),
-                    const Text('Vehicle and contact',
+                    Text(const ['Vehicle', 'Contact', 'Base'][_step],
                         style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
                   ]),
                 ),
@@ -719,89 +719,73 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       );
 
   Widget _photoBlock() {
-    if (!_hasPhoto) {
-      return GestureDetector(
-        onTap: _pickPhoto,
-        child: Container(
-          width: double.infinity,
-          height: 140,
-          decoration: BoxDecoration(
-            color: TaxiColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: TaxiColors.accent.withValues(alpha: 0.3), width: 1.5),
-          ),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: TaxiColors.accent.withValues(alpha: 0.12), shape: BoxShape.circle),
-              child: const Icon(Icons.add_a_photo_rounded, color: TaxiColors.accent, size: 28),
-            ),
-            const SizedBox(height: 10),
-            const Text('Add Plate Photo',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: TaxiColors.accentDark)),
-            const SizedBox(height: 4),
-            const Text('Camera or Gallery', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          ]),
-        ),
-      );
-    }
     final local = _localPhoto;
-    final image = local != null
-        ? Image.file(local, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
-        : CachedNetworkImage(
-            imageUrl: _remotePhotoUrl!,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            placeholder: (_, _) => Container(color: AppColors.surface),
-            errorWidget: (_, _, _) => Container(color: AppColors.surface),
-          );
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SizedBox(
-        height: 180,
-        width: double.infinity,
-        child: Stack(children: [
-          Positioned.fill(child: ClipRRect(borderRadius: BorderRadius.circular(12), child: image)),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              decoration: BoxDecoration(
-                color: TaxiColors.accentDark.withValues(alpha: 0.85),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (_hasPhoto)
+        SizedBox(
+          width: 96,
+          height: 96,
+          child: Stack(children: [
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: local != null
+                    ? Image.file(local, fit: BoxFit.cover)
+                    : CachedNetworkImage(
+                        imageUrl: _remotePhotoUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, _) => Container(color: AppColors.surface),
+                        errorWidget: (_, _, _) => Container(color: AppColors.surface),
+                      ),
               ),
-              child: const Text('Plate',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
             ),
-          ),
-          Positioned(
-            top: 6,
-            right: 6,
-            child: GestureDetector(
-              onTap: _removePhoto,
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
               child: Container(
-                padding: const EdgeInsets.all(5),
-                decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
-                child: const Icon(Icons.close_rounded, color: Colors.white, size: 13),
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                decoration: BoxDecoration(
+                  color: TaxiColors.accentDark.withValues(alpha: 0.85),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                ),
+                child: const Text('Plate',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
               ),
             ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: GestureDetector(
+                onTap: _removePhoto,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 12),
+                ),
+              ),
+            ),
+          ]),
+        )
+      else
+        GestureDetector(
+          onTap: _pickPhoto,
+          child: Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              color: TaxiColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: TaxiColors.accent.withValues(alpha: 0.4), width: 1.5),
+            ),
+            child: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(Icons.add_rounded, color: TaxiColors.accent, size: 26),
+              Text('Add',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: TaxiColors.accentDark, fontWeight: FontWeight.w600)),
+            ]),
           ),
-        ]),
-      ),
-      const SizedBox(height: 10),
-      GestureDetector(
-        onTap: _pickPhoto,
-        behavior: HitTestBehavior.opaque,
-        child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.add_a_photo_rounded, color: TaxiColors.accent, size: 16),
-          SizedBox(width: 6),
-          Text('Replace photo',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: TaxiColors.accentDark, fontWeight: FontWeight.w500)),
-        ]),
-      ),
+        ),
     ]);
   }
 

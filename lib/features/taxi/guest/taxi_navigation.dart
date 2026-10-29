@@ -2,11 +2,26 @@ import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
 
 class TaxiNavigation {
-  static Future<void>? openList({String? fromName, double? fromLat, double? fromLng}) {
+  static Future<void>? openList({
+    String? fromName,
+    double? fromLat,
+    double? fromLng,
+    String? toName,
+    double? toLat,
+    double? toLng,
+  }) {
     final preset = fromName != null && fromName.isNotEmpty && fromLat != null && fromLng != null;
+    final toPreset = toName != null && toName.isNotEmpty && toLat != null && toLng != null;
     return Get.toNamed(
       AppRoutes.taxiList,
-      arguments: preset ? {'fromName': fromName, 'fromLat': fromLat, 'fromLng': fromLng} : null,
+      arguments: preset
+          ? {
+              'fromName': fromName,
+              'fromLat': fromLat,
+              'fromLng': fromLng,
+              if (toPreset) ...{'toName': toName, 'toLat': toLat, 'toLng': toLng},
+            }
+          : null,
     );
   }
 

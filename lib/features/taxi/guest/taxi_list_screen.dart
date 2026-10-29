@@ -10,7 +10,6 @@ import '../../../utils/app_toast.dart';
 import '../../../widgets/gradient_button.dart';
 import '../../../widgets/location_search_sheet.dart';
 import '../../../widgets/location_switch_sheet.dart';
-import '../../../widgets/selectable_chip.dart';
 import '../models/taxi_browse_item.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_card.dart';
@@ -98,7 +97,6 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
           slivers: [
             SliverToBoxAdapter(child: _buildHeader(context)),
             SliverToBoxAdapter(child: _buildRouteCard()),
-            SliverToBoxAdapter(child: _buildCategoryChips()),
             SliverToBoxAdapter(child: _buildListHeader()),
             _buildBody(),
             SliverToBoxAdapter(child: _buildFooter()),
@@ -300,35 +298,6 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
       ),
     );
   }
-
-  Widget _buildCategoryChips() {
-    return SizedBox(
-      height: 48,
-      child: Obx(() {
-        final selected = _ctrl.category.value;
-        return ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-          children: [
-            _chip('All', selected == null, () => _ctrl.setCategory(null)),
-            for (final c in TaxiOptionSets.categories)
-              _chip(c.label, selected == c.value, () => _ctrl.setCategory(c.value)),
-          ],
-        );
-      }),
-    );
-  }
-
-  Widget _chip(String label, bool selected, VoidCallback onTap) => Padding(
-        padding: const EdgeInsets.only(right: 6),
-        child: SelectableChip(
-          label: label,
-          selected: selected,
-          activeColor: TaxiColors.accent,
-          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 14),
-          onTap: onTap,
-        ),
-      );
 
   Widget _buildListHeader() {
     return Padding(
