@@ -232,7 +232,7 @@ class ChatController extends GetxController {
       conversations[index] = ConversationModel(
         id: c.id, listingType: c.listingType, listingId: c.listingId,
         listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
-        roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
+        roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId, stayTypeId: c.stayTypeId,
         otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
         isOwner: c.isOwner, status: c.status, isBlockedByMe: c.isBlockedByMe, lastMessageAt: c.lastMessageAt,
         lastMessagePreview: c.lastMessagePreview, unreadCount: 0,
@@ -269,7 +269,7 @@ class ChatController extends GetxController {
       conversations[index] = ConversationModel(
         id: c.id, listingType: c.listingType, listingId: c.listingId,
         listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
-        roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
+        roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId, stayTypeId: c.stayTypeId,
         otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
         isOwner: c.isOwner, status: c.status, isBlockedByMe: c.isBlockedByMe, lastMessageAt: DateTime.now(),
         lastMessagePreview: c.lastMessagePreview, unreadCount: newUnreadCount,
@@ -295,7 +295,7 @@ class ChatController extends GetxController {
       conversations[index] = ConversationModel(
         id: c.id, listingType: c.listingType, listingId: c.listingId,
         listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
-        roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
+        roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId, stayTypeId: c.stayTypeId,
         otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
         isOwner: c.isOwner, status: c.status, isBlockedByMe: c.isBlockedByMe, lastMessageAt: message.createdAt,
         // Falls back to the previous preview for message types without a plain 'text'
@@ -336,7 +336,7 @@ class ChatController extends GetxController {
       conversations[index] = ConversationModel(
         id: c.id, listingType: c.listingType, listingId: c.listingId,
         listingTitle: c.listingTitle, area: c.area, listingThumbnailUrl: c.listingThumbnailUrl,
-        roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId,
+        roomTypeId: c.roomTypeId, plotTypeId: c.plotTypeId, stayTypeId: c.stayTypeId,
         otherPartyId: c.otherPartyId, otherPartyName: c.otherPartyName,
         isOwner: c.isOwner, status: status, isBlockedByMe: isBlockedByMe, lastMessageAt: c.lastMessageAt,
         lastMessagePreview: c.lastMessagePreview, unreadCount: c.unreadCount,

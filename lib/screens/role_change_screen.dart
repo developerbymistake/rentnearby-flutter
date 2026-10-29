@@ -21,12 +21,34 @@ class _RoleChangeScreenState extends State<RoleChangeScreen> {
   List<RoleModel> _roles = const [];
   bool _loading = true;
   String? _targetKey;
+  Worker? _lockWorker;
+  bool _exited = false;
 
   @override
   void initState() {
     super.initState();
+    if (_auth.roleChangeLocked) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _exitLocked());
+      return;
+    }
+    _lockWorker = ever(_auth.user, (_) {
+      if (_auth.roleChangeLocked) _exitLocked();
+    });
     _auth.refreshProfile();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _lockWorker?.dispose();
+    super.dispose();
+  }
+
+  void _exitLocked() {
+    if (_exited || !mounted) return;
+    _exited = true;
+    AppToast.info('Role is locked after approval');
+    Get.back();
   }
 
   void _retry() {
@@ -44,6 +66,10 @@ class _RoleChangeScreenState extends State<RoleChangeScreen> {
   }
 
   Future<void> _send(String targetKey) async {
+    if (_auth.roleChangeLocked) {
+      _exitLocked();
+      return;
+    }
     final ok = await _auth.requestRoleChange(targetKey);
     if (ok && mounted) {
       AppToast.success('Request sent');

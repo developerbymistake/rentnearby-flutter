@@ -14,6 +14,8 @@ import '../config/app_tabs.dart';
 import '../config/notification_types.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
+import '../features/stay/stay_status_sync.dart';
+import '../features/taxi/taxi_status_sync.dart';
 import '../models/conversation_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
@@ -199,6 +201,12 @@ class NotificationService extends GetxService {
       }
       if (notificationType == NotificationTypeKeys.roleRequestRejectedWire) {
         Get.find<AuthController>().refreshProfile();
+      } else if (notificationType == NotificationTypeKeys.stayApprovedWire ||
+          notificationType == NotificationTypeKeys.stayRejectedWire) {
+        StayStatusSync.onReviewResult();
+      } else if (notificationType == NotificationTypeKeys.taxiApprovedWire ||
+          notificationType == NotificationTypeKeys.taxiRejectedWire) {
+        TaxiStatusSync.onReviewResult();
       }
 
       // Every other push (admin broadcast, report-filed)
@@ -347,7 +355,42 @@ class NotificationService extends GetxService {
     // login/splash" — main not in the stack at all).
     AppRoutes.chatsList,
     AppRoutes.chatConversation,
+    AppRoutes.myStays,
+    AppRoutes.stayDetail,
+    AppRoutes.stayRooms,
+    AppRoutes.stayRules,
+    AppRoutes.stayBasicDetails,
+    AppRoutes.staySubmit,
+    AppRoutes.staySetup,
+    AppRoutes.myJobs,
+    AppRoutes.postJob,
+    AppRoutes.jobDetail,
+    AppRoutes.myTaxi,
+    AppRoutes.taxiDetail,
+    AppRoutes.taxiVehicle,
+    AppRoutes.taxiRoutes,
+    AppRoutes.taxiSubmit,
+    AppRoutes.taxiSetup,
+    AppRoutes.taxiList,
   };
+
+  // A gated Stay Owner's stack is rooted at staySetup, so main is not underneath.
+  static const _stayGateRoutes = {
+    AppRoutes.staySetup,
+    AppRoutes.stayBasicDetails,
+    AppRoutes.stayRooms,
+    AppRoutes.stayRules,
+    AppRoutes.staySubmit,
+    AppRoutes.taxiSetup,
+    AppRoutes.taxiVehicle,
+    AppRoutes.taxiRoutes,
+    AppRoutes.taxiSubmit,
+    AppRoutes.roleChange,
+  };
+
+  static bool _mainIsBelow(String route) =>
+      _routesOnTopOfMain.contains(route) &&
+      !(_stayGateRoutes.contains(route) && Get.find<AuthController>().postLoginRoute != AppRoutes.main);
 
   void _handleNotificationTap(RemoteMessage message) {
     if (!StorageService.isLoggedIn) return;
@@ -376,7 +419,7 @@ class NotificationService extends GetxService {
       // Already on main screen — no rebuild needed for the tab case; the
       // pushed-route case just navigates on top.
       _routeForNotificationData(data);
-    } else if (_routesOnTopOfMain.contains(currentRoute)) {
+    } else if (_mainIsBelow(currentRoute)) {
       // Detail/add screens are on top of main — main screen is alive underneath
       // Pop back to main WITHOUT recreating it (IndexedStack state preserved)
       Get.until((route) => route.settings.name == AppRoutes.main);
@@ -456,7 +499,7 @@ class NotificationService extends GetxService {
     final currentRoute = Get.currentRoute;
     if (currentRoute == AppRoutes.main) {
       _openChatConversation(conversationId);
-    } else if (_routesOnTopOfMain.contains(currentRoute)) {
+    } else if (_mainIsBelow(currentRoute)) {
       Get.until((route) => route.settings.name == AppRoutes.main);
       _openChatConversation(conversationId);
     } else {
@@ -533,6 +576,7 @@ class NotificationService extends GetxService {
       'listingId': conv.listingId,
       'roomTypeId': conv.roomTypeId,
       'plotTypeId': conv.plotTypeId,
+      'stayTypeId': conv.stayTypeId,
       'otherPartyId': conv.otherPartyId,
       'otherPartyName': conv.otherPartyName,
       'listingTitle': conv.listingTitle,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../controllers/auth_controller.dart';
+import '../features/stay/guest/stay_tour_steps.dart';
 import '../navigation/tour_keys.dart';
 import 'app_constants.dart';
 import 'app_tabs.dart';
@@ -67,7 +68,9 @@ List<TourStep> _buildHomeSteps() {
   final auth = Get.find<AuthController>();
   final canRooms = auth.canListRooms.value;
   final canPlots = auth.canListPlots.value;
-  final owner = canRooms || canPlots;
+  final canStays = auth.canListStays.value;
+  final canTaxis = auth.canListTaxis.value;
+  final owner = canRooms || canPlots || canStays || canTaxis;
   return [
     TourStep(
       key: TourKeys.homeManageListingsCard,
@@ -76,7 +79,11 @@ List<TourStep> _buildHomeSteps() {
       body: owner
           ? (canRooms
               ? 'Got a room to rent out? Tap this card to list yours and reach genuine tenants in minutes.'
-              : 'Got a plot to sell? Tap this card to list yours and reach genuine buyers in minutes.')
+              : canPlots
+                  ? 'Got a plot to sell? Tap this card to list yours and reach genuine buyers in minutes.'
+                  : canStays
+                      ? 'Tap this card to manage your stay.'
+                      : 'Tap this card to manage your taxi.')
           : 'This card slides between rooms and plots — tap it to start browsing.',
     ),
     if (canRooms)
@@ -93,14 +100,32 @@ List<TourStep> _buildHomeSteps() {
         title: 'Add a plot',
         body: 'Post a new plot listing in one tap.',
       ),
-    if (owner)
+    if (canStays)
+      TourStep(
+        key: TourKeys.homeQuickActionAddStay,
+        icon: Icons.add_rounded,
+        title: 'Add your stay',
+        body: 'Set up or finish your stay in one tap.',
+      ),
+    if (canTaxis)
+      TourStep(
+        key: TourKeys.homeQuickActionAddTaxi,
+        icon: Icons.add_rounded,
+        title: 'Add your taxi',
+        body: 'Set up or finish your taxi in one tap.',
+      ),
+    if (canRooms || canPlots || canStays || canTaxis)
       TourStep(
         key: TourKeys.homeQuickActionLeads,
         icon: Icons.bar_chart_rounded,
-        title: 'My Listings',
+        title: canStays ? 'My Stays' : 'My Listings',
         body: canRooms
             ? 'Jump straight to the rooms you have posted.'
-            : 'Jump straight to the plots you have posted.',
+            : canPlots
+                ? 'Jump straight to the plots you have posted.'
+                : canStays
+                    ? 'Jump straight to your stay.'
+                    : 'Jump straight to your taxi.',
       ),
     TourStep(
       key: TourKeys.homeInstagramCard,
@@ -125,6 +150,12 @@ List<TourStep> _buildHomeSteps() {
       icon: Icons.landscape_rounded,
       title: 'Looking for a plot?',
       body: 'Tap here anytime to browse plots near you.',
+    ),
+    TourStep(
+      key: TourKeys.homeStaysNavIcon,
+      icon: Iconsax.building_4,
+      title: 'Looking for a stay?',
+      body: 'Tap here anytime to browse stays near you.',
     ),
     TourStep(
       key: TourKeys.homeProfileNavIcon,
@@ -224,5 +255,11 @@ final Map<int, TourDefinition> tourRegistry = {
     storageKey: AppConstants.tourPlotsSeenKey,
     label: 'Plots Tour',
     stepsBuilder: () => _buildLandingSteps(rooms: false),
+  ),
+  AppTabs.stays: TourDefinition(
+    tabIndex: AppTabs.stays,
+    storageKey: AppConstants.tourStaysSeenKey,
+    label: 'Stays Tour',
+    stepsBuilder: buildStayLandingSteps,
   ),
 };

@@ -11,6 +11,11 @@ class DetailActionBar extends StatelessWidget {
   final VoidCallback? onReport;
   final VoidCallback? onChat;
   final Color accent;
+  final bool showDirections;
+  final String? whatsAppPhone;
+  final String callLabel;
+  final String reportLabel;
+  final String? safetyText;
   const DetailActionBar({
     super.key,
     this.latitude,
@@ -20,6 +25,11 @@ class DetailActionBar extends StatelessWidget {
     this.onReport,
     this.onChat,
     this.accent = AppColors.primary,
+    this.showDirections = true,
+    this.whatsAppPhone,
+    this.callLabel = 'Call Owner',
+    this.reportLabel = 'Report this listing',
+    this.safetyText,
   });
 
   void _directions() async {
@@ -42,8 +52,9 @@ class DetailActionBar extends StatelessWidget {
   }
 
   void _whatsapp() async {
-    if (ownerPhone == null) return;
-    final url = Uri.parse('https://wa.me/91$ownerPhone');
+    final phone = whatsAppPhone ?? ownerPhone;
+    if (phone == null) return;
+    final url = Uri.parse('https://wa.me/91$phone');
     if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
@@ -101,7 +112,7 @@ class DetailActionBar extends StatelessWidget {
           const SizedBox(width: 6),
           Flexible(
             child: Text(
-              'Bakhli never collects rent or advance. Always meet and visit before paying.',
+              safetyText ?? 'Bakhli never collects rent or advance. Always meet and visit before paying.',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: 'Poppins',
@@ -120,7 +131,7 @@ class DetailActionBar extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: onReport,
       icon: Icon(reported ? Icons.flag_rounded : Icons.flag_outlined, size: 18),
-      label: Text(reported ? 'Reported' : 'Report this listing',
+      label: Text(reported ? 'Reported' : reportLabel,
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
       style: reported
           ? OutlinedButton.styleFrom(
@@ -169,7 +180,7 @@ class DetailActionBar extends StatelessWidget {
                 // regardless of whether the owner's phone is visible (Chat is the sole
                 // contact method in that case, or sits alongside Call/WhatsApp below —
                 // either way, same layout, same outlined style).
-                if (onChat != null)
+                if (showDirections && onChat != null)
                   Row(
                     children: [
                       Expanded(child: _chatButton()),
@@ -177,10 +188,12 @@ class DetailActionBar extends StatelessWidget {
                       Expanded(child: _directionsButton()),
                     ],
                   )
-                else
-                  SizedBox(width: double.infinity, child: _directionsButton()),
+                else if (showDirections)
+                  SizedBox(width: double.infinity, child: _directionsButton())
+                else if (onChat != null)
+                  SizedBox(width: double.infinity, child: _chatButton()),
                 if (hasPhone) ...[
-                  const SizedBox(height: 10),
+                  if (showDirections || onChat != null) const SizedBox(height: 10),
                   // Row 3: Call Owner + WhatsApp side by side
                   Row(
                     children: [
@@ -188,8 +201,8 @@ class DetailActionBar extends StatelessWidget {
                         child: ElevatedButton.icon(
                           onPressed: _call,
                           icon: const Icon(Icons.call_rounded, size: 20),
-                          label: const Text('Call Owner',
-                              style: TextStyle(
+                          label: Text(callLabel,
+                              style: const TextStyle(
                                   fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFF59E0B),
@@ -221,7 +234,7 @@ class DetailActionBar extends StatelessWidget {
                   ),
                 ],
                 if (showReport) ...[
-                  const SizedBox(height: 10),
+                  if (showDirections || onChat != null || hasPhone) const SizedBox(height: 10),
                   // Row 4: Report this listing — full width
                   SizedBox(width: double.infinity, child: _reportButton()),
                 ],

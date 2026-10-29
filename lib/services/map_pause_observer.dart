@@ -15,6 +15,20 @@ const _pauseRoutes = {
   '/listing-reports',
   '/report-detail',
   '/my-filed-reports',
+  '/stay-setup',
+  '/stay-basic-details',
+  '/stay-rooms',
+  '/stay-rules',
+  '/stay-submit',
+  '/stay-detail',
+  '/my-stays',
+  '/taxi-setup',
+  '/taxi-vehicle',
+  '/taxi-routes',
+  '/taxi-submit',
+  '/my-taxi',
+  '/taxi-detail',
+  '/taxi-list',
 };
 
 class MapPauseObserver extends NavigatorObserver {

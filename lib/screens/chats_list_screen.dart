@@ -8,6 +8,7 @@ import '../config/app_routes.dart';
 import '../controllers/chat_controller.dart';
 import '../models/conversation_model.dart';
 import '../utils/input_formatters.dart';
+import '../utils/listing_kind_visuals.dart';
 
 class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({super.key});
@@ -91,6 +92,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
         'listingId': c.listingId,
         'roomTypeId': c.roomTypeId,
         'plotTypeId': c.plotTypeId,
+        'stayTypeId': c.stayTypeId,
         'otherPartyId': c.otherPartyId,
         'otherPartyName': c.otherPartyName,
         'listingTitle': c.listingTitle,
@@ -290,8 +292,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
 
   Widget _conversationCard(ConversationModel c) {
     final unread = c.unreadCount > 0;
-    final isPlot = c.listingType != 'Room';
-    final accent = isPlot ? AppColors.plot : AppColors.primary;
+    final accent = ListingKindVisuals.accentOf(c.listingType);
     final statusLabel = c.isActive
         ? null
         : switch (c.status) {
@@ -364,7 +365,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
                           decoration: BoxDecoration(color: accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)),
                           child: Text(
-                            isPlot ? 'PLOT' : 'ROOM',
+                            ListingKindVisuals.labelOf(c.listingType),
                             style: TextStyle(fontFamily: 'Poppins', fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: accent),
                           ),
                         ),

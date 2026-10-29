@@ -3,6 +3,7 @@ import '../config/app_colors.dart';
 import '../config/app_shadows.dart';
 import '../models/listing_report_model.dart';
 import '../utils/app_date_format.dart';
+import '../utils/listing_kind_visuals.dart';
 
 class ReportRow extends StatelessWidget {
   final ListingReportModel report;
@@ -14,8 +15,7 @@ class ReportRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = report;
-    final isPlot = r.listingType == 'Plot';
-    final accent = AppColors.accentFor(isPlot);
+    final accent = ListingKindVisuals.accentOf(r.listingType);
     final isPending = r.status == 'Pending';
     final statusColor = isPending ? AppColors.reportAlert : AppColors.success;
     return Container(
@@ -32,7 +32,7 @@ class ReportRow extends StatelessWidget {
             ? Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(color: accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
-                child: Text(isPlot ? 'PLOT' : 'ROOM',
+                child: Text(ListingKindVisuals.labelOf(r.listingType),
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: accent)),
               )
             : null,

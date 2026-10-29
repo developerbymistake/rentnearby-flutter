@@ -28,6 +28,7 @@ class AppConstants {
   static const String tourHomeSeenKey = 'tour_home_seen_v2';
   static const String tourRoomsSeenKey = 'tour_rooms_seen_v2';
   static const String tourPlotsSeenKey = 'tour_plots_seen_v2';
+  static const String tourStaysSeenKey = 'tour_stays_seen_v1';
 
   // District-switch feature — cached reference data for the location picker.
   // (Not the user's manual browsing choice — that is in-memory only, see

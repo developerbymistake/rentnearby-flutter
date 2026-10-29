@@ -2,14 +2,23 @@ class UserRoleKeys {
   static const String seeker = 'SEEKER';
   static const String rentOwner = 'RENT_OWNER';
   static const String propertyOwner = 'PROPERTY_OWNER';
+  static const String stayOwner = 'STAY_OWNER';
+  static const String taxiDriver = 'TAXI_DRIVER';
   static const String claim = 'role';
 }
 
 class RoleCapabilities {
   final bool canListRooms;
   final bool canListPlots;
+  final bool canListStays;
+  final bool canListTaxis;
 
-  const RoleCapabilities({required this.canListRooms, required this.canListPlots});
+  const RoleCapabilities({
+    required this.canListRooms,
+    required this.canListPlots,
+    this.canListStays = false,
+    this.canListTaxis = false,
+  });
 
   static const none = RoleCapabilities(canListRooms: false, canListPlots: false);
 
@@ -17,17 +26,23 @@ class RoleCapabilities {
     UserRoleKeys.seeker: none,
     UserRoleKeys.rentOwner: RoleCapabilities(canListRooms: true, canListPlots: false),
     UserRoleKeys.propertyOwner: RoleCapabilities(canListRooms: false, canListPlots: true),
+    UserRoleKeys.stayOwner: RoleCapabilities(canListRooms: false, canListPlots: false, canListStays: true),
+    UserRoleKeys.taxiDriver: RoleCapabilities(canListRooms: false, canListPlots: false, canListTaxis: true),
   };
 
   static RoleCapabilities of(String? roleKey) => byRole[roleKey] ?? none;
 
-  bool get isOwner => canListRooms || canListPlots;
+  bool get isOwner => canListRooms || canListPlots || canListStays || canListTaxis;
 
   String? get deletionLine => canListRooms
       ? 'Your rooms will be deleted.'
       : canListPlots
           ? 'Your plots will be deleted.'
-          : null;
+          : canListStays
+              ? 'Your stay and jobs will be deleted.'
+              : canListTaxis
+                  ? 'Your taxi will be deleted.'
+                  : null;
 }
 
 class RoleRequestErrorTypes {

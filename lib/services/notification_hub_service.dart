@@ -4,6 +4,8 @@ import '../config/app_constants.dart';
 import '../config/notification_types.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/notification_controller.dart';
+import '../features/stay/stay_status_sync.dart';
+import '../features/taxi/taxi_status_sync.dart';
 import 'hub_connection_shared.dart';
 import 'hub_session_manager.dart';
 import 'storage_service.dart';
@@ -47,6 +49,12 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect {
           Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
         } else if (data['type'] == NotificationTypeKeys.roleRequestRejected) {
           Get.find<AuthController>().refreshProfile();
+        } else if (data['type'] == NotificationTypeKeys.stayApproved ||
+            data['type'] == NotificationTypeKeys.stayRejected) {
+          StayStatusSync.onReviewResult();
+        } else if (data['type'] == NotificationTypeKeys.taxiApproved ||
+            data['type'] == NotificationTypeKeys.taxiRejected) {
+          TaxiStatusSync.onReviewResult();
         }
       } catch (_) {}
     });

@@ -17,9 +17,10 @@ class AnswerOption {
 class QuestionTemplateModel {
   final String id;
   final String key;
-  final String listingType; // "Room" | "Plot" | "Both"
+  final String listingType; // "Room" | "Plot" | "Stay" | "Both" (Both = Room and Plot)
   final String? roomTypeId; // further scoping within "Room" — null means all room types
   final String? plotTypeId; // further scoping within "Plot" — null means all plot types
+  final String? stayTypeId;
   final String questionText;
   final List<AnswerOption> answerOptions;
   final int sortOrder;
@@ -31,17 +32,20 @@ class QuestionTemplateModel {
     required this.listingType,
     this.roomTypeId,
     this.plotTypeId,
+    this.stayTypeId,
     required this.questionText,
     required this.answerOptions,
     required this.sortOrder,
     required this.isActive,
   });
 
-  bool appliesTo(String targetListingType, {String? targetRoomTypeId, String? targetPlotTypeId}) {
-    if (listingType == 'Both') return true;
+  bool appliesTo(String targetListingType,
+      {String? targetRoomTypeId, String? targetPlotTypeId, String? targetStayTypeId}) {
+    if (listingType == 'Both') return targetListingType == 'Room' || targetListingType == 'Plot';
     if (listingType != targetListingType) return false;
     if (listingType == 'Room' && roomTypeId != null) return roomTypeId == targetRoomTypeId;
     if (listingType == 'Plot' && plotTypeId != null) return plotTypeId == targetPlotTypeId;
+    if (listingType == 'Stay' && stayTypeId != null) return stayTypeId == targetStayTypeId;
     return true;
   }
 
@@ -60,6 +64,7 @@ class QuestionTemplateModel {
       listingType: json['listingType'] as String? ?? 'Both',
       roomTypeId: json['roomTypeId'] as String?,
       plotTypeId: json['plotTypeId'] as String?,
+      stayTypeId: json['stayTypeId'] as String?,
       questionText: json['questionText'] as String? ?? '',
       answerOptions: options,
       sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 999,

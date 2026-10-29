@@ -5,6 +5,7 @@ import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/report_controller.dart';
 import '../models/listing_report_model.dart';
+import '../utils/listing_kind_visuals.dart';
 import '../widgets/report_row.dart';
 
 class ListingReportsScreen extends StatefulWidget {
@@ -38,7 +39,7 @@ class _ListingReportsScreenState extends State<ListingReportsScreen> {
     return Scaffold(
       body: Column(children: [
         Container(
-          decoration: BoxDecoration(gradient: AppColors.gradientFor(_listingType == 'Plot')),
+          decoration: BoxDecoration(gradient: ListingKindVisuals.gradientOf(_listingType)),
           child: SafeArea(
             bottom: false,
             child: Padding(

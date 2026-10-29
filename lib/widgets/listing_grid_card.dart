@@ -18,6 +18,8 @@ class ListingGridCard extends StatelessWidget {
   final String priceUnit;
   final bool isPlot;
   final VoidCallback onViewDetails;
+  final Color? accent;
+  final Color? accentDark;
 
   const ListingGridCard({
     super.key,
@@ -31,10 +33,12 @@ class ListingGridCard extends StatelessWidget {
     required this.priceUnit,
     required this.isPlot,
     required this.onViewDetails,
+    this.accent,
+    this.accentDark,
   });
 
-  Color get _accent => isPlot ? AppColors.plot : AppColors.primary;
-  Color get _accentDark => isPlot ? AppColors.plotDark : AppColors.primary;
+  Color get _accent => accent ?? (isPlot ? AppColors.plot : AppColors.primary);
+  Color get _accentDark => accentDark ?? (isPlot ? AppColors.plotDark : AppColors.primary);
 
   @override
   Widget build(BuildContext context) {

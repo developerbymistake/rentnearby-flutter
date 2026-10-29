@@ -1,9 +1,10 @@
 class ConversationModel {
   final String id;
-  final String listingType; // "Room" | "Plot"
+  final String listingType; // "Room" | "Plot" | "Stay"
   final String listingId;
   final String? roomTypeId; // set when listingType == "Room"
   final String? plotTypeId; // set when listingType == "Plot"
+  final String? stayTypeId; // set when listingType == "Stay"
   final String listingTitle;
   // Concise locality label (city, falling back to district) — same precedence
   // listing_detail_screen.dart's _locationStr() already uses for room/plot detail pages.
@@ -28,6 +29,7 @@ class ConversationModel {
     required this.listingId,
     this.roomTypeId,
     this.plotTypeId,
+    this.stayTypeId,
     required this.listingTitle,
     this.area,
     this.listingThumbnailUrl,
@@ -49,6 +51,7 @@ class ConversationModel {
         listingId: json['listingId'] as String,
         roomTypeId: json['roomTypeId'] as String?,
         plotTypeId: json['plotTypeId'] as String?,
+        stayTypeId: json['stayTypeId'] as String?,
         listingTitle: json['listingTitle'] as String? ?? '',
         area: json['area'] as String?,
         listingThumbnailUrl: json['listingThumbnailUrl'] as String?,

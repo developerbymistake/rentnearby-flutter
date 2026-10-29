@@ -34,6 +34,8 @@ abstract final class NotificationVisuals {
   static String? listingKind(String? actionRoute) => switch (actionRoute) {
         AppRoutes.myPlots => 'PLOT',
         AppRoutes.myListings => 'ROOM',
+        AppRoutes.myStays => 'STAY',
+        AppRoutes.myTaxi => 'TAXI',
         _ => null,
       };
 }

@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
@@ -15,6 +16,8 @@ import 'floating_loop.dart';
 import 'pulse_once.dart';
 import 'role_option_card.dart';
 import 'sweep_highlight.dart';
+
+enum _Slide { rooms, plots, stay, taxi }
 
 class HomeOwnerCarousel extends StatefulWidget {
   const HomeOwnerCarousel({super.key});
@@ -112,10 +115,14 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
     return Obx(() {
       final canRooms = _auth.canListRooms.value;
       final canPlots = _auth.canListPlots.value;
-      final owner = canRooms || canPlots;
-      final slides = <bool>[
-        if (_tabs.isRoomsActive && (!owner || canRooms)) true,
-        if (_tabs.isPlotsActive && (!owner || canPlots)) false,
+      final canStays = _auth.canListStays.value;
+      final canTaxis = _auth.canListTaxis.value;
+      final owner = canRooms || canPlots || canStays || canTaxis;
+      final slides = <_Slide>[
+        if (_tabs.isRoomsActive && (!owner || canRooms)) _Slide.rooms,
+        if (_tabs.isPlotsActive && (!owner || canPlots)) _Slide.plots,
+        if (canStays) _Slide.stay,
+        if (canTaxis) _Slide.taxi,
       ];
       if (slides.length != _count) _onCountChanged(slides.length);
       if (slides.isEmpty) return const SizedBox.shrink();
@@ -128,7 +135,7 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
             child: slides.length == 1
                 ? Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _OwnerBanner(isRooms: slides.first, isOwner: owner),
+                    child: _OwnerBanner(slide: slides.first, isOwner: owner),
                   )
                 : NotificationListener<ScrollNotification>(
                     onNotification: _onScroll,
@@ -138,7 +145,7 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
                       itemBuilder: (_, i) => Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: _OwnerBanner(
-                          isRooms: slides[i % slides.length],
+                          slide: slides[i % slides.length],
                           isOwner: owner,
                         ),
                       ),
@@ -158,7 +165,7 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
                     width: i == page ? 18 : 6,
                     decoration: BoxDecoration(
                       color: i == page
-                          ? (slides[page] ? AppColors.primary : AppColors.plot)
+                          ? _OwnerBanner.accentOf(slides[page])
                           : AppColors.divider,
                       borderRadius: BorderRadius.circular(3),
                     ),
@@ -173,15 +180,25 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
 }
 
 class _OwnerBanner extends StatelessWidget {
-  final bool isRooms;
+  final _Slide slide;
   final bool isOwner;
 
-  const _OwnerBanner({required this.isRooms, required this.isOwner});
+  const _OwnerBanner({required this.slide, required this.isOwner});
+
+  static Color accentOf(_Slide slide) => switch (slide) {
+        _Slide.rooms => AppColors.primary,
+        _Slide.plots => AppColors.plot,
+        _Slide.stay => RoleVisuals.accent(UserRoleKeys.stayOwner),
+        _Slide.taxi => RoleVisuals.accent(UserRoleKeys.taxiDriver),
+      };
 
   @override
   Widget build(BuildContext context) {
-    final accent = isRooms ? AppColors.primary : AppColors.plot;
-    final imageGlowColor = isRooms ? AppColors.primary : AppColors.success;
+    final isRooms = slide != _Slide.plots;
+    final isStay = slide == _Slide.stay;
+    final isTaxi = slide == _Slide.taxi;
+    final accent = accentOf(slide);
+    final imageGlowColor = slide == _Slide.plots ? AppColors.success : accent;
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -231,13 +248,26 @@ class _OwnerBanner extends StatelessWidget {
                 ),
                 FloatingLoop(
                   child: SizedBox.expand(
-                    child: Image.asset(
-                      isRooms
-                          ? 'assets/images/owner_cta/house.png'
-                          : 'assets/images/owner_cta/plot.png',
-                      fit: BoxFit.contain,
-                      alignment: Alignment.centerRight,
-                    ),
+                    child: isTaxi
+                        ? Align(
+                            alignment: const Alignment(0.6, 0),
+                            child: Container(
+                              width: 96,
+                              height: 96,
+                              decoration: const BoxDecoration(
+                                gradient: RoleVisuals.taxiGradient,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Iconsax.car, size: 48, color: Colors.white),
+                            ),
+                          )
+                        : Image.asset(
+                            isRooms
+                                ? 'assets/images/owner_cta/house.png'
+                                : 'assets/images/owner_cta/plot.png',
+                            fit: BoxFit.contain,
+                            alignment: Alignment.centerRight,
+                          ),
                   ),
                 ),
               ],
@@ -258,11 +288,12 @@ class _OwnerBanner extends StatelessWidget {
                   ),
                   child: Text(
                     isOwner
-                        ? RoleVisuals.displayName(
-                            isRooms
-                                ? UserRoleKeys.rentOwner
-                                : UserRoleKeys.propertyOwner,
-                          )
+                        ? RoleVisuals.displayName(switch (slide) {
+                            _Slide.rooms => UserRoleKeys.rentOwner,
+                            _Slide.plots => UserRoleKeys.propertyOwner,
+                            _Slide.stay => UserRoleKeys.stayOwner,
+                            _Slide.taxi => UserRoleKeys.taxiDriver,
+                          })
                         : (isRooms ? 'Looking for a room?' : 'Looking for a plot?'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -277,7 +308,13 @@ class _OwnerBanner extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   isOwner
-                      ? (isRooms ? 'List your room' : 'List your plot')
+                      ? (isTaxi
+                          ? 'List your taxi'
+                          : isStay
+                              ? 'List your stay'
+                              : isRooms
+                                  ? 'List your room'
+                                  : 'List your plot')
                       : (isRooms ? 'Find your room' : 'Find your plot'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -306,7 +343,13 @@ class _OwnerBanner extends StatelessWidget {
                 GestureDetector(
                   onTap: isOwner
                       ? () => Get.toNamed(
-                            isRooms ? AppRoutes.myListings : AppRoutes.myPlots,
+                            isTaxi
+                                ? AppRoutes.myTaxi
+                                : isStay
+                                    ? AppRoutes.myStays
+                                    : isRooms
+                                        ? AppRoutes.myListings
+                                        : AppRoutes.myPlots,
                           )
                       : () => Get.find<AuthController>().switchToTab(
                             isRooms ? AppTabs.rooms : AppTabs.plots,

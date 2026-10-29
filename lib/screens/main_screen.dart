@@ -36,6 +36,9 @@ import '../navigation/tab_router.dart';
 import '../navigation/tab_keys.dart';
 import '../navigation/tour_keys.dart';
 import '../controllers/tour_controller.dart';
+import '../features/stay/guest/stay_landing_controller.dart';
+import '../features/stay/guest/stay_guest_controller.dart';
+import '../features/jobs/controllers/jobs_list_controller.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -58,6 +61,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     TabNavigator(tabId: AppTabs.home),
     TabNavigator(tabId: AppTabs.rooms),
     TabNavigator(tabId: AppTabs.plots),
+    TabNavigator(tabId: AppTabs.stays),
+    TabNavigator(tabId: AppTabs.jobs),
     TabNavigator(tabId: AppTabs.profile),
   ];
 
@@ -309,7 +314,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         // from (and lose sight of) the non-dismissible logout overlay.
         if (_auth.isLoggingOut.value) return;
         if (Get.find<ListingController>().isLoadingNearest.value ||
-            Get.find<PlotController>().isLoadingNearest.value) {
+            Get.find<PlotController>().isLoadingNearest.value ||
+            (Get.isRegistered<StayGuestController>() && Get.find<StayGuestController>().isLoadingNearest.value)) {
           return;
         }
         final tabNav = tabKeys[_auth.tabIndex.value].currentState;
@@ -365,9 +371,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           Obx(() {
             final roomLoading = Get.find<ListingController>().isLoadingNearest.value;
             final plotLoading = Get.find<PlotController>().isLoadingNearest.value;
-            if (!roomLoading && !plotLoading) return const SizedBox.shrink();
+            // StayGuestController is lazy; .to registers it so this Obx subscribes.
+            final stayLoading = StayGuestController.to.isLoadingNearest.value;
+            if (!roomLoading && !plotLoading && !stayLoading) return const SizedBox.shrink();
             return AppLoadingOverlay.stackChild(
-              message: roomLoading ? 'Finding nearest rooms...' : 'Finding nearest plots...',
+              message: roomLoading
+                  ? 'Finding nearest rooms...'
+                  : (plotLoading ? 'Finding nearest plots...' : 'Finding nearest stays...'),
             );
           }),
         ],
@@ -459,6 +469,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                     _tabConfigCtrl.displayNameForIndex(AppTabs.plots, 'Plots')),
               ),
             KeyedSubtree(
+              key: TourKeys.homeStaysNavIcon,
+              child: _navItem(AppTabs.stays, Iconsax.building_4, Iconsax.building_45,
+                  _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
+            ),
+            _navItem(AppTabs.jobs, Iconsax.briefcase, Iconsax.briefcase5,
+                _tabConfigCtrl.displayNameForIndex(AppTabs.jobs, 'Jobs')),
+            KeyedSubtree(
               key: TourKeys.homeProfileNavIcon,
               child: _navItem(AppTabs.profile, Iconsax.user, Iconsax.user5,
                   _tabConfigCtrl.displayNameForIndex(AppTabs.profile, 'Profile')),
@@ -480,9 +497,23 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           if (index == AppTabs.plots && _auth.tabIndex.value != AppTabs.plots) {
             Get.find<PlotController>().exploreRefreshTrigger.value++;
           }
+          final stays = Get.isRegistered<StayLandingController>(tag: 'stays')
+              ? Get.find<StayLandingController>(tag: 'stays')
+              : null;
+          if (index == AppTabs.stays && _auth.tabIndex.value != AppTabs.stays) {
+            stays?.exploreRefreshTrigger.value++;
+          }
+          final jobs = Get.isRegistered<JobsListController>(tag: JobsListController.tag)
+              ? Get.find<JobsListController>(tag: JobsListController.tag)
+              : null;
+          if (index == AppTabs.jobs && _auth.tabIndex.value != AppTabs.jobs) {
+            jobs?.exploreRefreshTrigger.value++;
+          }
           if (index == AppTabs.profile && _auth.tabIndex.value != AppTabs.profile) _auth.profileTabTrigger.value++;
           Get.find<ListingController>().filterResetTrigger.value++;
           Get.find<PlotController>().filterResetTrigger.value++;
+          stays?.filterResetTrigger.value++;
+          jobs?.filterResetTrigger.value++;
           _auth.switchToTab(index);
         },
         behavior: HitTestBehavior.opaque,

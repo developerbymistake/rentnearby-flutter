@@ -17,7 +17,13 @@ import '../controllers/tab_config_controller.dart';
 import '../models/browse_item.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
+import '../features/jobs/controllers/my_jobs_controller.dart';
+import '../features/stay/setup/stay_flow.dart';
+import '../features/stay/setup/stay_option_sets.dart';
+import '../features/taxi/setup/taxi_flow.dart';
+import '../features/taxi/taxi_option_sets.dart';
 import '../services/add_listing_flow.dart';
+import '../utils/app_toast.dart';
 import '../widgets/home_owner_carousel.dart';
 import '../widgets/icon_motion.dart';
 import '../widgets/listing_grid_card.dart';
@@ -528,11 +534,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Owner quick actions ─────────────────────────────────────────────────
 
+  Future<void> _postJob() async {
+    if (_auth.user.value?.stayStatus != 'Approved') {
+      AppToast.info('Stay must be live first');
+      return;
+    }
+    final result = await Get.toNamed(AppRoutes.postJob);
+    if (result == true) MyJobsController.invalidateList();
+  }
+
   Widget _buildOwnerQuickActions() {
     return Obx(() {
       final canRooms = _auth.canListRooms.value;
       final canPlots = _auth.canListPlots.value;
-      if (!canRooms && !canPlots) return const SizedBox.shrink();
+      final stays = _auth.canListStays.value;
+      final taxis = _auth.canListTaxis.value;
+      if (!canRooms && !canPlots && !stays && !taxis) return const SizedBox.shrink();
       final rooms = _tabs.isRoomsActive && canRooms;
       final plots = _tabs.isPlotsActive && canPlots;
       final checking = AddListingFlow.checking.value;
@@ -561,7 +578,30 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: checking != null ? null : () => AddListingFlow.start(false),
             ),
           ),
-        if (rooms || plots)
+        if (stays)
+          KeyedSubtree(
+            key: TourKeys.homeQuickActionAddStay,
+            child: _ownerQuickActionTile(
+              icon: Icons.add_rounded,
+              gradient: StayColors.gradient,
+              label: 'Add Stay',
+              motion: IconMotionStyle.pulse,
+              compact: true,
+              onTap: StayFlow.start,
+            ),
+          ),
+        if (taxis)
+          KeyedSubtree(
+            key: TourKeys.homeQuickActionAddTaxi,
+            child: _ownerQuickActionTile(
+              icon: Icons.add_rounded,
+              gradient: TaxiColors.gradient,
+              label: 'Add Taxi',
+              motion: IconMotionStyle.pulse,
+              onTap: () => TaxiFlow.start(),
+            ),
+          ),
+        if (rooms || plots || stays || taxis)
           KeyedSubtree(
             key: TourKeys.homeQuickActionLeads,
             child: _ownerQuickActionTile(
@@ -571,13 +611,40 @@ class _HomeScreenState extends State<HomeScreen> {
                 end: Alignment.bottomRight,
                 colors: [Color(0xFFFBBF24), AppColors.warning],
               ),
-              label: 'My Listings',
+              label: stays ? 'My Stays' : 'My Listings',
               motion: IconMotionStyle.grow,
+              compact: stays,
               onTap: () => Get.toNamed(
-                canRooms ? AppRoutes.myListings : AppRoutes.myPlots,
+                canRooms
+                    ? AppRoutes.myListings
+                    : canPlots
+                        ? AppRoutes.myPlots
+                        : stays
+                            ? AppRoutes.myStays
+                            : AppRoutes.myTaxi,
               ),
             ),
           ),
+        if (stays) ...[
+          _ownerQuickActionTile(
+            icon: Iconsax.briefcase,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.accentLight, AppColors.accent],
+            ),
+            label: 'Post Job',
+            compact: true,
+            onTap: _postJob,
+          ),
+          _ownerQuickActionTile(
+            icon: Iconsax.task_square,
+            gradient: AppColors.primaryGradient,
+            label: 'My Jobs',
+            compact: true,
+            onTap: () => Get.toNamed(AppRoutes.myJobs),
+          ),
+        ],
       ];
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
@@ -602,19 +669,21 @@ class _HomeScreenState extends State<HomeScreen> {
     String? badge,
     IconMotionStyle? motion,
     bool isLoading = false,
+    bool compact = false,
   }) {
+    final iconBox = compact ? 46.0 : 52.0;
     final iconGlyph = isLoading
         ? const SizedBox(
             width: 20,
             height: 20,
             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
           )
-        : Icon(icon, size: 26, color: Colors.white);
+        : Icon(icon, size: compact ? 23 : 26, color: Colors.white);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        padding: EdgeInsets.symmetric(vertical: 14, horizontal: compact ? 4 : 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -634,8 +703,8 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: iconBox,
+                  height: iconBox,
                   decoration: BoxDecoration(
                     gradient: gradient,
                     borderRadius: BorderRadius.circular(16),
