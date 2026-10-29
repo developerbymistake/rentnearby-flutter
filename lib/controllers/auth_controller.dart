@@ -91,8 +91,8 @@ class AuthController extends GetxController {
   }
 
   bool get roleChangeLocked =>
-      (staysEnabled && (user.value?.stayStatus == 'Approved' || user.value?.stayStatus == 'PendingReview')) ||
-      (taxisEnabled && (user.value?.taxiStatus == 'Approved' || user.value?.taxiStatus == 'PendingReview'));
+      (user.value?.stayStatus == 'Approved' || user.value?.stayStatus == 'PendingReview') ||
+      (user.value?.taxiStatus == 'Approved' || user.value?.taxiStatus == 'PendingReview');
 
   bool canOpenRoute(String route) {
     if (AppRoutes.roomOwnerOnly.contains(route) && !canListRooms.value) return false;
