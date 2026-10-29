@@ -4,6 +4,7 @@ import '../../../config/app_tabs.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
 import '../data/jobs_repository.dart';
+import '../models/job_experience_bucket.dart';
 import '../models/job_lookups_model.dart';
 import '../models/job_summary_model.dart';
 
@@ -21,7 +22,7 @@ class JobsListController extends GetxController {
   final noDistrict = false.obs;
   final lookups = Rxn<JobLookups>();
   final selectedDepartmentId = Rxn<String>();
-  final selectedExperienceLevelId = Rxn<String>();
+  final selectedExperience = Rxn<JobExperienceBucket>();
   final minSalary = Rxn<int>();
   final resetGeneration = 0.obs;
   final exploreRefreshTrigger = 0.obs;
@@ -41,7 +42,7 @@ class JobsListController extends GetxController {
   bool get _tabActive => _auth.tabIndex.value == AppTabs.jobs;
   String? get _districtId => Get.find<LocationController>().effectiveDistrict?.id;
 
-  bool get hasFilters => selectedExperienceLevelId.value != null || minSalary.value != null;
+  bool get hasFilters => selectedExperience.value != null || minSalary.value != null;
 
   @override
   void onInit() {
@@ -73,7 +74,7 @@ class JobsListController extends GetxController {
   void _clearFilters() {
     if (selectedDepartmentId.value == null && !hasFilters) return;
     selectedDepartmentId.value = null;
-    selectedExperienceLevelId.value = null;
+    selectedExperience.value = null;
     minSalary.value = null;
     resetGeneration.value++;
     _invalidateHard();
@@ -140,9 +141,9 @@ class JobsListController extends GetxController {
     _reloadFresh();
   }
 
-  void applyFilters({String? experienceLevelId, int? minSalary}) {
-    if (selectedExperienceLevelId.value == experienceLevelId && this.minSalary.value == minSalary) return;
-    selectedExperienceLevelId.value = experienceLevelId;
+  void applyFilters({JobExperienceBucket? experience, int? minSalary}) {
+    if (selectedExperience.value == experience && this.minSalary.value == minSalary) return;
+    selectedExperience.value = experience;
     this.minSalary.value = minSalary;
     _reloadFresh();
   }
@@ -183,7 +184,8 @@ class JobsListController extends GetxController {
       final res = await _repo.browse(
         districtId: districtId,
         departmentId: selectedDepartmentId.value,
-        experienceLevelId: selectedExperienceLevelId.value,
+        minExperience: selectedExperience.value?.min,
+        maxExperience: selectedExperience.value?.max,
         minSalary: minSalary.value,
         page: reset ? 1 : _page + 1,
         pageSize: _pageSize,

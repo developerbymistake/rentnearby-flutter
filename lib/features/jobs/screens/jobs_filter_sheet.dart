@@ -6,6 +6,7 @@ import '../../../widgets/selectable_chip.dart';
 import '../../stay/setup/stay_option_grid.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/jobs_list_controller.dart';
+import '../models/job_experience_bucket.dart';
 
 const _kGradient = StayColors.gradient;
 const _kActive = StayColors.accent;
@@ -40,7 +41,7 @@ class JobsFilterSheet extends StatefulWidget {
 }
 
 class _JobsFilterSheetState extends State<JobsFilterSheet> {
-  late String? _experienceId = widget.controller.selectedExperienceLevelId.value;
+  late JobExperienceBucket? _experience = widget.controller.selectedExperience.value;
   late int? _minSalary = widget.controller.minSalary.value;
   Worker? _externalResetWorker;
   bool _closing = false;
@@ -102,17 +103,13 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
               children: [
                 const Text('EXPERIENCE', style: _sectionLabelStyle),
                 const SizedBox(height: 8),
-                Obx(() {
-                  final levels = widget.controller.lookups.value?.experienceLevels ?? const [];
-                  final ids = <String?>[null, ...levels.map((e) => e.id)];
-                  return StayOptionGrid(
-                    crossAxisCount: 2,
-                    childAspectRatio: 3.9,
-                    labels: ['Any', ...levels.map((e) => e.name)],
-                    isActive: (i) => _experienceId == ids[i],
-                    onTap: (i) => setState(() => _experienceId = ids[i]),
-                  );
-                }),
+                StayOptionGrid(
+                  crossAxisCount: 3,
+                  childAspectRatio: 2.6,
+                  labels: ['Any', for (final b in JobExperienceBucket.all) b.label],
+                  isActive: (i) => _experience == _experienceAt(i),
+                  onTap: (i) => setState(() => _experience = _experienceAt(i)),
+                ),
                 const SizedBox(height: 16),
                 const Text('MIN SALARY', style: _sectionLabelStyle),
                 const SizedBox(height: 8),
@@ -144,7 +141,7 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => setState(() {
-                    _experienceId = null;
+                    _experience = null;
                     _minSalary = null;
                   }),
                   style: OutlinedButton.styleFrom(
@@ -167,7 +164,7 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
                   onPressed: () {
                     _closing = true;
                     Navigator.of(context).pop();
-                    widget.controller.applyFilters(experienceLevelId: _experienceId, minSalary: _minSalary);
+                    widget.controller.applyFilters(experience: _experience, minSalary: _minSalary);
                   },
                 ),
               ),
@@ -177,6 +174,8 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
       ],
     );
   }
+
+  static JobExperienceBucket? _experienceAt(int i) => i == 0 ? null : JobExperienceBucket.all[i - 1];
 
   static const _sectionLabelStyle = TextStyle(
     fontFamily: 'Poppins',

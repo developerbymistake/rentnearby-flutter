@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import '../../../controllers/auth_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../data/jobs_repository.dart';
@@ -12,8 +13,14 @@ class PostJobController extends GetxController {
   static const descriptionMax = 2000;
   static const minSalaryLimit = 100;
   static const maxSalaryLimit = 9900000;
-  static const experienceYearOptions = <int?>[null, 2, 5, 10];
+  static const maxExperienceYears = 20;
+  static const phoneLength = 10;
+  static final phoneRegex = RegExp(r'^[6-9]\d{9}$');
   static const _warnTypes = {'StayJobLimit', 'StayNotApproved'};
+
+  static final experienceYearOptions = List<int>.generate(maxExperienceYears + 1, (i) => i);
+
+  static String experienceOptionLabel(int y) => y == 0 ? 'Fresher' : (y == 1 ? '1 year' : '$y years');
 
   final _repo = const JobsRepository();
   final lookups = Rxn<JobLookups>();
@@ -25,24 +32,32 @@ class PostJobController extends GetxController {
 
   final departmentId = Rxn<String>();
   final roleId = Rxn<String>();
-  final experienceLevelId = Rxn<String>();
   final minExperienceYears = Rxn<int>();
   final jobTypeId = Rxn<String>();
   final shiftTypeId = Rxn<String>();
   final salaryTypeId = Rxn<String>();
+  final sameAsPhone = true.obs;
 
   final titleCtrl = TextEditingController();
   final minSalaryCtrl = TextEditingController();
   final maxSalaryCtrl = TextEditingController();
   final descCtrl = TextEditingController();
+  final phoneCtrl = TextEditingController();
+  final whatsAppCtrl = TextEditingController();
   final titleFocus = FocusNode();
   final descFocus = FocusNode();
   final minSalaryFocus = FocusNode();
   final maxSalaryFocus = FocusNode();
+  final phoneFocus = FocusNode();
+  final whatsAppFocus = FocusNode();
+
+  String _prefillPhone = '';
 
   @override
   void onInit() {
     super.onInit();
+    _prefillPhone = _tenDigits(Get.find<AuthController>().user.value?.phoneNumber ?? '');
+    phoneCtrl.text = _prefillPhone;
     load();
   }
 
@@ -52,11 +67,20 @@ class PostJobController extends GetxController {
     minSalaryCtrl.dispose();
     maxSalaryCtrl.dispose();
     descCtrl.dispose();
+    phoneCtrl.dispose();
+    whatsAppCtrl.dispose();
     titleFocus.dispose();
     descFocus.dispose();
     minSalaryFocus.dispose();
     maxSalaryFocus.dispose();
+    phoneFocus.dispose();
+    whatsAppFocus.dispose();
     super.onClose();
+  }
+
+  static String _tenDigits(String raw) {
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    return digits.length > phoneLength ? digits.substring(digits.length - phoneLength) : digits;
   }
 
   Future<void> load() async {
@@ -79,9 +103,11 @@ class PostJobController extends GetxController {
       descCtrl.text.isNotEmpty ||
       minSalaryCtrl.text.isNotEmpty ||
       maxSalaryCtrl.text.isNotEmpty ||
+      phoneCtrl.text.trim() != _prefillPhone ||
+      whatsAppCtrl.text.isNotEmpty ||
+      !sameAsPhone.value ||
       departmentId.value != null ||
       roleId.value != null ||
-      experienceLevelId.value != null ||
       minExperienceYears.value != null ||
       jobTypeId.value != null ||
       shiftTypeId.value != null ||
@@ -100,10 +126,11 @@ class PostJobController extends GetxController {
 
   void setRole(String id) => roleId.value = id;
 
-  void toggle(Rxn<String> field, String id) => field.value = field.value == id ? null : id;
-
   int? get minSalary => int.tryParse(minSalaryCtrl.text.trim());
   int? get maxSalary => int.tryParse(maxSalaryCtrl.text.trim());
+
+  String get contactPhone => phoneCtrl.text.trim();
+  String get whatsAppNumber => sameAsPhone.value ? contactPhone : whatsAppCtrl.text.trim();
 
   bool _fail(String message, [FocusNode? focus]) {
     AppToast.error(message);
@@ -124,8 +151,8 @@ class PostJobController extends GetxController {
       case 1:
         if (departmentId.value == null) return _fail('Please select a department');
         if (roleId.value == null) return _fail('Please select a job role');
-        if (experienceLevelId.value == null) return _fail('Please select an experience level');
       case 2:
+        if (salaryTypeId.value == null) return _fail('Please select a salary type');
         final min = minSalary;
         final max = maxSalary;
         if (minSalaryCtrl.text.trim().isEmpty) return _fail('Please enter the min salary', minSalaryFocus);
@@ -134,6 +161,17 @@ class PostJobController extends GetxController {
         if (maxSalaryCtrl.text.trim().isEmpty) return _fail('Please enter the max salary', maxSalaryFocus);
         if (max == null || max > maxSalaryLimit) return _fail('Max salary cannot exceed ₹99,00,000', maxSalaryFocus);
         if (max < min) return _fail('Max salary must be at least the min salary', maxSalaryFocus);
+        if (minExperienceYears.value == null) return _fail('Please select min experience');
+      case 3:
+        if (jobTypeId.value == null) return _fail('Please select a job type');
+        if (shiftTypeId.value == null) return _fail('Please select a shift type');
+        if (contactPhone.isEmpty) return _fail('Please enter the phone number', phoneFocus);
+        if (!phoneRegex.hasMatch(contactPhone)) return _fail('Enter a valid 10-digit mobile number', phoneFocus);
+        if (!sameAsPhone.value) {
+          final w = whatsAppCtrl.text.trim();
+          if (w.isEmpty) return _fail('Please enter the WhatsApp number', whatsAppFocus);
+          if (!phoneRegex.hasMatch(w)) return _fail('Enter a valid 10-digit WhatsApp number', whatsAppFocus);
+        }
     }
     return true;
   }
@@ -143,18 +181,19 @@ class PostJobController extends GetxController {
         'description': descCtrl.text.trim(),
         'jobDepartmentId': departmentId.value,
         'jobRoleId': roleId.value,
-        'jobExperienceLevelId': experienceLevelId.value,
         'jobTypeId': jobTypeId.value,
         'jobShiftTypeId': shiftTypeId.value,
         'jobSalaryTypeId': salaryTypeId.value,
         'minimumExperienceYears': minExperienceYears.value,
         'minSalary': minSalary,
         'maxSalary': maxSalary,
+        'contactPhone': contactPhone,
+        'whatsAppNumber': whatsAppNumber,
       };
 
   Future<bool> submit() async {
     if (isSubmitting.value || blockMessage.value != null) return false;
-    for (var s = 0; s < 3; s++) {
+    for (var s = 0; s < 4; s++) {
       if (!validateStep(s)) {
         step.value = s;
         return false;

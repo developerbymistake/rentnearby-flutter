@@ -321,6 +321,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
+        disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _kAccent, width: 1.5)),
       );
 
@@ -363,8 +364,21 @@ class _PostJobScreenState extends State<PostJobScreen> {
     required String? selectedId,
     required void Function(String id) onPicked,
   }) async {
+    final i = await _pickIndex(
+      title: title,
+      labels: [for (final e in items) e.name],
+      selectedIndex: items.indexWhere((e) => e.id == selectedId),
+    );
+    if (i != null) onPicked(items[i].id);
+  }
+
+  Future<int?> _pickIndex({
+    required String title,
+    required List<String> labels,
+    required int selectedIndex,
+  }) {
     FocusScope.of(context).unfocus();
-    final id = await showModalBottomSheet<String>(
+    return showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
@@ -390,21 +404,20 @@ class _PostJobScreenState extends State<PostJobScreen> {
             child: ListView.separated(
               shrinkWrap: true,
               padding: EdgeInsets.only(bottom: AppInsets.bottomViewPadding(sheetCtx) + 12),
-              itemCount: items.length,
+              itemCount: labels.length,
               separatorBuilder: (_, __) => const Divider(height: 1, indent: 20, endIndent: 20, color: AppColors.divider),
               itemBuilder: (_, i) {
-                final item = items[i];
-                final selected = item.id == selectedId;
+                final selected = i == selectedIndex;
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                  title: Text(item.name,
+                  title: Text(labels[i],
                       style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 14,
                           fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                           color: selected ? _kAccentDark : AppColors.textDark)),
                   trailing: selected ? const Icon(Icons.check_rounded, color: _kAccent) : null,
-                  onTap: () => Navigator.pop(sheetCtx, item.id),
+                  onTap: () => Navigator.pop(sheetCtx, i),
                 );
               },
             ),
@@ -412,7 +425,6 @@ class _PostJobScreenState extends State<PostJobScreen> {
         ]),
       ),
     );
-    if (id != null) onPicked(id);
   }
 
   Widget _basicsStep() {
@@ -452,7 +464,6 @@ class _PostJobScreenState extends State<PostJobScreen> {
   Widget _roleStep() {
     final l = _ctrl.lookups.value!;
     final deptId = _ctrl.departmentId.value;
-    final experienceId = _ctrl.experienceLevelId.value;
     return SingleChildScrollView(
       key: const ValueKey(1),
       padding: const EdgeInsets.all(16),
@@ -485,16 +496,6 @@ class _PostJobScreenState extends State<PostJobScreen> {
                     ),
           ),
         ),
-        _sectionCard(
-          title: 'Experience Level *',
-          child: StayOptionGrid(
-            crossAxisCount: 3,
-            childAspectRatio: 2.6,
-            labels: l.experienceLevels.map((e) => e.name).toList(),
-            isActive: (i) => experienceId == l.experienceLevels[i].id,
-            onTap: (i) => _ctrl.experienceLevelId.value = l.experienceLevels[i].id,
-          ),
-        ),
       ]),
     );
   }
@@ -503,20 +504,20 @@ class _PostJobScreenState extends State<PostJobScreen> {
     final l = _ctrl.lookups.value!;
     final salaryTypeId = _ctrl.salaryTypeId.value;
     final minYears = _ctrl.minExperienceYears.value;
-    const years = PostJobController.experienceYearOptions;
+    final years = PostJobController.experienceYearOptions;
     final salaryFormatters = [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)];
     return SingleChildScrollView(
       key: const ValueKey(2),
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _sectionCard(
-          title: 'Salary Type (Optional)',
+          title: 'Salary Type *',
           child: StayOptionGrid(
             crossAxisCount: 3,
             childAspectRatio: 2.6,
             labels: l.salaryTypes.map((e) => e.name).toList(),
             isActive: (i) => salaryTypeId == l.salaryTypes[i].id,
-            onTap: (i) => _ctrl.toggle(_ctrl.salaryTypeId, l.salaryTypes[i].id),
+            onTap: (i) => _ctrl.salaryTypeId.value = l.salaryTypes[i].id,
           ),
         ),
         _sectionCard(
@@ -546,13 +547,19 @@ class _PostJobScreenState extends State<PostJobScreen> {
           ]),
         ),
         _sectionCard(
-          title: 'Min Experience (Optional)',
-          child: StayOptionGrid(
-            crossAxisCount: 4,
-            childAspectRatio: 1.9,
-            labels: [for (final y in years) y == null ? '0' : (y == years.last ? '$y+' : '$y')],
-            isActive: (i) => minYears == years[i],
-            onTap: (i) => _ctrl.minExperienceYears.value = years[i],
+          title: 'Min Experience *',
+          hint: 'Fresher means no experience needed',
+          child: _pickerField(
+            value: minYears == null ? null : PostJobController.experienceOptionLabel(minYears),
+            placeholder: 'Select',
+            onTap: () async {
+              final i = await _pickIndex(
+                title: 'Min Experience',
+                labels: [for (final y in years) PostJobController.experienceOptionLabel(y)],
+                selectedIndex: minYears == null ? -1 : years.indexOf(minYears),
+              );
+              if (i != null) _ctrl.minExperienceYears.value = years[i];
+            },
           ),
         ),
       ]),
@@ -563,31 +570,80 @@ class _PostJobScreenState extends State<PostJobScreen> {
     final l = _ctrl.lookups.value!;
     final jobTypeId = _ctrl.jobTypeId.value;
     final shiftId = _ctrl.shiftTypeId.value;
+    final same = _ctrl.sameAsPhone.value;
+    final phoneFormatters = [
+      FilteringTextInputFormatter.digitsOnly,
+      LengthLimitingTextInputFormatter(PostJobController.phoneLength),
+    ];
     return SingleChildScrollView(
       key: const ValueKey(3),
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _sectionCard(
-          title: 'Job Type (Optional)',
+          title: 'Job Type *',
           child: StayOptionGrid(
             crossAxisCount: 2,
             childAspectRatio: 3.9,
             labels: l.jobTypes.map((e) => e.name).toList(),
             isActive: (i) => jobTypeId == l.jobTypes[i].id,
-            onTap: (i) => _ctrl.toggle(_ctrl.jobTypeId, l.jobTypes[i].id),
+            onTap: (i) => _ctrl.jobTypeId.value = l.jobTypes[i].id,
           ),
         ),
         _sectionCard(
-          title: 'Shift (Optional)',
+          title: 'Shift Type *',
           child: StayOptionGrid(
             crossAxisCount: 2,
             childAspectRatio: 3.9,
             labels: l.shiftTypes.map((e) => e.name).toList(),
             isActive: (i) => shiftId == l.shiftTypes[i].id,
-            onTap: (i) => _ctrl.toggle(_ctrl.shiftTypeId, l.shiftTypes[i].id),
+            onTap: (i) => _ctrl.shiftTypeId.value = l.shiftTypes[i].id,
           ),
         ),
+        _sectionCard(
+          title: 'Phone Number *',
+          hint: 'Your login number, you can change it',
+          child: TextField(
+            controller: _ctrl.phoneCtrl,
+            focusNode: _ctrl.phoneFocus,
+            keyboardType: TextInputType.phone,
+            inputFormatters: phoneFormatters,
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+            decoration: _inputDec('10-digit mobile', prefix: '+91 '),
+          ),
+        ),
+        _sectionCard(
+          title: 'WhatsApp Number *',
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const Expanded(
+                child: Text('Same as my phone',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textDark)),
+              ),
+              Switch(
+                value: same,
+                onChanged: (v) => _ctrl.sameAsPhone.value = v,
+                activeThumbColor: _kAccentDark,
+                activeTrackColor: _kAccent.withValues(alpha: 0.45),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ]),
+            const SizedBox(height: 6),
+            TextField(
+              key: ValueKey(same),
+              controller: same ? _ctrl.phoneCtrl : _ctrl.whatsAppCtrl,
+              focusNode: same ? null : _ctrl.whatsAppFocus,
+              enabled: !same,
+              keyboardType: TextInputType.phone,
+              inputFormatters: phoneFormatters,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: same ? AppColors.textMedium : AppColors.textDark),
+              decoration: _inputDec('10-digit WhatsApp', prefix: '+91 '),
+            ),
+          ]),
+        ),
         const Text('Your job goes live right after you post.',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+        const SizedBox(height: 2),
+        const Text('Seekers can call or WhatsApp you from the job.',
             style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
       ]),
     );

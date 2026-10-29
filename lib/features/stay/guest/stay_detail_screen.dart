@@ -330,13 +330,12 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Room ${r.roomIndex}',
+            Text(r.label,
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
             const SizedBox(height: 2),
             Text(
               [
                 '${StayOptionSets.guestsLabel(r.maxGuests)} guest${r.maxGuests == 1 ? '' : 's'}',
-                '${StayOptionSets.labelOf(StayOptionSets.bathroom, r.bathroom)} bath',
                 StayOptionSets.labelOf(StayOptionSets.meals, r.meals),
               ]
                   .where((e) => e.isNotEmpty)

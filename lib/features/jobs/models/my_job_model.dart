@@ -5,7 +5,7 @@ class MyJobModel {
   final String title;
   final String departmentName;
   final String roleName;
-  final String experienceLevelName;
+  final int minimumExperienceYears;
   final String? salaryTypeName;
   final String? stayName;
   final int minSalary;
@@ -20,7 +20,7 @@ class MyJobModel {
     required this.title,
     required this.departmentName,
     required this.roleName,
-    required this.experienceLevelName,
+    required this.minimumExperienceYears,
     this.salaryTypeName,
     this.stayName,
     required this.minSalary,
@@ -36,7 +36,7 @@ class MyJobModel {
         title: json['title'] as String? ?? '',
         departmentName: json['departmentName'] as String? ?? '',
         roleName: json['roleName'] as String? ?? '',
-        experienceLevelName: json['experienceLevelName'] as String? ?? '',
+        minimumExperienceYears: (json['minimumExperienceYears'] as num?)?.toInt() ?? 0,
         salaryTypeName: json['salaryTypeName'] as String?,
         stayName: json['stayName'] as String?,
         minSalary: (json['minSalary'] as num?)?.toInt() ?? 0,
@@ -52,6 +52,8 @@ class MyJobModel {
   String get salaryLabel => jobSalaryLabel(minSalary, maxSalary);
 
   String get salaryUnit => salaryTypeName == 'Monthly' ? '/month' : '';
+
+  String get experienceLabel => jobExperienceLabel(minimumExperienceYears);
 
   String get metaLabel {
     final ago = jobPostedAgo(createdAt);

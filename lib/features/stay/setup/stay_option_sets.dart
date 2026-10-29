@@ -34,9 +34,14 @@ class StayOptionSets {
     StayOption('MountainView', 'Mountain view'),
   ];
 
-  static const bathroom = [
-    StayOption('Attached', 'Attached'),
-    StayOption('Shared', 'Shared'),
+  static const roomNames = [
+    StayOption('Standard', 'Standard'),
+    StayOption('Deluxe', 'Deluxe'),
+    StayOption('Premium', 'Premium'),
+    StayOption('Suite', 'Suite'),
+    StayOption('Family Room', 'Family Room'),
+    StayOption('Executive', 'Executive'),
+    StayOption('Dormitory', 'Dormitory'),
   ];
 
   static const meals = [

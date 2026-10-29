@@ -16,6 +16,7 @@ import '../../../widgets/location_switch_sheet.dart';
 import '../../../widgets/selectable_chip.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/jobs_list_controller.dart';
+import '../models/job_experience_bucket.dart';
 import '../models/job_lookups_model.dart';
 import '../models/job_summary_model.dart';
 import 'jobs_filter_sheet.dart';
@@ -199,9 +200,9 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
       child: Obx(() {
         final l = _ctrl.lookups.value;
         final departments = l?.departments ?? const <JobLookupItem>[];
-        final levels = l?.experienceLevels ?? const <JobLookupItem>[];
+        const buckets = JobExperienceBucket.all;
         final deptId = _ctrl.selectedDepartmentId.value;
-        final expId = _ctrl.selectedExperienceLevelId.value;
+        final experience = _ctrl.selectedExperience.value;
         final salary = _ctrl.minSalary.value;
         final salaryOptions = JobsFilterSheet.salaryOptions;
         return Wrap(
@@ -217,13 +218,13 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
               onPicked: (i) => _ctrl.setDepartment(i == 0 ? null : departments[i - 1].id),
             ),
             _dropdownChip(
-              label: JobLookups.nameOf(levels, expId) ?? 'Experience',
-              selected: expId != null,
+              label: experience?.label ?? 'Experience',
+              selected: experience != null,
               title: 'Experience',
-              options: ['Any', ...levels.map((e) => e.name)],
-              selectedIndex: expId == null ? 0 : levels.indexWhere((e) => e.id == expId) + 1,
+              options: ['Any', for (final b in buckets) b.label],
+              selectedIndex: experience == null ? 0 : buckets.indexOf(experience) + 1,
               onPicked: (i) => _ctrl.applyFilters(
-                experienceLevelId: i == 0 ? null : levels[i - 1].id,
+                experience: i == 0 ? null : buckets[i - 1],
                 minSalary: _ctrl.minSalary.value,
               ),
             ),
@@ -234,7 +235,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
               options: [for (final o in salaryOptions) o.label],
               selectedIndex: salaryOptions.indexWhere((o) => o.value == salary),
               onPicked: (i) => _ctrl.applyFilters(
-                experienceLevelId: _ctrl.selectedExperienceLevelId.value,
+                experience: _ctrl.selectedExperience.value,
                 minSalary: salaryOptions[i].value,
               ),
             ),
@@ -409,7 +410,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
                 locationLabel: job.locationLabel,
                 facts: [
                   if (job.roleName.isNotEmpty) CardFact(job.roleName),
-                  if (job.jobTypeName != null) CardFact(job.jobTypeName!, tone: FactTone.cyan),
+                  CardFact(job.experienceLabel, tone: job.isFresher ? FactTone.cyan : FactTone.accent),
                   CardFact(job.postedAgo, tone: FactTone.slate),
                 ],
                 priceCaption: 'Salary',

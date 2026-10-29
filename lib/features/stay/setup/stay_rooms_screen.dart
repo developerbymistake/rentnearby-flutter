@@ -14,11 +14,11 @@ import 'stay_setup_controller.dart';
 
 class _RoomDraft {
   final String? id;
+  final String name;
   final int price;
   final int guests;
-  final String bathroom;
   final String meals;
-  const _RoomDraft({this.id, required this.price, required this.guests, required this.bathroom, required this.meals});
+  const _RoomDraft({this.id, required this.name, required this.price, required this.guests, required this.meals});
 }
 
 class StayRoomsScreen extends StatefulWidget {
@@ -35,8 +35,8 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
   bool _formOpen = false;
   int? _editingIndex;
   String? _editingId;
+  String? _roomName;
   int? _guests;
-  String? _bathroom;
   String? _meals;
   bool _dirty = false;
 
@@ -46,7 +46,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
   void initState() {
     super.initState();
     for (final r in _ctrl.stay.value?.rooms ?? const []) {
-      _rooms.add(_RoomDraft(id: r.id, price: r.pricePerNight, guests: r.maxGuests, bathroom: r.bathroom, meals: r.meals));
+      _rooms.add(_RoomDraft(id: r.id, name: r.roomName, price: r.pricePerNight, guests: r.maxGuests, meals: r.meals));
     }
     _formOpen = _rooms.length < _max;
   }
@@ -60,12 +60,12 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
 
   int get _count => _rooms.length + (_formOpen ? 1 : 0);
 
-  bool get _formBlank => _priceCtrl.text.trim().isEmpty && _guests == null && _bathroom == null && _meals == null;
+  bool get _formBlank => _roomName == null && _priceCtrl.text.trim().isEmpty && _guests == null && _meals == null;
 
   void _clearForm() {
+    _roomName = null;
     _priceCtrl.clear();
     _guests = null;
-    _bathroom = null;
     _meals = null;
     _editingIndex = null;
     _editingId = null;
@@ -79,6 +79,10 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
         _clearForm();
       });
       return true;
+    }
+    if (_roomName == null) {
+      AppToast.error('Please select a room name');
+      return false;
     }
     final priceText = _priceCtrl.text.trim();
     if (priceText.isEmpty) {
@@ -96,15 +100,11 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       AppToast.error('Please select max guests');
       return false;
     }
-    if (_bathroom == null) {
-      AppToast.error('Please select a bathroom type');
-      return false;
-    }
     if (_meals == null) {
       AppToast.error('Please select meals');
       return false;
     }
-    final draft = _RoomDraft(id: _editingId, price: price, guests: _guests!, bathroom: _bathroom!, meals: _meals!);
+    final draft = _RoomDraft(id: _editingId, name: _roomName!, price: price, guests: _guests!, meals: _meals!);
     setState(() {
       final at = _editingIndex;
       if (at != null && at <= _rooms.length) {
@@ -139,9 +139,9 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       _rooms.removeAt(at);
       _editingIndex = at;
       _editingId = r.id;
+      _roomName = r.name.isEmpty ? null : r.name;
       _priceCtrl.text = '${r.price}';
       _guests = r.guests;
-      _bathroom = r.bathroom;
       _meals = r.meals;
       _formOpen = true;
       _dirty = true;
@@ -167,7 +167,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
     }
     final ok = await _ctrl.saveRooms([
       for (final r in _rooms)
-        {'id': r.id, 'pricePerNight': r.price, 'maxGuests': r.guests, 'bathroom': r.bathroom, 'meals': r.meals},
+        {'id': r.id, 'roomName': r.name, 'pricePerNight': r.price, 'maxGuests': r.guests, 'meals': r.meals},
     ]);
     if (!ok || !mounted) return;
     Get.back();
@@ -268,8 +268,9 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
     final r = _rooms[i];
     final at = _editingIndex;
     final number = at != null && i >= at ? i + 2 : i + 1;
-    final text = 'Room $number ·${BrowseItem.inr(r.price)} / night · '
-        '${StayOptionSets.guestsLabel(r.guests)} guests · ${StayOptionSets.labelOf(StayOptionSets.bathroom, r.bathroom)} bath';
+    final name = r.name.isNotEmpty ? r.name : 'Room $number';
+    final text = '$name · ${BrowseItem.inr(r.price)} / night · '
+        '${StayOptionSets.guestsLabel(r.guests)} guests · ${StayOptionSets.labelOf(StayOptionSets.meals, r.meals)}';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
@@ -317,7 +318,25 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
         Text('Room $number',
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
         const SizedBox(height: 10),
-        _label('Price per Night (₹) *', first: true),
+        _label('Room Name *', first: true),
+        StayOptionGrid(
+          crossAxisCount: 2,
+          childAspectRatio: 3.9,
+          labels: StayOptionSets.roomNames.map((o) => o.label).toList(),
+          isActive: (i) => _roomName == StayOptionSets.roomNames[i].value,
+          onTap: (i) {
+            final value = StayOptionSets.roomNames[i].value;
+            if (_rooms.any((r) => r.name == value)) {
+              AppToast.error('Already used for another room');
+              return;
+            }
+            setState(() {
+              _roomName = value;
+              _dirty = true;
+            });
+          },
+        ),
+        _label('Price per Night (₹) *'),
         TextFormField(
           controller: _priceCtrl,
           focusNode: _priceFocusNode,
@@ -346,17 +365,6 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
           isActive: (i) => _guests == StayOptionSets.maxGuests[i],
           onTap: (i) => setState(() {
             _guests = StayOptionSets.maxGuests[i];
-            _dirty = true;
-          }),
-        ),
-        _label('Bathroom *'),
-        StayOptionGrid(
-          crossAxisCount: 2,
-          childAspectRatio: 3.9,
-          labels: StayOptionSets.bathroom.map((o) => o.label).toList(),
-          isActive: (i) => _bathroom == StayOptionSets.bathroom[i].value,
-          onTap: (i) => setState(() {
-            _bathroom = StayOptionSets.bathroom[i].value;
             _dirty = true;
           }),
         ),

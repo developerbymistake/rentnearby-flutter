@@ -201,7 +201,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
               decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
             ),
           ),
-          Text('Room ${room.roomIndex} price',
+          Text('${room.label} price',
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           const SizedBox(height: 4),
           const Text('Price per night',

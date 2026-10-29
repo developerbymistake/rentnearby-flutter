@@ -25,7 +25,6 @@ class JobLookupItem {
 class JobLookups {
   final List<JobLookupItem> departments;
   final List<JobLookupItem> roles;
-  final List<JobLookupItem> experienceLevels;
   final List<JobLookupItem> jobTypes;
   final List<JobLookupItem> shiftTypes;
   final List<JobLookupItem> salaryTypes;
@@ -33,7 +32,6 @@ class JobLookups {
   const JobLookups({
     required this.departments,
     required this.roles,
-    required this.experienceLevels,
     required this.jobTypes,
     required this.shiftTypes,
     required this.salaryTypes,
@@ -45,7 +43,6 @@ class JobLookups {
   factory JobLookups.fromJson(Map<String, dynamic> json) => JobLookups(
         departments: _list(json['departments']),
         roles: _list(json['roles']),
-        experienceLevels: _list(json['experienceLevels']),
         jobTypes: _list(json['jobTypes']),
         shiftTypes: _list(json['shiftTypes']),
         salaryTypes: _list(json['salaryTypes']),

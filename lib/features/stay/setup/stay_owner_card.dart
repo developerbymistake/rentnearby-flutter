@@ -249,7 +249,7 @@ class StayOwnerCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(children: [
           Expanded(
-            child: Text('Room ${r.roomIndex} · ${BrowseItem.inr(r.pricePerNight)} / night',
+            child: Text('${r.label} · ${BrowseItem.inr(r.pricePerNight)} / night',
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
           ),
           if (onEditPrice != null && !stay.isPendingReview)

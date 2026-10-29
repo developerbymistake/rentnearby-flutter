@@ -3,6 +3,8 @@ import '../../../models/browse_item.dart';
 String jobSalaryLabel(int min, int max) =>
     min == max ? BrowseItem.inr(min) : '${BrowseItem.inr(min)} - ${BrowseItem.inr(max)}';
 
+String jobExperienceLabel(int years) => years == 0 ? 'Fresher' : '$years+ yrs';
+
 String jobPostedAgo(DateTime dt) {
   final diff = DateTime.now().difference(dt.toLocal());
   if (diff.inMinutes < 1) return 'Just now';
@@ -23,11 +25,10 @@ class JobSummaryModel {
   final String title;
   final String departmentName;
   final String roleName;
-  final String experienceLevelName;
-  final String? jobTypeName;
-  final String? shiftTypeName;
-  final String? salaryTypeName;
-  final int? minimumExperienceYears;
+  final String jobTypeName;
+  final String shiftTypeName;
+  final String salaryTypeName;
+  final int minimumExperienceYears;
   final int minSalary;
   final int maxSalary;
   final String districtId;
@@ -44,11 +45,10 @@ class JobSummaryModel {
     required this.title,
     required this.departmentName,
     required this.roleName,
-    required this.experienceLevelName,
-    this.jobTypeName,
-    this.shiftTypeName,
-    this.salaryTypeName,
-    this.minimumExperienceYears,
+    required this.jobTypeName,
+    required this.shiftTypeName,
+    required this.salaryTypeName,
+    required this.minimumExperienceYears,
     required this.minSalary,
     required this.maxSalary,
     required this.districtId,
@@ -66,11 +66,10 @@ class JobSummaryModel {
         title: json['title'] as String? ?? '',
         departmentName: json['departmentName'] as String? ?? '',
         roleName: json['roleName'] as String? ?? '',
-        experienceLevelName: json['experienceLevelName'] as String? ?? '',
-        jobTypeName: json['jobTypeName'] as String?,
-        shiftTypeName: json['shiftTypeName'] as String?,
-        salaryTypeName: json['salaryTypeName'] as String?,
-        minimumExperienceYears: (json['minimumExperienceYears'] as num?)?.toInt(),
+        jobTypeName: json['jobTypeName'] as String? ?? '',
+        shiftTypeName: json['shiftTypeName'] as String? ?? '',
+        salaryTypeName: json['salaryTypeName'] as String? ?? '',
+        minimumExperienceYears: (json['minimumExperienceYears'] as num?)?.toInt() ?? 0,
         minSalary: (json['minSalary'] as num?)?.toInt() ?? 0,
         maxSalary: (json['maxSalary'] as num?)?.toInt() ?? 0,
         districtId: json['districtId'] as String? ?? '',
@@ -82,6 +81,10 @@ class JobSummaryModel {
   String get salaryLabel => jobSalaryLabel(minSalary, maxSalary);
 
   String get salaryUnit => salaryTypeName == 'Monthly' ? '/month' : '';
+
+  String get experienceLabel => jobExperienceLabel(minimumExperienceYears);
+
+  bool get isFresher => minimumExperienceYears == 0;
 
   String get postedAgo => jobPostedAgo(createdAt);
 

@@ -22,7 +22,7 @@ class StayRoomModel {
   final int roomIndex;
   final int pricePerNight;
   final int maxGuests;
-  final String bathroom;
+  final String roomName;
   final String meals;
 
   const StayRoomModel({
@@ -30,16 +30,18 @@ class StayRoomModel {
     required this.roomIndex,
     required this.pricePerNight,
     required this.maxGuests,
-    required this.bathroom,
+    required this.roomName,
     required this.meals,
   });
+
+  String get label => roomName.isNotEmpty ? roomName : 'Room $roomIndex';
 
   factory StayRoomModel.fromJson(Map<String, dynamic> json) => StayRoomModel(
         id: json['id']?.toString() ?? '',
         roomIndex: (json['roomIndex'] as num?)?.toInt() ?? 1,
         pricePerNight: (json['pricePerNight'] as num?)?.toInt() ?? 0,
         maxGuests: (json['maxGuests'] as num?)?.toInt() ?? 1,
-        bathroom: json['bathroom'] as String? ?? '',
+        roomName: json['roomName'] as String? ?? '',
         meals: json['meals'] as String? ?? '',
       );
 }

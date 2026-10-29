@@ -80,10 +80,24 @@ class MyJobCard extends StatelessWidget {
               ),
             ]),
             const SizedBox(height: 2),
-            Text(job.roleName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+            Row(children: [
+              Flexible(
+                child: Text(job.roleName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                decoration: BoxDecoration(
+                  color: StayColors.accent.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(job.experienceLabel,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+              ),
+            ]),
             const SizedBox(height: 2),
             Text(job.metaLabel,
                 maxLines: 1,

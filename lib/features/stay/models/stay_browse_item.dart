@@ -8,8 +8,7 @@ abstract final class StayBrowseItem {
     final type = j['stayTypeName'] as String?;
     final min = j['minPricePerNight'] as num?;
     final meals = j['mealsChip'] as String?;
-    final bath = j['bathroomChip'] as String?;
-    final bathKey = StayOptionSets.bathroom.any((o) => o.value == bath);
+    final roomName = j['roomNameChip'] as String?;
     return BrowseItem(
       id: j['id'] as String,
       userId: j['userId'] as String? ?? '',
@@ -22,8 +21,8 @@ abstract final class StayBrowseItem {
       facts: [
         if (type != null && type.isNotEmpty) CardFact(type),
         if (meals != null && meals.isNotEmpty) CardFact(StayOptionSets.labelOf(StayOptionSets.meals, meals)),
-        if (bath != null && bath.isNotEmpty)
-          CardFact(bathKey ? '${StayOptionSets.labelOf(StayOptionSets.bathroom, bath)} bath' : bath),
+        if (roomName != null && roomName.isNotEmpty && roomName.toLowerCase() != (type ?? '').toLowerCase())
+          CardFact(roomName),
       ],
       priceCaption: 'FROM',
       priceValue: min != null ? BrowseItem.inr(min) : 'On request',

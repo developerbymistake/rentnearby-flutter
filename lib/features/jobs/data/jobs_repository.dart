@@ -18,7 +18,8 @@ class JobsRepository {
   Future<({List<JobSummaryModel> items, bool hasMore})> browse({
     required String districtId,
     String? departmentId,
-    String? experienceLevelId,
+    int? minExperience,
+    int? maxExperience,
     int? minSalary,
     int page = 1,
     int pageSize = 20,
@@ -26,7 +27,8 @@ class JobsRepository {
     final data = _data(await ApiService.get('/stay-jobs', params: {
       'districtId': districtId,
       if (departmentId != null) 'departmentId': departmentId,
-      if (experienceLevelId != null) 'experienceLevelId': experienceLevelId,
+      if (minExperience != null) 'minExperience': minExperience,
+      if (maxExperience != null) 'maxExperience': maxExperience,
       if (minSalary != null) 'minSalary': minSalary,
       'page': page,
       'pageSize': pageSize,

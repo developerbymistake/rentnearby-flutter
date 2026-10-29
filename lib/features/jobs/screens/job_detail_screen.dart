@@ -6,14 +6,15 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../config/app_colors.dart';
-import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../config/app_shadows.dart';
 import '../../../controllers/auth_controller.dart';
-import '../../../controllers/chat_controller.dart';
+import '../../../controllers/report_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../../../widgets/detail_action_bar.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../../widgets/report_listing_sheet.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../data/jobs_repository.dart';
 import '../models/job_detail_model.dart';
@@ -190,6 +191,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               Wrap(spacing: 8, runSpacing: 8, children: [
                 if (j.roleName.isNotEmpty) _chip(Iconsax.user_tag, j.roleName),
                 if (j.departmentName.isNotEmpty) _chip(Iconsax.briefcase, j.departmentName),
+                _chip(Iconsax.medal_star, j.experienceLabel),
               ]),
               const SizedBox(height: 16),
               _salaryBlock(j),
@@ -270,13 +272,10 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   Widget _infoCard(JobDetailModel j) {
     final rows = <Widget>[
-      _infoRow(Iconsax.medal_star, 'Experience', j.experienceLevelName),
-      if (j.minimumExperienceYears != null)
-        _infoRow(Iconsax.calendar_1, 'Min experience',
-            '${j.minimumExperienceYears} year${j.minimumExperienceYears == 1 ? '' : 's'}'),
-      if (j.jobTypeName != null) _infoRow(Iconsax.briefcase, 'Job type', j.jobTypeName!),
-      if (j.shiftTypeName != null) _infoRow(Iconsax.clock, 'Shift', j.shiftTypeName!),
-      if (j.salaryTypeName != null) _infoRow(Iconsax.money, 'Salary type', j.salaryTypeName!),
+      _infoRow(Iconsax.medal_star, 'Experience', j.experienceDetail),
+      _infoRow(Iconsax.briefcase, 'Job type', j.jobTypeName),
+      _infoRow(Iconsax.clock, 'Shift', j.shiftTypeName),
+      _infoRow(Iconsax.money, 'Salary type', j.salaryTypeName),
     ];
     return Container(
       padding: const EdgeInsets.all(16),
@@ -365,43 +364,20 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   Widget? _buildActionBar() {
     if (_isOwner) return null;
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 16, offset: const Offset(0, -4))],
-      ),
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + AppInsets.bottomViewPadding(context)),
-      child: ElevatedButton.icon(
-        onPressed: _openChat,
-        icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-        label: const Text('Chat', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _kAccent,
-          foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          elevation: 0,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openChat() async {
-    final conv = await Get.find<ChatController>().createOrGetConversation('Stay', _job!.stayListingId);
-    if (conv == null) return;
-    Get.toNamed(AppRoutes.chatConversation, arguments: {
-      'conversationId': conv.id,
-      'listingType': conv.listingType,
-      'listingId': conv.listingId,
-      'roomTypeId': conv.roomTypeId,
-      'plotTypeId': conv.plotTypeId,
-      'stayTypeId': conv.stayTypeId,
-      'otherPartyId': conv.otherPartyId,
-      'otherPartyName': conv.otherPartyName,
-      'listingTitle': conv.listingTitle,
-      'isOwner': conv.isOwner,
-      'status': conv.status,
-      'isBlockedByMe': conv.isBlockedByMe,
-    });
+    final j = _job!;
+    final reportCtrl = Get.find<ReportController>();
+    return Obx(() => DetailActionBar(
+          ownerPhone: j.hasContact ? j.contactPhone : null,
+          whatsAppPhone: j.hasContact ? j.whatsAppOrPhone : null,
+          isOwner: false,
+          showDirections: false,
+          callLabel: 'Call',
+          reportLabel: 'Report this stay',
+          safetyText: 'Never pay to get a job. Visit the stay before joining.',
+          onReport: (j.hasReportedStay || reportCtrl.reportedListingIds.contains(j.stayListingId))
+              ? null
+              : () => ReportListingSheet.show(context, listingId: j.stayListingId, listingType: 'Stay'),
+          accent: _kAccent,
+        ));
   }
 }
