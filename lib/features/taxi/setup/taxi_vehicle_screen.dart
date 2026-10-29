@@ -436,7 +436,10 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         final res = await _ctrl.uploadPlatePhoto(file.path);
         if (!mounted) return;
         setState(() => _isUploading = false);
-        if (res == null) return;
+        if (res == null) {
+          if (_wasApproved) AppToast.warning('Plate saved but photo not uploaded. Tap Save again before leaving.');
+          return;
+        }
         _localPhoto = null;
         _remotePhotoUrl = res.photoUrl ?? _remotePhotoUrl;
         status = res.status ?? status;

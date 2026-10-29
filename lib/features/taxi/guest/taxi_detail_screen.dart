@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -86,7 +85,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
         context: context,
         type: 't',
         slug: t.slug!,
-        photoUrl: t.platePhotoUrl,
+        photoUrl: null,
         priceOrArea: t.minFare != null ? 'From ${BrowseItem.inr(t.minFare!)}' : 'Local taxi',
         typeLabel: t.vehicleTypeName,
         locality: t.locality,
@@ -220,20 +219,10 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
               ),
           ],
           flexibleSpace: FlexibleSpaceBar(
-            background: t.platePhotoUrl == null
-                ? Container(
-                    decoration: BoxDecoration(gradient: TaxiColors.gradient),
-                    child: const Center(child: Icon(Iconsax.car, size: 80, color: Colors.white38)),
-                  )
-                : CachedNetworkImage(
-                    imageUrl: t.platePhotoUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: (ctx, url) => Container(decoration: BoxDecoration(gradient: TaxiColors.gradient)),
-                    errorWidget: (ctx, url, err) => Container(
-                      decoration: BoxDecoration(gradient: TaxiColors.gradient),
-                      child: const Icon(Iconsax.car, size: 64, color: Colors.white38),
-                    ),
-                  ),
+            background: Container(
+              decoration: BoxDecoration(gradient: TaxiColors.gradient),
+              child: const Center(child: Icon(Iconsax.car, size: 80, color: Colors.white38)),
+            ),
           ),
         ),
         SliverToBoxAdapter(
@@ -314,7 +303,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
       if (t.seats != null) _infoRow(Iconsax.people, 'Seats', '${TaxiOptionSets.seatsLabel(t.seats!)} seats'),
       _infoRow(Iconsax.location, 'Base', t.locality.isEmpty ? '-' : t.locality),
       Row(children: [
-        const Icon(Icons.verified_outlined, size: 18, color: AppColors.success),
+        const Icon(Iconsax.tick_circle, size: 18, color: AppColors.success),
         const SizedBox(width: 12),
         Text(TaxiOptionSets.plateCheckedLabel,
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.success)),

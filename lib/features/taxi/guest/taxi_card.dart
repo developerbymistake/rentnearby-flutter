@@ -69,7 +69,7 @@ class TaxiCard extends StatelessWidget {
           Row(children: [
             Expanded(child: _fareBlock()),
             const SizedBox(width: 8),
-            _badge('Plate checked', TaxiColors.accentDark, icon: Icons.verified_outlined),
+            _badge(TaxiOptionSets.plateCheckedLabel, TaxiColors.accentDark, icon: Iconsax.tick_circle),
           ]),
           const SizedBox(height: 12),
           Row(children: [
