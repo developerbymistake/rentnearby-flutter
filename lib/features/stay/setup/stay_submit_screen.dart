@@ -128,7 +128,7 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> {
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                 const SizedBox(height: 2),
                 Text(summary,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
               ]),

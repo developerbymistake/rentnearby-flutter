@@ -12,6 +12,7 @@ class StayStepRow extends StatelessWidget {
   final String subtitle;
   final StayStepState state;
   final VoidCallback? onTap;
+  final Color accent;
 
   const StayStepRow({
     super.key,
@@ -20,6 +21,7 @@ class StayStepRow extends StatelessWidget {
     required this.subtitle,
     required this.state,
     this.onTap,
+    this.accent = StayColors.accent,
   });
 
   @override
@@ -41,7 +43,7 @@ class StayStepRow extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: current ? StayColors.accent : AppColors.divider,
+              color: current ? accent : AppColors.divider,
               width: current ? 1.5 : 1,
             ),
             boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
@@ -56,7 +58,7 @@ class StayStepRow extends StatelessWidget {
                         fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                 const SizedBox(height: 2),
                 Text(subtitle,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
               ]),
@@ -84,7 +86,7 @@ class StayStepRow extends StatelessWidget {
         return PulseOnce(
           key: ValueKey('current-$number'),
           pulseCount: 1,
-          child: _circle(StayColors.accent, _numberText(Colors.white)),
+          child: _circle(accent, _numberText(Colors.white)),
         );
       case StayStepState.locked:
         return _circle(AppColors.divider, _numberText(AppColors.textLight));
@@ -104,19 +106,24 @@ class StayStepRow extends StatelessWidget {
   Widget _trailing() {
     switch (state) {
       case StayStepState.done:
-        return const Text('Edit',
-            style: TextStyle(
-                fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: StayColors.accentDark));
+        return Text('Edit',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: accent));
       case StayStepState.current:
-        return const Row(mainAxisSize: MainAxisSize.min, children: [
-          Text('Start',
-              style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
-          SizedBox(width: 2),
-          Icon(Icons.chevron_right_rounded, size: 20, color: StayColors.accentDark),
+        return Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text('Start',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: accent)),
+          ),
+          const SizedBox(width: 2),
+          Icon(Icons.chevron_right_rounded, size: 20, color: accent),
         ]);
       case StayStepState.locked:
-        return const Icon(Iconsax.lock, size: 18, color: AppColors.textHint);
+        return const Icon(Iconsax.lock, size: 16, color: AppColors.textHint);
     }
   }
 }

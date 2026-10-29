@@ -343,17 +343,32 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     if (mounted) setState(() => _isFinalizing = false);
 
     final files = [for (final p in _photos) if (p.local != null) p.local!];
-    if (files.isNotEmpty && mounted) await _uploadAll(files);
+    final failedFiles = files.isNotEmpty && mounted ? await _uploadAll(files) : const <File>[];
 
     if (mounted) setState(() => _isFinalizing = true);
-    await _ctrl.load();
+    final loaded = await _ctrl.load();
     if (!mounted) return;
+    final serverPhotos = loaded ? _ctrl.stay.value?.photos : null;
+    if (failedFiles.isNotEmpty || (serverPhotos != null && serverPhotos.isEmpty)) {
+      final kept = serverPhotos != null
+          ? serverPhotos.map(_PhotoEntry.remote).toList()
+          : _photos.where((p) => p.remote != null).toList();
+      setState(() {
+        _isFinalizing = false;
+        _photos
+          ..clear()
+          ..addAll(kept)
+          ..addAll(failedFiles.map(_PhotoEntry.local));
+      });
+      if (failedFiles.isEmpty) AppToast.error('Please add at least 1 photo of your stay');
+      return;
+    }
     setState(() => _isFinalizing = false);
     Get.back();
     AppToast.success('Basic details saved');
   }
 
-  Future<void> _uploadAll(List<File> files) async {
+  Future<List<File>> _uploadAll(List<File> files) async {
     setState(() {
       _isUploading = true;
       _uploadTotal = files.length;
@@ -415,13 +430,14 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     if (failed.isNotEmpty) {
       AppToast.error('${failed.length} photo${failed.length > 1 ? 's' : ''} could not be uploaded.');
     }
+    return [for (final i in failed) files[i]];
   }
 
   InputDecoration _inputDec(String hint) => InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: StayColors.surface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
@@ -779,8 +795,8 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
-            placeholder: (_, _) => Container(color: AppColors.surface),
-            errorWidget: (_, _, _) => Container(color: AppColors.surface),
+            placeholder: (_, _) => Container(color: StayColors.surface),
+            errorWidget: (_, _, _) => Container(color: StayColors.surface),
           );
     return Stack(children: [
       ClipRRect(borderRadius: BorderRadius.circular(12), child: image),

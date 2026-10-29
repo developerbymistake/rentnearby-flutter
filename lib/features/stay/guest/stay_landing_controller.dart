@@ -10,6 +10,7 @@ class StayLandingController extends GetxController {
   static const tag = 'stays';
   static const _pageSize = 20;
   static const _staleAfter = Duration(minutes: 2);
+  static const defaultSort = 'newest';
 
   final items = <BrowseItem>[].obs;
   final isLoading = true.obs;
@@ -19,7 +20,7 @@ class StayLandingController extends GetxController {
   final loadMoreFailed = false.obs;
   final selectedMeals = Rxn<String>();
   final selectedStayTypeId = Rxn<String>();
-  final sortBy = 'newest'.obs;
+  final sortBy = defaultSort.obs;
   final resetGeneration = 0.obs;
   final exploreRefreshTrigger = 0.obs;
   final filterResetTrigger = 0.obs;

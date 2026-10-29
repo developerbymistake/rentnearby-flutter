@@ -14,6 +14,7 @@ class JobsListController extends GetxController {
   static const _staleAfter = Duration(minutes: 2);
 
   final items = <JobSummaryModel>[].obs;
+  final total = Rxn<int>();
   final isLoading = true.obs;
   final isLoadingMore = false.obs;
   final hasMore = false.obs;
@@ -42,7 +43,8 @@ class JobsListController extends GetxController {
   bool get _tabActive => _auth.tabIndex.value == AppTabs.jobs;
   String? get _districtId => Get.find<LocationController>().effectiveDistrict?.id;
 
-  bool get hasFilters => selectedExperience.value != null || minSalary.value != null;
+  bool get hasFilters =>
+      selectedDepartmentId.value != null || selectedExperience.value != null || minSalary.value != null;
 
   @override
   void onInit() {
@@ -72,7 +74,7 @@ class JobsListController extends GetxController {
   }
 
   void _clearFilters() {
-    if (selectedDepartmentId.value == null && !hasFilters) return;
+    if (!hasFilters) return;
     selectedDepartmentId.value = null;
     selectedExperience.value = null;
     minSalary.value = null;
@@ -97,6 +99,7 @@ class JobsListController extends GetxController {
     loadMoreFailed.value = false;
     isLoadingMore.value = false;
     isLoading.value = true;
+    total.value = null;
     items.clear();
   }
 
@@ -141,8 +144,17 @@ class JobsListController extends GetxController {
     _reloadFresh();
   }
 
-  void applyFilters({JobExperienceBucket? experience, int? minSalary}) {
-    if (selectedExperience.value == experience && this.minSalary.value == minSalary) return;
+  void applyFilters({
+    required String? departmentId,
+    required JobExperienceBucket? experience,
+    required int? minSalary,
+  }) {
+    if (selectedDepartmentId.value == departmentId &&
+        selectedExperience.value == experience &&
+        this.minSalary.value == minSalary) {
+      return;
+    }
+    selectedDepartmentId.value = departmentId;
     selectedExperience.value = experience;
     this.minSalary.value = minSalary;
     _reloadFresh();
@@ -160,6 +172,7 @@ class JobsListController extends GetxController {
       _gen++;
       _resetInFlight = false;
       items.clear();
+      total.value = null;
       hasMore.value = false;
       isLoading.value = false;
       isLoadingMore.value = false;
@@ -194,6 +207,7 @@ class JobsListController extends GetxController {
 
       if (reset) {
         items.assignAll(res.items);
+        total.value = res.total;
         _page = 1;
         _loadedAt = DateTime.now();
       } else {

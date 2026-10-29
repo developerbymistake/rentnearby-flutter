@@ -30,8 +30,8 @@ class TaxiBrowseRepository {
   }) async =>
       _page(await ApiService.get('/taxis/browse', params: {
         'districtId': districtId,
-        if (cityId != null) 'cityId': cityId,
-        if (category != null) 'category': category,
+        'cityId': ?cityId,
+        'category': ?category,
         'page': page,
         'pageSize': pageSize,
       }));
@@ -50,7 +50,7 @@ class TaxiBrowseRepository {
         'fromLng': fromLng,
         'toLat': toLat,
         'toLng': toLng,
-        if (category != null) 'category': category,
+        'category': ?category,
         'page': page,
         'pageSize': pageSize,
       }));

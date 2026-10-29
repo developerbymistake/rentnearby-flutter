@@ -8,6 +8,7 @@ import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/gradient_button.dart';
+import 'dashed_add_row.dart';
 import 'stay_option_grid.dart';
 import 'stay_option_sets.dart';
 import 'stay_setup_controller.dart';
@@ -81,7 +82,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
       return true;
     }
     if (_roomName == null) {
-      AppToast.error('Please select a room name');
+      AppToast.error('Please select a room type');
       return false;
     }
     final priceText = _priceCtrl.text.trim();
@@ -273,30 +274,37 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
         '${StayOptionSets.guestsLabel(r.guests)} guests · ${StayOptionSets.labelOf(StayOptionSets.meals, r.meals)}';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+      padding: const EdgeInsets.fromLTRB(14, 2, 2, 2),
       decoration: BoxDecoration(
-        color: StayColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: StayColors.accent.withValues(alpha: 0.35)),
+        border: Border.all(color: AppColors.divider),
+        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Row(children: [
         Expanded(
           child: Text(text,
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w500, color: AppColors.textDark)),
         ),
-        IconButton(
-          onPressed: () => _editRoom(i),
-          icon: const Icon(Iconsax.edit_2, size: 18, color: StayColors.accentDark),
-          visualDensity: VisualDensity.compact,
-        ),
-        IconButton(
-          onPressed: () => _removeRoom(i),
-          icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.error),
-          visualDensity: VisualDensity.compact,
-        ),
+        _squareAction(Iconsax.edit_2, StayColors.surface, StayColors.accent, () => _editRoom(i)),
+        _squareAction(Iconsax.close_circle, const Color(0xFFFEE2E2), const Color(0xFF991B1B), () => _removeRoom(i)),
       ]),
     );
   }
+
+  Widget _squareAction(IconData icon, Color bg, Color fg, VoidCallback onTap) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.all(9),
+          child: Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+            child: Icon(icon, size: 14, color: fg),
+          ),
+        ),
+      );
 
   Widget _label(String text, {bool first = false}) => Padding(
         padding: EdgeInsets.only(top: first ? 0 : 14, bottom: 8),
@@ -318,24 +326,8 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
         Text('Room $number',
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
         const SizedBox(height: 10),
-        _label('Room Name *', first: true),
-        StayOptionGrid(
-          crossAxisCount: 2,
-          childAspectRatio: 3.9,
-          labels: StayOptionSets.roomNames.map((o) => o.label).toList(),
-          isActive: (i) => _roomName == StayOptionSets.roomNames[i].value,
-          onTap: (i) {
-            final value = StayOptionSets.roomNames[i].value;
-            if (_rooms.any((r) => r.name == value)) {
-              AppToast.error('Already used for another room');
-              return;
-            }
-            setState(() {
-              _roomName = value;
-              _dirty = true;
-            });
-          },
-        ),
+        _label('Room Type *', first: true),
+        _roomTypeField(),
         _label('Price per Night (₹) *'),
         TextFormField(
           controller: _priceCtrl,
@@ -350,7 +342,7 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
             prefixText: '₹ ',
             prefixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: StayColors.surface,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
@@ -385,32 +377,120 @@ class _StayRoomsScreenState extends State<StayRoomsScreen> {
 
   Widget _addRow() {
     final full = _count >= _max;
-    return AnimatedOpacity(
-      opacity: full ? 0.45 : 1,
-      duration: const Duration(milliseconds: 200),
-      child: GestureDetector(
-        onTap: full ? null : _addAnother,
-        behavior: HitTestBehavior.opaque,
+    return DashedAddRow(
+      label: 'Add another room',
+      counter: full ? '$_count of $_max · limit reached' : '$_count of $_max',
+      enabled: !full,
+      onTap: _addAnother,
+    );
+  }
+
+  Widget _roomTypeField() {
+    final value = _roomName == null ? null : StayOptionSets.labelOf(StayOptionSets.roomNames, _roomName);
+    return Material(
+      color: StayColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.divider),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: _pickRoomType,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: StayColors.accent.withValues(alpha: 0.5)),
-          ),
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Row(children: [
-            const Icon(Icons.add_rounded, size: 18, color: StayColors.accentDark),
-            const SizedBox(width: 6),
-            const Expanded(
-              child: Text('Add another room',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+            const Icon(Iconsax.lamp_on, size: 18, color: StayColors.accent),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                value ?? 'Select',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  fontWeight: value == null ? FontWeight.w400 : FontWeight.w500,
+                  color: value == null ? AppColors.textHint : AppColors.textDark,
+                ),
+              ),
             ),
-            Text(full ? '$_count of $_max · limit reached' : '$_count of $_max',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+            const SizedBox(width: 8),
+            const Icon(Iconsax.arrow_down_1, size: 18, color: StayColors.accentDark),
           ]),
         ),
       ),
     );
+  }
+
+  Future<void> _pickRoomType() async {
+    FocusScope.of(context).unfocus();
+    final options = [
+      for (final o in StayOptionSets.roomNames)
+        if (o.value == _roomName || !_rooms.any((r) => r.name == o.value)) o,
+    ];
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (sheetCtx) => ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(sheetCtx).size.height * 0.7),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(top: 12, bottom: 12),
+            decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Room Type',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+            ),
+          ),
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: EdgeInsets.only(bottom: AppInsets.bottomViewPadding(sheetCtx) + 12),
+              itemCount: options.length,
+              separatorBuilder: (_, _) => const Divider(height: 1, indent: 20, endIndent: 20, color: AppColors.divider),
+              itemBuilder: (_, i) {
+                final o = options[i];
+                final selected = o.value == _roomName;
+                return InkWell(
+                  onTap: () => Navigator.pop(sheetCtx, o.value),
+                  child: Container(
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(children: [
+                      Expanded(
+                        child: Text(o.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 14,
+                                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                                color: selected ? StayColors.accent : AppColors.textDark)),
+                      ),
+                      if (selected) const Icon(Iconsax.tick_circle, size: 18, color: StayColors.accent),
+                    ]),
+                  ),
+                );
+              },
+            ),
+          ),
+        ]),
+      ),
+    );
+    if (picked == null || !mounted || picked == _roomName) return;
+    setState(() {
+      _roomName = picked;
+      _dirty = true;
+    });
   }
 
   Widget _footer() => Container(

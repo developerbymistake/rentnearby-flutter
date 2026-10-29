@@ -58,13 +58,11 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
                     onRefresh: _ctrl.load,
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + AppInsets.bottomViewPadding(context)),
+                      padding: EdgeInsets.fromLTRB(0, 14, 0, 16 + AppInsets.bottomViewPadding(context)),
                       children: [
                         if (page != null) ...[
-                          _postBlock(page),
-                          const SizedBox(height: 20),
                           if (page.items.isEmpty)
-                            _empty()
+                            _empty(page)
                           else
                             for (final job in page.items)
                               MyJobCard(
@@ -85,64 +83,72 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
     );
   }
 
-  Widget _header() => Container(
-        decoration: const BoxDecoration(gradient: StayColors.gradient),
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
-            child: Row(children: [
-              IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-              ),
-              const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('My Jobs',
+  Widget _header() {
+    final page = _ctrl.page.value;
+    return Container(
+      decoration: const BoxDecoration(gradient: StayColors.gradient),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
+          child: Row(children: [
+            IconButton(
+              onPressed: () => Get.back(),
+              icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+            ),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('My Jobs',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                Text('Hire for your stay',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
+                Text(page == null ? 'Hire for your stay' : '${page.activeCount} of ${page.maxActive} active',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white70)),
               ]),
-            ]),
-          ),
+            ),
+          ]),
         ),
-      );
-
-  Widget _postBlock(MyJobsPage page) {
-    final hint = page.blockMessage;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('${page.activeCount} of ${page.maxActive} active',
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
-      const SizedBox(height: 10),
-      GradientButton(
-        onPressed: page.canPost ? () => _openForm() : null,
-        label: 'Post a Job',
-        gradient: StayColors.gradient,
-        shadowColor: StayColors.accent,
       ),
-      if (hint != null) ...[
-        const SizedBox(height: 6),
-        Text(hint, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-      ],
-    ]);
+    );
   }
 
-  Widget _empty() => Padding(
-        padding: const EdgeInsets.only(top: 40),
-        child: Column(children: [
-          Container(
-            width: 90,
-            height: 90,
-            decoration: const BoxDecoration(color: StayColors.surface, shape: BoxShape.circle),
-            child: const Icon(Iconsax.briefcase, size: 40, color: StayColors.accent),
-          ),
-          const SizedBox(height: 20),
-          const Text('No jobs yet',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+  Widget _empty(MyJobsPage page) {
+    final hint = page.blockMessage;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 40, 32, 0),
+      child: Column(children: [
+        Container(
+          width: 90,
+          height: 90,
+          decoration: const BoxDecoration(color: StayColors.surface, shape: BoxShape.circle),
+          child: const Icon(Iconsax.briefcase, size: 40, color: StayColors.accent),
+        ),
+        const SizedBox(height: 20),
+        const Text('No jobs yet',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        const SizedBox(height: 8),
+        const Text('Post your first job',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textLight)),
+        const SizedBox(height: 20),
+        GradientButton(
+          onPressed: page.canPost ? _openForm : null,
+          label: 'Post a Job',
+          gradient: StayColors.gradient,
+          shadowColor: StayColors.accent,
+        ),
+        if (hint != null) ...[
           const SizedBox(height: 8),
-          const Text('Post your first job',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textLight)),
-        ]),
-      );
+          Text(hint,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+        ],
+      ]),
+    );
+  }
 
   Widget _failed() => Padding(
         padding: const EdgeInsets.only(top: 80),

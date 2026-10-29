@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
-import '../../../config/app_shadows.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../models/my_job_model.dart';
+import 'job_list_card.dart';
 
 class MyJobCard extends StatelessWidget {
   final MyJobModel job;
@@ -45,101 +45,35 @@ class MyJobCard extends StatelessWidget {
     return ok == true;
   }
 
+  Widget _pill(String label, Color bg, Color fg) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+        child: Text(label,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: fg)),
+      );
+
   @override
   Widget build(BuildContext context) {
     final active = job.isActive;
-    final badgeColor = active ? AppColors.success : AppColors.textHint;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return JobListCard(
+      title: job.title,
+      roleLabel: job.roleName,
+      experienceTag: job.experienceLabel,
+      metaLine: job.metaLabel,
+      metaIcon: null,
+      salaryLabel: job.salaryLabel,
+      salaryUnit: job.salaryUnit,
+      topRightBadge: active
+          ? _pill('ACTIVE', const Color(0xFFDCFCE7), const Color(0xFF166534))
+          : _pill('CLOSED', AppColors.surface, AppColors.textLight),
+      dimmed: !active,
       onTap: onTap,
-      child: Opacity(
-        opacity: active ? 1 : 0.6,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.divider.withValues(alpha: 0.7)),
-            boxShadow: AppShadows.premium(StayColors.accent, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(
-                child: Text(job.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(color: badgeColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
-                child: Text(active ? 'ACTIVE' : 'CLOSED',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: badgeColor)),
-              ),
-            ]),
-            const SizedBox(height: 2),
-            Row(children: [
-              Flexible(
-                child: Text(job.roleName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                decoration: BoxDecoration(
-                  color: StayColors.accent.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(job.experienceLabel,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
-              ),
-            ]),
-            const SizedBox(height: 2),
-            Text(job.metaLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight)),
-            const SizedBox(height: 8),
-            Text.rich(
-              TextSpan(children: [
-                TextSpan(text: job.salaryLabel),
-                if (job.salaryUnit.isNotEmpty)
-                  TextSpan(text: ' ${job.salaryUnit}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-              ]),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.gold),
-            ),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: _action(Iconsax.eye, 'View', StayColors.accentDark, onTap)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: active
-                    ? _action(Iconsax.close_circle, 'Close', AppColors.error, onClose)
-                    : _action(Iconsax.close_circle, 'Closed', AppColors.textHint, null),
-              ),
-            ]),
-          ]),
-        ),
-      ),
+      actions: [
+        JobListCardAction(icon: Iconsax.eye, label: 'View', color: StayColors.accentDark, onTap: onTap),
+        active
+            ? JobListCardAction(icon: Iconsax.close_circle, label: 'Close', color: AppColors.error, onTap: onClose)
+            : const JobListCardAction(icon: Iconsax.close_circle, label: 'Closed', color: AppColors.textHint),
+      ],
     );
   }
-
-  Widget _action(IconData icon, String label, Color color, VoidCallback? onTap) => OutlinedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 16, color: color),
-        label: Text(label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: color)),
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(0, 40),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          side: BorderSide(color: color.withValues(alpha: 0.5)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
 }

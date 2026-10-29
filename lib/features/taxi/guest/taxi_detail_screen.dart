@@ -27,6 +27,12 @@ const _kDivider = Padding(
   child: Divider(height: 1, color: AppColors.divider),
 );
 
+const _kHeroGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [TaxiColors.surface, Color(0xFF5EEAD4)],
+);
+
 class TaxiDetailScreen extends StatefulWidget {
   const TaxiDetailScreen({super.key});
   @override
@@ -134,7 +140,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(height: 300 + MediaQuery.of(context).padding.top, color: Colors.white),
+                    Container(height: 220 + MediaQuery.of(context).padding.top, color: Colors.white),
                     Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -191,10 +197,11 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
     }
     final t = _taxi!;
     final matched = _matchedFare != null && _matchedToName != null;
+    final category = TaxiOptionSets.categoryLabel(t.vehicleCategory);
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 300,
+          expandedHeight: 220,
           pinned: true,
           backgroundColor: TaxiColors.accent,
           leading: _backButton(margin: const EdgeInsets.all(8)),
@@ -209,7 +216,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.share_rounded, color: Colors.white, size: 18),
+                      Icon(Iconsax.export_1, color: Colors.white, size: 18),
                       SizedBox(width: 6),
                       Text('Share',
                           style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
@@ -220,8 +227,8 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
           ],
           flexibleSpace: FlexibleSpaceBar(
             background: Container(
-              decoration: BoxDecoration(gradient: TaxiColors.gradient),
-              child: const Center(child: Icon(Iconsax.car, size: 80, color: Colors.white38)),
+              decoration: const BoxDecoration(gradient: _kHeroGradient),
+              child: Center(child: Icon(Iconsax.car, size: 72, color: TaxiColors.accent.withValues(alpha: 0.9))),
             ),
           ),
         ),
@@ -237,32 +244,30 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
                 accent: TaxiColors.accent,
                 tag: 'TAXI',
                 icon: Iconsax.car,
-                title: '${t.driverName} · ${t.vehicleTypeName}',
-                caption: matched ? 'TO ${_short(_matchedToName!).toUpperCase()}' : 'FROM',
+                title: '${t.driverName} · ${category.isNotEmpty ? category : t.vehicleTypeName}',
+                caption: matched ? 'TO ${_matchedToName!.toUpperCase()}' : 'FROM',
                 value: matched
                     ? BrowseItem.inr(_matchedFare!)
                     : (t.minFare != null ? BrowseItem.inr(t.minFare!) : 'On request'),
               ),
-              if (t.locality.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                DetailChipRow(accent: TaxiColors.accentDark, icon: Iconsax.location, label: t.locality),
-              ],
               const SizedBox(height: 16),
-              _sectionTitle('Vehicle'),
-              const SizedBox(height: 8),
               _vehicleCard(t),
               if (t.routes.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 _sectionTitle('Routes and fares'),
                 const SizedBox(height: 8),
-                _routesCard(t.routes),
+                _routesCard(t),
               ],
               const SizedBox(height: 16),
               Row(children: [
-                const Icon(Icons.access_time_rounded, size: 13, color: AppColors.textHint),
+                const Icon(Iconsax.clock, size: 13, color: AppColors.textHint),
                 const SizedBox(width: 4),
-                Text('Posted ${_timeAgo(t.createdAt)}',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
+                Expanded(
+                  child: Text('Posted ${_timeAgo(t.createdAt)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
+                ),
               ]),
               const SizedBox(height: 20),
             ]),
@@ -280,77 +285,104 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
       );
 
-  Widget _card(List<Widget> rows) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: AppShadows.premium(TaxiColors.accent, alpha: 0.06, blur: 12, offset: const Offset(0, 4)),
-        ),
-        child: Column(children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) _kDivider,
-            rows[i],
-          ],
-        ]),
+  BoxDecoration get _cardDecoration => BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+        boxShadow: AppShadows.premium(TaxiColors.accent, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
       );
 
+  String _baseCity(TaxiDetailModel t) =>
+      t.cityName?.isNotEmpty == true ? t.cityName! : (t.districtName?.isNotEmpty == true ? t.districtName! : '');
+
   Widget _vehicleCard(TaxiDetailModel t) {
-    final category = TaxiOptionSets.categoryLabel(t.vehicleCategory);
-    return _card([
-      _infoRow(Iconsax.car, 'Vehicle', [t.vehicleTypeName, if (category.isNotEmpty) category].join(' · ')),
-      if (t.plateDisplay.isNotEmpty) _infoRow(Iconsax.card, 'Number plate', t.plateDisplay),
+    final rows = <Widget>[
+      if (t.plateDisplay.isNotEmpty) _infoRow(Iconsax.car, 'Number plate', t.plateDisplay),
       if (t.seats != null) _infoRow(Iconsax.people, 'Seats', '${TaxiOptionSets.seatsLabel(t.seats!)} seats'),
-      _infoRow(Iconsax.location, 'Base', t.locality.isEmpty ? '-' : t.locality),
-      Row(children: [
-        const Icon(Iconsax.tick_circle, size: 18, color: AppColors.success),
-        const SizedBox(width: 12),
-        Text(TaxiOptionSets.plateCheckedLabel,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.success)),
+      _infoRow(Iconsax.location, 'Base', _baseCity(t)),
+    ];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _sectionTitle('Vehicle'),
+        const SizedBox(height: 12),
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) _kDivider,
+          rows[i],
+        ],
       ]),
-    ]);
-  }
-
-  Widget _routesCard(List<TaxiRouteModel> routes) => _card([for (final r in routes) _routeRow(r)]);
-
-  Widget _routeRow(TaxiRouteModel r) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(Iconsax.routing, size: 18, color: TaxiColors.accent),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${r.fromName} → ${r.toName}',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-            const SizedBox(height: 2),
-            Text(TaxiOptionSets.tripLabel(r.tripType),
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          ]),
-        ),
-        const SizedBox(width: 8),
-        Text(BrowseItem.inr(r.fare),
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.gold)),
-      ],
     );
   }
 
-  static String _short(String s) => s.length > 16 ? '${s.substring(0, 15)}…' : s;
+  bool _isMatchedRoute(TaxiRouteModel r) {
+    final to = _matchedToName;
+    if (to == null || _matchedFare != r.fare) return false;
+    final key = to.trim().toLowerCase();
+    return r.toName.trim().toLowerCase() == key || r.fromName.trim().toLowerCase() == key;
+  }
+
+  Widget _routesCard(TaxiDetailModel t) {
+    final matchIndex = t.routes.indexWhere(_isMatchedRoute);
+    return Container(
+      width: double.infinity,
+      clipBehavior: Clip.antiAlias,
+      decoration: _cardDecoration,
+      child: Column(children: [
+        for (var i = 0; i < t.routes.length; i++) ...[
+          if (i > 0) const Divider(height: 1, color: AppColors.divider),
+          _routeRow(t.routes[i], highlight: i == matchIndex),
+        ],
+      ]),
+    );
+  }
+
+  Widget _routeRow(TaxiRouteModel r, {required bool highlight}) {
+    return Container(
+      color: highlight ? TaxiColors.surface : null,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${r.fromName} to ${r.toName}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+              const SizedBox(height: 2),
+              Text(TaxiOptionSets.tripLabel(r.tripType),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+            ]),
+          ),
+          const SizedBox(width: 12),
+          Text(BrowseItem.inr(r.fare),
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.gold)),
+        ],
+      ),
+    );
+  }
 
   Widget _sectionTitle(String text) => Text(text,
-      style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark));
+      style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark));
 
   Widget _infoRow(IconData icon, String label, String value) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: TaxiColors.accent),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(color: TaxiColors.accent.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: Icon(icon, size: 18, color: TaxiColors.accent),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
               const SizedBox(height: 2),
               Text(value.isEmpty ? '-' : value,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
             ]),
           ),
         ],
@@ -358,13 +390,14 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
 
   static String _timeAgo(DateTime dt) {
     final diff = DateTime.now().toUtc().difference(dt.toUtc());
-    if (diff.inSeconds < 60) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()} weeks ago';
-    if (diff.inDays < 365) return '${(diff.inDays / 30).floor()} months ago';
-    return '${(diff.inDays / 365).floor()} years ago';
+    String unit(int n, String word) => '$n $word${n == 1 ? '' : 's'} ago';
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inHours < 1) return unit(diff.inMinutes, 'minute');
+    if (diff.inDays < 1) return unit(diff.inHours, 'hour');
+    if (diff.inDays < 7) return unit(diff.inDays, 'day');
+    if (diff.inDays < 30) return unit(diff.inDays ~/ 7, 'week');
+    if (diff.inDays < 365) return unit(diff.inDays ~/ 30, 'month');
+    return unit(diff.inDays ~/ 365, 'year');
   }
 
   Widget? _buildActionBar() {

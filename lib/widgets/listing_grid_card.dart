@@ -6,7 +6,7 @@ import '../config/app_shadows.dart';
 import '../models/card_fact.dart';
 
 class ListingGridCard extends StatelessWidget {
-  static const double height = 240;
+  static const double height = 262;
 
   final String? thumbnailUrl;
   final String tagLabel;
@@ -96,84 +96,84 @@ class ListingGridCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Iconsax.location, size: 10, color: AppColors.textLight),
-                        const SizedBox(width: 2),
-                        Expanded(
-                          child: Text(
-                            locationLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.textLight),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Iconsax.location, size: 10, color: AppColors.textLight),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Text(
+                              locationLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.textLight),
+                            ),
                           ),
+                        ],
+                      ),
+                      if (facts.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: [for (final f in facts.take(3)) _factChip(f)],
                         ),
                       ],
-                    ),
-                    if (facts.isNotEmpty) ...[
+                      const Spacer(),
+                      const SizedBox(height: 8),
+                      Container(height: 1, color: AppColors.divider.withValues(alpha: 0.6)),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          for (var i = 0; i < facts.length; i++) ...[
-                            if (i > 0) const SizedBox(width: 4),
-                            Flexible(child: _factChip(facts[i])),
-                          ],
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    priceCaption,
+                                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 8, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: priceValue,
+                                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.gold),
+                                        ),
+                                        TextSpan(
+                                          text: priceUnit,
+                                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 8.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
+                                        ),
+                                      ],
+                                    ),
+                                    maxLines: 1,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(Iconsax.arrow_right_3, size: 16, color: _accentDark),
                         ],
                       ),
                     ],
-                    const SizedBox(height: 8),
-                    Container(height: 1, color: AppColors.divider.withValues(alpha: 0.6)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  priceCaption,
-                                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 8, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight),
-                                ),
-                                const SizedBox(height: 2),
-                                Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: priceValue,
-                                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.gold),
-                                      ),
-                                      TextSpan(
-                                        text: priceUnit,
-                                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 8.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
-                                      ),
-                                    ],
-                                  ),
-                                  maxLines: 1,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Icon(Iconsax.arrow_right_3, size: 16, color: AppColors.primary),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -202,9 +202,9 @@ class ListingGridCard extends StatelessWidget {
   }
 
   Widget _placeholder() => Container(
-        color: isPlot ? AppColors.plotSurface : AppColors.surface,
+        color: _accent.withValues(alpha: 0.08),
         child: Center(
-          child: Icon(isPlot ? Icons.landscape_rounded : Icons.home_rounded, size: 30, color: _accent.withValues(alpha: 0.5)),
+          child: Icon(isPlot ? Icons.landscape_rounded : Icons.home_rounded, size: 30, color: _accent),
         ),
       );
 }

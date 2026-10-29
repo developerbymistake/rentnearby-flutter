@@ -63,6 +63,7 @@ class StayBottomSheet extends StatelessWidget {
                     const Icon(Iconsax.building_4, size: 20, color: StayColors.accent),
                     const SizedBox(width: 8),
                     Expanded(
+                      flex: 3,
                       child: Text(
                         stay.title,
                         maxLines: 1,
@@ -71,16 +72,26 @@ class StayBottomSheet extends StatelessWidget {
                             fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark),
                       ),
                     ),
-                    if (stay.minPricePerNight != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(gradient: _kGradient, borderRadius: BorderRadius.circular(10)),
-                        child: Text(
-                          'From ${BrowseItem.inr(stay.minPricePerNight!)}/night',
-                          style: const TextStyle(
-                              fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                    if (stay.minPricePerNight != null) ...[
+                      const SizedBox(width: 8),
+                      Flexible(
+                        flex: 2,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(gradient: _kGradient, borderRadius: BorderRadius.circular(10)),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'From ${BrowseItem.inr(stay.minPricePerNight!)}/night',
+                              maxLines: 1,
+                              softWrap: false,
+                              style: const TextStyle(
+                                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                            ),
+                          ),
                         ),
                       ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 12),

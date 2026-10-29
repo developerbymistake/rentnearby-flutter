@@ -9,24 +9,15 @@ import '../../../config/app_shadows.dart';
 import '../../../config/app_tabs.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
-import '../../../models/card_fact.dart';
 import '../../../widgets/gradient_button.dart';
-import '../../../widgets/listing_grid_card.dart';
 import '../../../widgets/location_switch_sheet.dart';
-import '../../../widgets/selectable_chip.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/jobs_list_controller.dart';
 import '../models/job_experience_bucket.dart';
 import '../models/job_lookups_model.dart';
 import '../models/job_summary_model.dart';
+import '../widgets/job_list_card.dart';
 import 'jobs_filter_sheet.dart';
-
-const _kGridDelegate = SliverGridDelegateWithMaxCrossAxisExtent(
-  maxCrossAxisExtent: 190,
-  mainAxisSpacing: 12,
-  crossAxisSpacing: 12,
-  mainAxisExtent: ListingGridCard.height,
-);
 
 const _kAccent = StayColors.accent;
 const _kAccentDark = StayColors.accentDark;
@@ -152,7 +143,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
                 alignment: PlaceholderAlignment.middle,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Icon(Icons.chevron_right_rounded, size: 14, color: _kAccentDark.withValues(alpha: 0.6)),
+                  child: Icon(Iconsax.arrow_right_3, size: 12, color: _kAccentDark.withValues(alpha: 0.6)),
                 ),
               ),
               TextSpan(text: cityName),
@@ -170,7 +161,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.location_on_outlined, size: 17, color: _kAccentDark),
+              const Icon(Iconsax.location, size: 17, color: _kAccentDark),
               const SizedBox(width: 8),
               Expanded(
                 child: Text.rich(
@@ -185,7 +176,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
                   width: 26,
                   height: 26,
                   decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
-                  child: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: _kAccentDark),
+                  child: const Icon(Iconsax.arrow_down_1, size: 14, color: _kAccentDark),
                 ),
             ],
           ),
@@ -196,19 +187,18 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
 
   Widget _buildFilterChips() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-      child: Obx(() {
-        final l = _ctrl.lookups.value;
-        final departments = l?.departments ?? const <JobLookupItem>[];
-        const buckets = JobExperienceBucket.all;
-        final deptId = _ctrl.selectedDepartmentId.value;
-        final experience = _ctrl.selectedExperience.value;
-        final salary = _ctrl.minSalary.value;
-        final salaryOptions = JobsFilterSheet.salaryOptions;
-        return Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
+      padding: const EdgeInsets.only(top: 14),
+      child: SizedBox(
+        height: 17 + MediaQuery.textScalerOf(context).scale(17),
+        child: Obx(() {
+          final l = _ctrl.lookups.value;
+          final departments = l?.departments ?? const <JobLookupItem>[];
+          const buckets = JobExperienceBucket.all;
+          final deptId = _ctrl.selectedDepartmentId.value;
+          final experience = _ctrl.selectedExperience.value;
+          final salary = _ctrl.minSalary.value;
+          final salaryOptions = JobsFilterSheet.salaryOptions;
+          final chips = <Widget>[
             _dropdownChip(
               label: JobLookups.nameOf(departments, deptId) ?? 'Department',
               selected: deptId != null,
@@ -224,6 +214,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
               options: ['Any', for (final b in buckets) b.label],
               selectedIndex: experience == null ? 0 : buckets.indexOf(experience) + 1,
               onPicked: (i) => _ctrl.applyFilters(
+                departmentId: _ctrl.selectedDepartmentId.value,
                 experience: i == 0 ? null : buckets[i - 1],
                 minSalary: _ctrl.minSalary.value,
               ),
@@ -235,13 +226,21 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
               options: [for (final o in salaryOptions) o.label],
               selectedIndex: salaryOptions.indexWhere((o) => o.value == salary),
               onPicked: (i) => _ctrl.applyFilters(
+                departmentId: _ctrl.selectedDepartmentId.value,
                 experience: _ctrl.selectedExperience.value,
                 minSalary: salaryOptions[i].value,
               ),
             ),
-          ],
-        );
-      }),
+          ];
+          return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: chips.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 6),
+            itemBuilder: (_, i) => chips[i],
+          );
+        }),
+      ),
     );
   }
 
@@ -253,12 +252,34 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
     required int selectedIndex,
     required void Function(int) onPicked,
   }) {
-    return SelectableChip(
-      label: '$label ▾',
-      selected: selected,
-      activeColor: _kAccent,
-      padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 14),
+    final fg = selected ? Colors.white : AppColors.textDark;
+    return GestureDetector(
       onTap: () => _pickOption(title: title, options: options, selectedIndex: selectedIndex, onPicked: onPicked),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        constraints: const BoxConstraints(maxWidth: 200),
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 14),
+        decoration: BoxDecoration(
+          color: selected ? _kAccent : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: selected ? _kAccent : AppColors.divider, width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Iconsax.arrow_down_1, size: 14, color: selected ? Colors.white : _kAccentDark),
+          ],
+        ),
+      ),
     );
   }
 
@@ -273,7 +294,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       builder: (sheetCtx) => ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.of(sheetCtx).size.height * 0.7),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -288,7 +309,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(title,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
             ),
           ),
           Flexible(
@@ -296,18 +317,21 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
               shrinkWrap: true,
               padding: EdgeInsets.only(bottom: AppInsets.bottomViewPadding(sheetCtx) + 12),
               itemCount: options.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, indent: 20, endIndent: 20, color: AppColors.divider),
+              separatorBuilder: (_, _) => const Divider(height: 1, indent: 20, endIndent: 20, color: AppColors.divider),
               itemBuilder: (_, i) {
                 final on = i == selectedIndex;
                 return ListTile(
+                  minTileHeight: 48,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20),
                   title: Text(options[i],
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 14,
-                          fontWeight: on ? FontWeight.w600 : FontWeight.w400,
-                          color: on ? _kAccentDark : AppColors.textDark)),
-                  trailing: on ? const Icon(Icons.check_rounded, color: _kAccent) : null,
+                          fontWeight: on ? FontWeight.w700 : FontWeight.w400,
+                          color: on ? _kAccent : AppColors.textDark)),
+                  trailing: on ? const Icon(Iconsax.tick_circle, size: 20, color: _kAccent) : null,
                   onTap: () => Navigator.pop(sheetCtx, i),
                 );
               },
@@ -322,22 +346,27 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
 
   Widget _buildListHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 9, 20, 0),
       child: Row(
         children: [
-          const Expanded(
-            child: Text(
-              'Jobs near you',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
-            ),
+          Expanded(
+            child: Obx(() {
+              final n = _ctrl.total.value;
+              return Text(
+                n == null ? 'Jobs near you' : '$n ${n == 1 ? 'job' : 'jobs'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              );
+            }),
           ),
           GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () => JobsFilterSheet.show(context, controller: _ctrl),
             child: Obx(() {
               final active = _ctrl.hasFilters;
               return Container(
+                margin: const EdgeInsets.symmetric(vertical: 7),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: active ? _kAccent.withValues(alpha: 0.10) : Colors.white,
@@ -347,7 +376,7 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.tune_rounded, size: 14, color: _kAccentDark),
+                    const Icon(Iconsax.setting_4, size: 14, color: _kAccentDark),
                     const SizedBox(width: 5),
                     const Text(
                       'Filter',
@@ -378,17 +407,17 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
         if (_ctrl.noDistrict.value) {
           return SliverToBoxAdapter(
             child: _buildMessage(
-              icon: Icons.location_off_outlined,
+              icon: Iconsax.location_slash,
               title: 'Pick a district',
               subtitle: 'Choose where to find jobs',
             ),
           );
         }
-        if (_ctrl.isLoading.value) return _buildShimmerGrid();
+        if (_ctrl.isLoading.value) return _buildShimmerList();
         final failed = _ctrl.loadFailed.value;
         return SliverToBoxAdapter(
           child: _buildMessage(
-            icon: failed ? Icons.cloud_off_rounded : Iconsax.briefcase,
+            icon: failed ? Iconsax.cloud_cross : Iconsax.briefcase,
             title: failed ? "Couldn't load jobs" : 'No jobs yet',
             subtitle: failed ? 'Check your connection and try again' : 'Try another district',
             onRetry: failed ? _ctrl.retry : null,
@@ -396,54 +425,45 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> {
         );
       }
       return SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-        sliver: SliverGrid(
-          gridDelegate: _kGridDelegate,
-          delegate: SliverChildBuilderDelegate(
-            (_, i) {
-              final job = items[i];
-              return ListingGridCard(
-                key: ValueKey(job.id),
-                thumbnailUrl: job.coverPhotoUrl,
-                tagLabel: job.departmentName,
-                title: job.title,
-                locationLabel: job.locationLabel,
-                facts: [
-                  if (job.roleName.isNotEmpty) CardFact(job.roleName),
-                  CardFact(job.experienceLabel, tone: job.isFresher ? FactTone.cyan : FactTone.accent),
-                  CardFact(job.postedAgo, tone: FactTone.slate),
-                ],
-                priceCaption: 'Salary',
-                priceValue: job.salaryLabel,
-                priceUnit: job.salaryUnit,
-                isPlot: false,
-                accent: _kAccent,
-                accentDark: _kAccentDark,
-                onViewDetails: () => _viewDetails(job),
-              );
-            },
-            childCount: items.length,
-            addAutomaticKeepAlives: false,
-          ),
+        padding: const EdgeInsets.only(top: 4),
+        sliver: SliverList.builder(
+          itemCount: items.length,
+          itemBuilder: (_, i) {
+            final job = items[i];
+            return JobListCard(
+              key: ValueKey(job.id),
+              title: job.title,
+              roleLabel: job.roleName,
+              experienceTag: job.experienceLabel,
+              metaLine: job.locationLabel,
+              topRightText: job.postedAgo,
+              salaryLabel: job.salaryLabel,
+              salaryUnit: job.salaryUnit,
+              trailingChip: job.jobTypeName.isEmpty ? null : job.jobTypeName,
+              accent: _kAccent,
+              accentDark: _kAccentDark,
+              onTap: () => _viewDetails(job),
+            );
+          },
         ),
       );
     });
   }
 
-  Widget _buildShimmerGrid() {
+  Widget _buildShimmerList() {
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      sliver: SliverGrid(
-        gridDelegate: _kGridDelegate,
-        delegate: SliverChildBuilderDelegate(
-          (_, __) => Shimmer.fromColors(
-            baseColor: AppColors.shimmerBase,
-            highlightColor: AppColors.shimmerHighlight,
-            child: Container(
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-            ),
+      padding: const EdgeInsets.only(top: 4),
+      sliver: SliverList.separated(
+        itemCount: 5,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (_, _) => Shimmer.fromColors(
+          baseColor: AppColors.shimmerBase,
+          highlightColor: AppColors.shimmerHighlight,
+          child: Container(
+            height: 104,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
           ),
-          childCount: 6,
         ),
       ),
     );

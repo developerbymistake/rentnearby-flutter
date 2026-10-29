@@ -39,8 +39,8 @@ class TaxiOptionSets {
   static const categories = [
     TaxiOption('Hatchback', 'Hatchback'),
     TaxiOption('Sedan', 'Sedan'),
-    TaxiOption('SUV', 'SUV'),
     TaxiOption('MUV', 'MUV'),
+    TaxiOption('SUV', 'SUV'),
     TaxiOption('TempoTraveller', 'Tempo Traveller'),
     TaxiOption('Bus', 'Bus'),
   ];
@@ -104,9 +104,19 @@ class TaxiOptionSets {
     return 2 * r * math.asin(math.min(1.0, math.sqrt(a)));
   }
 
-  static String step1Summary(TaxiOwnerModel t) => [
-        t.vehicleTypeName ?? 'Vehicle',
+  static String vehicleLabel(TaxiOwnerModel t) {
+    final c = t.vehicleCategory;
+    if (c != null && c.isNotEmpty) return categoryLabel(c);
+    return t.vehicleTypeName ?? 'Vehicle';
+  }
+
+  static String vehicleSummary(TaxiOwnerModel t) => [
+        vehicleLabel(t),
         if (t.seats != null) '${seatsLabel(t.seats!)} seats',
+      ].join(' · ');
+
+  static String step1Summary(TaxiOwnerModel t) => [
+        vehicleSummary(t),
         if (t.plateDisplay != null && t.plateDisplay!.isNotEmpty) t.plateDisplay!,
       ].join(' · ');
 

@@ -15,7 +15,7 @@ class JobsRepository {
   Future<JobLookups> getLookups() async =>
       JobLookups.fromJson(_data(await ApiService.get('/stay-jobs/lookups')));
 
-  Future<({List<JobSummaryModel> items, bool hasMore})> browse({
+  Future<({List<JobSummaryModel> items, bool hasMore, int? total})> browse({
     required String districtId,
     String? departmentId,
     int? minExperience,
@@ -37,6 +37,7 @@ class JobsRepository {
     return (
       items: list.map((e) => JobSummaryModel.fromJson(e as Map<String, dynamic>)).toList(),
       hasMore: data['hasMore'] == true,
+      total: ((data['total'] ?? data['totalCount']) as num?)?.toInt(),
     );
   }
 

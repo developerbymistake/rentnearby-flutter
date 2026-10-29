@@ -17,7 +17,7 @@ class TaxiVehicleTypePickerSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       builder: (_) => TaxiVehicleTypePickerSheet(selectedId: selectedId),
     );
   }
@@ -56,7 +56,7 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: SizedBox(
-        height: (_baseHeight ?? 700) * 0.8,
+        height: (_baseHeight ?? 700) * 0.7,
         child: Column(children: [
           Container(
             width: 40,
@@ -70,7 +70,7 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
               alignment: Alignment.centerLeft,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('Vehicle Type',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                 Text('Pick from the list. Admin keeps the list updated.',
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
               ]),
@@ -94,10 +94,10 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
                           _searchCtrl.clear();
                           _query = '';
                         }),
-                        icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textLight),
+                        icon: const Icon(Iconsax.close_circle, size: 18, color: AppColors.textLight),
                       ),
                 filled: true,
-                fillColor: AppColors.surface,
+                fillColor: TaxiColors.surface,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 enabledBorder: OutlineInputBorder(
@@ -115,10 +115,18 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
   }
 
   Widget _list() {
-    final types = _types.types;
+    final types = _types.types.toList();
+    final loading = _types.isLoading.value;
+    final failed = _types.loadFailed.value;
     if (types.isEmpty) {
-      if (_types.isLoading.value) {
+      if (loading) {
         return const Center(child: CircularProgressIndicator(color: TaxiColors.accent, strokeWidth: 2));
+      }
+      if (!failed) {
+        return const Center(
+          child: Text('No vehicle types yet',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium)),
+        );
       }
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -127,6 +135,7 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
           const SizedBox(height: 8),
           TextButton(
             onPressed: _types.load,
+            style: TextButton.styleFrom(minimumSize: const Size(88, 44)),
             child: const Text('Try again',
                 style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: TaxiColors.accentDark)),
           ),
@@ -140,58 +149,61 @@ class _TaxiVehicleTypePickerSheetState extends State<TaxiVehicleTypePickerSheet>
             style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
       );
     }
-    return ListView(
+    final items = <Object>[
+      for (final entry in groups.entries) ...[entry.key, ...entry.value],
+    ];
+    return ListView.separated(
       padding: EdgeInsets.fromLTRB(16, 0, 16, AppInsets.bottomViewPadding(context) + 16),
-      children: [
-        for (final entry in groups.entries) ...[
-          Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 6),
-            child: Text(TaxiOptionSets.categoryLabel(entry.key).toUpperCase(),
-                style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.4,
-                    color: AppColors.textHint)),
-          ),
-          for (final t in entry.value) _row(t),
-        ],
-      ],
+      itemCount: items.length,
+      separatorBuilder: (_, i) => items[i] is String || items[i + 1] is String
+          ? const SizedBox.shrink()
+          : const Divider(height: 1, thickness: 1, color: AppColors.divider),
+      itemBuilder: (_, i) {
+        final item = items[i];
+        return item is TaxiVehicleTypeModel ? _row(item) : _groupHeader(item as String);
+      },
     );
   }
+
+  Widget _groupHeader(String category) => Padding(
+        padding: const EdgeInsets.only(top: 14, bottom: 4),
+        child: Text(TaxiOptionSets.categoryLabel(category).toUpperCase(),
+            style: const TextStyle(
+                fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: AppColors.textHint)),
+      );
 
   Widget _row(TaxiVehicleTypeModel t) {
     final selected = t.id == widget.selectedId;
     return InkWell(
       onTap: () => Navigator.pop(context, t),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? TaxiColors.surface : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? TaxiColors.accent : AppColors.divider, width: selected ? 1.5 : 1),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+          child: Row(children: [
+            Icon(Iconsax.car, size: 18, color: selected ? TaxiColors.accent : AppColors.textLight),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(t.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected ? TaxiColors.accent : AppColors.textDark)),
+            ),
+            if (t.defaultSeats != null) ...[
+              const SizedBox(width: 8),
+              Text('${TaxiOptionSets.seatsLabel(t.defaultSeats!)} seats',
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+            ],
+            if (selected) ...[
+              const SizedBox(width: 8),
+              const Icon(Iconsax.tick_circle, size: 18, color: TaxiColors.accent),
+            ],
+          ]),
         ),
-        child: Row(children: [
-          Icon(Iconsax.car, size: 18, color: selected ? TaxiColors.accentDark : AppColors.textLight),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(t.name,
-                style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                    color: AppColors.textDark)),
-          ),
-          if (t.defaultSeats != null)
-            Text('${TaxiOptionSets.seatsLabel(t.defaultSeats!)} seats',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-          if (selected) ...[
-            const SizedBox(width: 8),
-            const Icon(Icons.check_circle_rounded, size: 18, color: TaxiColors.accent),
-          ],
-        ]),
       ),
     );
   }

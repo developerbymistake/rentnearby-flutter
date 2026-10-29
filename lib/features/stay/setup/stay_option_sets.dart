@@ -80,7 +80,6 @@ class StayOptionSets {
 
   static String basicSummary(StayOwnerModel s) => [
         s.name ?? 'Stay',
-        if (s.stayTypeName != null && s.stayTypeName!.isNotEmpty) s.stayTypeName!,
         '${s.photos.length} photo${s.photos.length == 1 ? '' : 's'}',
       ].join(' · ');
 

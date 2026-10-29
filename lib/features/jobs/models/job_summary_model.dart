@@ -1,9 +1,41 @@
 import '../../../models/browse_item.dart';
 
 String jobSalaryLabel(int min, int max) =>
-    min == max ? BrowseItem.inr(min) : '${BrowseItem.inr(min)} - ${BrowseItem.inr(max)}';
+    min == max ? BrowseItem.inr(min) : '${BrowseItem.inr(min)} - ${BrowseItem.inr(max).substring(1)}';
+
+String _thousands(int v) {
+  final k = v / 1000;
+  return k == k.roundToDouble() ? '${k.round()}k' : '${k.toStringAsFixed(1)}k';
+}
+
+String jobSalaryCompact(int min, int max) {
+  if (min <= 0 && max <= 0) return 'Negotiable';
+  if (min == max || min <= 0 || max <= 0) {
+    final v = max > 0 ? max : min;
+    return v >= 1000 ? '₹${_thousands(v)}' : BrowseItem.inr(v);
+  }
+  if (min >= 1000 && max >= 1000) {
+    final a = _thousands(min);
+    return '₹${a.substring(0, a.length - 1)}-${_thousands(max)}';
+  }
+  final a = min >= 1000 ? _thousands(min) : '$min';
+  final b = max >= 1000 ? _thousands(max) : '$max';
+  return '₹$a - $b';
+}
 
 String jobExperienceLabel(int years) => years == 0 ? 'Fresher' : '$years+ yrs';
+
+String jobPostedAgoLong(DateTime dt) {
+  final diff = DateTime.now().difference(dt.toLocal());
+  String unit(int n, String word) => '$n $word${n == 1 ? '' : 's'} ago';
+  if (diff.inMinutes < 1) return 'Posted just now';
+  if (diff.inMinutes < 60) return 'Posted ${unit(diff.inMinutes, 'minute')}';
+  if (diff.inHours < 24) return 'Posted ${unit(diff.inHours, 'hour')}';
+  if (diff.inDays < 7) return 'Posted ${unit(diff.inDays, 'day')}';
+  if (diff.inDays < 30) return 'Posted ${unit((diff.inDays / 7).floor(), 'week')}';
+  if (diff.inDays < 365) return 'Posted ${unit((diff.inDays / 30).floor(), 'month')}';
+  return 'Posted ${unit((diff.inDays / 365).floor(), 'year')}';
+}
 
 String jobPostedAgo(DateTime dt) {
   final diff = DateTime.now().difference(dt.toLocal());
@@ -80,6 +112,8 @@ class JobSummaryModel {
 
   String get salaryLabel => jobSalaryLabel(minSalary, maxSalary);
 
+  String get salaryCompact => jobSalaryCompact(minSalary, maxSalary);
+
   String get salaryUnit => salaryTypeName == 'Monthly' ? '/month' : '';
 
   String get experienceLabel => jobExperienceLabel(minimumExperienceYears);
@@ -88,7 +122,11 @@ class JobSummaryModel {
 
   String get postedAgo => jobPostedAgo(createdAt);
 
-  String get placeLabel => cityName ?? districtName ?? '';
+  String get postedAgoLong => jobPostedAgoLong(createdAt);
 
-  String get locationLabel => placeLabel.isEmpty ? stayName : '$stayName · $placeLabel';
+  String get placeLabel => {cityName, districtName}.whereType<String>().where((e) => e.isNotEmpty).join(', ');
+
+  String get localityLabel => (cityName?.isNotEmpty == true ? cityName : districtName) ?? '';
+
+  String get locationLabel => localityLabel.isEmpty ? stayName : '$stayName · $localityLabel';
 }

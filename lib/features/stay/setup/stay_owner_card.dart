@@ -41,21 +41,20 @@ class StayOwnerCard extends StatelessWidget {
         if (stay.pendingReportCount > 0) _reportStrip(),
         _photoSection(),
         _content(),
-        if (stay.isRejected)
-          _bottomStrip(
-            color: AppColors.error,
-            icon: Icons.cancel_rounded,
-            text: stay.rejectedReason != null && stay.rejectedReason!.isNotEmpty
-                ? 'Rejected: ${stay.rejectedReason}'
-                : 'Rejected',
-            action: 'Fix and resubmit',
-          ),
+        if (stay.isRejected) _rejectStrip(),
         if (stay.isDraft)
           _bottomStrip(
             color: StayColors.accentDark,
             icon: Iconsax.clock,
             text: 'Setup not finished',
             action: 'Continue setup',
+            onTap: onOpenSetup,
+          ),
+        if (stay.isPendingReview)
+          _bottomStrip(
+            color: AppColors.warning,
+            icon: Iconsax.clock,
+            text: 'Under review · We will notify you',
           ),
       ]),
     );
@@ -78,18 +77,24 @@ class StayOwnerCard extends StatelessWidget {
               child: Text('$count report${count == 1 ? '' : 's'} on this stay',
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
             ),
-            const Icon(Icons.chevron_right_rounded, size: 16, color: Colors.white),
+            const Icon(Iconsax.arrow_right_3, size: 14, color: Colors.white),
           ]),
         ),
       ),
     );
   }
 
-  Widget _bottomStrip({required Color color, required IconData icon, required String text, required String action}) {
+  Widget _bottomStrip({
+    required Color color,
+    required IconData icon,
+    required String text,
+    String? action,
+    VoidCallback? onTap,
+  }) {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
       child: GestureDetector(
-        onTap: onOpenSetup,
+        onTap: onTap,
         child: Container(
           width: double.infinity,
           color: color,
@@ -103,20 +108,53 @@ class StayOwnerCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
             ),
-            const SizedBox(width: 8),
-            Text(action,
-                style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Colors.white)),
+            if (action != null) ...[
+              const SizedBox(width: 8),
+              _stripAction(action),
+            ],
           ]),
         ),
       ),
     );
   }
+
+  Widget _rejectStrip() {
+    final reason = stay.rejectedReason;
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+      child: GestureDetector(
+        onTap: onOpenSetup,
+        child: Container(
+          width: double.infinity,
+          color: AppColors.error,
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Iconsax.close_circle, size: 15, color: Colors.white),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(reason != null && reason.isNotEmpty ? 'Rejected: $reason' : 'Rejected',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+              ),
+            ]),
+            const SizedBox(height: 6),
+            Align(alignment: Alignment.centerRight, child: _stripAction('Fix and resubmit')),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _stripAction(String text) => Text(text,
+      style: const TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          decoration: TextDecoration.underline,
+          decorationColor: Colors.white));
 
   Widget _photoSection() {
     final photo = stay.photos.isNotEmpty ? stay.photos.first.url : null;
@@ -136,9 +174,18 @@ class StayOwnerCard extends StatelessWidget {
               )
             : _placeholder(),
       ),
-      Positioned(top: 10, left: 10, child: _statusBadge()),
-      if (stay.minPricePerNight != null)
-        Positioned(top: 10, right: 10, child: _priceBadge()),
+      Positioned(
+        top: 10,
+        left: 10,
+        right: 10,
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Flexible(child: _statusBadge()),
+          if (stay.minPricePerNight != null) ...[
+            const SizedBox(width: 8),
+            Flexible(child: _priceBadge()),
+          ],
+        ]),
+      ),
     ]);
   }
 
@@ -160,9 +207,13 @@ class StayOwnerCard extends StatelessWidget {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
         const SizedBox(width: 5),
-        Text(label,
-            style: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5)),
+        Flexible(
+          child: Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5)),
+        ),
       ]),
     );
   }
@@ -174,8 +225,13 @@ class StayOwnerCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 4, offset: const Offset(0, 2))],
         ),
-        child: Text('From ${BrowseItem.inr(stay.minPricePerNight!)}/night',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('From ${BrowseItem.inr(stay.minPricePerNight!)}/night',
+              maxLines: 1,
+              softWrap: false,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+        ),
       );
 
   Widget _content() {
@@ -193,11 +249,6 @@ class StayOwnerCard extends StatelessWidget {
           Text(_timeAgo(stay.createdAt),
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textHint)),
         ]),
-        if (stay.stayTypeName != null && stay.stayTypeName!.isNotEmpty) ...[
-          const SizedBox(height: 2),
-          Text(stay.stayTypeName!,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
-        ],
         const SizedBox(height: 8),
         _fieldLabel('Locality'),
         const SizedBox(height: 3),
@@ -233,7 +284,10 @@ class StayOwnerCard extends StatelessWidget {
         ],
         if (stay.rooms.isNotEmpty) ...[
           const SizedBox(height: 6),
-          for (final r in stay.rooms) _roomRow(r),
+          for (var i = 0; i < stay.rooms.length; i++) ...[
+            if (i > 0) const Divider(height: 1, color: AppColors.divider),
+            _roomRow(stay.rooms[i]),
+          ],
         ],
         if (onDelete != null || onPreview != null || onShare != null) ...[
           const SizedBox(height: 12),
@@ -250,6 +304,8 @@ class StayOwnerCard extends StatelessWidget {
         child: Row(children: [
           Expanded(
             child: Text('${r.label} · ${BrowseItem.inr(r.pricePerNight)} / night',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
           ),
           if (onEditPrice != null && !stay.isPendingReview)
@@ -268,7 +324,7 @@ class StayOwnerCard extends StatelessWidget {
   Widget _actions() {
     final cells = <Widget>[
       if (onPreview != null) _actionCell(icon: Iconsax.eye, label: 'View', color: StayColors.accentDark, onTap: onPreview),
-      if (onShare != null) _actionCell(icon: Icons.share_rounded, label: 'Share', color: StayColors.accentDark, onTap: onShare),
+      if (onShare != null) _actionCell(icon: Iconsax.export_1, label: 'Share', color: StayColors.accentDark, onTap: onShare),
       if (onDelete != null) _actionCell(icon: Iconsax.trash, label: 'Delete', color: AppColors.error, onTap: onDelete),
     ];
     return IntrinsicHeight(
