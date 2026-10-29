@@ -177,7 +177,7 @@ class _StayRulesScreenState extends State<StayRulesScreen> {
                       _switchRow('Smoking allowed', _smoking, (v) => _smoking = v),
                       _switchRow('Alcohol allowed', _alcohol, (v) => _alcohol = v),
                       _switchRow('Unmarried couples allowed', _couples, (v) => _couples = v),
-                      _switchRow('ID proof required', _idProof, (v) => _idProof = v),
+                      _switchRow('ID proof required', _idProof, (v) => _idProof = v, last: true),
                     ]),
                   ),
                   _sectionCard(
@@ -240,25 +240,35 @@ class _StayRulesScreenState extends State<StayRulesScreen> {
           GestureDetector(
             onTap: onTap,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: StayColors.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.divider),
               ),
               child: Row(children: [
                 Icon(icon, size: 16, color: StayColors.accentDark),
                 const SizedBox(width: 8),
-                Text(StayOptionSets.time12(_hhmm(value)),
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark)),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(StayOptionSets.time12(_hhmm(value)),
+                        maxLines: 1,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark)),
+                  ),
+                ),
               ]),
             ),
           ),
         ],
       );
 
-  Widget _switchRow(String label, bool value, void Function(bool) apply) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+  Widget _switchRow(String label, bool value, void Function(bool) apply, {bool last = false}) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          border: last ? null : const Border(bottom: BorderSide(color: AppColors.divider)),
+        ),
         child: Row(children: [
           Expanded(
             child: Text(label,

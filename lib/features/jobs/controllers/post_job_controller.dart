@@ -16,6 +16,7 @@ class PostJobController extends GetxController {
   static const maxExperienceYears = 20;
   static const phoneLength = 10;
   static final phoneRegex = RegExp(r'^[6-9]\d{9}$');
+  static const stepCount = 3;
   static const _warnTypes = {'StayJobLimit', 'StayNotApproved'};
 
   static final experienceYearOptions = List<int>.generate(maxExperienceYears + 1, (i) => i);
@@ -44,6 +45,7 @@ class PostJobController extends GetxController {
   final descCtrl = TextEditingController();
   final phoneCtrl = TextEditingController();
   final whatsAppCtrl = TextEditingController();
+  final loginPhoneCtrl = TextEditingController();
   final titleFocus = FocusNode();
   final descFocus = FocusNode();
   final minSalaryFocus = FocusNode();
@@ -58,6 +60,8 @@ class PostJobController extends GetxController {
     super.onInit();
     _prefillPhone = _tenDigits(Get.find<AuthController>().user.value?.phoneNumber ?? '');
     phoneCtrl.text = _prefillPhone;
+    loginPhoneCtrl.text = _prefillPhone;
+    sameAsPhone.value = hasLoginPhone;
     load();
   }
 
@@ -69,6 +73,7 @@ class PostJobController extends GetxController {
     descCtrl.dispose();
     phoneCtrl.dispose();
     whatsAppCtrl.dispose();
+    loginPhoneCtrl.dispose();
     titleFocus.dispose();
     descFocus.dispose();
     minSalaryFocus.dispose();
@@ -105,7 +110,7 @@ class PostJobController extends GetxController {
       maxSalaryCtrl.text.isNotEmpty ||
       phoneCtrl.text.trim() != _prefillPhone ||
       whatsAppCtrl.text.isNotEmpty ||
-      !sameAsPhone.value ||
+      sameAsPhone.value != hasLoginPhone ||
       departmentId.value != null ||
       roleId.value != null ||
       minExperienceYears.value != null ||
@@ -130,7 +135,8 @@ class PostJobController extends GetxController {
   int? get maxSalary => int.tryParse(maxSalaryCtrl.text.trim());
 
   String get contactPhone => phoneCtrl.text.trim();
-  String get whatsAppNumber => sameAsPhone.value ? contactPhone : whatsAppCtrl.text.trim();
+  bool get hasLoginPhone => phoneRegex.hasMatch(_prefillPhone);
+  String get whatsAppNumber => sameAsPhone.value ? _prefillPhone : whatsAppCtrl.text.trim();
 
   bool _fail(String message, [FocusNode? focus]) {
     AppToast.error(message);
@@ -148,10 +154,9 @@ class PostJobController extends GetxController {
         if (t > titleMax) return _fail('Job title is too long', titleFocus);
         if (d == 0) return _fail('Please enter the job description', descFocus);
         if (d > descriptionMax) return _fail('Description is too long', descFocus);
-      case 1:
         if (departmentId.value == null) return _fail('Please select a department');
         if (roleId.value == null) return _fail('Please select a job role');
-      case 2:
+      case 1:
         if (salaryTypeId.value == null) return _fail('Please select a salary type');
         final min = minSalary;
         final max = maxSalary;
@@ -162,9 +167,9 @@ class PostJobController extends GetxController {
         if (max == null || max > maxSalaryLimit) return _fail('Max salary cannot exceed ₹99,00,000', maxSalaryFocus);
         if (max < min) return _fail('Max salary must be at least the min salary', maxSalaryFocus);
         if (minExperienceYears.value == null) return _fail('Please select min experience');
-      case 3:
+      case 2:
         if (jobTypeId.value == null) return _fail('Please select a job type');
-        if (shiftTypeId.value == null) return _fail('Please select a shift type');
+        if (shiftTypeId.value == null) return _fail('Please select a shift');
         if (contactPhone.isEmpty) return _fail('Please enter the phone number', phoneFocus);
         if (!phoneRegex.hasMatch(contactPhone)) return _fail('Enter a valid 10-digit mobile number', phoneFocus);
         if (!sameAsPhone.value) {
@@ -193,7 +198,7 @@ class PostJobController extends GetxController {
 
   Future<bool> submit() async {
     if (isSubmitting.value || blockMessage.value != null) return false;
-    for (var s = 0; s < 4; s++) {
+    for (var s = 0; s < stepCount; s++) {
       if (!validateStep(s)) {
         step.value = s;
         return false;

@@ -8,6 +8,7 @@ class StayOptionGrid extends StatelessWidget {
   final List<String> labels;
   final bool Function(int) isActive;
   final void Function(int) onTap;
+  final Color accent;
 
   const StayOptionGrid({
     super.key,
@@ -16,6 +17,7 @@ class StayOptionGrid extends StatelessWidget {
     required this.labels,
     required this.isActive,
     required this.onTap,
+    this.accent = StayColors.accent,
   });
 
   @override
@@ -38,17 +40,25 @@ class StayOptionGrid extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              color: active ? StayColors.accent : Colors.white,
+              color: active ? accent : Colors.white,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: active ? StayColors.accent : AppColors.divider, width: 1.5),
+              border: Border.all(color: active ? accent : AppColors.divider, width: 1.5),
             ),
             child: Center(
-              child: Text(labels[i],
-                  style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: active ? Colors.white : AppColors.textMedium)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(labels[i],
+                      maxLines: 1,
+                      softWrap: false,
+                      style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: active ? Colors.white : AppColors.textMedium)),
+                ),
+              ),
             ),
           ),
         );

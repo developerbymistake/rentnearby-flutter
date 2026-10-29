@@ -169,6 +169,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
         subtitle: d1 ? TaxiOptionSets.step1Summary(t!) : 'Vehicle, plate photo, phone, base',
         state: state(true, d1),
         onTap: () => _open(AppRoutes.taxiVehicle),
+        accent: TaxiColors.accent,
       ),
       StayStepRow(
         number: 2,
@@ -176,13 +177,21 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
         subtitle: !u2 ? 'Complete step 1 first' : d2 ? TaxiOptionSets.routesSummary(t!) : 'Add routes, up to 10',
         state: state(u2, d2),
         onTap: () => _open(AppRoutes.taxiRoutes),
+        accent: TaxiColors.accent,
       ),
       StayStepRow(
         number: 3,
         title: 'Final submit',
-        subtitle: !u3 ? 'Complete step 2 first' : d3 ? 'Submitted for review' : 'Review and submit',
+        subtitle: !u3
+            ? 'Complete step 2 first'
+            : t!.isApproved
+                ? 'Your taxi is live'
+                : d3
+                    ? 'Submitted for review'
+                    : 'Review and submit',
         state: state(u3, d3),
         onTap: _openSubmit,
+        accent: TaxiColors.accent,
       ),
     ];
   }
@@ -261,11 +270,21 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
   Widget _rejectedStrip(TaxiOwnerModel t) =>
       _strip(color: AppColors.error, icon: Iconsax.close_circle, title: 'Not approved', body: t.rejectedReason);
 
-  Widget _pendingStrip() => _strip(
-        color: TaxiColors.accentDark,
-        icon: Iconsax.clock,
-        title: 'Under review',
-        body: 'We will notify you',
+  Widget _pendingStrip() => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(999)),
+        child: const Row(children: [
+          Icon(Iconsax.clock, size: 16, color: Color(0xFF92400E)),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text('Under review · We will notify you',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF92400E))),
+          ),
+        ]),
       );
 
   Widget _errorView() => Center(

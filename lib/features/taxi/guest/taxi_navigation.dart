@@ -29,8 +29,8 @@ class TaxiNavigation {
         AppRoutes.taxiDetail,
         arguments: {
           'id': id,
-          if (matchedFare != null) 'matchedFare': matchedFare,
-          if (matchedToName != null) 'matchedToName': matchedToName,
+          'matchedFare': ?matchedFare,
+          'matchedToName': ?matchedToName,
         },
       );
 }

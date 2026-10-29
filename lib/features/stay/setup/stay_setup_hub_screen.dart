@@ -153,6 +153,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
 
     return [
       if (s != null && s.isRejected) _rejectedStrip(s),
+      if (s != null && s.isPendingReview) _pendingStrip(),
       _scoreCard(percent),
       const SizedBox(height: 16),
       StayStepRow(
@@ -179,7 +180,13 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
       StayStepRow(
         number: 4,
         title: 'Final submit',
-        subtitle: !u4 ? 'Complete step 3 first' : d4 ? 'Submitted for review' : 'Review and submit',
+        subtitle: !u4
+            ? 'Complete step 3 first'
+            : s!.isApproved
+                ? 'Your stay is live'
+                : d4
+                    ? 'Submitted for review'
+                    : 'Review and submit',
         state: state(u4, d4),
         onTap: () => _open(AppRoutes.staySubmit),
       ),
@@ -235,30 +242,37 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
     );
   }
 
-  Widget _rejectedStrip(StayOwnerModel s) {
-    final reason = s.rejectedReason;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.25)),
-      ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Icon(Iconsax.close_circle, size: 16, color: AppColors.error),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Not approved',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.error)),
-            if (reason != null && reason.isNotEmpty)
-              Text(reason, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
-          ]),
+  Widget _strip({required Color color, required IconData icon, required String title, String? body}) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
-      ]),
-    );
-  }
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+              if (body != null && body.isNotEmpty)
+                Text(body, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
+            ]),
+          ),
+        ]),
+      );
+
+  Widget _rejectedStrip(StayOwnerModel s) =>
+      _strip(color: AppColors.error, icon: Iconsax.close_circle, title: 'Not approved', body: s.rejectedReason);
+
+  Widget _pendingStrip() => _strip(
+        color: StayColors.accentDark,
+        icon: Iconsax.clock,
+        title: 'Under review',
+        body: 'We will notify you',
+      );
 
   Widget _errorView() => Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [

@@ -335,7 +335,7 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
   Widget _buildTiles() {
     const myStays = _OptionTile(
       label: 'My Stays',
-      icon: Icons.bar_chart_rounded,
+      icon: Iconsax.house_2,
       gradient: _kMineGradient,
       onTap: _openMyStays,
     );
@@ -357,8 +357,8 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
         tiles = [
           _OptionTile(
             label: 'My Taxi',
-            icon: Icons.bar_chart_rounded,
-            gradient: _kMineGradient,
+            icon: Iconsax.car,
+            gradient: TaxiColors.gradient,
             onTap: () => Get.toNamed(AppRoutes.myTaxi),
           ),
           jobs,
@@ -384,39 +384,45 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
           taxi,
         ];
       } else {
+        final draft = _auth.user.value?.stayStatus == 'Draft';
         tiles = [
-          const _OptionTile(
-            label: 'Add Stay',
-            icon: Icons.add_rounded,
+          _OptionTile(
+            label: draft ? 'Continue setup' : 'Add Stay',
+            icon: draft ? Iconsax.edit_2 : Iconsax.add,
             gradient: _kGradient,
             onTap: StayFlow.start,
           ),
           myStays,
-          const _OptionTile(
-            label: 'Map view',
-            icon: Icons.map_outlined,
-            gradient: _kMapGradient,
-            onTap: StayNavigation.openMap,
-          ),
           taxi,
         ];
       }
-      final slots = tiles.length > 3 ? tiles.length : 3;
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
         child: KeyedSubtree(
           key: TourKeys.staysLandingTiles,
-          child: Row(
-            children: [
-              for (var i = 0; i < slots; i++) ...[
-                if (i > 0) const SizedBox(width: 10),
-                Expanded(child: i < tiles.length ? tiles[i] : const SizedBox.shrink()),
-              ],
-            ],
-          ),
+          child: tiles.length == 4
+              ? Column(
+                  children: [
+                    _tileRow(tiles.sublist(0, 2)),
+                    const SizedBox(height: 10),
+                    _tileRow(tiles.sublist(2)),
+                  ],
+                )
+              : _tileRow(tiles),
         ),
       );
     });
+  }
+
+  Widget _tileRow(List<Widget> tiles) {
+    return Row(
+      children: [
+        for (var i = 0; i < tiles.length; i++) ...[
+          if (i > 0) const SizedBox(width: 10),
+          Expanded(child: tiles[i]),
+        ],
+      ],
+    );
   }
 
   Widget _buildTypeChips() {
@@ -468,7 +474,10 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
             key: TourKeys.staysLandingSort,
             onTap: () => StayFilterSortSheet.show(context, controller: _ctrl),
             child: Obx(() {
-              final active = _ctrl.selectedMeals.value != null;
+              final meals = _ctrl.selectedMeals.value;
+              final type = _ctrl.selectedStayTypeId.value;
+              final sort = _ctrl.sortBy.value;
+              final active = meals != null || type != null || sort != StayLandingController.defaultSort;
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -667,12 +676,15 @@ class _OptionTile extends StatelessWidget {
               child: Icon(icon, size: 26, color: Colors.white),
             ),
             const SizedBox(height: 6),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textDark),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                softWrap: false,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              ),
             ),
           ],
         ),

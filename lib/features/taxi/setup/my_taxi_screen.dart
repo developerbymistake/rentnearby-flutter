@@ -257,7 +257,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
               prefixStyle:
                   const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
               filled: true,
-              fillColor: AppColors.surface,
+              fillColor: TaxiColors.surface,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),

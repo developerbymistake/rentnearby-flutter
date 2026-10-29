@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../config/app_colors.dart';
 import '../../../widgets/gradient_button.dart';
-import '../../../widgets/selectable_chip.dart';
 import '../../stay/setup/stay_option_grid.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/jobs_list_controller.dart';
 import '../models/job_experience_bucket.dart';
+import '../models/job_lookups_model.dart';
 
 const _kGradient = StayColors.gradient;
 const _kActive = StayColors.accent;
@@ -41,6 +41,7 @@ class JobsFilterSheet extends StatefulWidget {
 }
 
 class _JobsFilterSheetState extends State<JobsFilterSheet> {
+  late String? _departmentId = widget.controller.selectedDepartmentId.value;
   late JobExperienceBucket? _experience = widget.controller.selectedExperience.value;
   late int? _minSalary = widget.controller.minSalary.value;
   Worker? _externalResetWorker;
@@ -101,6 +102,27 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Obx(() {
+                  final departments = widget.controller.lookups.value?.departments ?? const <JobLookupItem>[];
+                  if (departments.isEmpty) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('DEPARTMENT', style: _sectionLabelStyle),
+                        const SizedBox(height: 8),
+                        StayOptionGrid(
+                          crossAxisCount: 3,
+                          childAspectRatio: 2.6,
+                          labels: ['All', for (final d in departments) d.name],
+                          isActive: (i) => _departmentId == (i == 0 ? null : departments[i - 1].id),
+                          onTap: (i) => setState(() => _departmentId = i == 0 ? null : departments[i - 1].id),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
                 const Text('EXPERIENCE', style: _sectionLabelStyle),
                 const SizedBox(height: 8),
                 StayOptionGrid(
@@ -113,21 +135,12 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
                 const SizedBox(height: 16),
                 const Text('MIN SALARY', style: _sectionLabelStyle),
                 const SizedBox(height: 8),
-                GridView.count(
+                StayOptionGrid(
                   crossAxisCount: 3,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 6,
-                  crossAxisSpacing: 6,
-                  childAspectRatio: 2.4,
-                  children: JobsFilterSheet.salaryOptions
-                      .map((o) => SelectableChip(
-                            label: o.label,
-                            selected: _minSalary == o.value,
-                            activeColor: _kActive,
-                            onTap: () => setState(() => _minSalary = o.value),
-                          ))
-                      .toList(),
+                  childAspectRatio: 2.6,
+                  labels: [for (final o in JobsFilterSheet.salaryOptions) o.label],
+                  isActive: (i) => _minSalary == JobsFilterSheet.salaryOptions[i].value,
+                  onTap: (i) => setState(() => _minSalary = JobsFilterSheet.salaryOptions[i].value),
                 ),
                 const SizedBox(height: 8),
               ],
@@ -141,6 +154,7 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => setState(() {
+                    _departmentId = null;
                     _experience = null;
                     _minSalary = null;
                   }),
@@ -164,7 +178,11 @@ class _JobsFilterSheetState extends State<JobsFilterSheet> {
                   onPressed: () {
                     _closing = true;
                     Navigator.of(context).pop();
-                    widget.controller.applyFilters(experience: _experience, minSalary: _minSalary);
+                    widget.controller.applyFilters(
+                      departmentId: _departmentId,
+                      experience: _experience,
+                      minSalary: _minSalary,
+                    );
                   },
                 ),
               ),

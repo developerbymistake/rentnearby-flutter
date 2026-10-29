@@ -12,6 +12,7 @@ import '../../../utils/app_toast.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/gradient_button.dart';
 import '../../../widgets/location_search_sheet.dart';
+import '../../stay/setup/dashed_add_row.dart';
 import '../../stay/setup/stay_option_grid.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_setup_controller.dart';
@@ -80,6 +81,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
       ));
     }
     _formOpen = _routes.length < _max;
+    _from = _defaultFrom;
   }
 
   @override
@@ -91,7 +93,14 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
 
   int get _count => _routes.length + (_formOpen ? 1 : 0);
 
-  bool get _formBlank => _from == null && _to == null && _fareCtrl.text.trim().isEmpty && _tripType == null;
+  bool get _fromIsDefault {
+    final from = _from;
+    if (from == null) return true;
+    final d = _defaultFrom;
+    return d != null && d.name == from.name && d.lat == from.lat && d.lng == from.lng;
+  }
+
+  bool get _formBlank => _fromIsDefault && _to == null && _fareCtrl.text.trim().isEmpty && _tripType == null;
 
   LatLng get _bias {
     final t = _ctrl.taxi.value;
@@ -99,8 +108,18 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
     return Get.find<LocationController>().effectiveSearchCenter;
   }
 
+  _Place? get _defaultFrom {
+    if (_routes.isNotEmpty) return _routes.last.from;
+    final t = _ctrl.taxi.value;
+    final lat = t?.latitude, lng = t?.longitude;
+    final name = t?.locality ?? '';
+    if (t == null || lat == null || lng == null || name.isEmpty) return null;
+    final label = t.baseLabel;
+    return _Place(name: name, label: label.isNotEmpty && label != name ? label : null, lat: lat, lng: lng);
+  }
+
   void _clearForm() {
-    _from = null;
+    _from = _defaultFrom;
     _to = null;
     _fareCtrl.clear();
     _tripType = null;
@@ -349,33 +368,46 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
 
   Widget _summaryCard(int i) {
     final r = _routes[i];
-    final text = '${r.from.name} → ${r.to.name} · ${BrowseItem.inr(r.fare)} · ${TaxiOptionSets.tripLabel(r.tripType)}';
+    final text = '${r.from.name} to ${r.to.name} · ${BrowseItem.inr(r.fare)} · ${TaxiOptionSets.tripLabel(r.tripType)}';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+      padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
       decoration: BoxDecoration(
-        color: TaxiColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: TaxiColors.accent.withValues(alpha: 0.35)),
+        border: Border.all(color: AppColors.divider),
+        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Row(children: [
         Expanded(
           child: Text(text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w500, color: AppColors.textDark)),
         ),
-        IconButton(
-          onPressed: () => _editRoute(i),
-          icon: const Icon(Iconsax.edit_2, size: 18, color: TaxiColors.accentDark),
-          visualDensity: VisualDensity.compact,
-        ),
-        IconButton(
-          onPressed: () => _removeRoute(i),
-          icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.error),
-          visualDensity: VisualDensity.compact,
-        ),
+        const SizedBox(width: 6),
+        _squareAction(Iconsax.edit_2, TaxiColors.accentDark, () => _editRoute(i)),
+        _squareAction(Iconsax.close_circle, AppColors.error, () => _removeRoute(i)),
       ]),
     );
   }
+
+  Widget _squareAction(IconData icon, Color color, VoidCallback onTap) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+              child: Icon(icon, size: 14, color: color),
+            ),
+          ),
+        ),
+      );
 
   Widget _label(String text, {bool first = false}) => Padding(
         padding: EdgeInsets.only(top: first ? 0 : 14, bottom: 8),
@@ -384,37 +416,42 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
       );
 
   Widget _placeRow({required IconData icon, required _Place? place, required String placeholder, required VoidCallback onTap}) =>
-      InkWell(
-        onTap: onTap,
+      Material(
+        color: TaxiColors.surface,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.divider),
-          ),
-          child: Row(children: [
-            Icon(icon, size: 18, color: TaxiColors.accent),
-            const SizedBox(width: 10),
-            Expanded(
-              child: place == null
-                  ? Text(placeholder,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint))
-                  : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(place.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark)),
-                      if (place.label != null && place.label!.isNotEmpty)
-                        Text(place.label!,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 50),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: Row(children: [
+              Icon(icon, size: 18, color: TaxiColors.accent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: place == null
+                    ? Text(placeholder,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint))
+                    : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(place.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                    ]),
-            ),
-            const Icon(Iconsax.search_normal, size: 16, color: AppColors.textLight),
-          ]),
+                            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark)),
+                        if (place.label != null && place.label!.isNotEmpty)
+                          Text(place.label!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                      ]),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Iconsax.gps, size: 18, color: TaxiColors.accentDark),
+            ]),
+          ),
         ),
       );
 
@@ -435,7 +472,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
         _label('From *', first: true),
         _placeRow(icon: Iconsax.location, place: _from, placeholder: 'Search a place', onTap: () => _pickPlace(true)),
         _label('To *'),
-        _placeRow(icon: Iconsax.flag, place: _to, placeholder: 'Search a place', onTap: () => _pickPlace(false)),
+        _placeRow(icon: Iconsax.search_normal, place: _to, placeholder: 'Search a place', onTap: () => _pickPlace(false)),
         _label('Fare (₹) *'),
         TextFormField(
           controller: _fareCtrl,
@@ -450,7 +487,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
             prefixText: '₹ ',
             prefixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: TaxiColors.surface,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             enabledBorder: OutlineInputBorder(
@@ -469,38 +506,20 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
             _tripType = TaxiOptionSets.tripTypes[i].value;
             _dirty = true;
           }),
+          accent: TaxiColors.accent,
         ),
       ]),
     );
   }
 
   Widget _addRow() {
-    final full = _count >= _max;
-    return AnimatedOpacity(
-      opacity: full ? 0.45 : 1,
-      duration: const Duration(milliseconds: 200),
-      child: GestureDetector(
-        onTap: _addAnother,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: TaxiColors.accent.withValues(alpha: 0.5)),
-          ),
-          child: Row(children: [
-            const Icon(Icons.add_rounded, size: 18, color: TaxiColors.accentDark),
-            const SizedBox(width: 6),
-            const Expanded(
-              child: Text('Add another route',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: TaxiColors.accentDark)),
-            ),
-            Text(full ? '$_count of $_max · limit reached' : '$_count of $_max',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-          ]),
-        ),
-      ),
+    final n = _count;
+    return DashedAddRow(
+      label: 'Add another route',
+      counter: n < _max ? '$n of $_max' : 'Limit reached',
+      enabled: n < _max,
+      onTap: _addAnother,
+      accent: TaxiColors.accent,
     );
   }
 

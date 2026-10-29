@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +12,7 @@ import '../../../controllers/report_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../../widgets/detail_action_bar.dart';
+import '../../../widgets/detail_header.dart';
 import '../../../widgets/gradient_button.dart';
 import '../../../widgets/report_listing_sheet.dart';
 import '../../stay/setup/stay_option_sets.dart';
@@ -81,7 +81,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           margin: margin,
           padding: const EdgeInsets.all(8),
           decoration: const BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
-          child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+          child: const Icon(Iconsax.arrow_left_2, color: Colors.white, size: 18),
         ),
       );
 
@@ -101,7 +101,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(height: 260 + MediaQuery.of(context).padding.top, color: Colors.white),
+                    Container(height: 140 + MediaQuery.of(context).padding.top, color: Colors.white),
                     Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -156,25 +156,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return CustomScrollView(
       slivers: [
         SliverAppBar(
-          expandedHeight: 260,
+          expandedHeight: 140,
           pinned: true,
           backgroundColor: _kAccent,
           leading: _backButton(margin: const EdgeInsets.all(8)),
-          flexibleSpace: FlexibleSpaceBar(
-            background: j.coverPhotoUrl == null
-                ? Container(
-                    decoration: const BoxDecoration(gradient: _kGradient),
-                    child: const Center(child: Icon(Iconsax.briefcase, size: 80, color: Colors.white38)),
-                  )
-                : CachedNetworkImage(
-                    imageUrl: j.coverPhotoUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: (ctx, url) => Container(color: AppColors.surface),
-                    errorWidget: (ctx, url, err) => Container(
-                      color: AppColors.surface,
-                      child: const Icon(Icons.broken_image_rounded, size: 48, color: AppColors.textHint),
-                    ),
-                  ),
+          flexibleSpace: const FlexibleSpaceBar(
+            background: DecoratedBox(
+              decoration: BoxDecoration(gradient: _kGradient),
+              child: Center(child: Icon(Iconsax.briefcase, size: 56, color: Colors.white)),
+            ),
           ),
         ),
         SliverToBoxAdapter(
@@ -185,16 +175,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 _closedBanner(),
                 const SizedBox(height: 12),
               ],
-              Text(j.title,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-              const SizedBox(height: 8),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                if (j.roleName.isNotEmpty) _chip(Iconsax.user_tag, j.roleName),
-                if (j.departmentName.isNotEmpty) _chip(Iconsax.briefcase, j.departmentName),
-                _chip(Iconsax.medal_star, j.experienceLabel),
-              ]),
-              const SizedBox(height: 16),
-              _salaryBlock(j),
+              DetailTitleRow(
+                accent: _kAccent,
+                tag: 'JOB',
+                secondTag: j.experienceLabel,
+                icon: Iconsax.briefcase,
+                title: j.title,
+                caption: 'SALARY',
+                value: j.salaryCompact,
+                unit: j.salaryUnit,
+              ),
               const SizedBox(height: 16),
               _infoCard(j),
               if (j.description.isNotEmpty) ...[
@@ -204,16 +194,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 Text(j.description,
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium, height: 1.6)),
               ],
-              const SizedBox(height: 24),
-              _sectionTitle('About the stay'),
-              const SizedBox(height: 8),
-              _stayCard(j),
               const SizedBox(height: 16),
               Row(children: [
-                const Icon(Icons.access_time_rounded, size: 13, color: AppColors.textHint),
+                const Icon(Iconsax.clock, size: 13, color: AppColors.textHint),
                 const SizedBox(width: 4),
-                Text('Posted ${_timeAgo(j.createdAt)}',
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
+                Expanded(
+                  child: Text(j.postedAgoLong,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
+                ),
               ]),
               const SizedBox(height: 20),
             ]),
@@ -231,51 +221,22 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
       );
 
-  Widget _chip(IconData icon, String label) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: _kAccent.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _kAccent.withValues(alpha: 0.3)),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 13, color: _kAccentDark),
-          const SizedBox(width: 5),
-          Text(label,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: _kAccentDark)),
-        ]),
-      );
-
-  Widget _salaryBlock(JobDetailModel j) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: StayColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _kAccent.withValues(alpha: 0.3)),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('SALARY',
-              style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight)),
-          const SizedBox(height: 2),
-          Text.rich(
-            TextSpan(children: [
-              TextSpan(text: j.salaryLabel),
-              if (j.salaryUnit.isNotEmpty)
-                TextSpan(text: ' ${j.salaryUnit}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            ]),
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.gold),
-          ),
-        ]),
-      );
-
   Widget _infoCard(JobDetailModel j) {
+    final jobTypeShift = [j.jobTypeName, j.shiftTypeName].where((e) => e.isNotEmpty).join(' · ');
     final rows = <Widget>[
-      _infoRow(Iconsax.medal_star, 'Experience', j.experienceDetail),
-      _infoRow(Iconsax.briefcase, 'Job type', j.jobTypeName),
-      _infoRow(Iconsax.clock, 'Shift', j.shiftTypeName),
-      _infoRow(Iconsax.money, 'Salary type', j.salaryTypeName),
+      _infoRow(Iconsax.briefcase, 'Job role', j.roleName),
+      _infoRow(
+        Iconsax.house_2,
+        'Stay',
+        j.stayName,
+        onTap: j.stayListingId.isEmpty
+            ? null
+            : () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': j.stayListingId}),
+      ),
+      _infoRow(Iconsax.location, 'Location', j.placeLabel),
+      _infoRow(Iconsax.timer_1, 'Experience', j.experienceDetail),
+      _infoRow(Iconsax.clock, 'Job type · Shift', jobTypeShift),
+      _infoRow(Iconsax.wallet_3, 'Salary type', j.salaryTypeName),
     ];
     return Container(
       padding: const EdgeInsets.all(16),
@@ -293,91 +254,59 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  Widget _stayCard(JobDetailModel j) {
-    final subtitle = [j.stayTypeName, j.placeLabel].where((e) => e != null && e.isNotEmpty).join(' · ');
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': j.stayListingId}),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: AppShadows.premium(_kAccent, alpha: 0.06, blur: 12, offset: const Offset(0, 4)),
-        ),
-        child: Row(children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(gradient: _kGradient, borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Iconsax.building_4, size: 22, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(j.stayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-              if (subtitle.isNotEmpty)
-                Text(subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-            ]),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.textHint),
-        ]),
-      ),
-    );
-  }
-
   Widget _sectionTitle(String text) => Text(text,
-      style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark));
+      style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark));
 
-  Widget _infoRow(IconData icon, String label, String value) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: _kAccent),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-              const SizedBox(height: 2),
-              Text(value.isEmpty ? '-' : value,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-            ]),
-          ),
+  Widget _infoRow(IconData icon, String label, String value, {VoidCallback? onTap}) {
+    final row = Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(color: _kAccent.withValues(alpha: 0.1), shape: BoxShape.circle),
+          child: Icon(icon, size: 18, color: _kAccent),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+            const SizedBox(height: 2),
+            Text(value.isEmpty ? '-' : value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          ]),
+        ),
+        if (onTap != null) ...[
+          const SizedBox(width: 8),
+          const Icon(Iconsax.arrow_right_3, size: 16, color: _kAccentDark),
         ],
-      );
-
-  static String _timeAgo(DateTime dt) {
-    final diff = DateTime.now().toUtc().difference(dt.toUtc());
-    if (diff.inSeconds < 60) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()} weeks ago';
-    if (diff.inDays < 365) return '${(diff.inDays / 30).floor()} months ago';
-    return '${(diff.inDays / 365).floor()} years ago';
+      ],
+    );
+    if (onTap == null) return row;
+    return InkWell(onTap: onTap, borderRadius: BorderRadius.circular(10), child: row);
   }
 
   Widget? _buildActionBar() {
     if (_isOwner) return null;
     final j = _job!;
     final reportCtrl = Get.find<ReportController>();
-    return Obx(() => DetailActionBar(
-          ownerPhone: j.hasContact ? j.contactPhone : null,
-          whatsAppPhone: j.hasContact ? j.whatsAppOrPhone : null,
-          isOwner: false,
-          showDirections: false,
-          callLabel: 'Call',
-          reportLabel: 'Report this stay',
-          safetyText: 'Never pay to get a job. Visit the stay before joining.',
-          onReport: (j.hasReportedStay || reportCtrl.reportedListingIds.contains(j.stayListingId))
-              ? null
-              : () => ReportListingSheet.show(context, listingId: j.stayListingId, listingType: 'Stay'),
-          accent: _kAccent,
-        ));
+    final canContact = j.isActive && j.hasContact;
+    return Obx(() {
+      final reported = reportCtrl.reportedListingIds.contains(j.stayListingId) || j.hasReportedStay;
+      return DetailActionBar(
+        ownerPhone: canContact ? j.contactPhone : null,
+        whatsAppPhone: canContact ? j.whatsAppOrPhone : null,
+        isOwner: false,
+        showDirections: false,
+        callLabel: 'Call',
+        reportLabel: 'Report this stay',
+        safetyText: 'Never pay to get a job. Visit the stay before joining.',
+        onReport: reported
+            ? null
+            : () => ReportListingSheet.show(context, listingId: j.stayListingId, listingType: 'Stay'),
+        accent: _kAccent,
+      );
+    });
   }
 }

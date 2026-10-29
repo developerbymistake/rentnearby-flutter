@@ -19,8 +19,6 @@ import '../../../widgets/report_listing_sheet.dart';
 import '../models/stay_detail_model.dart';
 import '../models/stay_owner_model.dart';
 import '../../taxi/guest/stay_taxis_section.dart';
-import '../../taxi/guest/taxi_navigation.dart';
-import '../../taxi/taxi_option_sets.dart';
 import '../setup/stay_option_sets.dart';
 import 'stay_guest_controller.dart';
 
@@ -183,7 +181,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.share_rounded, color: Colors.white, size: 18),
+                      Icon(Iconsax.export_1, color: Colors.white, size: 18),
                       SizedBox(width: 6),
                       Text('Share',
                           style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
@@ -289,10 +287,10 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
                 _sectionTitle('Getting there'),
                 const SizedBox(height: 8),
                 StayTaxisSection(
-                  stayPlace: s.cityName?.isNotEmpty == true ? s.cityName! : (s.districtName ?? 'this stay'),
                   stayLat: s.latitude!,
                   stayLng: s.longitude!,
-                  fallback: _gettingThereRow(s),
+                  stayCityName: s.cityName ?? '',
+                  stayDistrictName: s.districtName ?? '',
                 ),
               ],
               if (s.facilities.isNotEmpty) ...[
@@ -320,7 +318,7 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
               ],
               const SizedBox(height: 16),
               Row(children: [
-                const Icon(Icons.access_time_rounded, size: 13, color: AppColors.textHint),
+                const Icon(Iconsax.clock, size: 13, color: AppColors.textHint),
                 const SizedBox(width: 4),
                 Text('Posted ${_timeAgo(s.createdAt)}',
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textHint)),
@@ -333,58 +331,19 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
     );
   }
 
-  Widget _gettingThereRow(StayDetailModel s) {
-    final from = s.cityName?.isNotEmpty == true
-        ? s.cityName!
-        : (s.districtName?.isNotEmpty == true ? s.districtName! : 'this stay');
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => TaxiNavigation.openList(fromName: from, fromLat: s.latitude, fromLng: s.longitude),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: TaxiColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: TaxiColors.accent.withValues(alpha: 0.25)),
-        ),
-        child: Row(children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(gradient: TaxiColors.gradient, borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Iconsax.car, size: 20, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Local taxis',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-              Text('From $from',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-            ]),
-          ),
-          const Text('See ›',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: TaxiColors.accentDark)),
-        ]),
-      ),
-    );
-  }
-
   Widget _sectionTitle(String text) => Text(text,
-      style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark));
+      style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark));
 
   Widget _roomRow(StayRoomModel r) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Iconsax.lamp_on, size: 18, color: _kAccent),
-        const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(r.label,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
             const SizedBox(height: 2),
             Text(
               [
@@ -393,18 +352,17 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
               ]
                   .where((e) => e.isNotEmpty)
                   .join(' · '),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
             ),
           ]),
         ),
         const SizedBox(width: 8),
-        Text.rich(
-          TextSpan(children: [
-            TextSpan(text: BrowseItem.inr(r.pricePerNight)),
-            const TextSpan(text: ' /night', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-          ]),
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.gold),
-        ),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(BrowseItem.inr(r.pricePerNight),
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.gold)),
+          const Text('/night',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textLight)),
+        ]),
       ],
     );
   }
@@ -423,12 +381,6 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
   }
 
   Widget _rulesCard(StayRulesModel r) {
-    final facts = [
-      ('Check-in', StayOptionSets.time12(r.checkInTime)),
-      ('Check-out', StayOptionSets.time12(r.checkOutTime)),
-      ('Pets', _yesNo(r.petsAllowed)),
-      ('Cancellation', StayOptionSets.labelOf(StayOptionSets.cancellation, r.cancellationPolicy)),
-    ];
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -436,32 +388,44 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppShadows.premium(_kAccent, alpha: 0.06, blur: 12, offset: const Offset(0, 4)),
       ),
-      child: GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 2.8,
-        children: facts
-            .map((f) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(color: AppColors.scaffoldBg, borderRadius: BorderRadius.circular(12)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(f.$1, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                      Text(f.$2.isEmpty ? '-' : f.$2,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                    ],
-                  ),
-                ))
-            .toList(),
-      ),
+      child: Column(children: [
+        IntrinsicHeight(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Expanded(child: _ruleTile(Iconsax.login, 'Check-in', StayOptionSets.time12(r.checkInTime))),
+            const SizedBox(width: 8),
+            Expanded(child: _ruleTile(Iconsax.logout, 'Check-out', StayOptionSets.time12(r.checkOutTime))),
+          ]),
+        ),
+        const SizedBox(height: 8),
+        IntrinsicHeight(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Expanded(child: _ruleTile(Iconsax.pet, 'Pets', _yesNo(r.petsAllowed))),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _ruleTile(Iconsax.calendar_remove, 'Cancellation',
+                  StayOptionSets.labelOf(StayOptionSets.cancellation, r.cancellationPolicy)),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _ruleTile(IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(color: AppColors.scaffoldBg, borderRadius: BorderRadius.circular(12)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, size: 16, color: _kAccent),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+            Text(value.isEmpty ? '-' : value,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          ]),
+        ),
+      ]),
     );
   }
 
@@ -481,17 +445,18 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
   Widget _buildActionBar() {
     final s = _stay!;
     final reportCtrl = Get.find<ReportController>();
-    return Obx(() => DetailActionBar(
+    return Obx(() {
+      final reported = reportCtrl.reportedListingIds.contains(s.id) || s.hasReported;
+      return DetailActionBar(
           latitude: s.latitude,
           longitude: s.longitude,
           ownerPhone: _isOwner ? null : s.ownerPhone,
           isOwner: _isOwner,
-          onReport: (s.hasReported || reportCtrl.reportedListingIds.contains(s.id))
-              ? null
-              : () => ReportListingSheet.show(context, listingId: s.id, listingType: 'Stay'),
+          onReport: reported ? null : () => ReportListingSheet.show(context, listingId: s.id, listingType: 'Stay'),
           onChat: _isOwner ? null : () => _openChat(s),
           accent: _kAccent,
-        ));
+        );
+    });
   }
 
   Future<void> _openChat(StayDetailModel s) async {

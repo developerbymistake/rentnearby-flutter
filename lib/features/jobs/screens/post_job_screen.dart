@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../utils/input_formatters.dart';
@@ -14,6 +15,8 @@ import '../models/job_lookups_model.dart';
 const _kAccent = StayColors.accent;
 const _kAccentDark = StayColors.accentDark;
 const _kGradient = StayColors.gradient;
+const _kWarnBg = Color(0xFFFEF3C7);
+const _kWarnText = Color(0xFF92400E);
 
 class PostJobScreen extends StatefulWidget {
   const PostJobScreen({super.key});
@@ -86,7 +89,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
     );
   }
 
-  static const _steps = ['Basics', 'Role', 'Pay', 'Extras'];
+  static const _steps = ['Basics', 'Details', 'Extras'];
 
   Future<void> _next() async {
     FocusScope.of(context).unfocus();
@@ -163,17 +166,13 @@ class _PostJobScreenState extends State<PostJobScreen> {
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.error.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.35)),
-      ),
-      child: Row(children: [
-        const Icon(Icons.info_outline_rounded, size: 20, color: AppColors.error),
+      decoration: BoxDecoration(color: _kWarnBg, borderRadius: BorderRadius.circular(14)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Iconsax.warning_2, size: 18, color: _kWarnText),
         const SizedBox(width: 10),
         Expanded(
           child: Text(message,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: _kWarnText)),
         ),
       ]),
     );
@@ -247,8 +246,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
       ),
       child: switch (step) {
         0 => _basicsStep(),
-        1 => _roleStep(),
-        2 => _payStep(),
+        1 => _detailsStep(),
         _ => _extrasStep(),
       },
     );
@@ -291,7 +289,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
     );
   }
 
-  Widget _sectionCard({required String title, String? hint, required Widget child}) => Container(
+  Widget _sectionCard({required String title, required Widget child}) => Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -302,10 +300,6 @@ class _PostJobScreenState extends State<PostJobScreen> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title,
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          if (hint != null) ...[
-            const SizedBox(height: 2),
-            Text(hint, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          ],
           const SizedBox(height: 10),
           child,
         ]),
@@ -317,7 +311,8 @@ class _PostJobScreenState extends State<PostJobScreen> {
         prefixText: prefix,
         prefixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: StayColors.surface,
+        counterText: '',
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
@@ -325,35 +320,46 @@ class _PostJobScreenState extends State<PostJobScreen> {
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _kAccent, width: 1.5)),
       );
 
-  Widget _pickerField({required String? value, required String placeholder, required VoidCallback? onTap}) {
+  Widget _pickerField({
+    required IconData icon,
+    required String? value,
+    required String placeholder,
+    required VoidCallback? onTap,
+  }) {
     final enabled = onTap != null;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        height: 50,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: Row(children: [
-          Expanded(
-            child: Text(
-              value ?? placeholder,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 14,
-                fontWeight: value == null ? FontWeight.w400 : FontWeight.w500,
-                color: value == null ? AppColors.textHint : AppColors.textDark,
+    return Material(
+      color: StayColors.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.divider),
+          ),
+          child: Row(children: [
+            Icon(icon, size: 18, color: enabled ? _kAccent : AppColors.textHint),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                value ?? placeholder,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  fontWeight: value == null ? FontWeight.w400 : FontWeight.w500,
+                  color: value == null ? AppColors.textHint : AppColors.textDark,
+                ),
               ),
             ),
-          ),
-          Icon(Icons.keyboard_arrow_down_rounded, color: enabled ? _kAccentDark : AppColors.textHint),
-        ]),
+            const SizedBox(width: 8),
+            Icon(Iconsax.arrow_down_1, size: 18, color: enabled ? _kAccentDark : AppColors.textHint),
+          ]),
+        ),
       ),
     );
   }
@@ -382,7 +388,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       builder: (sheetCtx) => ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.of(sheetCtx).size.height * 0.7),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -397,7 +403,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(title,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
             ),
           ),
           Flexible(
@@ -408,16 +414,26 @@ class _PostJobScreenState extends State<PostJobScreen> {
               separatorBuilder: (_, __) => const Divider(height: 1, indent: 20, endIndent: 20, color: AppColors.divider),
               itemBuilder: (_, i) {
                 final selected = i == selectedIndex;
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                  title: Text(labels[i],
-                      style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                          color: selected ? _kAccentDark : AppColors.textDark)),
-                  trailing: selected ? const Icon(Icons.check_rounded, color: _kAccent) : null,
+                return InkWell(
                   onTap: () => Navigator.pop(sheetCtx, i),
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Row(children: [
+                      Expanded(
+                        child: Text(labels[i],
+                            style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 14,
+                                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                                color: selected ? _kAccent : AppColors.textDark)),
+                      ),
+                      if (selected) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Iconsax.tick_circle, size: 18, color: _kAccent),
+                      ],
+                    ]),
+                  ),
                 );
               },
             ),
@@ -428,6 +444,8 @@ class _PostJobScreenState extends State<PostJobScreen> {
   }
 
   Widget _basicsStep() {
+    final l = _ctrl.lookups.value!;
+    final deptId = _ctrl.departmentId.value;
     return SingleChildScrollView(
       key: const ValueKey(0),
       padding: const EdgeInsets.all(16),
@@ -437,8 +455,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
           child: TextField(
             controller: _ctrl.titleCtrl,
             focusNode: _ctrl.titleFocus,
-            maxLength: PostJobController.titleMax,
-            inputFormatters: noEmojiInputFormatters,
+            inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(PostJobController.titleMax)],
             textCapitalization: TextCapitalization.words,
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
             decoration: _inputDec('e.g. Cook for homestay'),
@@ -450,27 +467,16 @@ class _PostJobScreenState extends State<PostJobScreen> {
             controller: _ctrl.descCtrl,
             focusNode: _ctrl.descFocus,
             maxLines: 5,
-            maxLength: PostJobController.descriptionMax,
-            inputFormatters: noEmojiInputFormatters,
+            inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(PostJobController.descriptionMax)],
             textCapitalization: TextCapitalization.sentences,
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
             decoration: _inputDec('Duties, timings, food or stay'),
           ),
         ),
-      ]),
-    );
-  }
-
-  Widget _roleStep() {
-    final l = _ctrl.lookups.value!;
-    final deptId = _ctrl.departmentId.value;
-    return SingleChildScrollView(
-      key: const ValueKey(1),
-      padding: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _sectionCard(
           title: 'Department *',
           child: _pickerField(
+            icon: Iconsax.briefcase,
             value: _ctrl.departmentName,
             placeholder: 'Select',
             onTap: () => _pick(
@@ -484,6 +490,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
         _sectionCard(
           title: 'Job Role *',
           child: _pickerField(
+            icon: Iconsax.user,
             value: _ctrl.roleName,
             placeholder: deptId == null ? 'Pick a department first' : 'Select',
             onTap: deptId == null
@@ -500,14 +507,22 @@ class _PostJobScreenState extends State<PostJobScreen> {
     );
   }
 
-  Widget _payStep() {
+  Widget _fieldLabel(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textLight)),
+      );
+
+  Widget _detailsStep() {
     final l = _ctrl.lookups.value!;
     final salaryTypeId = _ctrl.salaryTypeId.value;
     final minYears = _ctrl.minExperienceYears.value;
     final years = PostJobController.experienceYearOptions;
     final salaryFormatters = [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)];
     return SingleChildScrollView(
-      key: const ValueKey(2),
+      key: const ValueKey(1),
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _sectionCard(
@@ -524,47 +539,61 @@ class _PostJobScreenState extends State<PostJobScreen> {
           title: 'Salary Range (₹) *',
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(
-              child: TextField(
-                controller: _ctrl.minSalaryCtrl,
-                focusNode: _ctrl.minSalaryFocus,
-                keyboardType: TextInputType.number,
-                inputFormatters: salaryFormatters,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-                decoration: _inputDec('Min', prefix: '₹ '),
-              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                _fieldLabel('Min'),
+                TextField(
+                  controller: _ctrl.minSalaryCtrl,
+                  focusNode: _ctrl.minSalaryFocus,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: salaryFormatters,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+                  decoration: _inputDec('15000'),
+                ),
+              ]),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: TextField(
-                controller: _ctrl.maxSalaryCtrl,
-                focusNode: _ctrl.maxSalaryFocus,
-                keyboardType: TextInputType.number,
-                inputFormatters: salaryFormatters,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-                decoration: _inputDec('Max', prefix: '₹ '),
-              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                _fieldLabel('Max'),
+                TextField(
+                  controller: _ctrl.maxSalaryCtrl,
+                  focusNode: _ctrl.maxSalaryFocus,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: salaryFormatters,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+                  decoration: _inputDec('20000'),
+                ),
+              ]),
             ),
           ]),
         ),
         _sectionCard(
           title: 'Min Experience *',
-          hint: 'Fresher means no experience needed',
-          child: _pickerField(
-            value: minYears == null ? null : PostJobController.experienceOptionLabel(minYears),
-            placeholder: 'Select',
-            onTap: () async {
-              final i = await _pickIndex(
-                title: 'Min Experience',
-                labels: [for (final y in years) PostJobController.experienceOptionLabel(y)],
-                selectedIndex: minYears == null ? -1 : years.indexOf(minYears),
-              );
-              if (i != null) _ctrl.minExperienceYears.value = years[i];
-            },
-          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _pickerField(
+              icon: Iconsax.timer_1,
+              value: minYears == null ? null : PostJobController.experienceOptionLabel(minYears),
+              placeholder: 'Select',
+              onTap: () async {
+                final i = await _pickIndex(
+                  title: 'Min Experience',
+                  labels: [for (final y in years) PostJobController.experienceOptionLabel(y)],
+                  selectedIndex: minYears == null ? -1 : years.indexOf(minYears),
+                );
+                if (i != null) _ctrl.minExperienceYears.value = years[i];
+              },
+            ),
+            const SizedBox(height: 8),
+            const Text('Fresher means no experience needed',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+          ]),
         ),
       ]),
     );
   }
+
+  static String _shiftLabel(String name) =>
+      name.endsWith(' Shift') ? name.substring(0, name.length - ' Shift'.length) : name;
 
   Widget _extrasStep() {
     final l = _ctrl.lookups.value!;
@@ -576,7 +605,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
       LengthLimitingTextInputFormatter(PostJobController.phoneLength),
     ];
     return SingleChildScrollView(
-      key: const ValueKey(3),
+      key: const ValueKey(2),
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _sectionCard(
@@ -590,47 +619,32 @@ class _PostJobScreenState extends State<PostJobScreen> {
           ),
         ),
         _sectionCard(
-          title: 'Shift Type *',
+          title: 'Shift *',
           child: StayOptionGrid(
             crossAxisCount: 2,
             childAspectRatio: 3.9,
-            labels: l.shiftTypes.map((e) => e.name).toList(),
+            labels: l.shiftTypes.map((e) => _shiftLabel(e.name)).toList(),
             isActive: (i) => shiftId == l.shiftTypes[i].id,
             onTap: (i) => _ctrl.shiftTypeId.value = l.shiftTypes[i].id,
           ),
         ),
         _sectionCard(
-          title: 'Phone Number *',
-          hint: 'Your login number, you can change it',
-          child: TextField(
-            controller: _ctrl.phoneCtrl,
-            focusNode: _ctrl.phoneFocus,
-            keyboardType: TextInputType.phone,
-            inputFormatters: phoneFormatters,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-            decoration: _inputDec('10-digit mobile', prefix: '+91 '),
-          ),
-        ),
-        _sectionCard(
-          title: 'WhatsApp Number *',
+          title: 'Contact *',
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const Expanded(
-                child: Text('Same as my phone',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-              ),
-              Switch(
-                value: same,
-                onChanged: (v) => _ctrl.sameAsPhone.value = v,
-                activeThumbColor: _kAccentDark,
-                activeTrackColor: _kAccent.withValues(alpha: 0.45),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ]),
-            const SizedBox(height: 6),
+            _fieldLabel('Phone Number'),
+            TextField(
+              controller: _ctrl.phoneCtrl,
+              focusNode: _ctrl.phoneFocus,
+              keyboardType: TextInputType.phone,
+              inputFormatters: phoneFormatters,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+              decoration: _inputDec('10-digit mobile', prefix: '+91 '),
+            ),
+            const SizedBox(height: 12),
+            _fieldLabel('WhatsApp Number'),
             TextField(
               key: ValueKey(same),
-              controller: same ? _ctrl.phoneCtrl : _ctrl.whatsAppCtrl,
+              controller: same ? _ctrl.loginPhoneCtrl : _ctrl.whatsAppCtrl,
               focusNode: same ? null : _ctrl.whatsAppFocus,
               enabled: !same,
               keyboardType: TextInputType.phone,
@@ -638,13 +652,24 @@ class _PostJobScreenState extends State<PostJobScreen> {
               style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: same ? AppColors.textMedium : AppColors.textDark),
               decoration: _inputDec('10-digit WhatsApp', prefix: '+91 '),
             ),
+            const SizedBox(height: 12),
+            Row(children: [
+              const Expanded(
+                child: Text('Same as my login number',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+              ),
+              const SizedBox(width: 8),
+              Switch(
+                value: same,
+                onChanged: _ctrl.hasLoginPhone ? (v) => _ctrl.sameAsPhone.value = v : null,
+                activeThumbColor: _kAccentDark,
+                activeTrackColor: _kAccent.withValues(alpha: 0.45),
+              ),
+            ]),
           ]),
         ),
-        const Text('Your job goes live right after you post.',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-        const SizedBox(height: 2),
-        const Text('Seekers can call or WhatsApp you from the job.',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+        const Text('Your job goes live right after you post. Seekers call or WhatsApp you from the job.',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
       ]),
     );
   }
