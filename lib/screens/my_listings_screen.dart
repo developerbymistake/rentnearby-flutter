@@ -5,23 +5,19 @@ import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
-import '../controllers/config_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
-import '../controllers/wallet_controller.dart';
-import '../models/go_live_result.dart';
+import '../controllers/plan_controller.dart';
 import '../models/listing_model.dart';
-import '../models/plan_selection_result.dart';
+import '../services/go_live_flow.dart';
 import '../services/listing_permission_service.dart';
 import '../services/listing_share_service.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
-import '../widgets/go_live_plan_sheet.dart';
-import '../widgets/go_live_submitted_dialog.dart';
-import '../widgets/go_live_success_dialog.dart';
-import '../widgets/insufficient_balance_sheet.dart';
 import '../widgets/listing_card.dart';
-import '../widgets/listing_limit_reached_sheet.dart';
+import '../widgets/plan_cap_strip.dart';
+import '../widgets/plan_limit_reached_sheet.dart';
+import '../widgets/swap_live_sheet.dart';
 
 class MyListingsScreen extends StatefulWidget {
   const MyListingsScreen({super.key});
@@ -66,7 +62,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     if (state == AppLifecycleState.resumed) {
       _page = 1;
       _dataReady = _ctrl.loadMyListings(page: 1).catchError((_) => false);
-      Get.find<WalletController>().loadBalance();
+      Get.find<PlanController>().invalidate();
     }
   }
 
@@ -83,7 +79,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     _page = 1;
     await Future.wait([
       _ctrl.loadMyListings(page: 1),
-      Get.find<WalletController>().loadBalance(forceRefresh: true),
+      Get.find<PlanController>().refreshPlan(force: true),
     ]);
   }
 
@@ -168,7 +164,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
             ),
           ),
 
-          Obx(() => _buildRoomCapStrip()),
+          const PlanCapStrip(accent: AppColors.primary, icon: Icons.bed_rounded, unitPlural: 'rooms'),
           Expanded(
             child: Obx(() {
               final isLoading = _ctrl.isLoading.value;
@@ -201,7 +197,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                         listing: listings[i],
                         onToggleActive: () =>
                             _ctrl.toggleActive(listings[i].id, listings[i].isActive),
-                        onDelete: () => _confirmDelete(listings[i].id, _hasUnusedPaidWindow(listings[i])),
+                        onDelete: () => _confirmDelete(listings[i].id, listings[i].isActive),
                         onGoLive: () => _onGoLiveTap(listings[i]),
                         isGoLiveLoading: _goLiveLoadingId == listings[i].id,
                         onReportsTap: () => Get.toNamed(AppRoutes.listingReports, arguments: {
@@ -239,7 +235,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         case ListingNeedsDistrict():
           AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
         case ListingLimitReached():
-          ListingLimitReachedSheet.show(context, cap: result.cap, unitSingular: 'room', unitPlural: 'rooms', accent: AppColors.primary);
+          PlanLimitReachedSheet.show(context, limit: result.cap, unitSingular: 'room', unitPlural: 'rooms', accent: AppColors.primary);
       }
     } catch (_) {
       AppToast.error('Could not verify your listing limit. Please try again.');
@@ -252,101 +248,25 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     if (_goLiveLoadingId != null) return;
     setState(() => _goLiveLoadingId = listing.id);
     try {
-      final stillWithinValidity = listing.validUntil != null &&
-          listing.validUntil!.toUtc().isAfter(DateTime.now().toUtc());
-      final paymentEnabled = Get.find<ConfigController>().paymentEnabled.value;
-
-      if (stillWithinValidity || !paymentEnabled) {
-        // Free reactivation — owner turned it off, is turning it back on
-        // before the previously-paid window expired. Also taken whenever the
-        // payment kill switch is off, regardless of validity, since the
-        // backend accepts a null-planType go-live for free in that case. No
-        // plan dialog needed either way.
-        final result = await _ctrl.goLive(listing.id);
-        if (mounted) await _handleGoLiveResult(result, spentCredits: 0);
-        return;
-      }
-
-      // Loop rather than a single pass: picking "Add Credits" on an
-      // unaffordable row (or hitting a 409 INSUFFICIENT_BALANCE despite the
-      // client-side check, e.g. balance changed elsewhere) routes to
-      // CreditPacksScreen and, on a successful purchase, comes back here to
-      // reopen the plan sheet against the refreshed balance — same loading
-      // state (`_goLiveLoadingId`) held the whole way through instead of a
-      // fragile recursive re-entry into this method.
-      while (true) {
-        final plans = await _ctrl.getPlans();
-        if (!mounted) return;
-        final selection = await GoLivePlanSheet.show(
-          context,
-          plans: plans.values,
-          unitLimitKey: 'roomLimit',
-          unitSingular: 'room',
-          unitPlural: 'rooms',
-          accentColor: AppColors.primary,
-        );
-        if (selection == null) return; // "Maybe Later" / dismissed
-
-        if (selection is PlanSelectionAddCredits) {
-          final toppedUp = await Get.toNamed(AppRoutes.creditPacks, arguments: {'returnToGoLive': true});
-          if (toppedUp == true && mounted) continue;
-          return;
-        }
-
-        final selectedPlan = (selection as PlanSelected).plan;
-        final planType = selectedPlan['planType'] as String? ?? '';
-        final price = (selectedPlan['originalPrice'] as num?)?.toInt() ?? 0;
-        final result = await _ctrl.goLive(listing.id, planType: planType, requiredCredits: price);
-        if (!mounted) return;
-        final retry = await _handleGoLiveResult(result, spentCredits: price);
-        if (retry && mounted) continue;
-        return;
-      }
+      await GoLiveFlow.run(
+        context,
+        isPlot: false,
+        accent: AppColors.primary,
+        goLive: () => _ctrl.goLive(listing.id),
+        swap: (pauseId) => _ctrl.swapLive(listing.id, pauseId),
+        liveOptions: [
+          for (final l in _ctrl.myListings)
+            if (l.isActive && l.id != listing.id)
+              SwapOption(
+                id: l.id,
+                title: l.roomTypeName ?? 'Room for Rent',
+                subtitle: [l.districtName, l.cityName].where((e) => e != null && e.isNotEmpty).join(', '),
+              ),
+        ],
+        preferSwap: listing.isPausedByPlan,
+      );
     } finally {
       if (mounted) setState(() => _goLiveLoadingId = null);
-    }
-  }
-
-  /// Returns true when the caller should loop back and re-show the plan
-  /// sheet (owner topped up from the insufficient-balance sheet and wants to
-  /// resume), false for every other outcome.
-  Future<bool> _handleGoLiveResult(GoLiveResult result, {required int spentCredits}) async {
-    switch (result) {
-      case GoLiveSuccess():
-        Get.dialog(
-          GoLiveSuccessDialog(
-            isPlot: false,
-            planType: result.planType,
-            creditsSpent: spentCredits,
-            validUntil: result.validUntil,
-            onDismiss: _refresh,
-          ),
-          barrierDismissible: false,
-        );
-        return false;
-      case GoLiveSubmittedForReview():
-        Get.dialog(
-          GoLiveSubmittedDialog(
-            isPlot: false,
-            creditsSpent: result.creditsSpent,
-            onDismiss: _refresh,
-          ),
-          barrierDismissible: false,
-        );
-        return false;
-      case GoLiveInsufficientBalance g:
-        if (!mounted) return false;
-        return InsufficientBalanceSheet.show(
-          context,
-          required: g.requiredCredits,
-          current: Get.find<WalletController>().balance.value,
-        );
-      case GoLiveConcurrentUpdate g:
-        AppToast.error(g.message);
-        return false;
-      case GoLiveFailure g:
-        AppToast.error(g.message);
-        return false;
     }
   }
 
@@ -389,37 +309,6 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         ),
       );
 
-  /// Each listing already carries its own validUntil/isActive (see
-  /// ListingCard's own expiry label) — this strip just shows the flat
-  /// creation cap usage, sourced from ConfigController, with no separate
-  /// membership call needed.
-  Widget _buildRoomCapStrip() {
-    final cap = Get.find<ConfigController>().roomLimit.value;
-    final used = _ctrl.myListings.length;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-      ),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.bed_rounded, size: 13, color: AppColors.primary),
-        const SizedBox(width: 6),
-        Text('$used / $cap rooms used',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                color: AppColors.primary, fontWeight: FontWeight.w600)),
-      ]),
-    );
-  }
-
-  // Credits are only "at risk" while the paid ValidUntil window hasn't lapsed yet — reactivating
-  // within that window is free, so a paused (isActive: false) listing can still be sitting on
-  // unused paid days that a delete would forfeit. isActive alone would miss that case.
-  bool _hasUnusedPaidWindow(ListingModel listing) =>
-      listing.validUntil != null && listing.validUntil!.isAfter(DateTime.now());
-
   Future<void> _shareListing(BuildContext ctx, ListingModel listing) async {
     _ctrl.isSharing.value = true;
     try {
@@ -438,7 +327,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
     }
   }
 
-  void _confirmDelete(String id, bool hasUnusedPaidWindow) {
+  void _confirmDelete(String id, bool wasLive) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -473,34 +362,10 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                     children: [
                       const Text('Are you sure? This will also delete all photos.',
                           style: TextStyle(fontFamily: 'Poppins')),
-                      if (hasUnusedPaidWindow) ...[
+                      if (wasLive && Get.find<PlanController>().myPlan.value.pausedByPlanCount > 0) ...[
                         const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.error.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
-                          ),
-                          child: const Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(Icons.info_outline_rounded, size: 16, color: AppColors.error),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'You still have unused paid days on this listing. Deleting it '
-                                  'will not refund the credits you spent — they will be lost.',
-                                  style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 12.5,
-                                      color: AppColors.error,
-                                      fontWeight: FontWeight.w500),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        const Text('Your paused listing will go live.',
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textLight)),
                       ],
                     ],
                   ),

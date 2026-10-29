@@ -13,9 +13,7 @@ import '../utils/notification_visuals.dart';
 import '../widgets/day_header.dart';
 import '../widgets/new_pill.dart';
 
-/// The Home-screen bell's inbox — infinite-scroll paginated, mirroring
-/// WalletLedgerScreen's ScrollController + footer-loader-row pattern (this
-/// app has no shared PaginatedListView widget). Row tap is fully generic —
+/// Home bell inbox: infinite-scroll list with a footer loader row. Row tap is fully generic —
 /// no per-`type` switch: every notification already carries its own
 /// actionRoute/actionArguments (see NotificationModel's doc comment), so a
 /// future notification category needs zero changes here to route correctly.

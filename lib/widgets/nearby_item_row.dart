@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_shadows.dart';
 import '../config/module_palette.dart';
+import 'plan_badge_chip.dart';
 
 class NearbyItemRow extends StatelessWidget {
   final String? thumbnailUrl;
@@ -16,6 +17,7 @@ class NearbyItemRow extends StatelessWidget {
   final ModulePalette palette;
   final IconData placeholderIcon;
   final bool elevated;
+  final bool isFeatured;
   final VoidCallback onTap;
 
   const NearbyItemRow({
@@ -31,6 +33,7 @@ class NearbyItemRow extends StatelessWidget {
     required this.placeholderIcon,
     required this.onTap,
     this.elevated = false,
+    this.isFeatured = false,
   });
 
   @override
@@ -73,13 +76,19 @@ class NearbyItemRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
+                  Row(children: [
+                    Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(5)),
                     child: Text(tag,
                         style: const TextStyle(
                             fontFamily: 'Poppins', fontSize: 8.5, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: Colors.white)),
                   ),
+                    if (isFeatured) ...[
+                      const SizedBox(width: 6),
+                      PlanBadgeChip(color: palette.accentDark),
+                    ],
+                  ]),
                   const SizedBox(height: 4),
                   Text(title,
                       maxLines: 1,

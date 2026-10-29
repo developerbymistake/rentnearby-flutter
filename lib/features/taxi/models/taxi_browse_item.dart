@@ -15,6 +15,7 @@ class TaxiBrowseItem {
   final String? matchedTripType;
   final bool matchReversed;
   final DateTime createdAt;
+  final bool isFeatured;
 
   const TaxiBrowseItem({
     required this.id,
@@ -33,6 +34,7 @@ class TaxiBrowseItem {
     this.matchedTripType,
     required this.matchReversed,
     required this.createdAt,
+    this.isFeatured = false,
   });
 
   factory TaxiBrowseItem.fromJson(Map<String, dynamic> json) => TaxiBrowseItem(
@@ -52,6 +54,7 @@ class TaxiBrowseItem {
         matchedTripType: json['matchedTripType'] as String?,
         matchReversed: json['matchReversed'] as bool? ?? false,
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+        isFeatured: json['isFeatured'] == true,
       );
 
   bool get isMatch => matchedFare != null;

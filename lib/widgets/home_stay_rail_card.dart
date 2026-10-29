@@ -27,6 +27,7 @@ class HomeStayRailCard extends StatelessWidget {
         isPlot: false,
         accent: ModulePalette.stays.accent,
         accentDark: ModulePalette.stays.accentDark,
+        isFeatured: item.isFeatured,
         onViewDetails: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': item.id}),
       ),
     );

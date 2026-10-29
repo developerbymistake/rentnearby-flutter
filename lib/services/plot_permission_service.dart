@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:get/get.dart';
-import '../controllers/config_controller.dart';
 import '../controllers/location_controller.dart';
+import '../controllers/plan_controller.dart';
 import '../controllers/plot_controller.dart';
 
 sealed class PlotPermissionResult {}
@@ -15,12 +15,10 @@ class PlotLimitReached extends PlotPermissionResult {
   PlotLimitReached({required this.cap});
 }
 
-/// Mirror of ListingPermissionService for plots — see its doc comment.
 class PlotPermissionService {
-  final PlotController _ctrl;
   final LocationController _location;
 
-  PlotPermissionService(this._ctrl, this._location);
+  PlotPermissionService(PlotController _, this._location);
 
   Future<PlotPermissionResult> check() async {
     // See ListingPermissionService.check()'s comment — same GPS/district
@@ -30,13 +28,10 @@ class PlotPermissionService {
     }
     if (_location.selectedDistrict.value == null) return PlotNeedsDistrict();
 
-    final config = Get.find<ConfigController>();
-    await config.ensureLoaded();
-    final cap = config.plotLimit.value;
-
-    if (_ctrl.myPlots.length >= cap) {
-      return PlotLimitReached(cap: cap);
-    }
+    final plans = Get.find<PlanController>();
+    await plans.refreshPlan(force: true);
+    final cap = plans.limits.listingLimit;
+    if (plans.limits.used >= cap) return PlotLimitReached(cap: cap);
     return PlotAllowed();
   }
 

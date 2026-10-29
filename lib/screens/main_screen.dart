@@ -14,13 +14,11 @@ import '../controllers/notification_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../controllers/report_controller.dart';
 import '../repositories/notification_repository.dart';
-import '../repositories/listing_repository.dart';
-import '../repositories/plot_repository.dart';
 import '../repositories/user_repository.dart';
-import '../repositories/wallet_repository.dart';
+import '../repositories/plan_repository.dart';
 import '../controllers/config_controller.dart';
 import '../controllers/tab_config_controller.dart';
-import '../controllers/wallet_controller.dart';
+import '../controllers/plan_controller.dart';
 import '../controllers/banner_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../services/banner_hub_service.dart';
@@ -28,7 +26,6 @@ import '../services/chat_hub_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/notification_hub_service.dart';
 import '../services/notification_service.dart';
-import '../services/wallet_hub_service.dart';
 import '../widgets/app_loading_overlay.dart';
 import '../widgets/district_banner_overlay.dart';
 import '../widgets/global_location_gates.dart';
@@ -74,14 +71,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     super.initState();
     _tabConfigCtrl = TabConfigController.to;
     Get.put(ConfigController());
+    Get.put(PlanRepository());
+    Get.put(PlanController());
     _locationCtrl = Get.put(LocationController());
     // GlobalLocationGates (main.dart's builder:) sits above the Navigator and
     // only re-evaluates Get.isRegistered<LocationController>() when nudged —
     // see its doc comment.
     GlobalLocationGates.notifyReady();
-    Get.put(ListingRepository());
     Get.put(ListingController());
-    Get.put(PlotRepository());
     Get.put(PlotController());
     // HomeController.onInit() looks up LocationController, PlotController, and
     // ListingController — must be put after all three.
@@ -100,15 +97,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     Get.put(NotificationHubService());
     Get.put(ReportController());
     Get.put(UserRepository());
-    Get.put(WalletRepository());
-    Get.put(WalletController());
-    Get.put(WalletHubService());
-    // Same session-wide-connected shape as chat — unconditional, not district-gated. Delivers
-    // live balance pushes for changes this device didn't itself initiate (admin credit/debit,
-    // a Razorpay webhook fallback credit); locally-initiated spends already update instantly via
-    // their own REST response regardless of this connection's state.
-    WalletHubService.to.connect();
-    // Session-wide like Chat/Wallet — delivers the generic NotificationReceived push that
+    // Session-wide like Chat — delivers the generic NotificationReceived push that
     // updates the Home bell live, regardless of which tab is open.
     NotificationHubService.to.connect();
     _chatCtrl.loadConversations();
@@ -194,10 +183,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         BannerHubService.to.connectForDistrict(district.id.toString());
       }
       ChatHubService.to.connect();
-      WalletHubService.to.connect();
       NotificationHubService.to.connect();
       _tabConfigCtrl.load(forceRefresh: true);
       Get.find<ConfigController>().refreshPaymentFeature();
+      Get.find<PlanController>().invalidate();
       Get.find<NotificationController>().loadUnreadCount();
       // Chat badge's app-resume anchor — pushes may have been missed while backgrounded
       // (the hub reconnect above isn't guaranteed to fire if the connection quietly died).

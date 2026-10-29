@@ -6,7 +6,7 @@ import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../utils/app_toast.dart';
-import '../widgets/listing_limit_reached_sheet.dart';
+import '../widgets/plan_limit_reached_sheet.dart';
 import 'listing_permission_service.dart';
 import 'plot_permission_service.dart';
 
@@ -41,13 +41,6 @@ class AddListingFlow {
 
   static Future<void> _startRoom() async {
     final listingCtrl = Get.find<ListingController>();
-    if (!listingCtrl.hasLoadedMyListings) {
-      final loaded = await listingCtrl.loadMyListings();
-      if (!loaded) {
-        AppToast.error('Could not verify your listing limit. Please try again.');
-        return;
-      }
-    }
     final result = await ListingPermissionService(
       listingCtrl,
       Get.find<LocationController>(),
@@ -60,9 +53,9 @@ class AddListingFlow {
       case ListingLimitReached():
         final context = Get.context;
         if (context == null) return;
-        ListingLimitReachedSheet.show(
+        PlanLimitReachedSheet.show(
           context,
-          cap: result.cap,
+          limit: result.cap,
           unitSingular: 'room',
           unitPlural: 'rooms',
           accent: AppColors.primary,
@@ -73,13 +66,6 @@ class AddListingFlow {
 
   static Future<void> _startPlot() async {
     final plotCtrl = Get.find<PlotController>();
-    if (!plotCtrl.hasLoadedMyPlots) {
-      final loaded = await plotCtrl.loadMyPlots(reset: true);
-      if (!loaded) {
-        AppToast.error('Could not verify your listing limit. Please try again.');
-        return;
-      }
-    }
     final result = await PlotPermissionService(
       plotCtrl,
       Get.find<LocationController>(),
@@ -92,9 +78,9 @@ class AddListingFlow {
       case PlotLimitReached():
         final context = Get.context;
         if (context == null) return;
-        ListingLimitReachedSheet.show(
+        PlanLimitReachedSheet.show(
           context,
-          cap: result.cap,
+          limit: result.cap,
           unitSingular: 'plot',
           unitPlural: 'plots',
           accent: AppColors.plot,

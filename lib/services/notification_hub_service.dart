@@ -4,13 +4,14 @@ import '../config/app_constants.dart';
 import '../config/notification_types.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/notification_controller.dart';
+import '../controllers/plan_controller.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
 import 'hub_connection_shared.dart';
 import 'hub_session_manager.dart';
 import 'storage_service.dart';
 
-/// Session-lifetime, push-only connection (like WalletHubService) delivering the generic
+/// Session-lifetime, push-only connection (like ChatHubService) delivering the generic
 /// NotificationReceived envelope that drives the Home bell.
 class NotificationHubService extends GetxService with SingleFlightHubConnect {
   static NotificationHubService get to => Get.find();
@@ -45,6 +46,7 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect {
       try {
         final data = Map<String, dynamic>.from(args[0] as Map);
         Get.find<NotificationController>().applyLiveNotification(data);
+        if (Get.isRegistered<PlanController>()) Get.find<PlanController>().onPushNotification(data['type'] as String?);
         if (data['type'] == NotificationTypeKeys.roleRequestApproved) {
           Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
         } else if (data['type'] == NotificationTypeKeys.roleRequestRejected) {
@@ -66,7 +68,7 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect {
     }
   }
 
-  /// Only called from logout/account-deletion — mirrors WalletHubService/ChatHubService.
+  /// Only called from logout/account-deletion — mirrors ChatHubService.
   Future<void> disconnect() async {
     try {
       _connection?.off('NotificationReceived');

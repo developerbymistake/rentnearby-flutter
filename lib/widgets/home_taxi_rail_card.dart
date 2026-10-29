@@ -8,6 +8,7 @@ import '../features/taxi/models/taxi_browse_item.dart';
 import '../features/taxi/taxi_option_sets.dart';
 import '../models/browse_item.dart';
 import 'listing_grid_card.dart';
+import 'plan_badge_chip.dart';
 
 class HomeTaxiRailCard extends StatelessWidget {
   final TaxiBrowseItem taxi;
@@ -77,6 +78,8 @@ class HomeTaxiRailCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (t.isFeatured)
+                        Positioned(top: 6, right: 6, child: PlanBadgeChip(color: _palette.accentDark)),
                     ],
                   ),
                 ),

@@ -54,7 +54,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
           ),
           _sectionBody(
             'Data Retention and Right to Erasure',
-            'Your account information and listings are retained for as long as your account remains active. You may request deletion of your account at any time through the profile settings. Upon deletion, all associated data — including listings, photos, and wallet/credit transaction records — is permanently removed from our systems. This right is provided in accordance with the Digital Personal Data Protection Act, 2023.',
+            'Your account information and listings are retained for as long as your account remains active. You may request deletion of your account at any time through the profile settings. Upon deletion, all associated data — including listings, photos, and plan purchase records — is permanently removed from our systems. This right is provided in accordance with the Digital Personal Data Protection Act, 2023.',
           ),
           _sectionBody(
             'Security',

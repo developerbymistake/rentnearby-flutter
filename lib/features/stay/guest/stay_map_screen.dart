@@ -1090,6 +1090,7 @@ class _StayMapScreenState extends State<StayMapScreen>
       palette: StayColors.palette,
       placeholderIcon: Iconsax.building_4,
       elevated: elevated,
+      isFeatured: s.isFeatured,
       onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, 'distanceKm': s.distanceKm}),
     );
   }
@@ -1186,7 +1187,7 @@ class _StayMapScreenState extends State<StayMapScreen>
                 const SizedBox(height: 8),
                 Expanded(
                   child: Obx(() {
-                    final items = _guest.nearbyStays.toList()..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+                    final items = _guest.nearbyStays.toList();
                     return ListView.builder(
                       controller: scrollController,
                       padding: EdgeInsets.only(bottom: 16 + AppInsets.bottomViewPadding(context)),

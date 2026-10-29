@@ -27,6 +27,7 @@ abstract final class StayBrowseItem {
       priceCaption: 'FROM',
       priceValue: min != null ? BrowseItem.inr(min) : 'On request',
       priceUnit: min != null ? '/night' : '',
+      isFeatured: j['isFeatured'] == true,
     );
   }
 }

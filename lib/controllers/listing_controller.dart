@@ -4,11 +4,9 @@ import '../config/app_constants.dart';
 import '../models/city_model.dart';
 import '../models/go_live_result.dart';
 import '../models/listing_model.dart';
-import '../repositories/listing_repository.dart';
-import '../repositories/wallet_repository.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/plan_controller.dart';
 import '../controllers/tab_config_controller.dart';
-import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../config/app_colors.dart';
 import '../utils/app_toast.dart';
@@ -256,6 +254,7 @@ class ListingController extends GetxController {
       nearbyListings.removeWhere((l) => l.id == id);
       exploreRefreshTrigger.value++;
       listingStatusChangedTrigger.value++;
+      Get.find<PlanController>().invalidate();
       await loadMyListings();
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) return;
@@ -273,6 +272,8 @@ class ListingController extends GetxController {
       nearbyListings.removeWhere((l) => l.id == id);
       AppToast.success('Listing removed successfully.');
       listingStatusChangedTrigger.value++;
+      Get.find<PlanController>().invalidate();
+      await loadMyListings();
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not delete listing.'));
@@ -281,70 +282,43 @@ class ListingController extends GetxController {
     }
   }
 
-  /// POST /listings/{id}/go-live. Pass [planType] null for a free
-  /// reactivation of a listing still within its previously-paid ValidUntil
-  /// window; pass it (and the credit cost of that plan, so an
-  /// INSUFFICIENT_BALANCE result can report it) when going live for the
-  /// first time or after expiry. On success, refreshes myListings and the
-  /// wallet balance (a spend just happened).
-  Future<GoLiveResult> goLive(String listingId, {String? planType, int requiredCredits = 0}) async {
+  Future<GoLiveResult> goLive(String listingId) async {
     try {
       isLoading.value = true;
-      final res = await ApiService.post('/listings/$listingId/go-live', {'planType': planType});
+      final res = await ApiService.post('/listings/$listingId/go-live', {});
       final data = res['data'];
       if (data == null || data is! Map<String, dynamic>) {
         throw Exception('Invalid response from server');
       }
       listingPostedTrigger.value++;
       await loadMyListings();
-      // The response already carries the authoritative post-spend balance — apply it directly
-      // instead of triggering a separate (cache-prone, previously-buggy) refresh call.
-      final newBalance = (data['balance'] as num?)?.toInt() ?? 0;
-      Get.find<WalletController>().applyBalanceUpdate(newBalance, reason: 'golive');
-      // A first-time (or never-approved) Go-Live now submits for admin review instead of
-      // activating immediately — isActive stays false and the server marks status Pending.
-      if (data['isActive'] == false && data['status'] == 'Pending') {
-        return GoLiveSubmittedForReview(creditsSpent: (data['creditsSpent'] as num?)?.toInt() ?? 0);
-      }
-      return GoLiveSuccess(
-        validUntil: data['validUntil'] != null ? DateTime.tryParse(data['validUntil'] as String) : null,
-        planType: data['planType'] as String?,
-        balance: newBalance,
-      );
+      Get.find<PlanController>().invalidate();
+      return GoLiveResult.fromData(data);
     } on DioException catch (e) {
-      final status = e.response?.statusCode;
-      final responseData = e.response?.data;
-      String? message;
-      String? type;
-      if (responseData is Map<String, dynamic>) {
-        final error = responseData['error'];
-        if (error is Map<String, dynamic>) {
-          message = error['message'] as String?;
-          type = error['type'] as String?;
-        }
-        message ??= responseData['message'] as String?;
-      }
-      if (status == 409 && type == 'INSUFFICIENT_BALANCE') {
-        // Balance may have changed since this attempt started (spent elsewhere, admin
-        // debit, another device) — invalidate the cache and refresh before returning so the
-        // insufficient-balance sheet shows the real current shortfall, not a stale cached value.
-        // Must be awaited (unlike the response-driven update on the success branch above) since
-        // the caller reads WalletController.balance.value synchronously right after this returns.
-        Get.find<WalletRepository>().invalidateBalance();
-        await Get.find<WalletController>().loadBalance();
-        return GoLiveInsufficientBalance(message: message ?? 'Insufficient balance.', requiredCredits: requiredCredits);
-      }
-      if (status == 409 && type == 'CONCURRENT_UPDATE') {
-        return GoLiveConcurrentUpdate(message ?? 'This listing was just modified by another request. Please retry.');
-      }
-      return GoLiveFailure(DioErrorMapper.toMessage(e, 'Could not go live. Please try again.'));
+      if (e.response?.statusCode == 401) return const GoLiveFailure('Session expired.');
+      return GoLiveResult.fromError(e, noun: 'room');
     } catch (_) {
-      return GoLiveFailure('Could not go live. Please try again.');
+      return const GoLiveFailure('Could not go live. Try again.');
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<Map<String, Map<String, dynamic>>> getPlans() =>
-      Get.find<ListingRepository>().getPlans();
+  Future<bool> swapLive(String targetId, String pauseId) async {
+    try {
+      isLoading.value = true;
+      await Get.find<PlanController>().swapLive(isPlot: false, targetId: targetId, pauseListingId: pauseId);
+      listingPostedTrigger.value++;
+      await loadMyListings();
+      Get.find<PlanController>().invalidate();
+      return true;
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return false;
+      AppToast.error(DioErrorMapper.toMessage(e, 'Could not swap. Try again.',
+          showRawMessageForStatusCodes: const {400, 409}));
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
 }

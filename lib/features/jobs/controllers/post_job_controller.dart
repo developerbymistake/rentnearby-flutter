@@ -30,6 +30,7 @@ class PostJobController extends GetxController {
   final isSubmitting = false.obs;
   final step = 0.obs;
   final blockMessage = Rxn<String>();
+  final limitReached = false.obs;
 
   final departmentId = Rxn<String>();
   final roleId = Rxn<String>();
@@ -93,8 +94,11 @@ class PostJobController extends GetxController {
       isLoading.value = true;
       loadFailed.value = false;
       blockMessage.value = null;
+      limitReached.value = false;
       lookups.value = await _repo.getLookups();
-      blockMessage.value = (await _repo.getMine()).blockMessage;
+      final mine = await _repo.getMine();
+      blockMessage.value = mine.blockMessage;
+      limitReached.value = mine.limitReached;
     } catch (e) {
       loadFailed.value = true;
       _handleError(e, 'Could not load the form.');
@@ -213,6 +217,7 @@ class PostJobController extends GetxController {
       const fallback = 'Could not post the job.';
       if (e is DioException && _warnTypes.contains(DioErrorMapper.errorType(e))) {
         blockMessage.value = DioErrorMapper.toMessage(e, fallback, showRawMessageForStatusCodes: const {409});
+        limitReached.value = DioErrorMapper.errorType(e) == 'StayJobLimit';
       }
       _handleError(e, fallback);
       return false;

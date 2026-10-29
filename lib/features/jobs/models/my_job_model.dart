@@ -69,7 +69,9 @@ class MyJobsPage {
   final String? stayStatus;
   final bool canPost;
 
-  static String limitMessage(int max) => 'You can have up to $max active jobs. Close one to add a new job.';
+  static String limitMessage(int max) => 'Your plan allows $max active jobs. Close one or upgrade.';
+
+  bool get limitReached => !canPost && stayStatus == 'Approved';
 
   String? get blockMessage {
     if (canPost) return null;

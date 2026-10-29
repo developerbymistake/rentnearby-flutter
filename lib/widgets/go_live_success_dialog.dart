@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
-import 'credit_icon.dart';
 
-/// Shown after a successful POST /{listings|plots}/{id}/go-live — the credit-
-/// economy replacement for the old razorpay PaymentSuccessDialog. Covers
-/// both a paid plan activation ([creditsSpent] > 0) and a free reactivation
-/// within an already-paid window ([creditsSpent] == 0, [planType] null).
 class GoLiveSuccessDialog extends StatefulWidget {
   final bool isPlot;
-  final String? planType;
-  final int creditsSpent;
+  final int? live;
+  final int? limit;
   final DateTime? validUntil;
   final VoidCallback onDismiss;
 
   const GoLiveSuccessDialog({
     required this.isPlot,
-    this.planType,
-    this.creditsSpent = 0,
+    this.live,
+    this.limit,
     this.validUntil,
     required this.onDismiss,
     super.key,
@@ -69,7 +64,6 @@ class _GoLiveSuccessDialogState extends State<GoLiveSuccessDialog> with TickerPr
 
   @override
   Widget build(BuildContext context) {
-    final isFree = widget.creditsSpent == 0;
     final color = widget.isPlot ? AppColors.plot : AppColors.success;
     final lightColor = widget.isPlot ? const Color(0xFFFFF7ED) : const Color(0xFFECFDF5);
 
@@ -96,27 +90,12 @@ class _GoLiveSuccessDialogState extends State<GoLiveSuccessDialog> with TickerPr
               widget.isPlot ? 'Plot is Live!' : 'Room is Live!',
               style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, fontFamily: 'Poppins', color: AppColors.textDark),
             ),
-            if (widget.planType != null) ...[
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-                decoration: BoxDecoration(
-                  color: lightColor,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: color.withValues(alpha: 0.35)),
-                ),
-                child: Text(
-                  '${widget.planType} Plan',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, fontFamily: 'Poppins', color: color),
-                ),
-              ),
-            ],
             const SizedBox(height: 18),
             Row(children: [
               _statBox(
-                icon: const CreditIcon(size: 16),
-                label: 'Credits Spent',
-                value: isFree ? 'FREE' : '${widget.creditsSpent}',
+                icon: Icon(Icons.home_work_rounded, size: 16, color: color),
+                label: 'Live now',
+                value: widget.live != null && widget.limit != null ? '${widget.live} / ${widget.limit}' : '—',
                 color: color,
                 lightColor: lightColor,
               ),

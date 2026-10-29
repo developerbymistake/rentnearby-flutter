@@ -8,7 +8,6 @@ import 'dart:io';
 import '../config/app_colors.dart';
 import '../config/app_constants.dart';
 import '../config/app_insets.dart';
-import '../controllers/config_controller.dart';
 import '../controllers/listing_controller.dart';
 import '../models/go_live_result.dart';
 import '../utils/app_toast.dart';
@@ -432,20 +431,16 @@ class _AddListingScreenState extends State<AddListingScreen> with AddListingLoca
     try {
       var successMessage = 'Room listed successfully!';
       var listReloaded = false;
-      final config = Get.find<ConfigController>();
-      await config.ensureLoaded();
-      if (config.paymentEnabled.value == false) {
-        final result = await _ctrl.goLive(listingId);
-        switch (result) {
-          case GoLiveSuccess():
-            successMessage = 'Room listed & live!';
-            listReloaded = true;
-          case GoLiveSubmittedForReview():
-            successMessage = 'Room listed — submitted for review!';
-            listReloaded = true;
-          default:
-            successMessage = 'Room listed successfully!';
-        }
+      final result = await _ctrl.goLive(listingId);
+      switch (result) {
+        case GoLiveSuccess():
+          successMessage = 'Room listed & live!';
+          listReloaded = true;
+        case GoLiveSubmittedForReview():
+          successMessage = 'Room listed — submitted for review!';
+          listReloaded = true;
+        default:
+          successMessage = 'Room listed successfully!';
       }
       if (!listReloaded) await _ctrl.loadMyListings();
       if (mounted) Get.back();

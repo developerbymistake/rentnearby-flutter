@@ -62,12 +62,6 @@ class AuthController extends GetxController {
   final profilePhoneVerified = false.obs;
   final profilePhoneChangeLocked = false.obs;
 
-  // Set right after a brand-new account finishes onboarding, consumed exactly once by
-  // WalletController's first loadBalance() on MainScreen mount — that's what turns the
-  // silent server-side welcome-bonus credit into a one-time "100 credits added!" toast,
-  // without a dedicated backend endpoint for it. Never true for a returning login.
-  bool justSignedUp = false;
-
   void _syncProfileFields(UserModel? u) {
     profileName.value = u?.name ?? '';
     profilePhone.value = u?.phoneNumber ?? '';
@@ -98,6 +92,7 @@ class AuthController extends GetxController {
       (user.value?.taxiStatus == 'Approved' || user.value?.taxiStatus == 'PendingReview');
 
   bool canOpenRoute(String route) {
+    if (AppRoutes.ownerOnly.contains(route) && !isOwner) return false;
     if (AppRoutes.roomOwnerOnly.contains(route) && !canListRooms.value) return false;
     if (AppRoutes.plotOwnerOnly.contains(route) && !canListPlots.value) return false;
     if (AppRoutes.stayOwnerOnly.contains(route) && !canListStays.value) return false;
@@ -197,7 +192,6 @@ class AuthController extends GetxController {
         'name': name,
       });
       await _saveSession(res['data'] as Map<String, dynamic>);
-      justSignedUp = true;
       Get.offAllNamed(postLoginRoute);
     } catch (e) {
       AppToast.error(_onboardingError(e));

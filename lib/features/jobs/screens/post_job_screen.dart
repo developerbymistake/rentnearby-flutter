@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
+import '../../../config/app_routes.dart';
+import '../../../controllers/plan_controller.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/gradient_button.dart';
@@ -175,6 +177,14 @@ class _PostJobScreenState extends State<PostJobScreen> {
           child: Text(message,
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: _kWarnText)),
         ),
+        if (_ctrl.limitReached.value && Get.find<PlanController>().paymentEnabled) ...[
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => Get.toNamed(AppRoutes.plansBilling),
+            child: const Text('Upgrade',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: _kAccentDark)),
+          ),
+        ],
       ]),
     );
   }

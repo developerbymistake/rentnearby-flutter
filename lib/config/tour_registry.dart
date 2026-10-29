@@ -209,8 +209,8 @@ List<TourStep> _buildHomeSteps() {
       icon: Iconsax.user,
       title: 'Your account lives here',
       body: owner
-          ? 'Manage your profile, listings, wallet and settings from here.'
-          : 'Manage your profile, wallet and settings from here.',
+          ? 'Manage your profile, listings, plan and settings from here.'
+          : 'Manage your profile and settings from here.',
     ),
   ];
 }

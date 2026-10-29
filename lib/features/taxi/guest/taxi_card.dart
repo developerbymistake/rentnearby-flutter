@@ -4,6 +4,7 @@ import 'package:shimmer/shimmer.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_shadows.dart';
 import '../../../models/browse_item.dart';
+import '../../../widgets/plan_badge_chip.dart';
 import '../models/taxi_browse_item.dart';
 import '../taxi_option_sets.dart';
 
@@ -65,6 +66,10 @@ class TaxiCard extends StatelessWidget {
             for (final tag in tags) ...[
               const SizedBox(width: 6),
               _tagChip(tag),
+            ],
+            if (t.isFeatured) ...[
+              const SizedBox(width: 6),
+              const PlanBadgeChip(color: TaxiColors.accent),
             ],
           ]),
           if (metaLine.isNotEmpty) ...[

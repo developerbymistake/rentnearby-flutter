@@ -10,6 +10,7 @@ import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/app_loading_overlay.dart';
+import '../../../widgets/plan_cap_strip.dart';
 import '../../../widgets/gradient_button.dart';
 import '../models/taxi_owner_model.dart';
 import '../taxi_option_sets.dart';
@@ -77,6 +78,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
             indicatorColor: TaxiColors.accent,
             child: Column(children: [
               _header(),
+              PlanCapStrip(accent: TaxiColors.accent, icon: Icons.workspace_premium_rounded, showUsage: false),
               Expanded(
                 child: Obx(() {
                   final loading = _ctrl.isLoading.value;

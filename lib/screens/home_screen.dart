@@ -10,6 +10,7 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
 import '../config/module_palette.dart';
+import '../controllers/plan_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
@@ -91,6 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const HomeOwnerCarousel(),
                 ),
               ),
+              _buildPlanNudge(),
               FadeInUp(
                 duration: const Duration(milliseconds: 260),
                 delay: const Duration(milliseconds: 120),
@@ -427,6 +429,7 @@ class _HomeScreenState extends State<HomeScreen> {
           priceMonthly: r.priceMonthly,
           city: r.cityName,
           district: r.districtName,
+          isFeatured: r.isFeatured,
         );
         return SizedBox(
           width: 160,
@@ -440,6 +443,7 @@ class _HomeScreenState extends State<HomeScreen> {
             priceValue: item.priceValue,
             priceUnit: item.priceUnit,
             isPlot: false,
+            isFeatured: item.isFeatured,
             onViewDetails: () =>
                 Get.toNamed(AppRoutes.listingDetail, arguments: {'id': r.id}),
           ),
@@ -472,6 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
           areaUnit: p.areaUnit,
           city: p.cityName,
           district: p.districtName,
+          isFeatured: p.isFeatured,
         );
         return SizedBox(
           width: 160,
@@ -485,6 +490,7 @@ class _HomeScreenState extends State<HomeScreen> {
             priceValue: item.priceValue,
             priceUnit: item.priceUnit,
             isPlot: true,
+            isFeatured: item.isFeatured,
             onViewDetails: () =>
                 Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id}),
           ),
@@ -640,6 +646,39 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final result = await Get.toNamed(AppRoutes.postJob);
     if (result == true) MyJobsController.invalidateList();
+  }
+
+  Widget _buildPlanNudge() {
+    final plans = Get.find<PlanController>();
+    return Obx(() {
+      final me = plans.myPlan.value;
+      final days = me.daysLeft;
+      if (!me.paymentEnabled || !me.hasPaidPlan || days == null || days > 7) return const SizedBox.shrink();
+      return GestureDetector(
+        onTap: () => Get.toNamed(AppRoutes.plansBilling),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+          child: Row(children: [
+            const Icon(Icons.schedule_rounded, size: 16, color: AppColors.warningText),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                days <= 0 ? 'Plan ends today' : 'Plan ends in $days day${days == 1 ? '' : 's'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
+              ),
+            ),
+            const Text('Renew',
+                style: TextStyle(
+                    fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.warningText)),
+          ]),
+        ),
+      );
+    });
   }
 
   Widget _buildOwnerQuickActions() {

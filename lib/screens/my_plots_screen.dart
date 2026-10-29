@@ -6,23 +6,20 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
-import '../controllers/config_controller.dart';
 import '../controllers/location_controller.dart';
+import '../controllers/plan_controller.dart';
 import '../controllers/plot_controller.dart';
-import '../controllers/wallet_controller.dart';
-import '../models/go_live_result.dart';
-import '../models/plan_selection_result.dart';
 import '../models/plot_model.dart';
+import '../services/go_live_flow.dart';
 import '../services/listing_share_service.dart';
 import '../services/plot_permission_service.dart';
 import '../utils/app_toast.dart';
 import '../widgets/app_loading_overlay.dart';
-import '../widgets/go_live_plan_sheet.dart';
-import '../widgets/go_live_submitted_dialog.dart';
-import '../widgets/go_live_success_dialog.dart';
-import '../widgets/insufficient_balance_sheet.dart';
-import '../widgets/listing_limit_reached_sheet.dart';
+import '../widgets/plan_badge_chip.dart';
+import '../widgets/plan_cap_strip.dart';
+import '../widgets/plan_limit_reached_sheet.dart';
 import '../widgets/pulse_once.dart';
+import '../widgets/swap_live_sheet.dart';
 
 const _kPlotColor = AppColors.plot;
 
@@ -67,7 +64,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     // top" is itself the correct condition for a refresh.
     if (state == AppLifecycleState.resumed) {
       _dataReady = _ctrl.loadMyPlots(reset: true).catchError((_) => false);
-      Get.find<WalletController>().loadBalance();
+      Get.find<PlanController>().invalidate();
     }
   }
 
@@ -79,7 +76,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
 
   Future<void> _refresh() => Future.wait([
         _ctrl.loadMyPlots(reset: true),
-        Get.find<WalletController>().loadBalance(forceRefresh: true),
+        Get.find<PlanController>().refreshPlan(force: true),
       ]);
 
   void _onAddPlot() async {
@@ -95,7 +92,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         case PlotNeedsDistrict():
           AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
         case PlotLimitReached():
-          ListingLimitReachedSheet.show(context, cap: result.cap, unitSingular: 'plot', unitPlural: 'plots', accent: AppColors.plot);
+          PlanLimitReachedSheet.show(context, limit: result.cap, unitSingular: 'plot', unitPlural: 'plots', accent: AppColors.plot);
       }
     } catch (_) {
       AppToast.error('Could not verify your listing limit. Please try again.');
@@ -108,133 +105,27 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     if (_goLiveLoadingId != null) return;
     setState(() => _goLiveLoadingId = plot.id);
     try {
-      final stillWithinValidity = plot.validUntil != null &&
-          plot.validUntil!.toUtc().isAfter(DateTime.now().toUtc());
-      final paymentEnabled = Get.find<ConfigController>().paymentEnabled.value;
-
-      if (stillWithinValidity || !paymentEnabled) {
-        // Free reactivation — owner turned it off, is turning it back on
-        // before the previously-paid window expired. Also taken whenever the
-        // payment kill switch is off, regardless of validity, since the
-        // backend accepts a null-planType go-live for free in that case. No
-        // plan dialog needed either way.
-        final result = await _ctrl.goLivePlot(plot.id);
-        if (mounted) await _handleGoLiveResult(result, spentCredits: 0);
-        return;
-      }
-
-      // Loop rather than a single pass: picking "Add Credits" on an
-      // unaffordable row (or hitting a 409 INSUFFICIENT_BALANCE despite the
-      // client-side check, e.g. balance changed elsewhere) routes to
-      // CreditPacksScreen and, on a successful purchase, comes back here to
-      // reopen the plan sheet against the refreshed balance — same loading
-      // state (`_goLiveLoadingId`) held the whole way through instead of a
-      // fragile recursive re-entry into this method.
-      while (true) {
-        final plans = await _ctrl.getPlotPlans();
-        if (!mounted) return;
-        final selection = await GoLivePlanSheet.show(
-          context,
-          plans: plans,
-          unitLimitKey: 'plotLimit',
-          unitSingular: 'plot',
-          unitPlural: 'plots',
-          accentColor: _kPlotColor,
-        );
-        if (selection == null) return; // "Maybe Later" / dismissed
-
-        if (selection is PlanSelectionAddCredits) {
-          final toppedUp = await Get.toNamed(AppRoutes.creditPacks, arguments: {'returnToGoLive': true});
-          if (toppedUp == true && mounted) continue;
-          return;
-        }
-
-        final selectedPlan = (selection as PlanSelected).plan;
-        final planType = selectedPlan['planType'] as String? ?? '';
-        final price = (selectedPlan['originalPrice'] as num?)?.toInt() ?? 0;
-        final result = await _ctrl.goLivePlot(plot.id, planType: planType, requiredCredits: price);
-        if (!mounted) return;
-        final retry = await _handleGoLiveResult(result, spentCredits: price);
-        if (retry && mounted) continue;
-        return;
-      }
+      await GoLiveFlow.run(
+        context,
+        isPlot: true,
+        accent: _kPlotColor,
+        goLive: () => _ctrl.goLivePlot(plot.id),
+        swap: (pauseId) => _ctrl.swapLive(plot.id, pauseId),
+        liveOptions: [
+          for (final p in _ctrl.myPlots)
+            if (p.isActive && p.id != plot.id)
+              SwapOption(
+                id: p.id,
+                title: '${p.plotType} · ${p.areaDisplay}',
+                subtitle: [p.districtName, p.cityName].whereType<String>().join(', '),
+              ),
+        ],
+        preferSwap: plot.isPausedByPlan,
+      );
     } finally {
       if (mounted) setState(() => _goLiveLoadingId = null);
     }
   }
-
-  /// Returns true when the caller should loop back and re-show the plan
-  /// sheet (owner topped up from the insufficient-balance sheet and wants to
-  /// resume), false for every other outcome.
-  Future<bool> _handleGoLiveResult(GoLiveResult result, {required int spentCredits}) async {
-    switch (result) {
-      case GoLiveSuccess():
-        Get.dialog(
-          GoLiveSuccessDialog(
-            isPlot: true,
-            planType: result.planType,
-            creditsSpent: spentCredits,
-            validUntil: result.validUntil,
-            onDismiss: _refresh,
-          ),
-          barrierDismissible: false,
-        );
-        return false;
-      case GoLiveSubmittedForReview():
-        Get.dialog(
-          GoLiveSubmittedDialog(
-            isPlot: true,
-            creditsSpent: result.creditsSpent,
-            onDismiss: _refresh,
-          ),
-          barrierDismissible: false,
-        );
-        return false;
-      case GoLiveInsufficientBalance g:
-        if (!mounted) return false;
-        return InsufficientBalanceSheet.show(
-          context,
-          required: g.requiredCredits,
-          current: Get.find<WalletController>().balance.value,
-        );
-      case GoLiveConcurrentUpdate g:
-        AppToast.error(g.message);
-        return false;
-      case GoLiveFailure g:
-        AppToast.error(g.message);
-        return false;
-    }
-  }
-
-  /// Each plot already carries its own validUntil/isActive (see _PlotCard's
-  /// own expiry label) — this strip just shows the flat creation cap usage,
-  /// sourced from ConfigController, with no separate membership call needed.
-  Widget _buildPlotCapStrip() {
-    final cap = Get.find<ConfigController>().plotLimit.value;
-    final used = _ctrl.myPlots.length;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: _kPlotColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _kPlotColor.withValues(alpha: 0.2)),
-      ),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Icon(Icons.terrain_rounded, size: 13, color: _kPlotColor),
-        const SizedBox(width: 6),
-        Text('$used / $cap plots used',
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12,
-                color: _kPlotColor, fontWeight: FontWeight.w600)),
-      ]),
-    );
-  }
-
-  // Credits are only "at risk" while the paid ValidUntil window hasn't lapsed yet — reactivating
-  // within that window is free, so a paused (isActive: false) listing can still be sitting on
-  // unused paid days that a delete would forfeit. isActive alone would miss that case.
-  bool _hasUnusedPaidWindow(PlotModel plot) =>
-      plot.validUntil != null && plot.validUntil!.isAfter(DateTime.now());
 
   Future<void> _shareListing(BuildContext ctx, PlotModel plot) async {
     _ctrl.isSharing.value = true;
@@ -253,7 +144,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
     }
   }
 
-  void _confirmDelete(String id, bool hasUnusedPaidWindow) {
+  void _confirmDelete(String id, bool wasLive) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -288,34 +179,10 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                     children: [
                       const Text('Are you sure? This will also delete all photos.',
                           style: TextStyle(fontFamily: 'Poppins')),
-                      if (hasUnusedPaidWindow) ...[
+                      if (wasLive && Get.find<PlanController>().myPlan.value.pausedByPlanCount > 0) ...[
                         const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.error.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
-                          ),
-                          child: const Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(Icons.info_outline_rounded, size: 16, color: AppColors.error),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'You still have unused paid days on this listing. Deleting it '
-                                  'will not refund the credits you spent — they will be lost.',
-                                  style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 12.5,
-                                      color: AppColors.error,
-                                      fontWeight: FontWeight.w500),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        const Text('Your paused listing will go live.',
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textLight)),
                       ],
                     ],
                   ),
@@ -357,7 +224,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
         child: Column(
         children: [
           _buildHeader(),
-          Obx(() => _buildPlotCapStrip()),
+          const PlanCapStrip(accent: _kPlotColor, icon: Icons.terrain_rounded, unitPlural: 'plots'),
           Expanded(
             child: Obx(() {
               final loading = _ctrl.isLoading.value;
@@ -387,7 +254,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
                         plot: plots[i],
                         onToggleActive: () => _ctrl.toggleActive(plots[i].id, plots[i].isActive),
                         onGoLive: () => _onGoLiveTap(plots[i]),
-                        onDelete: () => _confirmDelete(plots[i].id, _hasUnusedPaidWindow(plots[i])),
+                        onDelete: () => _confirmDelete(plots[i].id, plots[i].isActive),
                         isGoLiveLoading: _goLiveLoadingId == plots[i].id,
                         onReportsTap: () => Get.toNamed(AppRoutes.listingReports, arguments: {
                           'listingId': plots[i].id,
@@ -598,6 +465,8 @@ class _PlotCard extends StatelessWidget {
                 left: 10,
                 child: _statusBadge(),
               ),
+              if (plot.isFeatured)
+                const Positioned(bottom: 8, left: 10, child: PlanBadgeChip(color: _kPlotColor)),
             ],
           ),
 
@@ -699,6 +568,7 @@ class _PlotCard extends StatelessWidget {
             ),
           ),
           if (plot.isRejected) _buildRejectionStrip(),
+          if (_pauseStripText != null) _buildPauseStrip(_pauseStripText!),
         ],
       ),
     );
@@ -733,7 +603,7 @@ class _PlotCard extends StatelessWidget {
                   color: Color(0xFF10B981))),
         ],
       );
-    } else if (!plot.isPendingReview && !plot.isRejected) {
+    } else if (plot.canGoLive) {
       // Inactive (and never submitted, or previously approved and now expired): show
       // "Make it Live" button. Pending/Rejected must not resurrect a request the backend
       // has no resubmit path for.
@@ -762,12 +632,12 @@ class _PlotCard extends StatelessWidget {
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : const Row(
+                : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.rocket_launch_rounded, size: 14, color: Colors.white),
-                      SizedBox(width: 4),
-                      Text('Make it Live',
+                      const Icon(Icons.rocket_launch_rounded, size: 14, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(plot.isPausedByPlan ? 'Make this live' : 'Make it Live',
                           style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 12,
@@ -778,6 +648,10 @@ class _PlotCard extends StatelessWidget {
           ),
         ),
       );
+    } else if (plot.isPausedByAdmin || plot.isSuspended) {
+      return const Text('Paused',
+          style: TextStyle(
+              fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.warningText));
     } else if (plot.isPendingReview) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -874,6 +748,41 @@ class _PlotCard extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String? get _pauseStripText {
+    if (plot.isPausedByPlan) return 'Paused by plan';
+    if (plot.isPausedByAdmin) return 'Paused by admin';
+    if (plot.isSuspended) return 'Paused: account suspended';
+    return null;
+  }
+
+  Widget _buildPauseStrip(String text) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+      child: Container(
+        width: double.infinity,
+        color: AppColors.warningSurface,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            const Icon(Icons.pause_circle_outline_rounded, size: 15, color: AppColors.warningText),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.warningText,
+                ),
               ),
             ),
           ],

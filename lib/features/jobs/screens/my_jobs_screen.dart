@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
+import '../../../controllers/plan_controller.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/gradient_button.dart';
 import '../controllers/my_jobs_controller.dart';
@@ -146,6 +147,12 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
           Text(hint,
               textAlign: TextAlign.center,
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+          if (page.limitReached && Get.find<PlanController>().paymentEnabled)
+            TextButton(
+              onPressed: () => Get.toNamed(AppRoutes.plansBilling),
+              child: const Text('Upgrade',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: JobColors.accentDark)),
+            ),
         ],
       ]),
     );

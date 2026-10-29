@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/app_shadows.dart';
 import '../models/card_fact.dart';
+import 'plan_badge_chip.dart';
 
 class ListingGridCard extends StatelessWidget {
   static const double height = 262;
@@ -20,6 +21,7 @@ class ListingGridCard extends StatelessWidget {
   final VoidCallback onViewDetails;
   final Color? accent;
   final Color? accentDark;
+  final bool isFeatured;
 
   const ListingGridCard({
     super.key,
@@ -35,6 +37,7 @@ class ListingGridCard extends StatelessWidget {
     required this.onViewDetails,
     this.accent,
     this.accentDark,
+    this.isFeatured = false,
   });
 
   Color get _accent => accent ?? (isPlot ? AppColors.plot : AppColors.primary);
@@ -93,6 +96,8 @@ class ListingGridCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (isFeatured)
+                      Positioned(top: 6, right: 6, child: PlanBadgeChip(color: _accentDark)),
                   ],
                 ),
               ),

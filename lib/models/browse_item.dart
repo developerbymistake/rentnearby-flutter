@@ -12,6 +12,7 @@ class BrowseItem {
   final String priceCaption;
   final String priceValue;
   final String priceUnit;
+  final bool isFeatured;
 
   BrowseItem({
     required this.id,
@@ -24,6 +25,7 @@ class BrowseItem {
     required this.priceCaption,
     required this.priceValue,
     required this.priceUnit,
+    this.isFeatured = false,
   });
 
   factory BrowseItem.fromRoomJson(Map<String, dynamic> j) => BrowseItem.room(
@@ -36,6 +38,7 @@ class BrowseItem {
         priceMonthly: (j['priceMonthly'] as num?) ?? 0,
         city: j['cityName'] as String?,
         district: j['districtName'] as String?,
+        isFeatured: j['isFeatured'] == true,
       );
 
   factory BrowseItem.fromPlotJson(Map<String, dynamic> j) => BrowseItem.plot(
@@ -47,6 +50,7 @@ class BrowseItem {
         areaUnit: j['areaUnit'] as String? ?? '',
         city: j['cityName'] as String?,
         district: j['districtName'] as String?,
+        isFeatured: j['isFeatured'] == true,
       );
 
   factory BrowseItem.room({
@@ -59,6 +63,7 @@ class BrowseItem {
     required num priceMonthly,
     String? city,
     String? district,
+    bool isFeatured = false,
   }) =>
       BrowseItem(
         id: id,
@@ -74,6 +79,7 @@ class BrowseItem {
         priceCaption: 'MONTHLY RENT',
         priceValue: inr(priceMonthly),
         priceUnit: '/mo',
+        isFeatured: isFeatured,
       );
 
   factory BrowseItem.plot({
@@ -85,6 +91,7 @@ class BrowseItem {
     required String areaUnit,
     String? city,
     String? district,
+    bool isFeatured = false,
   }) {
     return BrowseItem(
       id: id,
@@ -99,6 +106,7 @@ class BrowseItem {
       priceCaption: 'PLOT AREA',
       priceValue: '${areaValue.toStringAsFixed(areaValue.truncateToDouble() == areaValue ? 0 : 1)} $areaUnit'.trim(),
       priceUnit: '',
+      isFeatured: isFeatured,
     );
   }
 

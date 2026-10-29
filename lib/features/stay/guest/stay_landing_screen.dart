@@ -502,6 +502,7 @@ class _StayLandingScreenState extends State<StayLandingScreen> with ExploreLocat
                 isPlot: false,
                 accent: _kAccent,
                 accentDark: _kAccentDark,
+                isFeatured: item.isFeatured,
                 onViewDetails: () => _viewDetails(item),
               );
               return i == 0 ? KeyedSubtree(key: TourKeys.staysLandingList, child: card) : card;

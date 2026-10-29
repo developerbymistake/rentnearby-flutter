@@ -7,12 +7,10 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
-import '../controllers/config_controller.dart';
-import '../controllers/wallet_controller.dart';
+import '../controllers/plan_controller.dart';
 import '../utils/app_date_format.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
-import '../widgets/credit_icon.dart';
 import '../widgets/role_option_card.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
@@ -143,12 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             _buildRoleCard(),
 
-            // Wallet — when hidden, keep the card's own top margin as a plain gap so
-            // the ACCOUNT section below (whose own Padding has zero top inset) doesn't
-            // end up flush against the header above.
-            Obx(() => Get.find<ConfigController>().paymentEnabled.value
-                ? _buildWalletCard()
-                : const SizedBox(height: 20)),
+            Obx(() => _auth.isOwner ? _buildPlansCard() : const SizedBox(height: 20)),
 
             // Account — phone and contact-visibility, each its own independent action
             // (separate confirm/edit sheets, separate API calls). Name is edited from the
@@ -160,16 +153,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ]),
 
             // My Activity — every screen that shows "things the user has done/can act on"
-            // (reports, redeem code), grouped together and separate from the pure app-meta
+            // (reports), grouped together and separate from the pure app-meta
             // Support section below.
             _sectionGroup('ACTIVITY', [
               _legalTile(icon: Iconsax.flag, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
-              Obx(() => Get.find<ConfigController>().paymentEnabled.value
-                  ? Column(children: [
-                      Divider(height: 1, indent: 56, color: AppColors.divider),
-                      _legalTile(icon: Icons.redeem_rounded, label: 'Redeem Code', onTap: () => Get.toNamed(AppRoutes.redeemCode)),
-                    ])
-                  : const SizedBox.shrink()),
             ]),
 
             // Support
@@ -325,54 +312,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  Widget _buildWalletCard() {
-    final wallet = Get.find<WalletController>();
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14)),
-                child: const CreditIcon(size: 24),
+  Widget _buildPlansCard() {
+    final plans = Get.find<PlanController>();
+    return GestureDetector(
+      onTap: () => Get.toNamed(AppRoutes.plansBilling),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14)),
+              child: const Icon(Iconsax.crown_1, size: 24, color: AppColors.primary),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Plans & Billing',
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  const SizedBox(height: 2),
+                  Obx(() {
+                    final me = plans.myPlan.value;
+                    final left = me.hasPaidPlan && me.daysLeft != null ? ' · ${me.daysLeft} days left' : '';
+                    return Text('${me.planName}$left',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight));
+                  }),
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('My Wallet', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                    const SizedBox(height: 3),
-                    Obx(() => Text('${wallet.balance.value} credits',
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark))),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: () => Get.toNamed(AppRoutes.creditPacks),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                  decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(12)),
-                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.add_rounded, size: 15, color: Colors.white),
-                    SizedBox(width: 3),
-                    Text('Buy Credits', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
-                  ]),
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),
+          ],
+        ),
       ),
     );
   }
@@ -774,7 +755,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
                   ),
                   child: const Text(
-                    'This will permanently delete your account, all your listings, photos, and wallet credit balance. This action cannot be undone.',
+                    'This will permanently delete your account, listings, photos and plan. This cannot be undone.',
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.error, height: 1.55),
                   ),
                 ),

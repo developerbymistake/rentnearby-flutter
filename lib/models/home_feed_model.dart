@@ -13,6 +13,7 @@ class HomeRoomModel {
   final String furnishedStatus;
   final bool? isAc;
   final DateTime? createdAt;
+  final bool isFeatured;
 
   HomeRoomModel({
     required this.id,
@@ -25,6 +26,7 @@ class HomeRoomModel {
     required this.furnishedStatus,
     this.isAc,
     this.createdAt,
+    this.isFeatured = false,
   });
 
   factory HomeRoomModel.fromJson(Map<String, dynamic> json) => HomeRoomModel(
@@ -38,6 +40,7 @@ class HomeRoomModel {
     furnishedStatus: json['furnishedStatus'] as String? ?? 'None',
     isAc: json['isAc'] as bool?,
     createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
+    isFeatured: json['isFeatured'] == true,
   );
 }
 
@@ -51,6 +54,7 @@ class HomePlotModel {
   final String? cityName;
   final String districtName;
   final DateTime? createdAt;
+  final bool isFeatured;
 
   HomePlotModel({
     required this.id,
@@ -62,6 +66,7 @@ class HomePlotModel {
     this.cityName,
     required this.districtName,
     this.createdAt,
+    this.isFeatured = false,
   });
 
   factory HomePlotModel.fromJson(Map<String, dynamic> json) => HomePlotModel(
@@ -74,6 +79,7 @@ class HomePlotModel {
     cityName: json['cityName'] as String?,
     districtName: json['districtName'] as String? ?? '',
     createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
+    isFeatured: json['isFeatured'] == true,
   );
 }
 

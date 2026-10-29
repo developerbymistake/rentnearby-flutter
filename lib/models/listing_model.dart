@@ -29,6 +29,9 @@ class ListingModel {
   final int pendingReportCount;
   final String? moderationStatus;
   final String? rejectionReason;
+  final String? pauseReason;
+  final int priorityRank;
+  final bool isFeatured;
 
   ListingModel({
     required this.id,
@@ -59,6 +62,9 @@ class ListingModel {
     this.pendingReportCount = 0,
     this.moderationStatus,
     this.rejectionReason,
+    this.pauseReason,
+    this.priorityRank = 0,
+    this.isFeatured = false,
   });
 
   factory ListingModel.fromJson(Map<String, dynamic> json) => ListingModel(
@@ -95,10 +101,17 @@ class ListingModel {
         // GoLiveRequestStatuses.* ("Pending"/"Approved"/"Rejected") or null if never requested.
         moderationStatus: json['liveRequestStatus'] as String?,
         rejectionReason: json['rejectedReason'] as String?,
+        pauseReason: json['pauseReason'] as String?,
+        priorityRank: (json['priorityRank'] as num?)?.toInt() ?? 0,
+        isFeatured: json['isFeatured'] == true,
       );
 
   bool get isPendingReview => moderationStatus == 'Pending';
   bool get isRejected => moderationStatus == 'Rejected';
+  bool get isPausedByPlan => pauseReason == 'Plan' && !isActive;
+  bool get isPausedByAdmin => pauseReason == 'Admin' && !isActive;
+  bool get isSuspended => pauseReason == 'Suspended' && !isActive;
+  bool get canGoLive => !isActive && !isPendingReview && !isRejected && !isPausedByAdmin && !isSuspended;
 
   String get priceDisplay =>
       priceMonthly != null ? '₹${_formatPrice(priceMonthly!)}/mo' : 'Price on request';
@@ -127,6 +140,8 @@ class NearbyListingModel {
   final bool isActive;
   final String furnishedStatus;
   final bool? isAc;
+  final int priorityRank;
+  final bool isFeatured;
 
   NearbyListingModel({
     required this.id,
@@ -141,6 +156,8 @@ class NearbyListingModel {
     required this.isActive,
     this.furnishedStatus = 'None',
     this.isAc,
+    this.priorityRank = 0,
+    this.isFeatured = false,
   });
 
   factory NearbyListingModel.fromJson(Map<String, dynamic> json) => NearbyListingModel(
@@ -160,6 +177,8 @@ class NearbyListingModel {
         isActive: json['isActive'] ?? true,
         furnishedStatus: json['furnishedStatus'] ?? 'None',
         isAc: json['isAc'] as bool?,
+        priorityRank: (json['priorityRank'] as num?)?.toInt() ?? 0,
+        isFeatured: json['isFeatured'] == true,
       );
 
   String get shortPrice =>

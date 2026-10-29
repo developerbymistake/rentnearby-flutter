@@ -4,11 +4,9 @@ import '../config/app_constants.dart';
 import '../models/city_model.dart';
 import '../models/go_live_result.dart';
 import '../models/plot_model.dart';
-import '../repositories/plot_repository.dart';
-import '../repositories/wallet_repository.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/plan_controller.dart';
 import '../controllers/tab_config_controller.dart';
-import '../controllers/wallet_controller.dart';
 import '../services/api_service.dart';
 import '../config/app_colors.dart';
 import '../utils/app_toast.dart';
@@ -227,9 +225,6 @@ class PlotController extends GetxController {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getPlotPlans() =>
-      Get.find<PlotRepository>().getPlotPlans();
-
   /// Deactivation only — turning a plot OFF is always free and never touches
   /// ValidUntil, so a later go-live within the same paid window reactivates
   /// for free too (server-enforced: PUT with isActive:true now 400s, telling
@@ -242,6 +237,7 @@ class PlotController extends GetxController {
       nearbyPlots.removeWhere((p) => p.id == id);
       exploreRefreshTrigger.value++;
       listingStatusChangedTrigger.value++;
+      Get.find<PlanController>().invalidate();
       await loadMyPlots(reset: true);
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) return;
@@ -259,6 +255,8 @@ class PlotController extends GetxController {
       nearbyPlots.removeWhere((p) => p.id == id);
       AppToast.success('Plot removed successfully.');
       listingStatusChangedTrigger.value++;
+      Get.find<PlanController>().invalidate();
+      await loadMyPlots(reset: true);
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) return;
       AppToast.error(DioErrorMapper.toMessage(e, 'Could not delete plot.'));
@@ -285,57 +283,41 @@ class PlotController extends GetxController {
     }
   }
 
-  /// POST /plots/{id}/go-live — exact mirror of ListingController.goLive.
-  Future<GoLiveResult> goLivePlot(String plotId, {String? planType, int requiredCredits = 0}) async {
+  Future<GoLiveResult> goLivePlot(String plotId) async {
     try {
       isLoading.value = true;
-      final res = await ApiService.post('/plots/$plotId/go-live', {'planType': planType});
+      final res = await ApiService.post('/plots/$plotId/go-live', {});
       final data = res['data'];
       if (data == null || data is! Map<String, dynamic>) {
         throw Exception('Invalid response from server');
       }
       plotPostedTrigger.value++;
       await loadMyPlots(reset: true);
-      // The response already carries the authoritative post-spend balance — apply it directly
-      // instead of triggering a separate (cache-prone, previously-buggy) refresh call.
-      final newBalance = (data['balance'] as num?)?.toInt() ?? 0;
-      Get.find<WalletController>().applyBalanceUpdate(newBalance, reason: 'golive');
-      // A first-time (or never-approved) Go-Live now submits for admin review instead of
-      // activating immediately — isActive stays false and the server marks status Pending.
-      if (data['isActive'] == false && data['status'] == 'Pending') {
-        return GoLiveSubmittedForReview(creditsSpent: (data['creditsSpent'] as num?)?.toInt() ?? 0);
-      }
-      return GoLiveSuccess(
-        validUntil: data['validUntil'] != null ? DateTime.tryParse(data['validUntil'] as String) : null,
-        planType: data['planType'] as String?,
-        balance: newBalance,
-      );
+      Get.find<PlanController>().invalidate();
+      return GoLiveResult.fromData(data);
     } on DioException catch (e) {
-      final status = e.response?.statusCode;
-      final responseData = e.response?.data;
-      String? message;
-      String? type;
-      if (responseData is Map<String, dynamic>) {
-        final error = responseData['error'];
-        if (error is Map<String, dynamic>) {
-          message = error['message'] as String?;
-          type = error['type'] as String?;
-        }
-        message ??= responseData['message'] as String?;
-      }
-      if (status == 409 && type == 'INSUFFICIENT_BALANCE') {
-        // See ListingController.goLive's identical branch for why this invalidates first and
-        // must be awaited.
-        Get.find<WalletRepository>().invalidateBalance();
-        await Get.find<WalletController>().loadBalance();
-        return GoLiveInsufficientBalance(message: message ?? 'Insufficient balance.', requiredCredits: requiredCredits);
-      }
-      if (status == 409 && type == 'CONCURRENT_UPDATE') {
-        return GoLiveConcurrentUpdate(message ?? 'This plot was just modified by another request. Please retry.');
-      }
-      return GoLiveFailure(DioErrorMapper.toMessage(e, 'Could not go live. Please try again.'));
+      if (e.response?.statusCode == 401) return const GoLiveFailure('Session expired.');
+      return GoLiveResult.fromError(e, noun: 'plot');
     } catch (_) {
-      return GoLiveFailure('Could not go live. Please try again.');
+      return const GoLiveFailure('Could not go live. Try again.');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<bool> swapLive(String targetId, String pauseId) async {
+    try {
+      isLoading.value = true;
+      await Get.find<PlanController>().swapLive(isPlot: true, targetId: targetId, pauseListingId: pauseId);
+      plotPostedTrigger.value++;
+      await loadMyPlots(reset: true);
+      Get.find<PlanController>().invalidate();
+      return true;
+    } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) return false;
+      AppToast.error(DioErrorMapper.toMessage(e, 'Could not swap. Try again.',
+          showRawMessageForStatusCodes: const {400, 409}));
+      return false;
     } finally {
       isLoading.value = false;
     }

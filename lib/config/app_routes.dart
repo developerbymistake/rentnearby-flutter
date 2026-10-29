@@ -17,9 +17,7 @@ import '../screens/chats_list_screen.dart';
 import '../screens/listing_reports_screen.dart';
 import '../screens/report_detail_screen.dart';
 import '../screens/my_filed_reports_screen.dart';
-import '../screens/credit_packs_screen.dart';
-import '../screens/redeem_code_screen.dart';
-import '../screens/wallet_ledger_screen.dart';
+import '../screens/plans_billing_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/role_select_screen.dart';
 import '../screens/role_change_screen.dart';
@@ -47,9 +45,7 @@ class AppRoutes {
   static const String listingReports = '/listing-reports';
   static const String reportDetail = '/report-detail';
   static const String myFiledReports = '/my-filed-reports';
-  static const String creditPacks = '/credit-packs';
-  static const String redeemCode = '/redeem-code';
-  static const String walletLedger = '/wallet-ledger';
+  static const String plansBilling = '/plans';
 
   // Notification inbox — backs the Home-screen bell icon.
   static const String notifications = '/notifications';
@@ -77,6 +73,7 @@ class AppRoutes {
   static const String taxiDetail = '/taxi-detail';
   static const String taxiList = '/taxi-list';
 
+  static const Set<String> ownerOnly = {plansBilling};
   static const Set<String> roomOwnerOnly = {myListings, addListing};
   static const Set<String> plotOwnerOnly = {myPlots, addPlot};
   static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob};
@@ -185,20 +182,8 @@ class AppRoutes {
       transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
-      name: creditPacks,
-      page: () => const CreditPacksScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
-    GetPage(
-      name: redeemCode,
-      page: () => const RedeemCodeScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
-    GetPage(
-      name: walletLedger,
-      page: () => const WalletLedgerScreen(),
+      name: plansBilling,
+      page: () => const PlansBillingScreen(),
       transition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 300),
     ),

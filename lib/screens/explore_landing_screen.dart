@@ -446,6 +446,7 @@ class _ExploreLandingScreenState extends State<ExploreLandingScreen>
                 priceValue: item.priceValue,
                 priceUnit: item.priceUnit,
                 isPlot: !_isRooms,
+                isFeatured: item.isFeatured,
                 onViewDetails: () => _viewDetails(item),
               );
               return i == 0 ? KeyedSubtree(key: _listKey, child: card) : card;

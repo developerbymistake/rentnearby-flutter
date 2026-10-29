@@ -6,6 +6,7 @@ import '../config/app_colors.dart';
 import '../config/app_shadows.dart';
 import '../config/app_tour_state.dart';
 import '../models/listing_model.dart';
+import 'plan_badge_chip.dart';
 import 'pulse_once.dart';
 
 class ListingCard extends StatelessWidget {
@@ -54,6 +55,42 @@ class ListingCard extends StatelessWidget {
             _buildPhotoSection(),
             _buildContentSection(),
             if (listing.isRejected) _buildRejectionStrip(),
+            if (_pauseStripText != null) _buildPauseStrip(_pauseStripText!),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String? get _pauseStripText {
+    if (listing.isPausedByPlan) return 'Paused by plan';
+    if (listing.isPausedByAdmin) return 'Paused by admin';
+    if (listing.isSuspended) return 'Paused: account suspended';
+    return null;
+  }
+
+  Widget _buildPauseStrip(String text) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+      child: Container(
+        width: double.infinity,
+        color: AppColors.warningSurface,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            const Icon(Icons.pause_circle_outline_rounded, size: 15, color: AppColors.warningText),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.warningText,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -147,6 +184,12 @@ class ListingCard extends StatelessWidget {
           left: 10,
           child: _statusBadge(),
         ),
+        if (listing.isFeatured)
+          const Positioned(
+            bottom: 8,
+            left: 10,
+            child: PlanBadgeChip(color: AppColors.primary),
+          ),
         // Price badge — top right
         if (listing.priceMonthly != null)
           Positioned(
@@ -349,8 +392,8 @@ class ListingCard extends StatelessWidget {
   // Whichever of these mutually-exclusive Live-state widgets applies becomes the row's
   // first cell; null when none of the conditions match (e.g. onGoLive not supplied).
   Widget? _stateWidget() {
-    if (!listing.isActive && !listing.isPendingReview && !listing.isRejected && onGoLive != null) {
-      return _makeItLiveButton();
+    if (listing.canGoLive && onGoLive != null) {
+      return _makeItLiveButton(label: listing.isPausedByPlan ? 'Make this live' : 'Make it Live');
     } else if (listing.isActive && onToggleActive != null) {
       return _liveToggle();
     } else if (listing.isPendingReview) {
@@ -420,7 +463,7 @@ class ListingCard extends StatelessWidget {
     );
   }
 
-  Widget _makeItLiveButton() {
+  Widget _makeItLiveButton({String label = 'Make it Live'}) {
     return Obx(() => PulseOnce(
       paused: tourInProgress.value,
       child: GestureDetector(
@@ -446,13 +489,13 @@ class ListingCard extends StatelessWidget {
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
               )
-            : const Row(
+            : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.rocket_launch_rounded, size: 14, color: Colors.white),
                   SizedBox(width: 6),
                   Text(
-                    'Make it Live',
+                    label,
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 12,

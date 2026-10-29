@@ -6,7 +6,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
-import '../controllers/config_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../models/go_live_result.dart';
 import '../utils/app_toast.dart';
@@ -461,20 +460,16 @@ class _AddPlotScreenState extends State<AddPlotScreen> with AddListingLocationMi
     try {
       var successMessage = 'Plot listed successfully!';
       var listReloaded = false;
-      final config = Get.find<ConfigController>();
-      await config.ensureLoaded();
-      if (config.paymentEnabled.value == false) {
-        final result = await _ctrl.goLivePlot(plotId);
-        switch (result) {
-          case GoLiveSuccess():
-            successMessage = 'Plot listed & live!';
-            listReloaded = true;
-          case GoLiveSubmittedForReview():
-            successMessage = 'Plot listed — submitted for review!';
-            listReloaded = true;
-          default:
-            successMessage = 'Plot listed successfully!';
-        }
+      final result = await _ctrl.goLivePlot(plotId);
+      switch (result) {
+        case GoLiveSuccess():
+          successMessage = 'Plot listed & live!';
+          listReloaded = true;
+        case GoLiveSubmittedForReview():
+          successMessage = 'Plot listed — submitted for review!';
+          listReloaded = true;
+        default:
+          successMessage = 'Plot listed successfully!';
       }
       if (!listReloaded) await _ctrl.loadMyPlots(reset: true);
       if (mounted) Get.back();

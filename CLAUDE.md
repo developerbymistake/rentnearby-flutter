@@ -8,7 +8,7 @@ Flutter app for the "Bakhli" rental/plot marketplace (Uttarakhand-focused; the F
 `bakhli` and internal branding are current — the repo directory name, Android `applicationId`
 (`com.rentnearby.rentnearby`), and iOS bundle id are legacy `rentnearby` naming that was never
 renamed). No brokers/commission — lists rental rooms and plots, in-app chat between owner/seeker,
-and paid listing plans via Razorpay.
+and owner plans (free by default, paid via Razorpay).
 
 ## Commands
 
@@ -104,15 +104,14 @@ instance (`_nominatimDio`) hits a self-hosted Nominatim reverse-geocoding proxy.
 (`https://developerbymistake.tech/api/v1`) — commented-out local/emulator URLs are left there for
 switching during local backend dev. Real-time features (chat, per-district promotional banners) use
 SignalR (`signalr_netcore`) via independent hub services, not Dio: `ChatHubService` (connected
-unconditionally from `MainScreen.initState()`, session-lifetime — same shape as `WalletHubService`/
-`NotificationHubService`, not scoped to any one conversation screen) and `BannerHubService` (connects for
+unconditionally from `MainScreen.initState()`, session-lifetime — same shape as `NotificationHubService`, not scoped to any one conversation screen) and `BannerHubService` (connects for
 the user's current district whenever `LocationController.selectedDistrict` changes, stays connected while
 browsing). All hubs pass a fresh JWT via `accessTokenFactory` so token refresh is handled transparently,
 and they fall back silently to REST polling / pull-to-refresh if the hub connection fails.
 
 **Data flow / caching**: `lib/repositories/*` wrap `ApiService` calls with simple in-memory
-TTL-based caches (e.g. `ListingRepository` caches `/listings/plans` for 5 min and membership status
-for 60s) and expose `invalidate()`/`invalidateAll()` for controllers to bust the cache after a
+TTL-based caches (e.g. `PlanRepository` caches `/plans/catalog` for 5 min and `/plans/me`
+for 30s) and expose `invalidate()`/`invalidateAll()` for controllers to bust the cache after a
 mutation. `lib/controllers/*` (all `GetxController`) hold UI-facing reactive state and orchestrate
 calls to repositories/`ApiService`; `AuthController` in particular is the hub for session state
 (`user`, `tabIndex`, granular profile Rx fields) and owns login/OTP/logout/account-deletion flows.
@@ -184,9 +183,13 @@ role cannot open lands on the notifications screen instead (same guard in `notif
   `canOpenRoute(route)` (checks `AppRoutes.roomOwnerOnly` = `myListings`/`addListing`, `plotOwnerOnly` =
   `myPlots`/`addPlot`). `chooseRole` calls `PUT /users/me/role-choice` and stores the returned token;
   `requestRoleChange` posts `/users/me/role-request` and shows the server's cooldown/live-listing message.
+  `roleChangeLocked` = `user.roleLocked` (server: Stay/Taxi Approved, under review or ever approved) OR the status check.
+  `correctRole(key)` (one-time Draft correction) calls `PUT /users/me/role-correction`, `_applySession`, clears `StaySetupController`/`TaxiSetupController` (`clear()`), then `Get.offAllNamed(postLoginRoute)`; 409s show the server message and run `_recoverChosenRole()`; never goes through `LogoutReason.roleChanged`.
+  `UserModel` carries `roleCorrectionUsed`, `canCorrectRole`, `roleLocked` (all default false).
+- Correction link: the Stay/Taxi setup hub shows a small "Wrong role? Change it" link (accent dark) only while the stay/taxi is a Draft and `user.canCorrectRole`, and hides the menu "Change role" while it shows. `StayOwnerModel.setupPercent` (40/30/20/10, also used by the hub) and `TaxiOwnerModel.percent` feed the dialog text.
 - Post-login routing: `AuthController.postLoginRoute` = `AppRoutes.main` once `user.roleConfirmed`, else
   `AppRoutes.roleSelect`; splash and the login/OTP flows navigate to it, and a cold-start notification tap is ignored while it is `roleSelect`.
-- Pages: `RoleSelectScreen` (first login, 3 cards from `GET /roles`, Seeker preselected, applies immediately) and
+- Pages: `RoleSelectScreen` (first login, 3 cards from `GET /roles`, Seeker preselected, applies immediately; with arguments `{"correction": true, "percent": p}` it is in correction mode: Back, current role hidden, subtitle "One-time change.", Continue opens a confirm dialog "Delete draft and change role?" then `correctRole`) and
   `RoleChangeScreen` (from Profile's role card, sends an admin-approval request); cards and per-role colors/icons
   live in `widgets/role_option_card.dart` (`RoleVisuals`, `RoleOptionCard`). Approval revokes the session: the
   `role_request_approved` push or hub event calls `forceLogout(reason: LogoutReason.roleChanged)`.
@@ -196,50 +199,22 @@ role cannot open lands on the notifications screen instead (same guard in `notif
   owner steps; `AddListingFlow.start` returns early without the capability; `ListingController`/`PlotController`
   load "my" lists only with the capability. All of these use the effective (role AND tab) getters, see "Tab gating".
 
-**Credit economy (replaces the old membership/payment model)**: there is no more per-listing membership
-entity and no more free-vs-paid tier on listing *creation*. Users buy credits (Razorpay packs, redeem
-codes, or admin credit) into a wallet, then spend credits to "Go Live" on a specific Room/Plot listing.
-A listing's own `isActive`/`validUntil` fields are the only per-listing state — deactivating and
-reactivating within the same paid window is free (`ListingController.toggleActive`/
-`PlotController.toggleActive`, deactivation only now — the backend 400s a PUT that tries to set
-`isActive: true`, directing callers to Go Live instead); going live after expiry (or for the first
-time) costs credits per a chosen plan (`GET /listings/plans` or `/plots/plans`, unchanged endpoints, now
-priced in credits not rupees) via `ListingController.goLive`/`PlotController.goLivePlot`
-(`POST /{listings|plots}/{id}/go-live`). Both return a `GoLiveResult` (`lib/models/go_live_result.dart`)
-so callers can branch on `GoLiveInsufficientBalance` specifically to open the shared
-`InsufficientBalanceSheet` (`lib/widgets/insufficient_balance_sheet.dart`) rather than just toasting.
+**Plans (replace the coin/credit economy, 2026-10-30)**: coins, the wallet and credit packs are gone. Owners (Rent, Property, Stay, Taxi) have a free default plan per feature and may buy a paid plan (prepaid via Razorpay); Seeker has no plans. Spec: `F:\Dhasu\PLAN_PAYMENT_MODEL.md` section 19.
 
-- **Listing-creation limits**: `ConfigController`/`ConfigRepository` (`lib/repositories/config_repository.dart`)
-  wrap `GET /config/listing-limits` (anonymous, 1h TTL) — the single, flat, admin-configured cap on how
-  many rooms/plots a user may *create*, with no per-user tier distinction anymore. `ListingPermissionService`
-  (and its plot equivalent, `lib/services/listing_permission_service.dart` / `plot_permission_service.dart`)
-  is the single place that decides, given this cap and the user's current listing count, whether posting a
-  new listing is `Allowed`, `NeedsDistrict`, or `LimitReached(cap)` — a 3-case sealed result, don't duplicate
-  this gating logic in screens. This is entirely separate from whether a listing is *live* (see above).
-- **Wallet**: `WalletController`/`WalletRepository` (`lib/controllers/wallet_controller.dart`,
-  `lib/repositories/wallet_repository.dart`) are the single source of truth for the user's live credit
-  balance (`GET /wallet/balance`, 30s TTL), the credit-pack catalog (`GET /credit-packs/`, 5min TTL), and the
-  paginated transaction ledger (`GET /wallet/transactions`, uncached). `WalletController` also owns the
-  reusable purchase flow (create-order → Razorpay → verify-payment → cancel-order, same Razorpay SDK
-  mechanism the old payment flow used, just pointed at credit packs) and `redeemCode()`. Call
-  `WalletController.loadBalance()` (or let `goLive`/`goLivePlot`/`verifyPayment`/`redeemCode` do it for
-  you — they already do) after any balance-changing spend or credit so the balance stays live everywhere;
-  nothing else should cache balance separately. `CreditBalanceChip` (`lib/widgets/credit_balance_chip.dart`) is
-  a reusable balance pill that is not currently mounted on any screen. Profile has its own bespoke wallet card
-  (`ProfileScreen._buildWalletCard`) instead — balance + Buy Credits button, since it doesn't fit the shared
-  chip's shape.
-- **Screens**: `CreditPacksScreen` (buy credits + entry points to redeem/history), `RedeemCodeScreen`,
-  `WalletLedgerScreen` — reachable via `AppRoutes.creditPacks`/`redeemCode`/`walletLedger`.
-- `ConfigRepository` is put permanently in `main()`; `ConfigController` and
-  `Get.put(WalletRepository())`/`Get.put(WalletController())` are registered in `MainScreen.initState()`
-  alongside `ListingRepository`/`PlotRepository`.
+- **`PlanController` / `PlanRepository`** (`lib/controllers/plan_controller.dart`, `lib/repositories/plan_repository.dart`) are the single owner of plan state. `GET /plans/catalog` (5 min TTL) and `GET /plans/me` (30 s TTL, the single source for limits `{listingLimit, used, live, priority, featured, jobsPosts}`, plan, `endsAt`, `trialAvailable`, `openPurchaseId`, `pausedByPlanCount`, `paymentEnabled`). Invalidate `/plans/me` after purchase, trial, go-live, create, delete, swap, resume and on a `plan_*` push. Screens and cards read it via `Obx`; never fetch plan data per card or per screen. Also quote, create purchase, verify, poll `GET /plans/purchases/{id}`, `GET /plans/purchases/open` (killed-app recovery on start/resume), history, trial and `swap-live`.
+- **`PlansBillingScreen`** (route `/plans`, reached from the Profile "Plans & Billing" tile, owners only) shows the plan cards with the 1/3/12 month cycle inside the card, coupon field, trial button and purchase history; the purchase status screen polls until Granted. Razorpay SDK is driven from the plan purchase flow (order and verification are server-side). With `paymentEnabled` OFF the purchase UI is hidden (free mode). Short English copy, heading first, module accent tokens only.
+- **Going live**: `ListingController.goLive` / `PlotController.goLivePlot` send NO body (`POST /{listings|plots}/{id}/go-live`) and return a `GoLiveResult` (`lib/models/go_live_result.dart`): validUntil, status (Pending for the first-ever Go Live, admin approval), `limits`, or the failures `PlanLimitReached {limit, live}` (offer Swap or Upgrade), `ListingPausedByAdmin`, `CONCURRENT_UPDATE`. Deactivating is free; activation is checked against the plan limit.
+- **Card state from `pauseReason`**: listing/plot cards show a paused-by-plan state (Plan: "Paused by plan", Swap and Renew actions; Owner: normal Go Live; Admin: "Paused by admin", no Go Live; Suspended). `swap-live` picks which listing is live. `isFeatured` shows a badge; `priorityRank` only orders lists on the server.
+- **Permission services**: `ListingPermissionService` / `PlotPermissionService` (`lib/services/`) read `PlanController` limits (`listingLimit` vs `used`) to return `Allowed`, `NeedsDistrict` or `LimitReached(limit)`; create can still return 409 `ListingLimitReached`. `ConfigRepository` no longer has `getListingLimits`; it keeps `payment-feature` (now with `freeModeListingLimit`).
+- Stay Jobs cap (`maxActive`/`canPost`) now comes from the plan; the over-limit message carries an Upgrade hint.
+- `ConfigRepository` is put permanently in `main()`; `ConfigController`, `PlanRepository`/`PlanController` are registered in `MainScreen.initState()`.
 
 **Hubs**: `NotificationHubService` (`lib/services/notification_hub_service.dart`, `/hubs/notification`) is a
 push-only, session-lifetime SignalR connection connected unconditionally from `MainScreen.initState()`/
-app-resume (same shape as Chat/Wallet, not lazily via a screen or business check), delivering a generic
+app-resume (same shape as Chat, not lazily via a screen or business check), delivering a generic
 `NotificationReceived` envelope; it falls back silently to pull-to-refresh if it never connects.
 `hub_session_manager.dart` is the single teardown point, `disconnectAllHubs()`, concurrently disconnecting
-all four hubs (Banner/Chat/Wallet/Notification) on logout or a forced 401 — a revoked session previously
+all three hubs (Banner/Chat/Notification) on logout or a forced 401 — a revoked session previously
 left hubs retrying forever with an empty token.
 
 **Notification inbox**: `NotificationController` (`lib/controllers/notification_controller.dart`) fetches
@@ -251,13 +226,7 @@ reaches this controller live (`applyLiveNotification` — increments `unreadCoun
 `notifications` if already loaded), so the bell updates immediately in foreground instead of only on the
 next resume/pull-to-refresh.
 
-**Payments**: Razorpay (`razorpay_flutter`) — the credit-pack purchase flow drives the `Razorpay()` SDK
-directly inline from `CreditPacksScreen._purchase`, calling `WalletController.createOrder`/`verifyPayment`/
-`cancelOrder` around it (order creation and verification happen server-side; the SDK only drives the
-native checkout UI and reports success/failure via callbacks). `lib/services/razorpay_service.dart`
-(`RazorpayPaymentService`) predates this and is unused by both the old and new flow — a callback wrapper
-that was never wired up; leave it alone unless you're specifically consolidating the two Razorpay call
-sites.
+**Payments**: Razorpay (`razorpay_flutter`) — the plan purchase flow drives the `Razorpay()` SDK from the plan purchase screen, calling `PlanController` create purchase / verify around it (order creation, verification, webhook and the 2-minute reconciler are server-side; the SDK only drives the native checkout and reports success/failure). A Rs 0 purchase (FreePlan coupon) skips checkout (`requiresPayment=false`). Play Billing is not solved; `paymentEnabled` is OFF by default.
 
 **Folder layout** (`lib/`):
 - `config/` — constants, colors, theme, insets, route table, tab indices, map-pause flag

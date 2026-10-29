@@ -15,6 +15,9 @@ import '../config/notification_types.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
+import '../controllers/listing_controller.dart';
+import '../controllers/plan_controller.dart';
+import '../controllers/plot_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
@@ -169,6 +172,19 @@ class NotificationService extends GetxService {
     await _initFirebase();
   }
 
+  void _onPlanPush(String type) {
+    if (!Get.isRegistered<PlanController>()) return;
+    Get.find<PlanController>().onPushNotification(type);
+    if (type == 'plan_expired' || type == 'plan_activated') {
+      if (Get.isRegistered<ListingController>() && Get.find<ListingController>().hasLoadedMyListings) {
+        Get.find<ListingController>().loadMyListings();
+      }
+      if (Get.isRegistered<PlotController>() && Get.find<PlotController>().hasLoadedMyPlots) {
+        Get.find<PlotController>().loadMyPlots(reset: true);
+      }
+    }
+  }
+
   Future<void> _initFirebase() async {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
@@ -197,6 +213,9 @@ class NotificationService extends GetxService {
       }
 
       final notificationType = message.data['notification_type'];
+      if (notificationType is String && notificationType.startsWith('plan_')) {
+        _onPlanPush(notificationType);
+      }
       if (notificationType == NotificationTypeKeys.roleRequestApprovedWire) {
         Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
         return;
@@ -342,9 +361,7 @@ class NotificationService extends GetxService {
     AppRoutes.plotDetail,
     AppRoutes.addListing,
     AppRoutes.addPlot,
-    AppRoutes.creditPacks,
-    AppRoutes.redeemCode,
-    AppRoutes.walletLedger,
+    AppRoutes.plansBilling,
     AppRoutes.listingReports,
     AppRoutes.reportDetail,
     AppRoutes.myFiledReports,

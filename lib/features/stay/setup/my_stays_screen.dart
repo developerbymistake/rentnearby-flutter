@@ -10,6 +10,7 @@ import '../../../models/browse_item.dart';
 import '../../../services/listing_share_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/app_loading_overlay.dart';
+import '../../../widgets/plan_cap_strip.dart';
 import '../../../widgets/gradient_button.dart';
 import '../models/stay_owner_model.dart';
 import 'stay_option_sets.dart';
@@ -75,6 +76,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
             indicatorColor: StayColors.accent,
             child: Column(children: [
               _header(),
+              PlanCapStrip(accent: StayColors.accent, icon: Icons.workspace_premium_rounded, showUsage: false),
               Expanded(
                 child: Obx(() {
                   final loading = _ctrl.isLoading.value;

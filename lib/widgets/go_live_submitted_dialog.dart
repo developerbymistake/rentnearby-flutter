@@ -1,21 +1,12 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
-import 'credit_icon.dart';
 
-/// Shown after a POST /{listings|plots}/{id}/go-live that submitted the
-/// listing for admin review instead of activating it — a first-time (or
-/// never-approved) Go-Live. Sibling to GoLiveSuccessDialog, not a
-/// parameterization of it: this outcome never activates the listing, so it
-/// has no "Valid For" stat and no plan-chip (the plan is still just spent
-/// credits, shown only in the "paid" case).
 class GoLiveSubmittedDialog extends StatefulWidget {
   final bool isPlot;
-  final int creditsSpent;
   final VoidCallback onDismiss;
 
   const GoLiveSubmittedDialog({
     required this.isPlot,
-    this.creditsSpent = 0,
     required this.onDismiss,
     super.key,
   });
@@ -61,7 +52,6 @@ class _GoLiveSubmittedDialogState extends State<GoLiveSubmittedDialog> with Tick
 
   @override
   Widget build(BuildContext context) {
-    final isFree = widget.creditsSpent == 0;
     const color = AppColors.warning;
     const lightColor = Color(0xFFFFFBEB);
 
@@ -95,16 +85,6 @@ class _GoLiveSubmittedDialogState extends State<GoLiveSubmittedDialog> with Tick
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 13, color: AppColors.textLight, fontFamily: 'Poppins', height: 1.4),
             ),
-            if (!isFree) ...[
-              const SizedBox(height: 18),
-              _statBox(
-                icon: const CreditIcon(size: 16),
-                label: 'Credits Spent',
-                value: '${widget.creditsSpent}',
-                color: color,
-                lightColor: lightColor,
-              ),
-            ],
             const SizedBox(height: 18),
             AnimatedBuilder(
               animation: _progressCtrl,
@@ -140,29 +120,6 @@ class _GoLiveSubmittedDialogState extends State<GoLiveSubmittedDialog> with Tick
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _statBox({
-    required Widget icon,
-    required String label,
-    required String value,
-    required Color color,
-    required Color lightColor,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-      decoration: BoxDecoration(color: lightColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withValues(alpha: 0.2))),
-      child: Row(
-        children: [
-          icon,
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textLight, fontFamily: 'Poppins', fontWeight: FontWeight.w500)),
-          const Spacer(),
-          Text(value, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, fontFamily: 'Poppins', color: color)),
-        ],
       ),
     );
   }
