@@ -50,6 +50,8 @@ class AddListingFlow {
         Get.toNamed(AppRoutes.addListing);
       case ListingNeedsDistrict():
         AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+      case ListingPlanUnavailable():
+        AppToast.error('Could not check your plan. Try again.');
       case ListingLimitReached():
         final context = Get.context;
         if (context == null) return;
@@ -75,6 +77,8 @@ class AddListingFlow {
         Get.toNamed(AppRoutes.addPlot);
       case PlotNeedsDistrict():
         AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+      case PlotPlanUnavailable():
+        AppToast.error('Could not check your plan. Try again.');
       case PlotLimitReached():
         final context = Get.context;
         if (context == null) return;

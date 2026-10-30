@@ -10,6 +10,8 @@ class PlotAllowed extends PlotPermissionResult {}
 
 class PlotNeedsDistrict extends PlotPermissionResult {}
 
+class PlotPlanUnavailable extends PlotPermissionResult {}
+
 class PlotLimitReached extends PlotPermissionResult {
   final int cap;
   PlotLimitReached({required this.cap});
@@ -30,6 +32,7 @@ class PlotPermissionService {
 
     final plans = Get.find<PlanController>();
     await plans.refreshPlan(force: true);
+    if (!plans.isLoaded) return PlotPlanUnavailable();
     final cap = plans.limits.listingLimit;
     if (plans.limits.used >= cap) return PlotLimitReached(cap: cap);
     return PlotAllowed();

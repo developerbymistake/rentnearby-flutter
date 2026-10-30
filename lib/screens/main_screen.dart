@@ -187,6 +187,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       _tabConfigCtrl.load(forceRefresh: true);
       Get.find<ConfigController>().refreshPaymentFeature();
       Get.find<PlanController>().invalidate();
+      Get.find<PlanController>().onAppResumed();
       Get.find<NotificationController>().loadUnreadCount();
       // Chat badge's app-resume anchor — pushes may have been missed while backgrounded
       // (the hub reconnect above isn't guaranteed to fire if the connection quietly died).

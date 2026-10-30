@@ -107,6 +107,7 @@ class ListingModel {
       );
 
   bool get isPendingReview => moderationStatus == 'Pending';
+  bool get isApproved => moderationStatus == 'Approved';
   bool get isRejected => moderationStatus == 'Rejected';
   bool get isPausedByPlan => pauseReason == 'Plan' && !isActive;
   bool get isPausedByAdmin => pauseReason == 'Admin' && !isActive;

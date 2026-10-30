@@ -234,6 +234,8 @@ class _MyListingsScreenState extends State<MyListingsScreen>
           Get.toNamed(AppRoutes.addListing);
         case ListingNeedsDistrict():
           AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+        case ListingPlanUnavailable():
+          AppToast.error('Could not check your plan. Try again.');
         case ListingLimitReached():
           PlanLimitReachedSheet.show(context, limit: result.cap, unitSingular: 'room', unitPlural: 'rooms', accent: AppColors.primary);
       }
@@ -264,6 +266,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
               ),
         ],
         preferSwap: listing.isPausedByPlan,
+        canSwap: listing.isApproved,
       );
     } finally {
       if (mounted) setState(() => _goLiveLoadingId = null);

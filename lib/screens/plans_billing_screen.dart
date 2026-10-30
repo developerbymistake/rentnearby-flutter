@@ -176,7 +176,9 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(16, 16, 16, 24 + AppInsets.bottomViewPadding(context)),
                 children: [
-                  if (me.featureKey == null)
+                  if (me.featureKey == null && !loading && _plans.planLoadFailed.value)
+                    _loadFailedState()
+                  else if (me.featureKey == null)
                     _emptyState(loading)
                   else ...[
                     _currentPlanCard(me, accent),
@@ -251,6 +253,25 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
                   Text('Plans are for owners.',
                       style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textLight)),
                 ]),
+        ),
+      );
+
+  Widget _loadFailedState() => Padding(
+        padding: const EdgeInsets.only(top: 60),
+        child: Center(
+          child: Column(children: [
+            const Text('Could not load plan',
+                style: TextStyle(
+                    fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+            const SizedBox(height: 6),
+            const Text('Check your connection.',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textLight)),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => _load(force: true),
+              child: Text('Retry', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: _accent)),
+            ),
+          ]),
         ),
       );
 
@@ -674,6 +695,11 @@ class _PurchaseStatusSheet extends StatelessWidget {
               color = AppColors.success;
               title = 'Plan active';
               body = s.endsAt != null ? '${s.planName} is active till ${_PlansBillingScreenState._date(s.endsAt!)}.' : '${s.planName} is active.';
+            } else if (s.status == 'VerifyFailed') {
+              icon = Icons.error_outline_rounded;
+              color = AppColors.error;
+              title = 'Could not verify';
+              body = 'If money was taken, your plan activates soon.';
             } else if (s.status == 'Failed') {
               icon = Icons.error_rounded;
               color = AppColors.error;
@@ -699,6 +725,13 @@ class _PurchaseStatusSheet extends StatelessWidget {
               color = AppColors.warning;
               title = 'Almost there';
               body = 'Plan will activate automatically.';
+            } else if (s.isBlocked) {
+              icon = Icons.error_outline_rounded;
+              color = AppColors.warning;
+              title = 'Payment on hold';
+              body = s.grantBlockedReason == 'AmountMismatch'
+                  ? 'Amount did not match. You will be refunded.'
+                  : 'Plan could not start. Refund is on its way.';
             } else if (s.isPaid) {
               icon = Icons.autorenew_rounded;
               color = accent;

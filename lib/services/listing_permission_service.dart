@@ -10,6 +10,8 @@ class ListingAllowed extends ListingPermissionResult {}
 
 class ListingNeedsDistrict extends ListingPermissionResult {}
 
+class ListingPlanUnavailable extends ListingPermissionResult {}
+
 class ListingLimitReached extends ListingPermissionResult {
   final int cap;
   ListingLimitReached({required this.cap});
@@ -32,6 +34,7 @@ class ListingPermissionService {
 
     final plans = Get.find<PlanController>();
     await plans.refreshPlan(force: true);
+    if (!plans.isLoaded) return ListingPlanUnavailable();
     final cap = plans.limits.listingLimit;
     if (plans.limits.used >= cap) return ListingLimitReached(cap: cap);
     return ListingAllowed();

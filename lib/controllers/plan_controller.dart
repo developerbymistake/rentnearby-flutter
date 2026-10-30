@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../models/my_plan_model.dart';
@@ -8,6 +9,8 @@ import '../repositories/plan_repository.dart';
 import '../utils/app_toast.dart';
 import '../utils/dio_error_mapper.dart';
 import 'auth_controller.dart';
+import 'listing_controller.dart';
+import 'plot_controller.dart';
 
 class PlanController extends GetxController {
   final myPlan = const MyPlanModel().obs;
@@ -19,10 +22,15 @@ class PlanController extends GetxController {
   final isPurchasing = false.obs;
   final activePurchase = Rxn<PurchaseStatus>();
   final pollTimedOut = false.obs;
+  final planLoadFailed = false.obs;
 
   bool _polling = false;
   bool _loaded = false;
   int _planSeq = 0;
+  int _pollSeq = 0;
+  bool _disposed = false;
+  Timer? _reloadTimer;
+  Completer<PaymentSuccessResponse?>? _checkout;
   final _skipOpenIds = <String>{};
 
   PlanRepository get _repo => Get.find<PlanRepository>();
@@ -31,6 +39,7 @@ class PlanController extends GetxController {
   bool get paymentEnabled => myPlan.value.paymentEnabled;
   bool get hasPlanFeature => myPlan.value.featureKey != null;
   bool get hasRoomForLive => limits.live < limits.listingLimit;
+  bool get isLoaded => _loaded;
 
   List<PlanModel> get plans => catalog.value?.plansOf(myPlan.value.featureKey) ?? const [];
   PlanModel? get currentPlanModel {
@@ -56,15 +65,17 @@ class PlanController extends GetxController {
       if (seq != _planSeq) return;
       myPlan.value = me;
       _loaded = true;
+      planLoadFailed.value = false;
       final open = me.openPurchaseId;
       final active = activePurchase.value;
       if (open == null && active != null && active.isOpen && pollTimedOut.value && !_polling && !isPurchasing.value) {
         activePurchase.value = null;
         pollTimedOut.value = false;
-      } else if (open != null && active == null && !_polling) {
+      } else if (open != null && !_skipOpenIds.contains(open) && active == null && !_polling) {
         unawaited(resumeOpenPurchase());
       }
     } catch (_) {
+      if (seq == _planSeq) planLoadFailed.value = true;
     } finally {
       if (seq == _planSeq) isLoadingPlan.value = false;
     }
@@ -83,6 +94,21 @@ class PlanController extends GetxController {
     if (type == null) return;
     final t = type.toLowerCase().replaceAll('_', '');
     if (t.startsWith('plan')) invalidate();
+    if (t == 'planactivated' || t == 'planexpired') _reloadMyLists();
+  }
+
+  void _reloadMyLists() {
+    _reloadTimer?.cancel();
+    _reloadTimer = Timer(const Duration(seconds: 2), _doReloadMyLists);
+  }
+
+  void _doReloadMyLists() {
+    if (Get.isRegistered<ListingController>() && Get.find<ListingController>().hasLoadedMyListings) {
+      Get.find<ListingController>().loadMyListings();
+    }
+    if (Get.isRegistered<PlotController>() && Get.find<PlotController>().hasLoadedMyPlots) {
+      Get.find<PlotController>().loadMyPlots(reset: true);
+    }
   }
 
   void clear() {
@@ -91,8 +117,27 @@ class PlanController extends GetxController {
     catalog.value = null;
     history.clear();
     activePurchase.value = null;
+    planLoadFailed.value = false;
     _skipOpenIds.clear();
     _loaded = false;
+  }
+
+  @override
+  void onClose() {
+    _disposed = true;
+    _reloadTimer?.cancel();
+    _pollSeq++;
+    final c = _checkout;
+    if (c != null && !c.isCompleted) c.complete(null);
+    super.onClose();
+  }
+
+  void onAppResumed() {
+    final c = _checkout;
+    if (c == null) return;
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!c.isCompleted) c.complete(null);
+    });
   }
 
   Future<void> loadCatalog({bool force = false}) async {
@@ -130,6 +175,8 @@ class PlanController extends GetxController {
   }
 
   Future<bool> startTrial(String planId) async {
+    if (isPurchasing.value) return false;
+    isPurchasing.value = true;
     try {
       final me = await _repo.startTrial(planId);
       _planSeq++;
@@ -142,6 +189,8 @@ class PlanController extends GetxController {
           showRawMessageForStatusCodes: const {400, 403, 409}));
       if (DioErrorMapper.errorType(e) == 'TrialNotAvailable') invalidate();
       return false;
+    } finally {
+      isPurchasing.value = false;
     }
   }
 
@@ -165,9 +214,12 @@ class PlanController extends GetxController {
   Future<void> purchase(PlanModel plan, int cycleMonths, String? couponCode) async {
     if (isPurchasing.value) return;
     isPurchasing.value = true;
+    _pollSeq++;
+    _polling = false;
     pollTimedOut.value = false;
     try {
       final created = await _createOrder(plan.id, cycleMonths, couponCode);
+      if (_disposed) return;
       if (created is! CreateOrderSuccess) return;
       final order = created.order;
       activePurchase.value = PurchaseStatus(
@@ -177,6 +229,7 @@ class PlanController extends GetxController {
         grantedDays: order.grantedDays,
         endsAt: null,
         failureReason: null,
+        grantBlockedReason: null,
       );
       if (!order.requiresPayment) {
         await _pollUntilSettled(order.purchaseId);
@@ -184,6 +237,7 @@ class PlanController extends GetxController {
         return;
       }
       final paid = await _openCheckout(order);
+      if (_disposed) return;
       if (paid == null) {
         _skipOpenIds.add(order.purchaseId);
         activePurchase.value = null;
@@ -196,11 +250,29 @@ class PlanController extends GetxController {
         grantedDays: order.grantedDays,
         endsAt: null,
         failureReason: null,
+        grantBlockedReason: null,
       );
       final result = await _verifyWithRetry(order.purchaseId, paid);
-      if (result is VerifyPaymentSuccess) activePurchase.value = result.status;
+      if (result is VerifyPaymentSuccess) {
+        activePurchase.value = result.status;
+      } else if (result is VerifyPaymentFailure && result.isDefinite) {
+        _skipOpenIds.add(order.purchaseId);
+        activePurchase.value = PurchaseStatus(
+          purchaseId: order.purchaseId,
+          status: 'VerifyFailed',
+          planName: order.planName,
+          grantedDays: order.grantedDays,
+          endsAt: null,
+          failureReason: null,
+          grantBlockedReason: null,
+        );
+        _afterSettled();
+        return;
+      }
       if (activePurchase.value?.isOpen ?? false) await _pollUntilSettled(order.purchaseId);
       _afterSettled();
+    } catch (_) {
+      if (!_disposed) AppToast.error('Could not complete purchase. Check My Plan.');
     } finally {
       isPurchasing.value = false;
     }
@@ -208,6 +280,7 @@ class PlanController extends GetxController {
 
   Future<PaymentSuccessResponse?> _openCheckout(PlanOrder order) async {
     final completer = Completer<PaymentSuccessResponse?>();
+    _checkout = completer;
     final razorpay = Razorpay();
     razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, (PaymentSuccessResponse r) {
       if (!completer.isCompleted) completer.complete(r);
@@ -236,6 +309,7 @@ class PlanController extends GetxController {
       AppToast.error('Could not open payment. Try again.');
       return null;
     } finally {
+      _checkout = null;
       razorpay.clear();
     }
   }
@@ -271,9 +345,11 @@ class PlanController extends GetxController {
           return VerifyPaymentSuccess(await _repo.getStatus(purchaseId));
         } catch (_) {}
       }
+      final status = e is DioException ? e.response?.statusCode : null;
       return VerifyPaymentFailure(
         DioErrorMapper.toMessage(e, 'Payment verification failed.'),
         isNetworkError: false,
+        isDefinite: status == 400 || status == 404,
       );
     }
   }
@@ -289,27 +365,29 @@ class PlanController extends GetxController {
   }
 
   Future<void> _pollUntilSettled(String purchaseId) async {
-    if (_polling) return;
+    final seq = ++_pollSeq;
     _polling = true;
     try {
       final deadline = DateTime.now().add(const Duration(seconds: 60));
-      while (DateTime.now().isBefore(deadline)) {
+      while (seq == _pollSeq && DateTime.now().isBefore(deadline)) {
         try {
           final s = await _repo.getStatus(purchaseId);
+          if (seq != _pollSeq) return;
           activePurchase.value = s;
           if (!s.isOpen) return;
         } catch (_) {}
         await Future.delayed(const Duration(seconds: 2));
       }
-      pollTimedOut.value = true;
+      if (seq == _pollSeq) pollTimedOut.value = true;
     } finally {
-      _polling = false;
+      if (seq == _pollSeq) _polling = false;
     }
   }
 
   void _afterSettled() {
     final s = activePurchase.value;
     if (s == null || s.isOpen) return;
+    if (s.isGranted) _reloadMyLists();
     invalidate();
   }
 
@@ -317,6 +395,10 @@ class PlanController extends GetxController {
     if (_polling || isPurchasing.value) return;
     try {
       final open = await _repo.getOpen();
+      if (open != null && open.status == 'Created') {
+        _skipOpenIds.add(open.purchaseId);
+        return;
+      }
       if (open == null || !open.isOpen || _skipOpenIds.contains(open.purchaseId)) return;
       pollTimedOut.value = false;
       activePurchase.value = open;

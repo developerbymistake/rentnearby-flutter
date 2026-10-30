@@ -115,6 +115,7 @@ class PurchaseStatus {
   final int grantedDays;
   final DateTime? endsAt;
   final String? failureReason;
+  final String? grantBlockedReason;
 
   const PurchaseStatus({
     required this.purchaseId,
@@ -123,12 +124,14 @@ class PurchaseStatus {
     required this.grantedDays,
     required this.endsAt,
     required this.failureReason,
+    this.grantBlockedReason,
   });
 
   bool get isGranted => status == 'Granted';
   bool get isWaiting => status == 'Created' || status == 'Pending';
   bool get isPaid => status == 'Paid';
-  bool get isOpen => isWaiting || isPaid;
+  bool get isBlocked => isPaid && grantBlockedReason != null;
+  bool get isOpen => isWaiting || (isPaid && grantBlockedReason == null);
 
   factory PurchaseStatus.fromJson(Map<String, dynamic> j) => PurchaseStatus(
         purchaseId: j['purchaseId'] as String,
@@ -137,6 +140,7 @@ class PurchaseStatus {
         grantedDays: (j['grantedDays'] as num?)?.toInt() ?? 0,
         endsAt: j['endsAt'] != null ? DateTime.tryParse(j['endsAt'] as String)?.toLocal() : null,
         failureReason: j['failureReason'] as String?,
+        grantBlockedReason: j['grantBlockedReason'] as String?,
       );
 }
 
@@ -150,7 +154,8 @@ class VerifyPaymentSuccess extends VerifyPaymentResult {
 class VerifyPaymentFailure extends VerifyPaymentResult {
   final String message;
   final bool isNetworkError;
-  VerifyPaymentFailure(this.message, {required this.isNetworkError});
+  final bool isDefinite;
+  VerifyPaymentFailure(this.message, {required this.isNetworkError, this.isDefinite = false});
 }
 
 class PurchaseHistoryItem {

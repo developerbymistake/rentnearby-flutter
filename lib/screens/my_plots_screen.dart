@@ -91,6 +91,8 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
           Get.toNamed(AppRoutes.addPlot);
         case PlotNeedsDistrict():
           AppToast.error('Your area is not supported yet. Contact admin to expand coverage.');
+        case PlotPlanUnavailable():
+          AppToast.error('Could not check your plan. Try again.');
         case PlotLimitReached():
           PlanLimitReachedSheet.show(context, limit: result.cap, unitSingular: 'plot', unitPlural: 'plots', accent: AppColors.plot);
       }
@@ -121,6 +123,7 @@ class _MyPlotsScreenState extends State<MyPlotsScreen>
               ),
         ],
         preferSwap: plot.isPausedByPlan,
+        canSwap: plot.isApproved,
       );
     } finally {
       if (mounted) setState(() => _goLiveLoadingId = null);
@@ -764,29 +767,45 @@ class _PlotCard extends StatelessWidget {
   }
 
   Widget _buildPauseStrip(String text) {
+    final plans = Get.find<PlanController>();
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
       child: Container(
         width: double.infinity,
         color: AppColors.warningSurface,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            const Icon(Icons.pause_circle_outline_rounded, size: 15, color: AppColors.warningText),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.warningText,
+        child: Obx(() {
+          final me = plans.myPlan.value;
+          final expired = plot.isPausedByPlan && !me.hasPaidPlan && me.paymentEnabled;
+          return Row(
+            children: [
+              const Icon(Icons.pause_circle_outline_rounded, size: 15, color: AppColors.warningText),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  expired ? 'Plan expired' : text,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.warningText,
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
+              if (expired)
+                GestureDetector(
+                  onTap: () => Get.toNamed(AppRoutes.plansBilling),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(color: _kPlotColor, borderRadius: BorderRadius.circular(999)),
+                    child: const Text('Renew',
+                        style: TextStyle(
+                            fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+            ],
+          );
+        }),
       ),
     );
   }

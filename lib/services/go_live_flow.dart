@@ -19,6 +19,7 @@ class GoLiveFlow {
     required Future<bool> Function(String pauseId) swap,
     required List<SwapOption> liveOptions,
     bool preferSwap = false,
+    bool canSwap = true,
   }) async {
     final plans = Get.find<PlanController>();
     if (preferSwap && liveOptions.isNotEmpty) {
@@ -54,7 +55,7 @@ class GoLiveFlow {
           unitPlural: '${unit}s',
           accent: accent,
           liveLimit: true,
-          onSwap: liveOptions.isEmpty
+          onSwap: !canSwap || liveOptions.isEmpty
               ? null
               : () => _offerSwap(context, accent: accent, swap: swap, liveOptions: liveOptions),
         );

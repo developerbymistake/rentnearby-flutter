@@ -3,8 +3,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
+import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
 import '../config/app_tour_state.dart';
+import '../controllers/plan_controller.dart';
 import '../models/listing_model.dart';
 import 'plan_badge_chip.dart';
 import 'pulse_once.dart';
@@ -70,29 +72,45 @@ class ListingCard extends StatelessWidget {
   }
 
   Widget _buildPauseStrip(String text) {
+    final plans = Get.find<PlanController>();
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
       child: Container(
         width: double.infinity,
         color: AppColors.warningSurface,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            const Icon(Icons.pause_circle_outline_rounded, size: 15, color: AppColors.warningText),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.warningText,
+        child: Obx(() {
+          final me = plans.myPlan.value;
+          final expired = listing.isPausedByPlan && !me.hasPaidPlan && me.paymentEnabled;
+          return Row(
+            children: [
+              const Icon(Icons.pause_circle_outline_rounded, size: 15, color: AppColors.warningText),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  expired ? 'Plan expired' : text,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.warningText,
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
+              if (expired)
+                GestureDetector(
+                  onTap: () => Get.toNamed(AppRoutes.plansBilling),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(999)),
+                    child: const Text('Renew',
+                        style: TextStyle(
+                            fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+            ],
+          );
+        }),
       ),
     );
   }
