@@ -94,6 +94,11 @@ class StayOwnerModel {
   final String? name;
   final String? stayTypeId;
   final String? stayTypeName;
+  final String? registrationTypeId;
+  final String? registrationTypeName;
+  final String? registrationOtherName;
+  final bool hasRegistrationNumber;
+  final bool hasGstin;
   final String? vehicleAccess;
   final bool? hostLivesHere;
   final List<String> facilities;
@@ -125,6 +130,11 @@ class StayOwnerModel {
     this.name,
     this.stayTypeId,
     this.stayTypeName,
+    this.registrationTypeId,
+    this.registrationTypeName,
+    this.registrationOtherName,
+    this.hasRegistrationNumber = false,
+    this.hasGstin = false,
     this.vehicleAccess,
     this.hostLivesHere,
     this.facilities = const [],
@@ -153,6 +163,7 @@ class StayOwnerModel {
   bool get isApproved => status == StayStatus.approved;
   bool get isRejected => status == StayStatus.rejected;
   bool get canEditSetup => isDraft || isRejected;
+  bool get registrationDone => registrationTypeId != null && hasRegistrationNumber;
 
   int get setupPercent {
     final d1 = step1Done;
@@ -179,6 +190,11 @@ class StayOwnerModel {
       name: json['name'] as String?,
       stayTypeId: json['stayTypeId']?.toString(),
       stayTypeName: json['stayTypeName'] as String?,
+      registrationTypeId: json['registrationTypeId']?.toString(),
+      registrationTypeName: json['registrationTypeName'] as String?,
+      registrationOtherName: json['registrationOtherName'] as String?,
+      hasRegistrationNumber: json['hasRegistrationNumber'] == true,
+      hasGstin: json['hasGstin'] == true,
       vehicleAccess: json['vehicleAccess'] as String?,
       hostLivesHere: json['hostLivesHere'] as bool?,
       facilities: (json['facilities'] as List? ?? []).map((e) => e.toString()).toList(),

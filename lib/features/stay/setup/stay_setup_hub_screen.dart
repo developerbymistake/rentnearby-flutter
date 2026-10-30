@@ -150,6 +150,8 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
 
   List<Widget> _content(StayOwnerModel? s, bool gated) {
     final d1 = s?.step1Done ?? false;
+    final regMissing =
+        d1 && (s?.canEditSetup ?? true) && !(s?.registrationDone ?? false);
     final u2 = d1;
     final d2 = u2 && (s?.roomsDone ?? false);
     final u3 = d2;
@@ -165,15 +167,20 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
     return [
       if (s != null && s.isRejected) _rejectedStrip(s),
       if (s != null && s.isPendingReview) _pendingStrip(),
+      if (regMissing) _registrationStrip(),
       _scoreCard(percent),
       if (canCorrect) _wrongRoleLink(percent),
       const SizedBox(height: 16),
       StayStepRow(
         number: 1,
         title: 'Basic details',
-        subtitle: d1 ? StayOptionSets.basicSummary(s!) : 'Details, location, address, photos',
+        subtitle: regMissing
+            ? 'Add registration details'
+            : d1
+                ? StayOptionSets.basicSummary(s!)
+                : 'Details, registration, location, photos',
         accent: StayColors.accent,
-        state: state(true, d1),
+        state: state(true, d1 && !regMissing),
         onTap: () => _open(AppRoutes.stayBasicDetails),
       ),
       StayStepRow(
@@ -291,6 +298,13 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
 
   Widget _rejectedStrip(StayOwnerModel s) =>
       _strip(color: AppColors.error, icon: Iconsax.close_circle, title: 'Not approved', body: s.rejectedReason);
+
+  Widget _registrationStrip() => _strip(
+        color: AppColors.warningText,
+        icon: Iconsax.info_circle,
+        title: 'Registration details needed',
+        body: 'Add them in Basic details',
+      );
 
   Widget _pendingStrip() => _strip(
         color: StayColors.accentDark,

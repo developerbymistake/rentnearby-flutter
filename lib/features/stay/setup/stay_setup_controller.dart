@@ -19,7 +19,7 @@ class StaySetupController extends GetxController {
   final isSaving = false.obs;
   bool mainBelow = false;
 
-  static const _stayErrorTypes = {'StayStepLocked', 'StayLocked', 'StayNotApproved', 'StayAlreadyExists', 'StayRoomLimit'};
+  static const _stayErrorTypes = {'StayStepLocked', 'StayLocked', 'StayNotApproved', 'StayAlreadyExists', 'StayRoomLimit', 'StayRegistrationRequired'};
 
   void clear() {
     stay.value = null;

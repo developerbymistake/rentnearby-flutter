@@ -16,6 +16,7 @@ import '../../../widgets/gradient_button.dart';
 import '../../stay/setup/stay_option_grid.dart';
 import '../taxi_option_sets.dart';
 import '../taxi_vehicle_types_controller.dart';
+import 'taxi_identity_validators.dart';
 import 'taxi_setup_controller.dart';
 import 'taxi_vehicle_type_picker_sheet.dart';
 
@@ -34,6 +35,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   final _phoneFocus = FocusNode();
   final _whatsAppCtrl = TextEditingController();
   final _whatsAppFocus = FocusNode();
+  final _dlCtrl = TextEditingController();
+  final _dlFocus = FocusNode();
   final _picker = ImagePicker();
 
   String? _vehicleTypeId;
@@ -49,6 +52,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   LatLng? _resolvedPin;
   String? _savedBasicKey;
   String? _uploadedStatus;
+  DateTime? _dob;
 
   String? _initTypeId;
   int? _initSeats;
@@ -112,12 +116,36 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     _phoneFocus.dispose();
     _whatsAppCtrl.dispose();
     _whatsAppFocus.dispose();
+    _dlCtrl.dispose();
+    _dlFocus.dispose();
     super.dispose();
   }
 
   String get _phone => _phoneCtrl.text.trim();
   String get _effectiveWhatsApp => _same ? _phone : _whatsAppCtrl.text.trim();
   bool get _hasPhoto => _localPhoto != null || (_remotePhotoUrl != null && _remotePhotoUrl!.isNotEmpty);
+  bool get _hasSavedDl => _ctrl.taxi.value?.hasDrivingLicence ?? false;
+  bool get _hasSavedDob => _ctrl.taxi.value?.hasDateOfBirth ?? false;
+  String get _dlTyped => TaxiIdentityValidators.normalizeDl(_dlCtrl.text);
+
+  String? get _dlError {
+    final dl = _dlTyped;
+    if (dl.isEmpty) return null;
+    if (!TaxiIdentityValidators.isValidDl(dl)) return TaxiIdentityValidators.dlInvalidMessage;
+    final dob = _dob;
+    if (dob != null && !TaxiIdentityValidators.dlYearMatchesDob(TaxiIdentityValidators.dlIssueYear(dl), dob)) {
+      return TaxiIdentityValidators.dlYearMessage;
+    }
+    return null;
+  }
+
+  String? get _dobError {
+    final dob = _dob;
+    if (dob == null) return null;
+    final status = TaxiIdentityValidators.dobStatus(dob, TaxiIdentityValidators.todayUtc());
+    return status == DobStatus.ok ? null : TaxiIdentityValidators.dobMessage(status);
+  }
+
   bool get _isApproved => _ctrl.taxi.value?.isApproved ?? false;
   late final bool _wasApproved;
 
@@ -126,6 +154,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     if (TaxiOptionSets.normalizePlate(_plateCtrl.text) != _initPlate) return true;
     if (_localPhoto != null || _remotePhotoUrl != _initPhotoUrl) return true;
     if (_phone != _initPhone || _effectiveWhatsApp != _initWhatsApp) return true;
+    if (_dlTyped.isNotEmpty || _dob != null) return true;
     final pin = selectedLocation, init = _initPin;
     if (init == null) return _step == 2;
     return pin != null &&
@@ -331,6 +360,26 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   }
 
   bool _validateContact() {
+    if (_dlTyped.isEmpty && !_hasSavedDl) {
+      AppToast.error(TaxiIdentityValidators.dlRequiredMessage);
+      _dlFocus.requestFocus();
+      return false;
+    }
+    final dlError = _dlError;
+    if (dlError != null) {
+      AppToast.error(dlError);
+      _dlFocus.requestFocus();
+      return false;
+    }
+    if (_dob == null && !_hasSavedDob) {
+      AppToast.error(TaxiIdentityValidators.dobRequiredMessage);
+      return false;
+    }
+    final dobError = _dobError;
+    if (dobError != null) {
+      AppToast.error(dobError);
+      return false;
+    }
     if (!TaxiOptionSets.isValidMobile(_phone)) {
       AppToast.error('Enter a valid 10-digit mobile number');
       _phoneFocus.requestFocus();
@@ -458,6 +507,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         'longitude': pin.longitude,
         'districtId': selectedDistrictId,
         'cityId': resolvedCityId,
+        'drivingLicenceNumber': _dlTyped.isEmpty ? null : _dlTyped,
+        'dateOfBirth': _dob == null ? null : TaxiIdentityValidators.isoDate(_dob!),
       };
       final key = body.toString();
       if (_savedBasicKey != key) {
@@ -469,6 +520,11 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
             _goTo(0);
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) _plateFocus.requestFocus();
+            });
+          } else if (type == 'TaxiIdentityRequired') {
+            _goTo(1);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _dlFocus.requestFocus();
             });
           } else if (type == 'TaxiBaseOutsideDistrict') {
             _resolvedPin = null;
@@ -489,7 +545,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
       if (_wasApproved && status == TaxiStatus.pendingReview) {
         AppToast.info('Sent back for review');
       } else {
-        AppToast.success('Vehicle and contact saved');
+        AppToast.success('Taxi details saved');
       }
     } finally {
       _busy = false;
@@ -525,7 +581,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                       onPressed: _onBack,
                       icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
                     ),
-                    Text(const ['Vehicle', 'Contact', 'Base'][_step],
+                    Text(const ['Vehicle', 'Driver', 'Base'][_step],
                         style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
                   ]),
                 ),
@@ -537,7 +593,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
               child: Row(children: [
                 _stepDot(0, 'Vehicle'),
                 Expanded(child: Container(height: 2, color: _step >= 1 ? TaxiColors.accent : AppColors.divider)),
-                _stepDot(1, 'Contact'),
+                _stepDot(1, 'Driver'),
                 Expanded(child: Container(height: 2, color: _step >= 2 ? TaxiColors.accent : AppColors.divider)),
                 _stepDot(2, 'Base'),
               ]),
@@ -596,7 +652,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                 onPressed: disabled ? null : _handleNext,
                 isLoading: saving || _isFinalizing,
                 label: _step == 0
-                    ? 'Next: Contact'
+                    ? 'Next: Driver'
                     : _step == 1
                         ? 'Next: Base'
                         : 'Save',
@@ -858,10 +914,108 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textLight)),
       );
 
+  Future<void> _pickDob() async {
+    FocusScope.of(context).unfocus();
+    final today = TaxiIdentityValidators.todayUtc();
+    final last = TaxiIdentityValidators.yearsBefore(today, TaxiIdentityValidators.minAgeYears);
+    final first = TaxiIdentityValidators.yearsBefore(today, TaxiIdentityValidators.maxAgeYears);
+    var initial = _dob ?? TaxiIdentityValidators.yearsBefore(today, 25);
+    if (initial.isAfter(last)) initial = last;
+    if (initial.isBefore(first)) initial = first;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: first,
+      lastDate: last,
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: TaxiColors.accent)),
+        child: child!,
+      ),
+    );
+    if (picked != null && mounted) setState(() => _dob = TaxiIdentityValidators.dateOnly(picked));
+  }
+
   Widget _contactStep() => SingleChildScrollView(
         key: const ValueKey(1),
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _sectionCard(
+            title: 'Driving Licence *',
+            hint: 'Only Bakhli admin sees this',
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              TextFormField(
+                controller: _dlCtrl,
+                focusNode: _dlFocus,
+                inputFormatters: TaxiIdentityValidators.dlInputFormatters,
+                textCapitalization: TextCapitalization.characters,
+                autocorrect: false,
+                enableSuggestions: false,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, letterSpacing: 1),
+                decoration: _inputDec('UK07 20150012345').copyWith(
+                  errorText: _dlError,
+                  errorMaxLines: 2,
+                  suffixText: _hasSavedDl && _dlCtrl.text.isEmpty ? 'Saved' : null,
+                  suffixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: TaxiColors.accentDark),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(TaxiIdentityValidators.dlHelp,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+              const Text(TaxiIdentityValidators.dlOldHelp,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+              if (_isApproved) ...[
+                const SizedBox(height: 6),
+                const Text('Changing the licence or date of birth sends your taxi back to review.',
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: TaxiColors.accentDark)),
+              ],
+            ]),
+          ),
+          _sectionCard(
+            title: 'Date of Birth *',
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Material(
+                color: TaxiColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  onTap: _pickDob,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 50),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _dobError != null ? AppColors.error : AppColors.divider),
+                    ),
+                    child: Row(children: [
+                      const Icon(Iconsax.calendar_1, size: 18, color: TaxiColors.accent),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                            _dob != null
+                                ? TaxiIdentityValidators.displayDate(_dob!)
+                                : _hasSavedDob
+                                    ? 'Saved'
+                                    : 'Select date',
+                            style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: _dob == null && !_hasSavedDob ? AppColors.textHint : AppColors.textDark)),
+                      ),
+                      const Icon(Iconsax.arrow_down_1, size: 18, color: TaxiColors.accentDark),
+                    ]),
+                  ),
+                ),
+              ),
+              if (_dobError != null) ...[
+                const SizedBox(height: 6),
+                Text(_dobError!,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.error)),
+              ],
+            ]),
+          ),
           _sectionCard(
             title: 'Contact *',
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

@@ -4,7 +4,9 @@ import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
 import '../config/user_roles.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/location_controller.dart';
 import '../models/role_model.dart';
+import '../widgets/global_location_gates.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/role_correction_dialog.dart';
 import '../widgets/role_option_card.dart';
@@ -27,6 +29,11 @@ class _RoleSelectScreenState extends State<RoleSelectScreen> {
   @override
   void initState() {
     super.initState();
+    // Pre-main page; permanent so MainScreen's later Get.put reuses this instance.
+    if (!Get.isRegistered<LocationController>()) {
+      Get.put(LocationController(), permanent: true);
+      GlobalLocationGates.notifyReady();
+    }
     final args = Get.arguments;
     _correction = args is Map && args['correction'] == true;
     _percent = args is Map && args['percent'] is int ? args['percent'] as int : 0;

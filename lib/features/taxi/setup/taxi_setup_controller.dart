@@ -28,6 +28,8 @@ class TaxiSetupController extends GetxController {
     'TaxiRouteLimit',
     'TaxiPlateTaken',
     'TaxiBaseOutsideDistrict',
+    'TaxiIdentityRequired',
+    'IdentityCipherNotConfigured',
   };
 
   void clear() {

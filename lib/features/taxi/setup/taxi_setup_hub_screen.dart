@@ -160,6 +160,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
   List<Widget> _content(TaxiOwnerModel? t, bool gated) {
     final d1 = t?.step1Done ?? false;
     final u2 = d1;
+    final stepDone = (t?.identityDone ?? false) || (t?.isPendingReview ?? false);
     final d2 = u2 && (t?.routesDone ?? false);
     final u3 = d2;
     final d3 = u3 && (t != null && (t.isPendingReview || t.isApproved));
@@ -172,14 +173,17 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
     return [
       if (t != null && t.isRejected) _rejectedStrip(t),
       if (t != null && t.isPendingReview) _pendingStrip(),
+      if (t != null && (t.isDraft || t.isRejected) && !t.identityDone) _identityStrip(),
       _scoreCard(percent),
       if (canCorrect) _wrongRoleLink(percent),
       const SizedBox(height: 16),
       StayStepRow(
         number: 1,
         title: 'Vehicle and contact',
-        subtitle: d1 ? TaxiOptionSets.step1Summary(t!) : 'Vehicle, plate photo, phone, base',
-        state: state(true, d1),
+        subtitle: d1
+            ? (stepDone ? TaxiOptionSets.step1Summary(t!) : 'Add licence and date of birth')
+            : 'Vehicle, plate, licence, phone, base',
+        state: state(true, d1 && stepDone),
         onTap: () => _open(AppRoutes.taxiVehicle),
         accent: TaxiColors.accent,
       ),
@@ -290,6 +294,23 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
 
   Widget _rejectedStrip(TaxiOwnerModel t) =>
       _strip(color: AppColors.error, icon: Iconsax.close_circle, title: 'Not approved', body: t.rejectedReason);
+
+  Widget _identityStrip() => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(999)),
+        child: const Row(children: [
+          Icon(Iconsax.info_circle, size: 16, color: AppColors.warningText),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text('Licence details needed',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText)),
+          ),
+        ]),
+      );
 
   Widget _pendingStrip() => Container(
         margin: const EdgeInsets.only(bottom: 12),

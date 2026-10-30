@@ -17,9 +17,12 @@ import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/gradient_button.dart';
 import '../../../widgets/selectable_chip.dart';
 import '../models/stay_owner_model.dart';
+import '../models/stay_registration_type_model.dart';
+import '../stay_registration_types_controller.dart';
 import '../stay_types_controller.dart';
 import 'stay_option_grid.dart';
 import 'stay_option_sets.dart';
+import 'stay_registration_validators.dart';
 import 'stay_setup_controller.dart';
 
 class _PhotoEntry {
@@ -42,8 +45,17 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   final _nameFocusNode = FocusNode();
   final _descCtrl = TextEditingController();
   final _types = StayTypesController.ensure();
+  final _regTypes = StayRegistrationTypesController.ensure();
+  final _regNumCtrl = TextEditingController();
+  final _regNumFocus = FocusNode();
+  final _regOtherCtrl = TextEditingController();
+  final _regOtherFocus = FocusNode();
+  final _gstinCtrl = TextEditingController();
+  final _gstinFocus = FocusNode();
 
   String? _stayTypeId;
+  String? _regTypeId;
+  bool _clearGstin = false;
   String? _vehicleAccess;
   bool? _hostLivesHere;
   final Set<String> _facilities = {};
@@ -75,11 +87,14 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     super.initState();
     initLocationTracking(style: _locationStyle, onLocationStale: _handleLocationStale);
     _types.ensureLoaded();
+    _regTypes.ensureLoaded();
     final s = _ctrl.stay.value;
     if (s != null) {
       _nameCtrl.text = s.name ?? '';
       _descCtrl.text = s.description ?? '';
       _stayTypeId = s.stayTypeId;
+      _regTypeId = s.registrationTypeId;
+      _regOtherCtrl.text = s.registrationOtherName ?? '';
       _vehicleAccess = s.vehicleAccess;
       _hostLivesHere = s.hostLivesHere;
       _facilities.addAll(s.facilities);
@@ -89,6 +104,9 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     }
     _nameCtrl.addListener(_markDirty);
     _descCtrl.addListener(_markDirty);
+    _regNumCtrl.addListener(_markDirty);
+    _regOtherCtrl.addListener(_markDirty);
+    _gstinCtrl.addListener(_markDirty);
   }
 
   @override
@@ -97,10 +115,71 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     _nameCtrl.dispose();
     _nameFocusNode.dispose();
     _descCtrl.dispose();
+    _regNumCtrl.dispose();
+    _regNumFocus.dispose();
+    _regOtherCtrl.dispose();
+    _regOtherFocus.dispose();
+    _gstinCtrl.dispose();
+    _gstinFocus.dispose();
     super.dispose();
   }
 
   void _markDirty() => _dirty = true;
+
+  StayRegistrationTypeModel? get _selectedRegType {
+    for (final t in _regTypes.types) {
+      if (t.id == _regTypeId) return t;
+    }
+    return null;
+  }
+
+  bool get _regTypeChanged => _regTypeId != _ctrl.stay.value?.registrationTypeId;
+
+  bool get _hasStoredNumber => (_ctrl.stay.value?.hasRegistrationNumber ?? false) && !_regTypeChanged;
+
+  String? get _numberError {
+    final type = _selectedRegType;
+    final raw = _regNumCtrl.text;
+    if (type == null || raw.trim().isEmpty) return null;
+    final n = StayRegistrationValidators.normalizeForType(type.code, raw);
+    return StayRegistrationValidators.isValidForType(type.code, n)
+        ? null
+        : StayRegistrationValidators.messageForType(type.code);
+  }
+
+  String? get _gstinError {
+    final raw = _gstinCtrl.text;
+    if (raw.trim().isEmpty) return null;
+    return StayRegistrationValidators.isValidGstin(StayRegistrationValidators.normalizeGstin(raw))
+        ? null
+        : StayRegistrationValidators.gstinInvalidMessage;
+  }
+
+  String? _validateRegistration() {
+    final type = _selectedRegType;
+    if (type == null) return StayRegistrationValidators.typeRequiredMessage;
+    if (type.requiresOtherName) {
+      final err = StayRegistrationValidators.otherNameError(_regOtherCtrl.text);
+      if (err != null) {
+        _regOtherFocus.requestFocus();
+        return err;
+      }
+    }
+    if (_regNumCtrl.text.trim().isEmpty) {
+      if (!_hasStoredNumber) {
+        _regNumFocus.requestFocus();
+        return StayRegistrationValidators.numberRequiredMessage;
+      }
+    } else if (_numberError != null) {
+      _regNumFocus.requestFocus();
+      return _numberError;
+    }
+    if (_gstinError != null) {
+      _gstinFocus.requestFocus();
+      return _gstinError;
+    }
+    return null;
+  }
 
   void _handleLocationStale() {
     if (!mounted || _step <= 1) return;
@@ -272,6 +351,11 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         AppToast.error('Please select a stay type');
         return;
       }
+      final regError = _validateRegistration();
+      if (regError != null) {
+        AppToast.error(regError);
+        return;
+      }
       if (_vehicleAccess == null) {
         AppToast.error('Please select vehicle access');
         return;
@@ -320,9 +404,24 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
       return;
     }
     final desc = _descCtrl.text.trim();
+    final regType = _selectedRegType;
+    if (regType == null) {
+      AppToast.error(StayRegistrationValidators.typeRequiredMessage);
+      return;
+    }
+    final regNumber = _regNumCtrl.text.trim();
+    final gstin = _gstinCtrl.text.trim();
     final ok = await _ctrl.saveBasic({
       'name': _nameCtrl.text.trim(),
       'stayTypeId': _stayTypeId,
+      'registrationTypeId': regType.id,
+      'registrationOtherName':
+          regType.requiresOtherName ? StayRegistrationValidators.normalizeOtherName(_regOtherCtrl.text) : null,
+      'registrationNumber':
+          regNumber.isEmpty ? null : StayRegistrationValidators.normalizeForType(regType.code, regNumber),
+      'gstin': gstin.isNotEmpty
+          ? StayRegistrationValidators.normalizeGstin(gstin)
+          : (_clearGstin ? '' : null),
       'vehicleAccess': _vehicleAccess,
       'hostLivesHere': _hostLivesHere,
       'facilities': StayOptionSets.facilities.map((o) => o.value).where(_facilities.contains).toList(),
@@ -727,6 +826,8 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               );
             }),
           ),
+          _registrationCard(),
+          _gstinCard(),
           _sectionCard(
             title: 'Vehicle Access *',
             child: StayOptionGrid(
@@ -788,6 +889,134 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           ),
         ]),
       );
+
+  InputDecoration _fieldDec(String hint, {String? errorText, String? helperText, String? suffixText}) =>
+      _inputDec(hint).copyWith(
+        errorText: errorText,
+        errorMaxLines: 2,
+        helperText: helperText,
+        helperMaxLines: 2,
+        helperStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+        errorStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.error),
+        suffixText: suffixText,
+        suffixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: StayColors.accentDark),
+        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error)),
+        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.error, width: 1.5)),
+      );
+
+  Widget _registrationCard() => _sectionCard(
+        title: 'Registration *',
+        child: Obx(() {
+          final types = _regTypes.types;
+          if (types.isEmpty) {
+            if (_regTypes.isLoading.value) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: StayColors.accent),
+                  ),
+                ),
+              );
+            }
+            return GestureDetector(
+              onTap: _regTypes.load,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: Text("Couldn't load registration types. Tap to retry.",
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+                ),
+              ),
+            );
+          }
+          final type = _selectedRegType;
+          final isUdyam = type?.code == StayRegistrationValidators.udyamCode;
+          final numberHint = isUdyam ? 'UDYAM-UK-05-0001234' : 'Registration number';
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            DropdownButtonFormField<String>(
+              initialValue: type?.id,
+              isExpanded: true,
+              decoration: _inputDec('Select type'),
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
+              items: [
+                for (final t in types)
+                  DropdownMenuItem<String>(value: t.id, child: Text(t.name, overflow: TextOverflow.ellipsis)),
+              ],
+              onChanged: (v) => setState(() {
+                _regTypeId = v;
+                _dirty = true;
+              }),
+            ),
+            if (type != null) ...[
+              if (type.requiresOtherName) ...[
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _regOtherCtrl,
+                  focusNode: _regOtherFocus,
+                  inputFormatters: StayRegistrationValidators.otherNameInputFormatters,
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: (_) => setState(() {}),
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+                  decoration: _fieldDec('e.g. Gram Panchayat NOC').copyWith(labelText: 'Document name'),
+                ),
+              ],
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _regNumCtrl,
+                focusNode: _regNumFocus,
+                inputFormatters: StayRegistrationValidators.registrationInputFormatters,
+                textCapitalization: TextCapitalization.characters,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+                decoration: _fieldDec(
+                  numberHint,
+                  errorText: _numberError,
+                  helperText: type.helpText ?? StayRegistrationValidators.registrationHelp,
+                  suffixText: _hasStoredNumber && _regNumCtrl.text.isEmpty ? 'Saved' : null,
+                ).copyWith(labelText: 'Registration number'),
+              ),
+            ],
+          ]);
+        }),
+      );
+
+  Widget _gstinCard() {
+    final hasSaved = (_ctrl.stay.value?.hasGstin ?? false) && _gstinCtrl.text.isEmpty;
+    return _sectionCard(
+      title: 'GSTIN (Optional)',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        TextFormField(
+          controller: _gstinCtrl,
+          focusNode: _gstinFocus,
+          inputFormatters: StayRegistrationValidators.gstinInputFormatters,
+          textCapitalization: TextCapitalization.characters,
+          onChanged: (_) => setState(() {}),
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+          decoration: _fieldDec(
+            '05ABCDE1234F1Z6',
+            errorText: _gstinError,
+            helperText: StayRegistrationValidators.gstinHelp,
+            suffixText: hasSaved && !_clearGstin ? 'Saved' : null,
+          ),
+        ),
+        if (hasSaved)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => setState(() {
+                _clearGstin = !_clearGstin;
+                _dirty = true;
+              }),
+              child: Text(_clearGstin ? 'Will be removed · Undo' : 'Saved · Remove',
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+            ),
+          ),
+      ]),
+    );
+  }
 
   Widget _photoTile(int i) {
     final p = _photos[i];

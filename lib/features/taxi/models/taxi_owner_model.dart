@@ -76,6 +76,8 @@ class TaxiOwnerModel {
   final DateTime createdAt;
   final DateTime? updatedAt;
   final int pendingReportCount;
+  final bool hasDrivingLicence;
+  final bool hasDateOfBirth;
 
   const TaxiOwnerModel({
     required this.id,
@@ -108,6 +110,8 @@ class TaxiOwnerModel {
     required this.createdAt,
     this.updatedAt,
     this.pendingReportCount = 0,
+    this.hasDrivingLicence = false,
+    this.hasDateOfBirth = false,
   });
 
   bool get isDraft => status == TaxiStatus.draft;
@@ -115,6 +119,7 @@ class TaxiOwnerModel {
   bool get isApproved => status == TaxiStatus.approved;
   bool get isRejected => status == TaxiStatus.rejected;
   bool get canEditSetup => !isPendingReview;
+  bool get identityDone => hasDrivingLicence && hasDateOfBirth;
 
   String get locality => cityName ?? districtName ?? '';
 
@@ -157,6 +162,8 @@ class TaxiOwnerModel {
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
       updatedAt: json['updatedAt'] != null ? DateTime.tryParse(json['updatedAt'].toString()) : null,
       pendingReportCount: (json['pendingReportCount'] as num?)?.toInt() ?? 0,
+      hasDrivingLicence: json['hasDrivingLicence'] == true,
+      hasDateOfBirth: json['hasDateOfBirth'] == true,
     );
   }
 }
