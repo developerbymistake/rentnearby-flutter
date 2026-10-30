@@ -33,6 +33,10 @@ class _TaxiSubmitScreenState extends State<TaxiSubmitScreen> {
       AppToast.warning('Complete step 1 first.');
       return;
     }
+    if (!t.identityDone) {
+      AppToast.warning('Add your licence and date of birth.');
+      return;
+    }
     if (!t.routesDone) {
       AppToast.warning('Complete step 2 first.');
       return;
@@ -93,7 +97,10 @@ class _TaxiSubmitScreenState extends State<TaxiSubmitScreen> {
                           style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                       const SizedBox(height: 6),
                       if (t != null) ...[
-                        _summaryRow('Vehicle and contact', TaxiOptionSets.step1Summary(t), AppRoutes.taxiVehicle),
+                        _summaryRow(
+                            'Vehicle and contact',
+                            t.identityDone ? TaxiOptionSets.step1Summary(t) : 'Add licence and date of birth',
+                            AppRoutes.taxiVehicle),
                         const Divider(height: 1, color: AppColors.divider),
                         _summaryRow('Routes and fares', TaxiOptionSets.routesSummary(t), AppRoutes.taxiRoutes),
                       ],

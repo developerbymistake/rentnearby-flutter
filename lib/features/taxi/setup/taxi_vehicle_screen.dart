@@ -53,6 +53,9 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   String? _savedBasicKey;
   String? _uploadedStatus;
   DateTime? _dob;
+  bool _showRequired = false;
+  String? _serverDlError;
+  String? _serverDobError;
 
   String? _initTypeId;
   int? _initSeats;
@@ -130,20 +133,26 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
 
   String? get _dlError {
     final dl = _dlTyped;
-    if (dl.isEmpty) return null;
+    if (dl.isEmpty) {
+      if (_showRequired && !_hasSavedDl) return TaxiIdentityValidators.dlRequiredMessage;
+      return _serverDlError;
+    }
     if (!TaxiIdentityValidators.isValidDl(dl)) return TaxiIdentityValidators.dlInvalidMessage;
     final dob = _dob;
     if (dob != null && !TaxiIdentityValidators.dlYearMatchesDob(TaxiIdentityValidators.dlIssueYear(dl), dob)) {
       return TaxiIdentityValidators.dlYearMessage;
     }
-    return null;
+    return _serverDlError;
   }
 
   String? get _dobError {
     final dob = _dob;
-    if (dob == null) return null;
-    final status = TaxiIdentityValidators.dobStatus(dob, TaxiIdentityValidators.todayUtc());
-    return status == DobStatus.ok ? null : TaxiIdentityValidators.dobMessage(status);
+    if (dob == null) {
+      if (_showRequired && !_hasSavedDob) return TaxiIdentityValidators.dobRequiredMessage;
+      return _serverDobError;
+    }
+    final status = TaxiIdentityValidators.dobStatus(dob, TaxiIdentityValidators.todayIst());
+    return status == DobStatus.ok ? _serverDobError : TaxiIdentityValidators.dobMessage(status);
   }
 
   bool get _isApproved => _ctrl.taxi.value?.isApproved ?? false;
@@ -360,19 +369,13 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   }
 
   bool _validateContact() {
-    if (_dlTyped.isEmpty && !_hasSavedDl) {
-      AppToast.error(TaxiIdentityValidators.dlRequiredMessage);
-      _dlFocus.requestFocus();
-      return false;
+    if ((_dlTyped.isEmpty && !_hasSavedDl) || (_dob == null && !_hasSavedDob)) {
+      setState(() => _showRequired = true);
     }
     final dlError = _dlError;
     if (dlError != null) {
       AppToast.error(dlError);
       _dlFocus.requestFocus();
-      return false;
-    }
-    if (_dob == null && !_hasSavedDob) {
-      AppToast.error(TaxiIdentityValidators.dobRequiredMessage);
       return false;
     }
     final dobError = _dobError;
@@ -516,12 +519,17 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         if (!mounted) return;
         if (!ok) {
           final type = _ctrl.lastErrorType;
+          final message = _ctrl.lastErrorMessage;
           if (type == 'TaxiPlateTaken') {
             _goTo(0);
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) _plateFocus.requestFocus();
             });
-          } else if (type == 'TaxiIdentityRequired') {
+          } else if (TaxiIdentityValidators.dobServerMessages.contains(message)) {
+            _serverDobError = message;
+            _goTo(1);
+          } else if (TaxiIdentityValidators.dlServerMessages.contains(message) || type == 'TaxiIdentityRequired') {
+            if (message != null && TaxiIdentityValidators.dlServerMessages.contains(message)) _serverDlError = message;
             _goTo(1);
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) _dlFocus.requestFocus();
@@ -916,7 +924,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
 
   Future<void> _pickDob() async {
     FocusScope.of(context).unfocus();
-    final today = TaxiIdentityValidators.todayUtc();
+    final today = TaxiIdentityValidators.todayIst();
     final last = TaxiIdentityValidators.yearsBefore(today, TaxiIdentityValidators.minAgeYears);
     final first = TaxiIdentityValidators.yearsBefore(today, TaxiIdentityValidators.maxAgeYears);
     var initial = _dob ?? TaxiIdentityValidators.yearsBefore(today, 25);
@@ -933,7 +941,13 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
         child: child!,
       ),
     );
-    if (picked != null && mounted) setState(() => _dob = TaxiIdentityValidators.dateOnly(picked));
+    if (picked != null && mounted) {
+      setState(() {
+        _dob = TaxiIdentityValidators.dateOnly(picked);
+        _serverDobError = null;
+        if (_serverDlError == TaxiIdentityValidators.dlYearMessage) _serverDlError = null;
+      });
+    }
   }
 
   Widget _contactStep() => SingleChildScrollView(
@@ -951,7 +965,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                 textCapitalization: TextCapitalization.characters,
                 autocorrect: false,
                 enableSuggestions: false,
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) => setState(() => _serverDlError = null),
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, letterSpacing: 1),
                 decoration: _inputDec('UK07 20150012345').copyWith(
                   errorText: _dlError,
@@ -960,6 +974,11 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                   suffixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: TaxiColors.accentDark),
                 ),
               ),
+              if (_hasSavedDl && _dlCtrl.text.isEmpty && _dlError == null) ...[
+                const SizedBox(height: 6),
+                const Text(TaxiIdentityValidators.savedHelp,
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: TaxiColors.accentDark)),
+              ],
               const SizedBox(height: 6),
               const Text(TaxiIdentityValidators.dlHelp,
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
@@ -996,7 +1015,7 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
                             _dob != null
                                 ? TaxiIdentityValidators.displayDate(_dob!)
                                 : _hasSavedDob
-                                    ? 'Saved'
+                                    ? 'Saved · Tap to change'
                                     : 'Select date',
                             style: TextStyle(
                                 fontFamily: 'Poppins',

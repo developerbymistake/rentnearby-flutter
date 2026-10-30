@@ -156,7 +156,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
     final d2 = u2 && (s?.roomsDone ?? false);
     final u3 = d2;
     final d3 = u3 && (s?.rulesDone ?? false);
-    final u4 = d3;
+    final u4 = d3 && !regMissing;
     final d4 = u4 && (s != null && (s.isPendingReview || s.isApproved));
     final percent = s?.setupPercent ?? 0;
     final canCorrect = gated && (s == null || s.isDraft) && (_auth.user.value?.canCorrectRole ?? false);
@@ -203,7 +203,7 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         number: 4,
         title: 'Final submit',
         subtitle: !u4
-            ? 'Complete step 3 first'
+            ? (d3 ? 'Complete step 1 first' : 'Complete step 3 first')
             : s!.isApproved
                 ? 'Your stay is live'
                 : d4

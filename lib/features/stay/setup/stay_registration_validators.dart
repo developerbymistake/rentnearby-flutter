@@ -27,6 +27,15 @@ class StayRegistrationValidators {
   static const String otherNameInvalidMessage = 'Document name must be 3 to 40 characters';
   static const String typeRequiredMessage = 'Pick a registration type';
   static const String numberRequiredMessage = 'Enter your registration number';
+  static const String typeInvalidMessage = 'Pick a valid registration type';
+  static const String typesNotLoadedMessage = 'Registration types did not load. Tap to retry.';
+  static const String typesLoadingMessage = 'Loading registration types. Try again in a moment.';
+  static const String savedHelp = 'Saved. Leave empty to keep it.';
+
+  static const typeServerMessages = {typeRequiredMessage, typeInvalidMessage};
+  static const otherNameServerMessages = {otherNameEmptyMessage, otherNameInvalidMessage};
+  static const numberServerMessages = {numberRequiredMessage, registrationInvalidMessage, udyamInvalidMessage};
+  static const gstinServerMessages = {gstinInvalidMessage};
 
   static const List<String> stateCodes = [
     'AN', 'AP', 'AR', 'AS', 'BR', 'CG', 'CH', 'DD', 'DL', 'GA', 'GJ', 'HP',

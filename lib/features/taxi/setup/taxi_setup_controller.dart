@@ -19,6 +19,9 @@ class TaxiSetupController extends GetxController {
   final isSaving = false.obs;
   bool mainBelow = false;
   String? lastErrorType;
+  String? lastErrorMessage;
+
+  static const cipherUnavailableMessage = 'Licence details cannot be saved right now. Try again later.';
 
   static const _taxiErrorTypes = {
     'TaxiStepLocked',
@@ -105,6 +108,7 @@ class TaxiSetupController extends GetxController {
   Future<bool> _mutate(Future<TaxiOwnerModel?> Function() call, String fallback, {bool awaitProfile = false}) async {
     if (isSaving.value) return false;
     lastErrorType = null;
+    lastErrorMessage = null;
     try {
       isSaving.value = true;
       final updated = await call();
@@ -129,8 +133,13 @@ class TaxiSetupController extends GetxController {
 
   void _handleError(dynamic e, String fallback) {
     lastErrorType = DioErrorMapper.errorType(e);
+    lastErrorMessage = DioErrorMapper.serverMessage(e);
     if (e is DioException && e.response?.statusCode == 401) return;
-    if (_taxiErrorTypes.contains(DioErrorMapper.errorType(e))) {
+    if (lastErrorType == 'IdentityCipherNotConfigured') {
+      AppToast.warning(cipherUnavailableMessage);
+      return;
+    }
+    if (_taxiErrorTypes.contains(lastErrorType)) {
       AppToast.warning(DioErrorMapper.toMessage(e, fallback, showRawMessageForStatusCodes: const {400, 409}));
       return;
     }

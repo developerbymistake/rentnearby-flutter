@@ -38,6 +38,16 @@ class DioErrorMapper {
     return null;
   }
 
+  static String? serverMessage(dynamic e) {
+    if (e is! DioException) return null;
+    final responseData = e.response?.data;
+    if (responseData is Map<String, dynamic>) {
+      final error = responseData['error'];
+      if (error is Map<String, dynamic>) return error['message'] as String?;
+    }
+    return null;
+  }
+
   static String toMessage(
     dynamic e,
     String fallback, {

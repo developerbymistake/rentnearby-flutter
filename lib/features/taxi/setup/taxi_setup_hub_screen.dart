@@ -162,7 +162,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
     final u2 = d1;
     final stepDone = (t?.identityDone ?? false) || (t?.isPendingReview ?? false);
     final d2 = u2 && (t?.routesDone ?? false);
-    final u3 = d2;
+    final u3 = d2 && stepDone;
     final d3 = u3 && (t != null && (t.isPendingReview || t.isApproved));
     final percent = t?.percent ?? 0;
     final canCorrect = gated && (t == null || t.isDraft) && (_auth.user.value?.canCorrectRole ?? false);
@@ -199,7 +199,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
         number: 3,
         title: 'Final submit',
         subtitle: !u3
-            ? 'Complete step 2 first'
+            ? (d2 ? 'Complete step 1 first' : 'Complete step 2 first')
             : t!.isApproved
                 ? 'Your taxi is live'
                 : d3

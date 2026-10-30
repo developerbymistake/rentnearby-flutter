@@ -56,6 +56,11 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   String? _stayTypeId;
   String? _regTypeId;
   bool _clearGstin = false;
+  bool _showRegRequired = false;
+  String? _serverTypeError;
+  String? _serverOtherError;
+  String? _serverNumberError;
+  String? _serverGstinError;
   String? _vehicleAccess;
   bool? _hostLivesHere;
   final Set<String> _facilities = {};
@@ -155,30 +160,81 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         : StayRegistrationValidators.gstinInvalidMessage;
   }
 
+  String? get _typeFieldError =>
+      (_showRegRequired && _selectedRegType == null ? StayRegistrationValidators.typeRequiredMessage : null) ??
+      _serverTypeError;
+
+  String? get _otherNameFieldError =>
+      (_showRegRequired ? StayRegistrationValidators.otherNameError(_regOtherCtrl.text) : null) ?? _serverOtherError;
+
+  String? get _numberFieldError {
+    if (_regNumCtrl.text.trim().isEmpty) {
+      if (_showRegRequired && !_hasStoredNumber) return StayRegistrationValidators.numberRequiredMessage;
+      return _serverNumberError;
+    }
+    return _numberError ?? _serverNumberError;
+  }
+
+  String? get _gstinFieldError => _gstinError ?? _serverGstinError;
+
+  String? get _typesUnavailableMessage {
+    if (_regTypes.types.isNotEmpty) return null;
+    return _regTypes.isLoading.value
+        ? StayRegistrationValidators.typesLoadingMessage
+        : StayRegistrationValidators.typesNotLoadedMessage;
+  }
+
   String? _validateRegistration() {
+    final unavailable = _typesUnavailableMessage;
+    if (unavailable != null) return unavailable;
     final type = _selectedRegType;
-    if (type == null) return StayRegistrationValidators.typeRequiredMessage;
+    if (type == null) return _typeFieldError ?? StayRegistrationValidators.typeRequiredMessage;
+    if (_serverTypeError != null) return _serverTypeError;
     if (type.requiresOtherName) {
-      final err = StayRegistrationValidators.otherNameError(_regOtherCtrl.text);
+      final err = _otherNameFieldError;
       if (err != null) {
         _regOtherFocus.requestFocus();
         return err;
       }
     }
-    if (_regNumCtrl.text.trim().isEmpty) {
-      if (!_hasStoredNumber) {
-        _regNumFocus.requestFocus();
-        return StayRegistrationValidators.numberRequiredMessage;
-      }
-    } else if (_numberError != null) {
+    final numberErr = _numberFieldError;
+    if (numberErr != null) {
       _regNumFocus.requestFocus();
-      return _numberError;
+      return numberErr;
     }
-    if (_gstinError != null) {
+    final gstinErr = _gstinFieldError;
+    if (gstinErr != null) {
       _gstinFocus.requestFocus();
-      return _gstinError;
+      return gstinErr;
     }
     return null;
+  }
+
+  void _showServerRegistrationError() {
+    final msg = _ctrl.lastErrorMessage;
+    FocusNode? focus;
+    if (StayRegistrationValidators.typeServerMessages.contains(msg)) {
+      _serverTypeError = msg;
+      _regTypes.load();
+    } else if (StayRegistrationValidators.otherNameServerMessages.contains(msg)) {
+      _serverOtherError = msg;
+      focus = _regOtherFocus;
+    } else if (StayRegistrationValidators.numberServerMessages.contains(msg)) {
+      _serverNumberError = msg;
+      focus = _regNumFocus;
+    } else if (StayRegistrationValidators.gstinServerMessages.contains(msg)) {
+      _serverGstinError = msg;
+      focus = _gstinFocus;
+    } else if (_ctrl.lastErrorType != 'StayRegistrationRequired') {
+      return;
+    }
+    setState(() => _step = 0);
+    if (focus != null) {
+      final f = focus;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) f.requestFocus();
+      });
+    }
   }
 
   void _handleLocationStale() {
@@ -351,6 +407,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         AppToast.error('Please select a stay type');
         return;
       }
+      setState(() => _showRegRequired = true);
       final regError = _validateRegistration();
       if (regError != null) {
         AppToast.error(regError);
@@ -406,7 +463,11 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     final desc = _descCtrl.text.trim();
     final regType = _selectedRegType;
     if (regType == null) {
-      AppToast.error(StayRegistrationValidators.typeRequiredMessage);
+      AppToast.error(_typesUnavailableMessage ?? StayRegistrationValidators.typeRequiredMessage);
+      setState(() {
+        _showRegRequired = true;
+        _step = 0;
+      });
       return;
     }
     final regNumber = _regNumCtrl.text.trim();
@@ -432,7 +493,11 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
       'districtId': districtId,
       'cityId': resolvedCityId,
     });
-    if (!ok || !mounted) return;
+    if (!mounted) return;
+    if (!ok) {
+      _showServerRegistrationError();
+      return;
+    }
 
     setState(() => _isFinalizing = true);
     for (final id in _removedPhotoIds) {
@@ -937,9 +1002,10 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           final numberHint = isUdyam ? 'UDYAM-UK-05-0001234' : 'Registration number';
           return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             DropdownButtonFormField<String>(
+              key: ValueKey(type?.id),
               initialValue: type?.id,
               isExpanded: true,
-              decoration: _inputDec('Select type'),
+              decoration: _fieldDec('Select type', errorText: _typeFieldError),
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark),
               items: [
                 for (final t in types)
@@ -947,6 +1013,9 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
               ],
               onChanged: (v) => setState(() {
                 _regTypeId = v;
+                _serverTypeError = null;
+                _serverOtherError = null;
+                _serverNumberError = null;
                 _dirty = true;
               }),
             ),
@@ -958,9 +1027,10 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                   focusNode: _regOtherFocus,
                   inputFormatters: StayRegistrationValidators.otherNameInputFormatters,
                   textCapitalization: TextCapitalization.words,
-                  onChanged: (_) => setState(() {}),
+                  onChanged: (_) => setState(() => _serverOtherError = null),
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-                  decoration: _fieldDec('e.g. Gram Panchayat NOC').copyWith(labelText: 'Document name'),
+                  decoration: _fieldDec('e.g. Gram Panchayat NOC', errorText: _otherNameFieldError)
+                      .copyWith(labelText: 'Document name'),
                 ),
               ],
               const SizedBox(height: 14),
@@ -969,12 +1039,14 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
                 focusNode: _regNumFocus,
                 inputFormatters: StayRegistrationValidators.registrationInputFormatters,
                 textCapitalization: TextCapitalization.characters,
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) => setState(() => _serverNumberError = null),
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
                 decoration: _fieldDec(
                   numberHint,
-                  errorText: _numberError,
-                  helperText: type.helpText ?? StayRegistrationValidators.registrationHelp,
+                  errorText: _numberFieldError,
+                  helperText: _hasStoredNumber && _regNumCtrl.text.isEmpty
+                      ? StayRegistrationValidators.savedHelp
+                      : type.helpText ?? StayRegistrationValidators.registrationHelp,
                   suffixText: _hasStoredNumber && _regNumCtrl.text.isEmpty ? 'Saved' : null,
                 ).copyWith(labelText: 'Registration number'),
               ),
@@ -993,11 +1065,11 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
           focusNode: _gstinFocus,
           inputFormatters: StayRegistrationValidators.gstinInputFormatters,
           textCapitalization: TextCapitalization.characters,
-          onChanged: (_) => setState(() {}),
+          onChanged: (_) => setState(() => _serverGstinError = null),
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
           decoration: _fieldDec(
             '05ABCDE1234F1Z6',
-            errorText: _gstinError,
+            errorText: _gstinFieldError,
             helperText: StayRegistrationValidators.gstinHelp,
             suffixText: hasSaved && !_clearGstin ? 'Saved' : null,
           ),
@@ -1008,6 +1080,7 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
             child: TextButton(
               onPressed: () => setState(() {
                 _clearGstin = !_clearGstin;
+                _serverGstinError = null;
                 _dirty = true;
               }),
               child: Text(_clearGstin ? 'Will be removed · Undo' : 'Saved · Remove',

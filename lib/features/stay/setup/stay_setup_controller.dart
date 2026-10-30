@@ -18,6 +18,8 @@ class StaySetupController extends GetxController {
   final loadFailed = false.obs;
   final isSaving = false.obs;
   bool mainBelow = false;
+  String? lastErrorType;
+  String? lastErrorMessage;
 
   static const _stayErrorTypes = {'StayStepLocked', 'StayLocked', 'StayNotApproved', 'StayAlreadyExists', 'StayRoomLimit', 'StayRegistrationRequired'};
 
@@ -107,6 +109,8 @@ class StaySetupController extends GetxController {
   }
 
   Future<bool> _mutate(Future<StayOwnerModel?> Function() call, String fallback, {bool awaitProfile = false}) async {
+    lastErrorType = null;
+    lastErrorMessage = null;
     try {
       isSaving.value = true;
       final updated = await call();
@@ -130,8 +134,10 @@ class StaySetupController extends GetxController {
   }
 
   void _handleError(dynamic e, String fallback) {
+    lastErrorType = DioErrorMapper.errorType(e);
+    lastErrorMessage = DioErrorMapper.serverMessage(e);
     if (e is DioException && e.response?.statusCode == 401) return;
-    if (_stayErrorTypes.contains(DioErrorMapper.errorType(e))) {
+    if (_stayErrorTypes.contains(lastErrorType)) {
       AppToast.warning(DioErrorMapper.toMessage(e, fallback));
       return;
     }

@@ -26,6 +26,12 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> {
   }
 
   Future<void> _submit() async {
+    if (_ctrl.isSaving.value) return;
+    final s = _ctrl.stay.value;
+    if (s != null && !s.registrationDone) {
+      AppToast.warning('Add your registration details.');
+      return;
+    }
     final ok = await _ctrl.submit();
     if (!ok || !mounted) return;
     final auth = Get.find<AuthController>();
@@ -80,7 +86,10 @@ class _StaySubmitScreenState extends State<StaySubmitScreen> {
                           style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                       const SizedBox(height: 6),
                       if (s != null) ...[
-                        _summaryRow('Basic details', StayOptionSets.basicSummary(s), AppRoutes.stayBasicDetails),
+                        _summaryRow(
+                            'Basic details',
+                            s.registrationDone ? StayOptionSets.basicSummary(s) : 'Add registration details',
+                            AppRoutes.stayBasicDetails),
                         const Divider(height: 1, color: AppColors.divider),
                         _summaryRow('Rooms', StayOptionSets.roomsSummary(s), AppRoutes.stayRooms),
                         const Divider(height: 1, color: AppColors.divider),
