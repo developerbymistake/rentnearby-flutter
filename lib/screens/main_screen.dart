@@ -472,15 +472,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 child: _navItem(AppTabs.stays, Iconsax.building_4, Iconsax.building_45,
                     _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
               ),
-            if (_tabConfigCtrl.isActiveForIndex(AppTabs.jobs))
-              _navItem(AppTabs.jobs, Iconsax.briefcase, Iconsax.briefcase5,
-                  _tabConfigCtrl.displayNameForIndex(AppTabs.jobs, 'Jobs')),
             if (_tabConfigCtrl.isActive(AppTabKeys.taxi))
               KeyedSubtree(
                 key: TourKeys.homeTaxiNavIcon,
                 child: _navItem(AppTabs.taxi, Iconsax.car, Iconsax.car5,
                     _tabConfigCtrl.displayNameForIndex(AppTabs.taxi, 'Taxi')),
               ),
+            if (_tabConfigCtrl.isActiveForIndex(AppTabs.jobs))
+              _navItem(AppTabs.jobs, Iconsax.briefcase, Iconsax.briefcase5,
+                  _tabConfigCtrl.displayNameForIndex(AppTabs.jobs, 'Jobs')),
             KeyedSubtree(
               key: TourKeys.homeProfileNavIcon,
               child: _navItem(AppTabs.profile, Iconsax.user, Iconsax.user5,

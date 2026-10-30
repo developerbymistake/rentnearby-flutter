@@ -39,6 +39,7 @@ class PlanController extends GetxController {
   final isLoadingPlan = false.obs;
   final isLoadingCatalog = false.obs;
   final isLoadingHistory = false.obs;
+  final historyLoadFailed = false.obs;
   final isPurchasing = false.obs;
   final activePurchase = Rxn<PurchaseStatus>();
   final pollTimedOut = false.obs;
@@ -188,6 +189,7 @@ class PlanController extends GetxController {
     history.clear();
     activePurchase.value = null;
     planLoadFailed.value = false;
+    historyLoadFailed.value = false;
     _skipOpenIds.clear();
     _strayTokens.clear();
     _lastRestoreAt = null;
@@ -409,7 +411,9 @@ class PlanController extends GetxController {
     isLoadingHistory.value = true;
     try {
       history.value = await _repo.getHistory();
+      historyLoadFailed.value = false;
     } catch (_) {
+      historyLoadFailed.value = true;
     } finally {
       isLoadingHistory.value = false;
     }

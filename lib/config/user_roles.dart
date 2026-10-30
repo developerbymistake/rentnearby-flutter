@@ -63,6 +63,7 @@ class RoleRequestErrorTypes {
   static const String correctionUsed = 'RoleCorrectionUsed';
   static const String correctionNotAllowed = 'RoleCorrectionNotAllowed';
   static const String requestPending = 'RoleRequestPending';
+  static const String locked = 'RoleLocked';
 }
 
 class RoleRequestStatus {

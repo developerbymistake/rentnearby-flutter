@@ -11,7 +11,6 @@ import '../controllers/plan_controller.dart';
 import '../utils/app_date_format.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
-import '../widgets/plan_subscription_card.dart';
 import '../widgets/role_option_card.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
@@ -140,8 +139,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            _buildRoleCard(),
-
             Obx(() => _auth.isOwner ? _buildPlansCard() : const SizedBox(height: 20)),
 
             // Account — phone and contact-visibility, each its own independent action
@@ -151,6 +148,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _accountPhoneTile(),
               Divider(height: 1, indent: 56, color: AppColors.divider),
               _accountVisibilityTile(),
+              Divider(height: 1, indent: 56, color: AppColors.divider),
+              _accountRoleTile(),
             ]),
 
             // My Activity — every screen that shows "things the user has done/can act on"
@@ -245,81 +244,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildRoleCard() {
-    return Obx(() {
-      final roleKey = _auth.roleKey.value;
-      final u = _auth.user.value;
-      final locked = _auth.roleChangeLocked;
-      final pending = !locked && (u?.hasPendingRoleRequest ?? false);
-      final rejected = !locked && (u?.hasRejectedRoleRequest ?? false);
-      final reason = u?.roleRequestReason;
-      final blockedUntil = u?.roleRequestBlockedUntil;
-      final retryText = blockedUntil != null ? 'Try again after ${AppDateFormat.dateTime(blockedUntil)}' : null;
-      final title = rejected ? 'Request rejected' : RoleVisuals.displayName(roleKey);
-      final subtitle = pending
-          ? 'Request pending'
-          : rejected
-              ? (reason != null && reason.isNotEmpty ? reason : (retryText ?? 'Tap to try again'))
-              : (retryText ?? (_auth.roleTabActive ? 'Change role' : 'Paused'));
-      return GestureDetector(
-        onTap: locked ? null : () => Get.toNamed(AppRoutes.roleChange),
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: const Offset(0, 6))],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: pending ? AppColors.warning : rejected ? AppColors.error : null,
-                  gradient: pending || rejected ? null : RoleVisuals.gradient(roleKey),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  pending ? Iconsax.clock : rejected ? Iconsax.close_circle : RoleVisuals.icon(roleKey),
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: const TextStyle(
-                            fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                    if (!locked) ...[
-                      const SizedBox(height: 2),
-                      Text(subtitle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-                    ],
-                  ],
-                ),
-              ),
-              if (!locked) const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),
-            ],
-          ),
-        ),
-      );
-    });
-  }
-
   Widget _buildPlansCard() {
     final plans = Get.find<PlanController>();
     return GestureDetector(
       onTap: () => Get.toNamed(AppRoutes.plansBilling),
       child: Container(
-        margin: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-        padding: const EdgeInsets.all(18),
+        margin: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -328,32 +259,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14)),
-              child: const Icon(Iconsax.crown_1, size: 24, color: AppColors.primary),
+              child: const Icon(Iconsax.crown_1, size: 22, color: AppColors.primary),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Plans & Billing',
-                      style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
                   const SizedBox(height: 2),
-                  Obx(() {
-                    final me = plans.myPlan.value;
-                    final status = PlanStateCopy.status(me);
-                    final left = status != null ? ' · $status' : '';
-                    return Text('${me.planName}$left',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight));
-                  }),
+                  Obx(() => Text(plans.myPlan.value.planName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark))),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Obx(() {
+              final me = plans.myPlan.value;
+              if (!me.paymentEnabled) {
+                return const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary);
+              }
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(me.hasPaidPlan ? 'Manage' : 'Upgrade',
+                    style: const TextStyle(
+                        fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+              );
+            }),
           ],
         ),
       ),
@@ -479,6 +422,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  Widget _accountRoleTile() {
+    return Obx(() {
+      final roleKey = _auth.roleKey.value;
+      final u = _auth.user.value;
+      final locked = _auth.roleChangeLocked;
+      final blockedUntil = u?.roleRequestBlockedUntil;
+      final String title;
+      final String sub;
+      var amber = false;
+      if (locked) {
+        title = 'Current role';
+        sub = RoleVisuals.displayName(roleKey);
+      } else {
+        title = 'Change role';
+        if (u?.hasPendingRoleRequest ?? false) {
+          sub = 'Request pending';
+          amber = true;
+        } else if (blockedUntil != null) {
+          sub = 'Try again after ${AppDateFormat.dateTime(blockedUntil)}';
+          amber = true;
+        } else if (u?.hasRejectedRoleRequest ?? false) {
+          sub = 'Request rejected';
+          amber = true;
+        } else if (!_auth.roleTabActive) {
+          sub = 'Paused';
+          amber = true;
+        } else {
+          sub = 'Now: ${RoleVisuals.displayName(roleKey)}';
+        }
+      }
+      return InkWell(
+        onTap: locked ? null : () => Get.toNamed(AppRoutes.roleChange),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          child: Row(
+            children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Iconsax.user_edit, color: AppColors.primaryLight, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textMedium)),
+                    const SizedBox(height: 2),
+                    Text(sub,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 11,
+                            color: amber ? AppColors.warningText : AppColors.textLight)),
+                  ],
+                ),
+              ),
+              if (!locked) const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   Future<void> _openPhoneVerify() async {

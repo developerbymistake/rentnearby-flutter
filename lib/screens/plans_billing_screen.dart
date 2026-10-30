@@ -3,13 +3,17 @@ import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
+import '../config/app_routes.dart';
 import '../controllers/plan_controller.dart';
+import '../models/browse_item.dart';
 import '../models/my_plan_model.dart';
 import '../models/plan_model.dart';
 import '../models/plan_purchase_result.dart';
 import '../models/store_product.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
+import '../widgets/plan_compare_table.dart';
+import '../widgets/plan_cycle_option.dart';
 import '../widgets/plan_subscription_card.dart';
 import '../widgets/purchase_status_sheet.dart';
 
@@ -28,14 +32,17 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
   final _quoteLoading = false.obs;
   final _quoteError = Rxn<String>();
   final _appliedCoupon = Rxn<String>();
+  final _showCoupon = false.obs;
   int _quoteSeq = 0;
   bool _sheetOpen = false;
   Worker? _purchaseWorker;
+  Worker? _catalogWorker;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _load().then((_) => _autoSelect());
+    _catalogWorker = ever<PlanCatalogModel?>(_plans.catalog, (_) => _autoSelect());
     _purchaseWorker = ever<PurchaseStatus?>(_plans.activePurchase, (v) {
       if (v == null) {
         if (_sheetOpen && mounted) Navigator.of(context).pop();
@@ -49,6 +56,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
   @override
   void dispose() {
     _purchaseWorker?.dispose();
+    _catalogWorker?.dispose();
     _couponCtrl.dispose();
     super.dispose();
   }
@@ -59,21 +67,22 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         _plans.loadHistory(),
       ]);
 
-  Color get _accent => _accentOf(_plans.myPlan.value.featureKey);
+  void _autoSelect() {
+    if (!mounted || _selectedPlanId.value != null) return;
+    final me = _plans.myPlan.value;
+    final paid = _plans.plans.where((p) => !p.isDefault && p.prices.isNotEmpty).toList();
+    if (!me.paymentEnabled || paid.isEmpty) return;
+    final plan = paid.firstWhereOrNull((p) => p.playProductId != null && p.playProductId == me.play?.productId) ??
+        paid.first;
+    final cycle = plan.prices
+            .firstWhereOrNull((x) => x.playBasePlanId != null && x.playBasePlanId == me.play?.basePlanId)
+            ?.cycleMonths ??
+        plan.prices.first.cycleMonths;
+    _cycles[plan.id] = cycle;
+    _selectPlan(plan);
+  }
 
-  static Color _accentOf(String? featureKey) => switch (featureKey) {
-        'Plot' => AppColors.plot,
-        'Stay' => AppColors.stay,
-        'Taxi' => AppColors.taxi,
-        _ => AppColors.primary,
-      };
-
-  static LinearGradient _gradientOf(String? featureKey) => switch (featureKey) {
-        'Plot' => AppColors.plotGradient,
-        'Stay' => AppColors.stayGradient,
-        'Taxi' => AppColors.taxiGradient,
-        _ => AppColors.primaryGradient,
-      };
+  Color get _accent => PlanAccent.of(_plans.myPlan.value.featureKey);
 
   void _maybeShowStatusSheet() {
     if (!mounted || _sheetOpen || _plans.activePurchase.value == null) return;
@@ -154,6 +163,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
   void _clearCoupon() {
     _appliedCoupon.value = null;
     _couponCtrl.clear();
+    _showCoupon.value = false;
     _requestQuote();
   }
 
@@ -192,6 +202,76 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     return pct > 0 ? pct : 0;
   }
 
+  static String _subtitleFor(String? featureKey) => switch (featureKey) {
+        'Plot' => 'Plots plan',
+        'Stay' => 'Stay plan',
+        'Taxi' => 'Taxi plan',
+        _ => 'Rooms plan',
+      };
+
+  static String _comingLine(String? featureKey) => switch (featureKey) {
+        'Plot' => 'Shown first and more plots. Not open yet.',
+        'Stay' => 'Featured, shown first and more job posts. Not open yet.',
+        'Taxi' => 'Featured and shown first. Not open yet.',
+        _ => 'Shown first and more rooms. Not open yet.',
+      };
+
+  static String _cycleTitle(int m) => m == 1 ? '1 month' : '$m months';
+
+  static String _billedText(int m, String formatted) => switch (m) {
+        1 => 'Billed monthly',
+        3 => 'Billed $formatted every 3 months',
+        12 => 'Billed $formatted a year',
+        _ => 'Billed $formatted every $m months',
+      };
+
+  String _perMonth(StorePrice sp, int m) => '${_symbol(sp)}${(sp.raw / m).round()}';
+
+  static String _plural(int n, String word) => '$n $word${n == 1 ? '' : 's'}';
+
+  List<String> _includedLines(PlanLimitsModel l, String? featureKey, bool paymentEnabled) {
+    final prefix = paymentEnabled ? '' : 'Up to ';
+    return [
+      if (featureKey == 'Room') '$prefix${_plural(l.listingLimit, 'live room')}',
+      if (featureKey == 'Plot') '$prefix${_plural(l.listingLimit, 'live plot')}',
+      if (l.priority > 0) 'Shown first in search',
+      if (l.featured) 'Featured badge',
+      if (featureKey == 'Stay') _plural(l.jobsPosts, 'job post'),
+    ];
+  }
+
+  List<CompareRow> _featureRows(List<PlanModel> plans, List<PlanModel> paidPlans, MyPlanModel me) {
+    final featureKey = me.featureKey;
+    final free = plans.firstWhereOrNull((p) => p.isDefault);
+    final l = me.limits;
+    int freeValue(String key) {
+      if (free != null) return free.feature(key);
+      return switch (key) {
+        PlanFeatureKeys.listingLimit => l.listingLimit,
+        PlanFeatureKeys.priority => l.priority,
+        PlanFeatureKeys.featured => l.featured ? 1 : 0,
+        PlanFeatureKeys.jobsPosts => l.jobsPosts,
+        _ => 0,
+      };
+    }
+
+    List<int> values(String key) => [freeValue(key), for (final p in paidPlans) p.feature(key)];
+
+    CompareRow? row(String key, String label, {required bool number}) {
+      final v = values(key);
+      if (!v.any((x) => x > 0)) return null;
+      return CompareRow(label, [for (final x in v) number ? CompareCell.number(x) : CompareCell.flag(x > 0)]);
+    }
+
+    return [
+      if (featureKey == 'Room' || featureKey == 'Plot')
+        row(PlanFeatureKeys.listingLimit, featureKey == 'Room' ? 'Live rooms' : 'Live plots', number: true),
+      row(PlanFeatureKeys.priority, 'Shown first', number: false),
+      row(PlanFeatureKeys.featured, 'Featured badge', number: false),
+      if (featureKey == 'Stay') row(PlanFeatureKeys.jobsPosts, 'Job posts', number: true),
+    ].whereType<CompareRow>().toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -201,17 +281,17 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         Expanded(
           child: RefreshIndicator(
             color: _accent,
-            onRefresh: () => _load(force: true),
+            onRefresh: () => _load(force: true).then((_) => _autoSelect()),
             child: Obx(() {
               final me = _plans.myPlan.value;
               final loading = _plans.isLoadingPlan.value;
               final catalogLoading = _plans.isLoadingCatalog.value;
-              final history = _plans.history.toList();
               final paidPlans = _plans.plans.where((p) => !p.isDefault && p.prices.isNotEmpty).toList();
-              final accent = _accentOf(me.featureKey);
+              final accent = PlanAccent.of(me.featureKey);
+              final barVisible = me.featureKey != null && me.paymentEnabled && paidPlans.isNotEmpty;
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 24 + AppInsets.bottomViewPadding(context)),
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 24 + (barVisible ? 0 : AppInsets.bottomViewPadding(context))),
                 children: [
                   if (me.featureKey == null && !loading && _plans.planLoadFailed.value)
                     _loadFailedState()
@@ -223,27 +303,16 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
                       const SizedBox(height: 12),
                       PlanSubscriptionCard(me: me, accent: accent, onResubscribe: () => _resubscribe(me, paidPlans)),
                     ],
-                    const SizedBox(height: 20),
-                    if (!me.paymentEnabled)
-                      _freeModeNote()
-                    else ...[
-                      _sectionTitle('Choose a plan',
-                          _plans.isPlay ? 'Auto-renews. Cancel anytime in Google Play.' : 'Prepaid. Pick how long.'),
+                    if (!me.paymentEnabled) ...[
                       const SizedBox(height: 12),
+                      _comingSoon(me.featureKey),
+                    ] else ...[
+                      const SizedBox(height: 20),
                       if (paidPlans.isEmpty)
                         _plansPlaceholder(catalogLoading)
                       else
-                        for (final p in paidPlans) ...[
-                          _planCard(p, me, accent),
-                          const SizedBox(height: 14),
-                        ],
+                        ..._purchaseSection(me, paidPlans, accent),
                       if (_plans.isPlay) _restoreButton(accent),
-                      if (history.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        _sectionTitle('History', 'Your plan payments.'),
-                        const SizedBox(height: 12),
-                        _historyList(history),
-                      ],
                     ],
                   ],
                 ],
@@ -251,9 +320,344 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
             }),
           ),
         ),
+        Obx(() => _stickyBar()),
       ]),
     );
   }
+
+  List<Widget> _purchaseSection(MyPlanModel me, List<PlanModel> paidPlans, Color accent) {
+    final isPlay = _plans.isPlay;
+    final owns = me.play?.ownsActivePlan == true;
+    final selectedId = _selectedPlanId.value;
+    final selected = paidPlans.firstWhereOrNull((p) => p.id == selectedId);
+    final otherAccounts = _plans.otherAccountProducts.toSet();
+    final otherAccount =
+        isPlay && selected?.playProductId != null && otherAccounts.contains(selected!.playProductId);
+    var showCoupon = false;
+    if (selected != null) {
+      final cycle = _cycles[selected.id] ?? selected.prices.first.cycleMonths;
+      final price = selected.priceFor(cycle) ?? selected.prices.first;
+      final notConfigured = isPlay && (selected.playProductId == null || price.playBasePlanId == null);
+      final ownedCycle = isPlay && _isOwnedCycle(selected, cycle);
+      showCoupon = !notConfigured && !ownedCycle;
+    }
+    return [
+      _sectionTitle('What you get', 'Free vs ${paidPlans.map((p) => p.name).join(' vs ')}'),
+      const SizedBox(height: 12),
+      PlanCompareTable(
+        rows: _featureRows(_plans.plans, paidPlans, me),
+        paidNames: [for (final p in paidPlans) p.name],
+        accent: accent,
+      ),
+      const SizedBox(height: 20),
+      owns
+          ? _sectionTitle('Change duration', 'Takes effect at your next renewal')
+          : _sectionTitle('Pick how long', isPlay ? 'Auto-renews. Cancel anytime in Google Play.' : 'Prepaid. Pick how long.'),
+      const SizedBox(height: 12),
+      for (final plan in paidPlans) ...[
+        if (paidPlans.length > 1) _planChipRow(plan, accent),
+        ..._cycleRows(plan, accent),
+        const SizedBox(height: 10),
+      ],
+      if (otherAccount)
+        const Text('Subscribed on another Bakhli account',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+      const SizedBox(height: 8),
+      if (showCoupon) _couponLink(accent),
+    ];
+  }
+
+  Widget _planChipRow(PlanModel plan, Color accent) {
+    final active = _selectedPlanId.value == plan.id;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Wrap(children: [
+        GestureDetector(
+          onTap: () => _selectPlan(plan),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: active ? accent : accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(plan.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: active ? Colors.white : accent)),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  List<Widget> _cycleRows(PlanModel plan, Color accent) {
+    final isPlay = _plans.isPlay;
+    final storeState = _plans.storeState.value;
+    final selectedCycle = _cycles[plan.id] ?? plan.prices.first.cycleMonths;
+    final isSelectedPlan = _selectedPlanId.value == plan.id;
+    final saves = [for (final p in plan.prices) _savePercent(plan, p)];
+    final maxSave = saves.isEmpty ? 0 : saves.reduce((a, b) => a > b ? a : b);
+    final bestIndex = maxSave > 0 ? saves.indexOf(maxSave) : -1;
+    return [
+      for (var i = 0; i < plan.prices.length; i++)
+        Padding(
+          padding: EdgeInsets.only(top: i == 0 ? 0 : 12),
+          child: Builder(builder: (_) {
+            final price = plan.prices[i];
+            final cycle = price.cycleMonths;
+            final save = saves[i];
+            final saveText = save > 0 ? ' · Save $save%' : '';
+            final selected = isSelectedPlan && selectedCycle == cycle;
+            if (!isPlay) {
+              return PlanCycleOption(
+                title: _cycleTitle(cycle),
+                subtitle: _billedText(cycle, BrowseItem.inr(price.priceInr)),
+                price: BrowseItem.inr(cycle == 1 ? price.priceInr : price.perMonthInr),
+                perMonth: cycle == 1 ? '${BrowseItem.inr(price.priceInr)} / mo' : '/ mo$saveText',
+                best: i == bestIndex,
+                selected: selected,
+                onTap: () => _selectCycle(plan, cycle),
+                accent: accent,
+              );
+            }
+            final sp = _plans.storePriceFor(plan, cycle);
+            final notConfigured = plan.playProductId == null || price.playBasePlanId == null;
+            final storeLoading =
+                !notConfigured && (storeState == StoreState.loading || storeState == StoreState.idle);
+            final priceUnavailable = !notConfigured && !storeLoading && sp == null;
+            final subtitle = _isOwnedCycle(plan, cycle)
+                ? 'Your current cycle'
+                : (sp != null ? _billedText(cycle, sp.formatted) : (cycle == 1 ? 'Billed monthly' : ''));
+            return PlanCycleOption(
+              title: _cycleTitle(cycle),
+              subtitle: subtitle,
+              price: sp == null ? null : (cycle == 1 ? sp.formatted : _perMonth(sp, cycle)),
+              perMonth: sp == null ? null : (cycle == 1 ? '${sp.formatted} / mo' : '/ mo$saveText'),
+              best: i == bestIndex,
+              selected: selected,
+              onTap: () => _selectCycle(plan, cycle),
+              accent: accent,
+              unavailableText: notConfigured ? 'Not available yet' : (priceUnavailable ? 'Price unavailable' : null),
+              onRetry: priceUnavailable ? () => _plans.loadStore(force: true) : null,
+            );
+          }),
+        ),
+    ];
+  }
+
+  Widget _couponLink(Color accent) {
+    if (!_showCoupon.value && _appliedCoupon.value == null) {
+      return Center(
+        child: TextButton(
+          onPressed: () => _showCoupon.value = true,
+          child: Text('Have a coupon?',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: accent)),
+        ),
+      );
+    }
+    return Padding(padding: const EdgeInsets.only(bottom: 4), child: _couponRow(accent));
+  }
+
+  Widget _comingSoon(String? featureKey) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Paid plans are coming',
+              style: TextStyle(
+                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+          const SizedBox(height: 2),
+          Text(_comingLine(featureKey),
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+        ]),
+      );
+
+  Widget _stickyBar() {
+    final me = _plans.myPlan.value;
+    final paidPlans = _plans.plans.where((p) => !p.isDefault && p.prices.isNotEmpty).toList();
+    final selectedId = _selectedPlanId.value;
+    final appliedCoupon = _appliedCoupon.value;
+    if (me.featureKey == null || !me.paymentEnabled || paidPlans.isEmpty) return const SizedBox.shrink();
+    final plan = paidPlans.firstWhereOrNull((p) => p.id == selectedId) ?? paidPlans.first;
+    final selected = selectedId == plan.id;
+    final accent = PlanAccent.of(me.featureKey);
+    final cycle = _cycles[plan.id] ?? plan.prices.first.cycleMonths;
+    final price = plan.priceFor(cycle) ?? plan.prices.first;
+    final quote = selected ? _quote.value : null;
+    final quoteLoading = selected && _quoteLoading.value;
+    final quoteError = selected ? _quoteError.value : null;
+    final purchasing = _plans.isPurchasing.value;
+    final isPlay = _plans.isPlay;
+    final storeState = _plans.storeState.value;
+    final storeCount = _plans.storeProducts.length;
+    final storePrice = isPlay && storeCount >= 0 ? _plans.storePriceFor(plan, cycle) : null;
+    final notConfigured = isPlay && (plan.playProductId == null || price.playBasePlanId == null);
+    final storeLoading = isPlay && !notConfigured && (storeState == StoreState.loading || storeState == StoreState.idle);
+    final priceUnavailable = isPlay && !notConfigured && !storeLoading && storePrice == null;
+    final ownedCycle = isPlay && _isOwnedCycle(plan, cycle);
+    final holdBlocked = isPlay && PlanStateCopy.blocksPurchase(me);
+    final trialOffer = isPlay ? _plans.trialOfferFor(plan) : null;
+    final canTrial = isPlay
+        ? me.trialAvailable && trialOffer != null && !me.hasPaidPlan && !holdBlocked && !notConfigured
+        : me.trialAvailable && plan.trialDays > 0;
+    final ctaDisabled =
+        purchasing || quoteLoading || notConfigured || storeLoading || priceUnavailable || holdBlocked || ownedCycle;
+
+    final quoteSp = quote != null && quote.storePriceRequired ? _plans.storePriceFor(plan, quote.cycleMonths) : null;
+    final fallbackPrice = isPlay ? (storePrice != null ? '${storePrice.formatted} today' : null) : '${BrowseItem.inr(price.priceInr)} today';
+
+    Widget right;
+    if (ownedCycle || notConfigured || quoteError != null) {
+      right = const SizedBox.shrink();
+    } else if (storeLoading || (quoteLoading && quote == null)) {
+      right = _shimmerBox(80, 18);
+    } else if (priceUnavailable) {
+      right = _barText('Price unavailable', AppColors.textLight, bold: false);
+    } else if (quote != null && quote.isTrial) {
+      right = _barText('Free for ${trialOffer?.trialDays ?? plan.trialDays} days', AppColors.successDark);
+    } else if (quote != null && !quote.requiresPayment) {
+      right = _barText('₹0 today', AppColors.textDark);
+    } else if (quote != null && quote.storePriceRequired) {
+      right = quoteSp != null ? _barText('${quoteSp.formatted} today', AppColors.textDark) : const SizedBox.shrink();
+    } else if (quote != null) {
+      right = _barText('${BrowseItem.inr(quote.payableInr)} today', AppColors.textDark);
+    } else {
+      right = fallbackPrice != null ? _barText(fallbackPrice, AppColors.textDark) : const SizedBox.shrink();
+    }
+
+    String? note;
+    var noteColor = AppColors.textLight;
+    if (quoteError != null) {
+      note = quoteError;
+      noteColor = AppColors.error;
+    } else if (holdBlocked) {
+      note = 'Fix the payment in Google Play first.';
+      noteColor = AppColors.warningText;
+    } else if (quote != null && quote.storePriceRequired) {
+      if (quote.isTrial && quoteSp != null) {
+        note = 'Then ${quoteSp.formatted}/month.';
+      } else if (quote.intent == 'Switch') {
+        note = quote.playReplacementMode == 'deferred'
+            ? 'Changes when your current period ends.'
+            : 'Google adjusts the charge.';
+      }
+    } else if (quote != null) {
+      final parts = [
+        if (quote.discountInr > 0)
+          '${quote.couponCode != null ? 'Coupon ${quote.couponCode}' : (appliedCoupon != null ? 'Coupon $appliedCoupon' : 'Discount')} − ₹${quote.discountInr}',
+        if (quote.creditInr > 0) 'Unused plan credit − ₹${quote.creditInr}',
+      ];
+      if (parts.isNotEmpty) {
+        note = parts.join(' · ');
+        noteColor = AppColors.successDark;
+      }
+    }
+
+    final label = quoteLoading && quote == null && !ownedCycle && !notConfigured
+        ? 'Continue with ${plan.name}'
+        : _ctaLabel(plan, me, selected, quote, ownedCycle: ownedCycle, notConfigured: notConfigured);
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(14, 10, 14, 12 + MediaQuery.paddingOf(context).bottom),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.divider)),
+        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 14, offset: Offset(0, -4))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        Row(children: [
+          Expanded(
+            child: Text('${plan.name} · ${_cycleTitle(cycle)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+          ),
+          const SizedBox(width: 8),
+          Flexible(child: Align(alignment: Alignment.centerRight, child: right)),
+        ]),
+        if (note != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(note, style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: noteColor)),
+          ),
+        const SizedBox(height: 7),
+        SizedBox(
+          height: 48,
+          child: ElevatedButton(
+            onPressed: ctaDisabled ? null : () => _onCta(plan, selected),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accent,
+              foregroundColor: Colors.white,
+              minimumSize: Size.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: purchasing && selected
+                ? const SizedBox(
+                    width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(label,
+                        maxLines: 1,
+                        style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 13.5)),
+                  ),
+          ),
+        ),
+        if (canTrial) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 44,
+            child: OutlinedButton(
+              onPressed: purchasing ? null : () => _startTrial(plan),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: accent,
+                side: BorderSide(color: accent),
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                    isPlay ? 'Try free for ${trialOffer?.trialDays ?? plan.trialDays} days' : 'Try free for ${plan.trialDays} days',
+                    maxLines: 1,
+                    style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 12.5)),
+              ),
+            ),
+          ),
+          if (isPlay && _plans.storePriceFor(plan, 1) != null) ...[
+            const SizedBox(height: 4),
+            Text('Then ${_plans.storePriceFor(plan, 1)!.formatted}/month. Cancel anytime in Google Play.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+          ],
+        ],
+      ]),
+    );
+  }
+
+  Widget _barText(String text, Color color, {bool bold = true}) => Text(text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+          fontFamily: 'Poppins', fontSize: 12, fontWeight: bold ? FontWeight.w700 : FontWeight.w500, color: color));
+
+  Widget _shimmerBox(double width, double height) => Shimmer.fromColors(
+        baseColor: AppColors.divider,
+        highlightColor: Colors.white,
+        child: Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+        ),
+      );
 
   Widget _restoreButton(Color accent) {
     final busy = _plans.isRestoring.value || _plans.isPurchasing.value;
@@ -269,36 +673,67 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
   void _resubscribe(MyPlanModel me, List<PlanModel> paidPlans) {
     final id = me.play?.productId;
     final plan = paidPlans.firstWhereOrNull((p) => p.playProductId == id) ?? (paidPlans.isNotEmpty ? paidPlans.first : null);
-    if (plan != null) _selectPlan(plan);
+    if (plan == null) return;
+    if (_selectedPlanId.value == plan.id) {
+      _onCta(plan, true);
+    } else {
+      _selectPlan(plan);
+    }
   }
 
   Widget _header(String? featureKey) {
     return Container(
-      decoration: BoxDecoration(gradient: _gradientOf(featureKey)),
+      decoration: BoxDecoration(gradient: PlanAccent.gradientOf(featureKey)),
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 20, 20),
+          padding: const EdgeInsets.fromLTRB(4, 8, 12, 20),
           child: Row(children: [
             IconButton(
               onPressed: () => Get.back(),
               icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
             ),
-            const Expanded(
+            Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Plans & Billing',
+                const Text('Plans & Billing',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                Text('Your plan and payments',
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
+                if (featureKey != null)
+                  Text(_subtitleFor(featureKey),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
               ]),
             ),
+            if (featureKey != null) ...[
+              const SizedBox(width: 8),
+              _historyButton(),
+            ],
           ]),
         ),
       ),
     );
   }
+
+  Widget _historyButton() => GestureDetector(
+        onTap: () => Get.toNamed(AppRoutes.planHistory),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.45)),
+          ),
+          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.history_rounded, size: 14, color: Colors.white),
+            SizedBox(width: 4),
+            Text('History',
+                maxLines: 1,
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+          ]),
+        ),
+      );
 
   Widget _emptyState(bool loading) => Padding(
         padding: const EdgeInsets.only(top: 60),
@@ -335,19 +770,6 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         ),
       );
 
-  Widget _freeModeNote() => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14)),
-        child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Free for now',
-              style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-          SizedBox(height: 2),
-          Text('Paid plans are not open yet.',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-        ]),
-      );
-
   Widget _plansPlaceholder(bool loading) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
         child: Center(
@@ -377,6 +799,12 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         : me.hasPaidPlan && me.endsAt != null
             ? 'Ends ${_date(me.endsAt!)}${me.daysLeft != null ? ' · ${me.daysLeft} days left' : ''}'
             : (me.paymentEnabled ? 'No end date' : 'Free for now');
+    final lines = _includedLines(l, me.featureKey, me.paymentEnabled);
+    final usageLabel = switch (me.featureKey) {
+      'Room' => 'Live rooms',
+      'Plot' => 'Live plots',
+      _ => null,
+    };
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -394,21 +822,60 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
                 style: const TextStyle(
                     fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark)),
           ),
-          if (me.isTrial || (me.play?.inTrial ?? false)) _pill('Trial', accent),
+          if (me.isTrial || (me.play?.inTrial ?? false)) ...[
+            _pill('Trial', accent),
+            const SizedBox(width: 6),
+          ],
+          _pill(me.hasPaidPlan ? 'Active' : 'Your plan', me.hasPaidPlan ? AppColors.successDark : accent),
         ]),
         const SizedBox(height: 2),
         Text(subtitle, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-        const SizedBox(height: 12),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          if (me.featureKey == 'Room' || me.featureKey == 'Plot')
-            _pill('${l.used} / ${l.listingLimit} ${me.featureKey == 'Room' ? 'rooms' : 'plots'}', accent),
-          if (l.priority > 0) _pill('Priority', accent),
-          if (l.featured) _pill('Featured', accent),
-          if (me.featureKey == 'Stay') _pill('${l.jobsPosts} job post${l.jobsPosts == 1 ? '' : 's'}', AppColors.job),
-          if (me.pausedByPlanCount > 0) _pill('${me.pausedByPlanCount} paused by plan', AppColors.warning),
-        ]),
+        if (usageLabel != null) ...[
+          const SizedBox(height: 12),
+          _usageBar(usageLabel, l.live, l.listingLimit, accent),
+        ],
+        if (lines.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          for (final line in lines)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(children: [
+                const Icon(Icons.check_rounded, size: 15, color: AppColors.successDark),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(line,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
+                ),
+              ]),
+            ),
+        ],
+        if (me.pausedByPlanCount > 0) ...[
+          const SizedBox(height: 8),
+          _pill('${me.pausedByPlanCount} paused by plan', AppColors.warning),
+        ],
       ]),
     );
+  }
+
+  Widget _usageBar(String label, int live, int limit, Color accent) {
+    const style = TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMedium);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: style)),
+        const SizedBox(width: 8),
+        Text('$live of $limit used', style: style),
+      ]),
+      const SizedBox(height: 6),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: LinearProgressIndicator(
+          minHeight: 7,
+          value: limit <= 0 ? 0 : (live / limit).clamp(0.0, 1.0),
+          backgroundColor: AppColors.divider,
+          color: accent,
+        ),
+      ),
+    ]);
   }
 
   Widget _pill(String text, Color color) => Container(
@@ -420,151 +887,6 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         child: Text(text,
             style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: color)),
       );
-
-  Widget _bullet(IconData icon, String text, Color color) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Row(children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(text,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium)),
-          ),
-        ]),
-      );
-
-  Widget _planCard(PlanModel plan, MyPlanModel me, Color accent) {
-    final selected = _selectedPlanId.value == plan.id;
-    final cycle = _cycles[plan.id] ?? (plan.prices.isEmpty ? 1 : plan.prices.first.cycleMonths);
-    final price = plan.priceFor(cycle) ?? plan.prices.first;
-    final isCurrent = me.planId == plan.id && me.hasPaidPlan;
-    final quote = selected ? _quote.value : null;
-    final quoteLoading = selected && _quoteLoading.value;
-    final quoteError = selected ? _quoteError.value : null;
-    final purchasing = _plans.isPurchasing.value;
-    final isPlay = _plans.isPlay;
-    final storeState = _plans.storeState.value;
-    final storeCount = _plans.storeProducts.length;
-    final otherAccounts = _plans.otherAccountProducts.toSet();
-    final storePrice = isPlay && storeCount >= 0 ? _plans.storePriceFor(plan, cycle) : null;
-    final notConfigured = isPlay && (plan.playProductId == null || price.playBasePlanId == null);
-    final storeLoading = isPlay && !notConfigured && (storeState == StoreState.loading || storeState == StoreState.idle);
-    final priceUnavailable = isPlay && !notConfigured && !storeLoading && storePrice == null;
-    final ownedCycle = isPlay && _isOwnedCycle(plan, cycle);
-    final holdBlocked = isPlay && PlanStateCopy.blocksPurchase(me);
-    final trialOffer = isPlay ? _plans.trialOfferFor(plan) : null;
-    final canTrial = isPlay
-        ? me.trialAvailable && trialOffer != null && !me.hasPaidPlan && !holdBlocked && !notConfigured
-        : me.trialAvailable && plan.trialDays > 0;
-    final otherAccount = isPlay && plan.playProductId != null && otherAccounts.contains(plan.playProductId);
-    final ctaDisabled = purchasing ||
-        (selected && quoteLoading) ||
-        notConfigured ||
-        storeLoading ||
-        priceUnavailable ||
-        holdBlocked ||
-        ownedCycle;
-    return GestureDetector(
-      onTap: () => _selectPlan(plan),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? accent : AppColors.divider, width: selected ? 1.6 : 1),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(
-              child: Text(plan.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-            ),
-            if (isCurrent) _pill('Current', accent),
-          ]),
-          if (plan.tagline != null && plan.tagline!.isNotEmpty)
-            Text(plan.tagline!, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          const SizedBox(height: 12),
-          if (plan.listingLimit > 0 && (plan.featureKey == 'Room' || plan.featureKey == 'Plot'))
-            _bullet(Icons.home_work_rounded,
-                '${plan.listingLimit} live ${plan.featureKey == 'Room' ? 'rooms' : 'plots'}', accent),
-          if (plan.hasPriority) _bullet(Icons.trending_up_rounded, 'Priority placement', accent),
-          if (plan.isFeatured) _bullet(Icons.star_rounded, 'Featured badge', accent),
-          if (plan.featureKey == 'Stay' && plan.jobsPosts > 0)
-            _bullet(Icons.work_rounded, '${plan.jobsPosts} job posts', AppColors.job),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final p in plan.prices) _cycleChip(plan, p, cycle == p.cycleMonths, accent),
-          ]),
-          const SizedBox(height: 12),
-          _priceRow(price, cycle, storePrice,
-              notConfigured: notConfigured, loading: storeLoading, unavailable: priceUnavailable, accent: accent),
-          if (otherAccount) ...[
-            const SizedBox(height: 8),
-            const Text('Subscribed on another Bakhli account',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          ],
-          if (holdBlocked) ...[
-            const SizedBox(height: 8),
-            const Text('Fix the payment in Google Play first.',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.warningText)),
-          ],
-          if (selected && !notConfigured && !ownedCycle) ...[
-            const SizedBox(height: 12),
-            _couponRow(accent),
-            const SizedBox(height: 12),
-            _quoteBreakdown(plan, quote, quoteLoading, quoteError, accent),
-          ],
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: ctaDisabled ? null : () => _onCta(plan, selected),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accent,
-                foregroundColor: Colors.white,
-                minimumSize: Size.zero,
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: purchasing && selected
-                  ? const SizedBox(
-                      width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(_ctaLabel(plan, me, selected, quote, ownedCycle: ownedCycle, notConfigured: notConfigured),
-                      style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14)),
-            ),
-          ),
-          if (canTrial) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: purchasing ? null : () => _startTrial(plan),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: accent,
-                  side: BorderSide(color: accent),
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text(
-                    isPlay ? 'Start ${trialOffer?.trialDays ?? plan.trialDays}-day free trial' : 'Try free for ${plan.trialDays} days',
-                    style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13)),
-              ),
-            ),
-            if (isPlay && _plans.storePriceFor(plan, 1) != null) ...[
-              const SizedBox(height: 4),
-              Text('Then ${_plans.storePriceFor(plan, 1)!.formatted}/month. Cancel anytime in Google Play.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-            ],
-          ],
-        ]),
-      ),
-    );
-  }
 
   void _onCta(PlanModel plan, bool selected) {
     if (!selected) {
@@ -586,94 +908,11 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     if (quote == null) return 'Retry';
     if (!quote.requiresPayment) return 'Activate';
     final resub = me.play != null && !me.play!.ownsActivePlan && me.play!.ended;
-    final verb = switch (quote.intent) {
+    return switch (quote.intent) {
       'Renew' => 'Renew',
       'Switch' => 'Switch',
-      _ => resub ? 'Resubscribe' : (_plans.isPlay ? 'Subscribe' : 'Buy'),
+      _ => resub ? 'Resubscribe' : 'Continue with ${plan.name}',
     };
-    if (quote.storePriceRequired) {
-      final sp = _plans.storePriceFor(plan, quote.cycleMonths);
-      return sp != null ? '$verb · ${sp.formatted}' : verb;
-    }
-    return '$verb · ₹${quote.payableInr}';
-  }
-
-  Widget _priceRow(PlanPriceModel price, int cycle, StorePrice? sp,
-      {required bool notConfigured, required bool loading, required bool unavailable, required Color accent}) {
-    if (notConfigured) {
-      return const Text('Not available yet',
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textLight));
-    }
-    if (loading) {
-      return Shimmer.fromColors(
-        baseColor: AppColors.divider,
-        highlightColor: Colors.white,
-        child: Container(
-          width: 120,
-          height: 30,
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-        ),
-      );
-    }
-    if (unavailable) {
-      return Row(children: [
-        const Text('Price unavailable',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textLight)),
-        TextButton(
-          onPressed: () => _plans.loadStore(force: true),
-          child: Text('Retry', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: accent)),
-        ),
-      ]);
-    }
-    final main = sp != null ? sp.formatted : '₹${price.priceInr}';
-    final perMonth = sp != null ? '${_symbol(sp)}${(sp.raw / cycle).round()}/mo' : '₹${price.perMonthInr}/mo';
-    return Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-      Text(main,
-          style: const TextStyle(
-              fontFamily: 'Poppins', fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-      const SizedBox(width: 6),
-      Flexible(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 5),
-          child: Text(perMonth,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-        ),
-      ),
-    ]);
-  }
-
-  Widget _cycleChip(PlanModel plan, PlanPriceModel p, bool active, Color accent) {
-    final label = p.cycleMonths == 12 ? '12 mo' : '${p.cycleMonths} mo';
-    return GestureDetector(
-      onTap: () => _selectCycle(plan, p.cycleMonths),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: active ? accent : Colors.white,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: active ? accent : AppColors.divider),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Text(label,
-              style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: active ? Colors.white : AppColors.textMedium)),
-          if (_savePercent(plan, p) > 0) ...[
-            const SizedBox(width: 6),
-            Text('Save ${_savePercent(plan, p)}%',
-                style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: active ? Colors.white : AppColors.successDark)),
-          ],
-        ]),
-      ),
-    );
   }
 
   Widget _couponRow(Color accent) {
@@ -707,116 +946,5 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
             style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: accent)),
       ),
     ]);
-  }
-
-  Widget _quoteBreakdown(PlanModel plan, PlanQuote? q, bool loading, String? error, Color accent) {
-    if (loading && q == null) {
-      return Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: accent)));
-    }
-    if (error != null) {
-      return Text(error, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.error));
-    }
-    if (q == null) return const SizedBox.shrink();
-    final sp = q.storePriceRequired && q.requiresPayment ? _plans.storePriceFor(plan, q.cycleMonths) : null;
-    if (q.storePriceRequired && q.requiresPayment && sp == null) return const SizedBox.shrink();
-    if (sp != null) {
-      final replaceNote = q.intent == 'Switch'
-          ? (q.playReplacementMode == 'deferred' ? 'Changes when your current period ends.' : 'Google adjusts the charge.')
-          : null;
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (q.isTrial) ...[
-            _line('Today', 'Free for ${_plans.trialOfferFor(plan)?.trialDays ?? plan.trialDays} days', good: true),
-            _line('Then', '${sp.formatted}/month'),
-          ] else
-            _line('You pay', sp.formatted, bold: true),
-          if (replaceNote != null) ...[
-            const SizedBox(height: 4),
-            Text(replaceNote, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          ],
-        ]),
-      );
-    }
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
-      child: Column(children: [
-        _line('Plan price', '₹${q.listPriceInr}'),
-        if (q.discountInr > 0) _line(q.couponCode != null ? 'Coupon ${q.couponCode}' : 'Discount', '- ₹${q.discountInr}', good: true),
-        if (q.creditInr > 0) _line('Unused plan credit', '- ₹${q.creditInr}', good: true),
-        const Divider(height: 14),
-        _line('You pay', '₹${q.payableInr}', bold: true),
-      ]),
-    );
-  }
-
-  Widget _line(String label, String value, {bool bold = false, bool good = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(children: [
-          Expanded(
-            child: Text(label,
-                style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12,
-                    fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-                    color: AppColors.textMedium)),
-          ),
-          Text(value,
-              style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: bold ? 14 : 12,
-                  fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
-                  color: good ? AppColors.successDark : AppColors.textDark)),
-        ]),
-      );
-
-  Widget _historyList(List<PurchaseHistoryItem> items) {
-    return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-      child: Column(children: [
-        for (var i = 0; i < items.length; i++) ...[
-          if (i > 0) const Divider(height: 1, color: AppColors.divider),
-          _historyRow(items[i]),
-        ],
-      ]),
-    );
-  }
-
-  Widget _historyRow(PurchaseHistoryItem h) {
-    final (label, color) = switch (h.status) {
-      'Granted' => ('Paid', AppColors.successDark),
-      'Paid' => ('Activating', AppColors.warning),
-      'Created' || 'Pending' => ('Waiting', AppColors.warning),
-      'Refunded' => ('Refunded', AppColors.textLight),
-      'Failed' => ('Failed', AppColors.error),
-      'Expired' => ('Expired', AppColors.textLight),
-      _ => (h.status, AppColors.textLight),
-    };
-    final cycle = h.cycleMonths != null ? ' · ${h.cycleMonths} mo' : '';
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${h.planName}$cycle',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-            Text(_date(h.createdAt),
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-          ]),
-        ),
-        const SizedBox(width: 8),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text('₹${h.payableInr}',
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-          Text(label, style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: color)),
-        ]),
-      ]),
-    );
   }
 }

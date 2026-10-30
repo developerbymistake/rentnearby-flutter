@@ -502,7 +502,9 @@ class AuthController extends GetxController {
       }
       if (e is DioException && e.response?.statusCode == 409) {
         final type = e.response?.data?['error']?['type'];
-        AppToast.warning(type == RoleRequestErrorTypes.cooldown || type == RoleRequestErrorTypes.liveListing
+        AppToast.warning(type == RoleRequestErrorTypes.cooldown ||
+                type == RoleRequestErrorTypes.liveListing ||
+                type == RoleRequestErrorTypes.locked
             ? _dioMessage(e, 'Try again later.')
             : 'A request is already pending.');
         await refreshProfile();
