@@ -44,6 +44,10 @@
 -keepattributes JavascriptInterface
 -keepattributes Signature
 
+# Google Play Billing (in_app_purchase_android)
+-keep class com.android.vending.billing.** { *; }
+-dontwarn com.android.billingclient.**
+
 # Geolocator — its Android implementation lives under com.baseflow.geolocator (not
 # io.flutter.plugins.**, so the broad Flutter-plugin rule above never covered it),
 # including a permission/ subpackage that handles the

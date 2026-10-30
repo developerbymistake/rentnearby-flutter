@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config/app_colors.dart';
-import '../config/app_routes.dart';
 import '../controllers/plan_controller.dart';
 import 'plan_badge_chip.dart';
+import 'plan_subscription_card.dart';
 
 class PlanCapStrip extends StatelessWidget {
   final Color accent;
@@ -26,7 +26,9 @@ class PlanCapStrip extends StatelessWidget {
       final me = plans.myPlan.value;
       final limits = me.limits;
       final canBuy = me.paymentEnabled && me.featureKey != null;
-      final action = me.hasPaidPlan ? 'Renew' : 'Upgrade';
+      final action = PlanStateCopy.action(me);
+      final status = PlanStateCopy.status(me);
+      final planLine = status != null && (me.hasPaidPlan || me.play != null) ? '${me.planName} · $status' : me.planName;
       return Container(
         margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -43,9 +45,7 @@ class PlanCapStrip extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  showUsage
-                      ? '${me.planName} · ${limits.used} / ${limits.listingLimit} $unitPlural'
-                      : (me.hasPaidPlan && me.daysLeft != null ? '${me.planName} · ${me.daysLeft} days left' : me.planName),
+                  showUsage ? '${me.planName} · ${limits.used} / ${limits.listingLimit} $unitPlural' : planLine,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: accent, fontWeight: FontWeight.w600),
@@ -57,7 +57,7 @@ class PlanCapStrip extends StatelessWidget {
               ],
               if (canBuy)
                 GestureDetector(
-                  onTap: () => Get.toNamed(AppRoutes.plansBilling),
+                  onTap: () => PlanStateCopy.openFor(me),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(999)),
@@ -67,6 +67,16 @@ class PlanCapStrip extends StatelessWidget {
                   ),
                 ),
             ]),
+            if (showUsage && me.play != null && status != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                status,
+                style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    color: me.play!.needsFix ? AppColors.warningText : AppColors.textLight),
+              ),
+            ],
             if (me.pausedByPlanCount > 0) ...[
               const SizedBox(height: 4),
               Text(

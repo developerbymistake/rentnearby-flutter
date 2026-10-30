@@ -3,12 +3,16 @@ class PlanPriceModel {
   final int priceInr;
   final int perMonthInr;
   final int savePercent;
+  final String? playBasePlanId;
+  final String? playTrialOfferId;
 
   const PlanPriceModel({
     required this.cycleMonths,
     required this.priceInr,
     required this.perMonthInr,
     required this.savePercent,
+    this.playBasePlanId,
+    this.playTrialOfferId,
   });
 
   factory PlanPriceModel.fromJson(Map<String, dynamic> j) => PlanPriceModel(
@@ -16,6 +20,8 @@ class PlanPriceModel {
         priceInr: (j['priceInr'] as num?)?.toInt() ?? 0,
         perMonthInr: (j['perMonthInr'] as num?)?.toInt() ?? 0,
         savePercent: (j['savePercent'] as num?)?.toInt() ?? 0,
+        playBasePlanId: j['playBasePlanId'] as String?,
+        playTrialOfferId: j['playTrialOfferId'] as String?,
       );
 }
 
@@ -37,6 +43,7 @@ class PlanModel {
   final int trialDays;
   final Map<String, int> features;
   final List<PlanPriceModel> prices;
+  final String? playProductId;
 
   const PlanModel({
     required this.id,
@@ -48,6 +55,7 @@ class PlanModel {
     required this.trialDays,
     required this.features,
     required this.prices,
+    this.playProductId,
   });
 
   int feature(String key) => features[key] ?? 0;
@@ -77,12 +85,14 @@ class PlanModel {
             .map((e) => PlanPriceModel.fromJson(e as Map<String, dynamic>))
             .toList()
           ..sort((a, b) => a.cycleMonths.compareTo(b.cycleMonths)),
+        playProductId: j['playProductId'] as String?,
       );
 }
 
 class PlanCatalogModel {
   final Map<String, List<PlanModel>> byFeature;
-  const PlanCatalogModel(this.byFeature);
+  final String paymentProvider;
+  const PlanCatalogModel(this.byFeature, {this.paymentProvider = 'Play'});
 
   List<PlanModel> plansOf(String? featureKey) => byFeature[featureKey] ?? const [];
 
@@ -95,6 +105,6 @@ class PlanCatalogModel {
           .map((e) => PlanModel.fromJson(e as Map<String, dynamic>, key))
           .toList();
     }
-    return PlanCatalogModel(out);
+    return PlanCatalogModel(out, paymentProvider: j['paymentProvider'] as String? ?? 'Play');
   }
 }

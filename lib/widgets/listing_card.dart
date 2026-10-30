@@ -3,12 +3,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../config/app_colors.dart';
-import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
 import '../config/app_tour_state.dart';
 import '../controllers/plan_controller.dart';
 import '../models/listing_model.dart';
 import 'plan_badge_chip.dart';
+import 'plan_subscription_card.dart';
 import 'pulse_once.dart';
 
 class ListingCard extends StatelessWidget {
@@ -88,7 +88,7 @@ class ListingCard extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  expired ? 'Plan expired' : text,
+                  expired ? PlanStateCopy.pausedTitle(me) : text,
                   style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 12,
@@ -99,11 +99,11 @@ class ListingCard extends StatelessWidget {
               ),
               if (expired)
                 GestureDetector(
-                  onTap: () => Get.toNamed(AppRoutes.plansBilling),
+                  onTap: () => PlanStateCopy.openPausedAction(me),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(999)),
-                    child: const Text('Renew',
+                    child: Text(PlanStateCopy.pausedAction(me),
                         style: TextStyle(
                             fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
                   ),
@@ -641,6 +641,18 @@ class ListingCard extends StatelessWidget {
   }
 
   Widget _expiryLabel(DateTime validUntil) {
+    final plans = Get.find<PlanController>();
+    return Obx(() {
+      final me = plans.myPlan.value;
+      if (!PlanStateCopy.autoRenews(me)) return _expiryText(validUntil);
+      return Text(
+        'Renews on ${PlanStateCopy.date(me.play!.expiryAt ?? validUntil.toLocal())}',
+        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textHint, fontWeight: FontWeight.w500),
+      );
+    });
+  }
+
+  Widget _expiryText(DateTime validUntil) {
     final days = validUntil.toUtc().difference(DateTime.now().toUtc()).inDays;
     final String label;
     final Color color;

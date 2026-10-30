@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/plan_controller.dart';
+import 'plan_subscription_card.dart';
 
 class PlanLimitReachedSheet {
   static void show(
@@ -56,6 +57,8 @@ class PlanLimitReachedSheet {
               const SizedBox(height: 24),
               Obx(() {
                 final canUpgrade = plans.paymentEnabled && plans.hasPlanFeature;
+                final me = plans.myPlan.value;
+                final fix = PlanStateCopy.blocksPurchase(me);
                 return Column(
                   children: [
                     if (canUpgrade)
@@ -64,7 +67,11 @@ class PlanLimitReachedSheet {
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.pop(ctx);
-                            Get.toNamed(AppRoutes.plansBilling);
+                            if (fix) {
+                              plans.openManageSubscription();
+                            } else {
+                              Get.toNamed(AppRoutes.plansBilling);
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: accent,
@@ -73,8 +80,8 @@ class PlanLimitReachedSheet {
                             padding: const EdgeInsets.symmetric(vertical: 13),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('Upgrade',
-                              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                          child: Text(fix ? 'Fix payment' : (me.hasPaidPlan ? 'Upgrade' : 'Subscribe'),
+                              style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                         ),
                       ),
                     if (onSwap != null) ...[

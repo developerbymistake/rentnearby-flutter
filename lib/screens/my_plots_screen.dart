@@ -18,6 +18,7 @@ import '../widgets/app_loading_overlay.dart';
 import '../widgets/plan_badge_chip.dart';
 import '../widgets/plan_cap_strip.dart';
 import '../widgets/plan_limit_reached_sheet.dart';
+import '../widgets/plan_subscription_card.dart';
 import '../widgets/pulse_once.dart';
 import '../widgets/swap_live_sheet.dart';
 
@@ -783,7 +784,7 @@ class _PlotCard extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  expired ? 'Plan expired' : text,
+                  expired ? PlanStateCopy.pausedTitle(me) : text,
                   style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 12,
@@ -794,11 +795,11 @@ class _PlotCard extends StatelessWidget {
               ),
               if (expired)
                 GestureDetector(
-                  onTap: () => Get.toNamed(AppRoutes.plansBilling),
+                  onTap: () => PlanStateCopy.openPausedAction(me),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(color: _kPlotColor, borderRadius: BorderRadius.circular(999)),
-                    child: const Text('Renew',
+                    child: Text(PlanStateCopy.pausedAction(me),
                         style: TextStyle(
                             fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
                   ),
@@ -887,6 +888,18 @@ class _PlotCard extends StatelessWidget {
   }
 
   Widget _expiryLabel(DateTime validUntil) {
+    final plans = Get.find<PlanController>();
+    return Obx(() {
+      final me = plans.myPlan.value;
+      if (!PlanStateCopy.autoRenews(me)) return _expiryText(validUntil);
+      return Text(
+        'Renews on ${PlanStateCopy.date(me.play!.expiryAt ?? validUntil.toLocal())}',
+        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textHint, fontWeight: FontWeight.w500),
+      );
+    });
+  }
+
+  Widget _expiryText(DateTime validUntil) {
     final days = validUntil.toUtc().difference(DateTime.now().toUtc()).inDays;
     final String label;
     final Color color;

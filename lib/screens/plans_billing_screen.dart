@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shimmer/shimmer.dart';
 import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../controllers/plan_controller.dart';
 import '../models/my_plan_model.dart';
 import '../models/plan_model.dart';
 import '../models/plan_purchase_result.dart';
+import '../models/store_product.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
+import '../widgets/plan_subscription_card.dart';
+import '../widgets/purchase_status_sheet.dart';
 
 class PlansBillingScreen extends StatefulWidget {
   const PlansBillingScreen({super.key});
@@ -80,7 +84,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
       enableDrag: false,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => _PurchaseStatusSheet(accent: _accent),
+      builder: (_) => PurchaseStatusSheet(accent: _accent),
     ).whenComplete(() {
       _sheetOpen = false;
       final wasOpen = (_plans.activePurchase.value?.isOpen ?? false) && !_plans.pollTimedOut.value;
@@ -96,6 +100,13 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     if (planId == null) return;
     final cycle = _cycles[planId] ?? 1;
     final seq = ++_quoteSeq;
+    final plan = _plans.plans.firstWhereOrNull((p) => p.id == planId);
+    if (plan != null && _isOwnedCycle(plan, cycle)) {
+      _quote.value = null;
+      _quoteError.value = null;
+      _quoteLoading.value = false;
+      return;
+    }
     _quoteLoading.value = true;
     _quoteError.value = null;
     final result = await _plans.quote(planId, cycle, _appliedCoupon.value);
@@ -109,7 +120,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         if (result.errorType == 'CouponInvalid') {
           _appliedCoupon.value = null;
           _couponCtrl.clear();
-          AppToast.error(result.message);
+          AppToast.error(_plans.isPlay ? 'Coupon not valid with Google Play' : result.message);
           _requestQuote();
           return;
         }
@@ -152,7 +163,33 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
   }
 
   Future<void> _startTrial(PlanModel plan) async {
-    await _plans.startTrial(plan.id);
+    if (_plans.isPlay) {
+      await _plans.purchase(plan, 1, null, useTrial: true);
+    } else {
+      await _plans.startTrial(plan.id);
+    }
+  }
+
+  bool _isOwnedCycle(PlanModel plan, int cycle) {
+    final p = _plans.myPlan.value.play;
+    final price = plan.priceFor(cycle);
+    return p != null &&
+        p.ownsActivePlan &&
+        plan.playProductId != null &&
+        p.productId == plan.playProductId &&
+        price?.playBasePlanId != null &&
+        p.basePlanId == price!.playBasePlanId;
+  }
+
+  String _symbol(StorePrice p) => p.currencyCode == 'INR' ? '₹' : '${p.currencyCode} ';
+
+  int _savePercent(PlanModel plan, PlanPriceModel price) {
+    if (!_plans.isPlay) return price.savePercent;
+    final one = _plans.storePriceFor(plan, 1);
+    final cur = _plans.storePriceFor(plan, price.cycleMonths);
+    if (one == null || cur == null || price.cycleMonths <= 1 || one.raw <= 0) return 0;
+    final pct = ((1 - cur.raw / (one.raw * price.cycleMonths)) * 100).round();
+    return pct > 0 ? pct : 0;
   }
 
   @override
@@ -182,11 +219,16 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
                     _emptyState(loading)
                   else ...[
                     _currentPlanCard(me, accent),
+                    if (me.play != null) ...[
+                      const SizedBox(height: 12),
+                      PlanSubscriptionCard(me: me, accent: accent, onResubscribe: () => _resubscribe(me, paidPlans)),
+                    ],
                     const SizedBox(height: 20),
                     if (!me.paymentEnabled)
                       _freeModeNote()
                     else ...[
-                      _sectionTitle('Choose a plan', 'Prepaid. Pick how long.'),
+                      _sectionTitle('Choose a plan',
+                          _plans.isPlay ? 'Auto-renews. Cancel anytime in Google Play.' : 'Prepaid. Pick how long.'),
                       const SizedBox(height: 12),
                       if (paidPlans.isEmpty)
                         _plansPlaceholder(catalogLoading)
@@ -195,6 +237,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
                           _planCard(p, me, accent),
                           const SizedBox(height: 14),
                         ],
+                      if (_plans.isPlay) _restoreButton(accent),
                       if (history.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         _sectionTitle('History', 'Your plan payments.'),
@@ -210,6 +253,23 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         ),
       ]),
     );
+  }
+
+  Widget _restoreButton(Color accent) {
+    final busy = _plans.isRestoring.value || _plans.isPurchasing.value;
+    return Center(
+      child: TextButton(
+        onPressed: busy ? null : () => _plans.restorePurchases(force: true, userInitiated: true),
+        child: Text(_plans.isRestoring.value ? 'Restoring...' : 'Restore purchases',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: busy ? AppColors.textLight : accent)),
+      ),
+    );
+  }
+
+  void _resubscribe(MyPlanModel me, List<PlanModel> paidPlans) {
+    final id = me.play?.productId;
+    final plan = paidPlans.firstWhereOrNull((p) => p.playProductId == id) ?? (paidPlans.isNotEmpty ? paidPlans.first : null);
+    if (plan != null) _selectPlan(plan);
   }
 
   Widget _header(String? featureKey) {
@@ -308,16 +368,15 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         ],
       );
 
-  static String _date(DateTime d) {
-    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${d.day} ${m[d.month - 1]} ${d.year}';
-  }
+  static String _date(DateTime d) => PlanStateCopy.date(d);
 
   Widget _currentPlanCard(MyPlanModel me, Color accent) {
     final l = me.limits;
-    final subtitle = me.hasPaidPlan && me.endsAt != null
-        ? 'Ends ${_date(me.endsAt!)}${me.daysLeft != null ? ' · ${me.daysLeft} days left' : ''}'
-        : (me.paymentEnabled ? 'No end date' : 'Free for now');
+    final subtitle = me.play?.ownsActivePlan == true
+        ? 'Billed by Google Play'
+        : me.hasPaidPlan && me.endsAt != null
+            ? 'Ends ${_date(me.endsAt!)}${me.daysLeft != null ? ' · ${me.daysLeft} days left' : ''}'
+            : (me.paymentEnabled ? 'No end date' : 'Free for now');
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -335,7 +394,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
                 style: const TextStyle(
                     fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark)),
           ),
-          if (me.isTrial) _pill('Trial', accent),
+          if (me.isTrial || (me.play?.inTrial ?? false)) _pill('Trial', accent),
         ]),
         const SizedBox(height: 2),
         Text(subtitle, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
@@ -383,7 +442,28 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     final quoteLoading = selected && _quoteLoading.value;
     final quoteError = selected ? _quoteError.value : null;
     final purchasing = _plans.isPurchasing.value;
-    final canTrial = me.trialAvailable && plan.trialDays > 0;
+    final isPlay = _plans.isPlay;
+    final storeState = _plans.storeState.value;
+    final storeCount = _plans.storeProducts.length;
+    final otherAccounts = _plans.otherAccountProducts.toSet();
+    final storePrice = isPlay && storeCount >= 0 ? _plans.storePriceFor(plan, cycle) : null;
+    final notConfigured = isPlay && (plan.playProductId == null || price.playBasePlanId == null);
+    final storeLoading = isPlay && !notConfigured && (storeState == StoreState.loading || storeState == StoreState.idle);
+    final priceUnavailable = isPlay && !notConfigured && !storeLoading && storePrice == null;
+    final ownedCycle = isPlay && _isOwnedCycle(plan, cycle);
+    final holdBlocked = isPlay && PlanStateCopy.blocksPurchase(me);
+    final trialOffer = isPlay ? _plans.trialOfferFor(plan) : null;
+    final canTrial = isPlay
+        ? me.trialAvailable && trialOffer != null && !me.hasPaidPlan && !holdBlocked && !notConfigured
+        : me.trialAvailable && plan.trialDays > 0;
+    final otherAccount = isPlay && plan.playProductId != null && otherAccounts.contains(plan.playProductId);
+    final ctaDisabled = purchasing ||
+        (selected && quoteLoading) ||
+        notConfigured ||
+        storeLoading ||
+        priceUnavailable ||
+        holdBlocked ||
+        ownedCycle;
     return GestureDetector(
       onTap: () => _selectPlan(plan),
       child: Container(
@@ -419,32 +499,29 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
             for (final p in plan.prices) _cycleChip(plan, p, cycle == p.cycleMonths, accent),
           ]),
           const SizedBox(height: 12),
-          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text('₹${price.priceInr}',
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Text('₹${price.perMonthInr}/mo',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-              ),
-            ),
-          ]),
-          if (selected) ...[
+          _priceRow(price, cycle, storePrice,
+              notConfigured: notConfigured, loading: storeLoading, unavailable: priceUnavailable, accent: accent),
+          if (otherAccount) ...[
+            const SizedBox(height: 8),
+            const Text('Subscribed on another Bakhli account',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+          ],
+          if (holdBlocked) ...[
+            const SizedBox(height: 8),
+            const Text('Fix the payment in Google Play first.',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.warningText)),
+          ],
+          if (selected && !notConfigured && !ownedCycle) ...[
             const SizedBox(height: 12),
             _couponRow(accent),
             const SizedBox(height: 12),
-            _quoteBreakdown(quote, quoteLoading, quoteError, accent),
+            _quoteBreakdown(plan, quote, quoteLoading, quoteError, accent),
           ],
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: purchasing || (selected && quoteLoading) ? null : () => _onCta(plan, selected),
+              onPressed: ctaDisabled ? null : () => _onCta(plan, selected),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: Colors.white,
@@ -455,7 +532,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
               child: purchasing && selected
                   ? const SizedBox(
                       width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(_ctaLabel(selected, quote),
+                  : Text(_ctaLabel(plan, me, selected, quote, ownedCycle: ownedCycle, notConfigured: notConfigured),
                       style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 14)),
             ),
           ),
@@ -472,10 +549,17 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text('Try free for ${plan.trialDays} days',
+                child: Text(
+                    isPlay ? 'Start ${trialOffer?.trialDays ?? plan.trialDays}-day free trial' : 'Try free for ${plan.trialDays} days',
                     style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 13)),
               ),
             ),
+            if (isPlay && _plans.storePriceFor(plan, 1) != null) ...[
+              const SizedBox(height: 4),
+              Text('Then ${_plans.storePriceFor(plan, 1)!.formatted}/month. Cancel anytime in Google Play.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+            ],
           ],
         ]),
       ),
@@ -494,16 +578,70 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     _buy(plan);
   }
 
-  String _ctaLabel(bool selected, PlanQuote? quote) {
+  String _ctaLabel(PlanModel plan, MyPlanModel me, bool selected, PlanQuote? quote,
+      {required bool ownedCycle, required bool notConfigured}) {
+    if (notConfigured) return 'Not available';
+    if (ownedCycle) return 'Current plan';
     if (!selected) return 'Select';
     if (quote == null) return 'Retry';
     if (!quote.requiresPayment) return 'Activate';
+    final resub = me.play != null && !me.play!.ownsActivePlan && me.play!.ended;
     final verb = switch (quote.intent) {
       'Renew' => 'Renew',
       'Switch' => 'Switch',
-      _ => 'Buy',
+      _ => resub ? 'Resubscribe' : (_plans.isPlay ? 'Subscribe' : 'Buy'),
     };
+    if (quote.storePriceRequired) {
+      final sp = _plans.storePriceFor(plan, quote.cycleMonths);
+      return sp != null ? '$verb · ${sp.formatted}' : verb;
+    }
     return '$verb · ₹${quote.payableInr}';
+  }
+
+  Widget _priceRow(PlanPriceModel price, int cycle, StorePrice? sp,
+      {required bool notConfigured, required bool loading, required bool unavailable, required Color accent}) {
+    if (notConfigured) {
+      return const Text('Not available yet',
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textLight));
+    }
+    if (loading) {
+      return Shimmer.fromColors(
+        baseColor: AppColors.divider,
+        highlightColor: Colors.white,
+        child: Container(
+          width: 120,
+          height: 30,
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    }
+    if (unavailable) {
+      return Row(children: [
+        const Text('Price unavailable',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textLight)),
+        TextButton(
+          onPressed: () => _plans.loadStore(force: true),
+          child: Text('Retry', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: accent)),
+        ),
+      ]);
+    }
+    final main = sp != null ? sp.formatted : '₹${price.priceInr}';
+    final perMonth = sp != null ? '${_symbol(sp)}${(sp.raw / cycle).round()}/mo' : '₹${price.perMonthInr}/mo';
+    return Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+      Text(main,
+          style: const TextStyle(
+              fontFamily: 'Poppins', fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+      const SizedBox(width: 6),
+      Flexible(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 5),
+          child: Text(perMonth,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+        ),
+      ),
+    ]);
   }
 
   Widget _cycleChip(PlanModel plan, PlanPriceModel p, bool active, Color accent) {
@@ -524,9 +662,9 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: active ? Colors.white : AppColors.textMedium)),
-          if (p.savePercent > 0) ...[
+          if (_savePercent(plan, p) > 0) ...[
             const SizedBox(width: 6),
-            Text('Save ${p.savePercent}%',
+            Text('Save ${_savePercent(plan, p)}%',
                 style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 10,
@@ -571,7 +709,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     ]);
   }
 
-  Widget _quoteBreakdown(PlanQuote? q, bool loading, String? error, Color accent) {
+  Widget _quoteBreakdown(PlanModel plan, PlanQuote? q, bool loading, String? error, Color accent) {
     if (loading && q == null) {
       return Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: accent)));
     }
@@ -579,6 +717,28 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
       return Text(error, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.error));
     }
     if (q == null) return const SizedBox.shrink();
+    final sp = q.storePriceRequired && q.requiresPayment ? _plans.storePriceFor(plan, q.cycleMonths) : null;
+    if (q.storePriceRequired && q.requiresPayment && sp == null) return const SizedBox.shrink();
+    if (sp != null) {
+      final replaceNote = q.intent == 'Switch'
+          ? (q.playReplacementMode == 'deferred' ? 'Changes when your current period ends.' : 'Google adjusts the charge.')
+          : null;
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (q.isTrial) ...[
+            _line('Today', 'Free for ${_plans.trialOfferFor(plan)?.trialDays ?? plan.trialDays} days', good: true),
+            _line('Then', '${sp.formatted}/month'),
+          ] else
+            _line('You pay', sp.formatted, bold: true),
+          if (replaceNote != null) ...[
+            const SizedBox(height: 4),
+            Text(replaceNote, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+          ],
+        ]),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
@@ -657,128 +817,6 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
           Text(label, style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: color)),
         ]),
       ]),
-    );
-  }
-}
-
-class _PurchaseStatusSheet extends StatelessWidget {
-  final Color accent;
-  const _PurchaseStatusSheet({required this.accent});
-
-  @override
-  Widget build(BuildContext context) {
-    final plans = Get.find<PlanController>();
-    return PopScope(
-      canPop: false,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-          child: Obx(() {
-            final s = plans.activePurchase.value;
-            final timedOut = plans.pollTimedOut.value;
-            if (s == null) {
-              return SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'),
-                ),
-              );
-            }
-            final waiting = s.isOpen && !timedOut;
-            final IconData icon;
-            final Color color;
-            final String title;
-            final String body;
-            if (s.isGranted) {
-              icon = Icons.check_circle_rounded;
-              color = AppColors.success;
-              title = 'Plan active';
-              body = s.endsAt != null ? '${s.planName} is active till ${_PlansBillingScreenState._date(s.endsAt!)}.' : '${s.planName} is active.';
-            } else if (s.status == 'VerifyFailed') {
-              icon = Icons.error_outline_rounded;
-              color = AppColors.error;
-              title = 'Could not verify';
-              body = 'If money was taken, your plan activates soon.';
-            } else if (s.status == 'Failed') {
-              icon = Icons.error_rounded;
-              color = AppColors.error;
-              title = 'Payment failed';
-              body = s.failureReason ?? 'No money was taken. Try again.';
-            } else if (s.status == 'Expired') {
-              icon = Icons.timer_off_rounded;
-              color = AppColors.textLight;
-              title = 'Order expired';
-              body = 'Please start again.';
-            } else if (s.status == 'Refunded') {
-              icon = Icons.undo_rounded;
-              color = AppColors.textLight;
-              title = 'Payment refunded';
-              body = 'Your money is on its way back.';
-            } else if (s.status == 'Created' && timedOut) {
-              icon = Icons.hourglass_bottom_rounded;
-              color = AppColors.warning;
-              title = 'No payment found';
-              body = 'If money was taken, your plan activates soon.';
-            } else if (s.isOpen && timedOut) {
-              icon = Icons.hourglass_bottom_rounded;
-              color = AppColors.warning;
-              title = 'Almost there';
-              body = 'Plan will activate automatically.';
-            } else if (s.isBlocked) {
-              icon = Icons.error_outline_rounded;
-              color = AppColors.warning;
-              title = 'Payment on hold';
-              body = s.grantBlockedReason == 'AmountMismatch'
-                  ? 'Amount did not match. You will be refunded.'
-                  : 'Plan could not start. Refund is on its way.';
-            } else if (s.isPaid) {
-              icon = Icons.autorenew_rounded;
-              color = accent;
-              title = 'Activating plan';
-              body = 'Payment received.';
-            } else {
-              icon = Icons.hourglass_top_rounded;
-              color = accent;
-              title = s.status == 'Created' ? 'Checking payment' : 'Confirming payment';
-              body = 'Please wait.';
-            }
-            return Column(mainAxisSize: MainAxisSize.min, children: [
-              waiting
-                  ? SizedBox(width: 48, height: 48, child: CircularProgressIndicator(strokeWidth: 3, color: accent))
-                  : Icon(icon, size: 56, color: color),
-              const SizedBox(height: 16),
-              Text(title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-              const SizedBox(height: 4),
-              Text(body,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
-              const SizedBox(height: 20),
-              if (!waiting)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (s.isGranted) AppToast.success('Plan updated.');
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accent,
-                      foregroundColor: Colors.white,
-                      minimumSize: Size.zero,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Done', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
-                  ),
-                ),
-            ]);
-          }),
-        ),
-      ),
     );
   }
 }

@@ -34,6 +34,7 @@ import '../widgets/home_taxi_rail_card.dart';
 import '../widgets/icon_motion.dart';
 import '../widgets/listing_grid_card.dart';
 import '../widgets/nearby_item_row.dart';
+import '../widgets/plan_subscription_card.dart';
 
 const _kInstagramGradient = LinearGradient(
   begin: Alignment.topLeft,
@@ -652,8 +653,23 @@ class _HomeScreenState extends State<HomeScreen> {
     final plans = Get.find<PlanController>();
     return Obx(() {
       final me = plans.myPlan.value;
+      final play = me.play;
       final days = me.daysLeft;
-      if (!me.paymentEnabled || !me.hasPaidPlan || days == null || days > 7) return const SizedBox.shrink();
+      String? message;
+      String action = 'Renew';
+      if (play != null && play.needsFix) {
+        message = PlanStateCopy.status(me);
+        action = PlanStateCopy.action(me);
+      } else if (play != null && play.ownsActivePlan) {
+        final at = play.expiryAt ?? me.endsAt;
+        if (!play.renewsAutomatically && at != null && days != null && days <= 7) {
+          message = 'Ends on ${PlanStateCopy.date(at)}';
+          action = 'Resubscribe';
+        }
+      } else if (me.hasPaidPlan && days != null && days <= 7) {
+        message = days <= 0 ? 'Plan ends today' : 'Plan ends in $days day${days == 1 ? '' : 's'}';
+      }
+      if (!me.paymentEnabled || message == null) return const SizedBox.shrink();
       return GestureDetector(
         onTap: () => Get.toNamed(AppRoutes.plansBilling),
         child: Container(
@@ -665,15 +681,15 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                days <= 0 ? 'Plan ends today' : 'Plan ends in $days day${days == 1 ? '' : 's'}',
+                message,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                     fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
               ),
             ),
-            const Text('Renew',
-                style: TextStyle(
+            Text(action,
+                style: const TextStyle(
                     fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.warningText)),
           ]),
         ),

@@ -66,22 +66,51 @@ class PlanRepository {
     _catalogTime = null;
   }
 
-  Future<PlanQuote> quote(String planId, int cycleMonths, String? couponCode) async {
+  Future<PlanQuote> quote(String planId, int cycleMonths, String? couponCode, {bool useTrial = false}) async {
     final res = await ApiService.post('/plans/quote', {
       'planId': planId,
       'cycleMonths': cycleMonths,
       if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
+      if (useTrial) 'useTrial': true,
     });
     return PlanQuote.fromJson(res['data'] as Map<String, dynamic>);
   }
 
-  Future<PlanOrder> createOrder(String planId, int cycleMonths, String? couponCode) async {
+  Future<PlanOrder> createOrder(String planId, int cycleMonths, String? couponCode, {bool useTrial = false}) async {
     final res = await ApiService.post('/plans/purchases', {
       'planId': planId,
       'cycleMonths': cycleMonths,
       if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
+      if (useTrial) 'useTrial': true,
     });
     return PlanOrder.fromJson(res['data'] as Map<String, dynamic>);
+  }
+
+  Future<PurchaseStatus> verifyPlay(String purchaseId, {required String purchaseToken, required String productId}) async {
+    final res = await ApiService.post('/plans/purchases/$purchaseId/verify-play', {
+      'purchaseToken': purchaseToken,
+      'productId': productId,
+    });
+    return PurchaseStatus.fromJson(res['data'] as Map<String, dynamic>);
+  }
+
+  Future<RestoreResult> restorePlay(List<({String token, String productId})> purchases) async {
+    final res = await ApiService.post('/plans/purchases/restore', {
+      'purchases': [
+        for (final p in purchases) {'purchaseToken': p.token, 'productId': p.productId},
+      ],
+    });
+    final data = res['data'] as Map<String, dynamic>? ?? const {};
+    final results = (data['results'] as List? ?? const [])
+        .map((e) => RestoreItemResult.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final meJson = data['me'];
+    if (meJson is! Map<String, dynamic>) {
+      invalidateMe();
+      return RestoreResult(results: results, me: await getMe(forceRefresh: true));
+    }
+    _meGen++;
+    return RestoreResult(results: results, me: _storeMe(MyPlanModel.fromJson(meJson)));
   }
 
   Future<PurchaseStatus> verify(

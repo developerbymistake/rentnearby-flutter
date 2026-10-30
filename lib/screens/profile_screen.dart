@@ -11,6 +11,7 @@ import '../controllers/plan_controller.dart';
 import '../utils/app_date_format.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
+import '../widgets/plan_subscription_card.dart';
 import '../widgets/role_option_card.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
@@ -342,7 +343,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 2),
                   Obx(() {
                     final me = plans.myPlan.value;
-                    final left = me.hasPaidPlan && me.daysLeft != null ? ' · ${me.daysLeft} days left' : '';
+                    final status = PlanStateCopy.status(me);
+                    final left = status != null ? ' · $status' : '';
                     return Text('${me.planName}$left',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
