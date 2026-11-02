@@ -25,6 +25,7 @@ import '../screens/role_change_screen.dart';
 import '../features/stay/stay_routes.dart';
 import '../features/jobs/jobs_routes.dart';
 import '../features/taxi/taxi_routes.dart';
+import '../features/trip/trip_routes.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -74,6 +75,13 @@ class AppRoutes {
   static const String myTaxi = '/my-taxi';
   static const String taxiDetail = '/taxi-detail';
   static const String taxiList = '/taxi-list';
+
+  static const String tripSpots = '/trip-spots';
+  static const String tripPlan = '/trip-plan';
+  static const String tripTaxi = '/trip-taxi';
+  static const String tripStay = '/trip-stay';
+  static const String tripMap = '/trip-map';
+  static const String myTrips = '/my-trips';
 
   static const Set<String> ownerOnly = {plansBilling, planHistory};
   static const Set<String> roomOwnerOnly = {myListings, addListing};
@@ -246,5 +254,6 @@ class AppRoutes {
     ...stayPages,
     ...jobPages,
     ...taxiPages,
+    ...tripPages,
   ];
 }

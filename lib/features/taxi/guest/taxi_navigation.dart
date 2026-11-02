@@ -32,12 +32,14 @@ class TaxiNavigation {
     );
   }
 
-  static Future<void>? openDetail(String id, {int? matchedFare, String? matchedToName}) => Get.toNamed(
+  static Future<void>? openDetail(String id, {int? matchedFare, String? matchedToName, String? whatsAppMessage}) =>
+      Get.toNamed(
         AppRoutes.taxiDetail,
         arguments: {
           'id': id,
           'matchedFare': ?matchedFare,
           'matchedToName': ?matchedToName,
+          'whatsAppMessage': ?whatsAppMessage,
         },
       );
 }

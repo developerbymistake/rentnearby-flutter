@@ -25,6 +25,7 @@ class TaxiBrowseRepository {
     required String districtId,
     String? cityId,
     String? category,
+    bool cityOnly = false,
     int page = 1,
     int pageSize = 20,
   }) async =>
@@ -32,6 +33,7 @@ class TaxiBrowseRepository {
         'districtId': districtId,
         'cityId': ?cityId,
         'category': ?category,
+        'cityOnly': ?(cityOnly ? 'true' : null),
         'page': page,
         'pageSize': pageSize,
       }));

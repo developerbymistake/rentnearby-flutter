@@ -29,6 +29,12 @@ const _pauseRoutes = {
   '/my-taxi',
   '/taxi-detail',
   '/taxi-list',
+  '/trip-spots',
+  '/trip-plan',
+  '/trip-taxi',
+  '/trip-stay',
+  '/trip-map',
+  '/my-trips',
 };
 
 class MapPauseObserver extends NavigatorObserver {

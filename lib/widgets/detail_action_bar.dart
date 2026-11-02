@@ -15,6 +15,7 @@ class DetailActionBar extends StatelessWidget {
   final ModulePalette? palette;
   final bool showDirections;
   final String? whatsAppPhone;
+  final String? whatsAppMessage;
   final String callLabel;
   final String reportLabel;
   final String? safetyText;
@@ -30,6 +31,7 @@ class DetailActionBar extends StatelessWidget {
     this.palette,
     this.showDirections = true,
     this.whatsAppPhone,
+    this.whatsAppMessage,
     this.callLabel = 'Call Owner',
     this.reportLabel = 'Report this listing',
     this.safetyText,
@@ -59,7 +61,8 @@ class DetailActionBar extends StatelessWidget {
   void _whatsapp() async {
     final phone = whatsAppPhone ?? ownerPhone;
     if (phone == null) return;
-    final url = Uri.parse('https://wa.me/91$phone');
+    final url = Uri.parse(
+        'https://wa.me/91$phone${whatsAppMessage == null ? '' : '?text=${Uri.encodeComponent(whatsAppMessage!)}'}');
     if (await canLaunchUrl(url)) launchUrl(url, mode: LaunchMode.externalApplication);
   }
 

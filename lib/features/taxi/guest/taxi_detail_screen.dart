@@ -39,6 +39,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
   late final String _id;
   int? _matchedFare;
   String? _matchedToName;
+  String? _whatsAppMessage;
   TaxiDetailModel? _taxi;
   bool _loading = true;
   bool _notFound = false;
@@ -55,6 +56,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
       _matchedFare = fare is num ? fare.toInt() : null;
       final to = args['matchedToName'];
       _matchedToName = to is String && to.isNotEmpty ? to : null;
+      _whatsAppMessage = args['whatsAppMessage'] as String?;
     } else {
       _id = args as String;
     }
@@ -404,6 +406,7 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
       return DetailActionBar(
         ownerPhone: t.hasContact ? t.contactPhone : null,
         whatsAppPhone: t.hasContact ? (t.whatsAppNumber ?? t.contactPhone) : null,
+        whatsAppMessage: _whatsAppMessage,
         isOwner: false,
         showDirections: false,
         callLabel: 'Call Driver',

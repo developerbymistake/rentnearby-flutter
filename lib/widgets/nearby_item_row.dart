@@ -19,6 +19,7 @@ class NearbyItemRow extends StatelessWidget {
   final bool elevated;
   final bool isFeatured;
   final VoidCallback onTap;
+  final Widget? trailing;
 
   const NearbyItemRow({
     super.key,
@@ -34,6 +35,7 @@ class NearbyItemRow extends StatelessWidget {
     required this.onTap,
     this.elevated = false,
     this.isFeatured = false,
+    this.trailing,
   });
 
   @override
@@ -120,7 +122,7 @@ class NearbyItemRow extends StatelessWidget {
               ],
             ),
             const SizedBox(width: 4),
-            Icon(Iconsax.arrow_right_3, size: 16, color: accent),
+            trailing ?? Icon(Iconsax.arrow_right_3, size: 16, color: accent),
           ],
         ),
       ),

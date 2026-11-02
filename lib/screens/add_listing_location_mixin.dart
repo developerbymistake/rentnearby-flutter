@@ -70,6 +70,9 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
   bool _mapReady = false;
   bool _cameraInitialized = false;
   late LocationStepStyle _style;
+  VoidCallback? _onOnboardingClosed;
+  bool _lastResolveOnboardingClosed = false;
+  bool Function(DistrictModel district)? _onboardingGrandfathered;
 
   final _boundaryRepo = DistrictBoundaryRepository();
   Map<String, dynamic>? _districtBoundaryGeoJson;
@@ -89,6 +92,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
   String? get resolvedDistrictName => _resolvedDistrict?.name;
   String? get resolvedCityName => _resolvedCity?.name;
   bool get isResolvingDistrict => _isResolvingDistrict;
+  bool get lastResolveOnboardingClosed => _lastResolveOnboardingClosed;
   bool get showAddressResolveOverlay => _showAddressResolveOverlay;
   String get trimmedAddress => _addressCtrl.text.trim();
   bool get hasAddressText => _addressCtrl.text.trim().isNotEmpty;
@@ -116,8 +120,15 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     if (loc != null) _resolveDistrictForPin(loc);
   }
 
-  void initLocationTracking({required LocationStepStyle style, VoidCallback? onLocationStale}) {
+  void initLocationTracking({
+    required LocationStepStyle style,
+    VoidCallback? onLocationStale,
+    VoidCallback? onOnboardingClosed,
+    bool Function(DistrictModel district)? onboardingGrandfathered,
+  }) {
     _style = style;
+    _onOnboardingClosed = onOnboardingClosed;
+    _onboardingGrandfathered = onboardingGrandfathered;
     _addressCtrl.addListener(_onAddressChanged);
     _userLocation = _locationCtrl.userLocation.value;
     _selectedLocation = _locationCtrl.userLocation.value;
@@ -355,11 +366,17 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
+  bool _isPrefilledPin(LatLng pos) {
+    final p = _prefilledPin;
+    return p != null && (pos.latitude - p.latitude).abs() <= 1e-6 && (pos.longitude - p.longitude).abs() <= 1e-6;
+  }
+
   // District/city/address resolve for the current pin; a newer call supersedes one still in flight.
   Future<void> _resolveDistrictForPin(LatLng pos) async {
     if (!mounted) return;
     final myGeneration = ++_districtResolveGeneration;
     setState(() {
+      _lastResolveOnboardingClosed = false;
       _isResolvingDistrict = true;
       _showAddressResolveOverlay = true;
       _resolvedDistrict = null;
@@ -377,6 +394,13 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
         setState(() { _isResolvingDistrict = false; _showAddressResolveOverlay = false; });
         AppToast.error(
             'This spot is actually in ${ctx.district.name} district. Please re-pin inside ${_locationCtrl.effectiveDistrict?.name ?? "your district"}.');
+        return;
+      }
+      if (_onOnboardingClosed != null &&
+          ctx.district.businessOnboardingEnabled == false &&
+          !(_isPrefilledPin(pos) && (_onboardingGrandfathered?.call(ctx.district) ?? false))) {
+        setState(() { _isResolvingDistrict = false; _showAddressResolveOverlay = false; _lastResolveOnboardingClosed = true; });
+        _onOnboardingClosed!();
         return;
       }
       setState(() {

@@ -5,10 +5,11 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
 import '../../../config/app_shadows.dart';
 import '../../../config/app_tabs.dart';
+import '../../../config/module_palette.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
 import '../../../utils/app_toast.dart';
-import '../../../widgets/gradient_button.dart';
+import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/location_switch_sheet.dart';
 import '../models/taxi_browse_item.dart';
 import '../taxi_option_sets.dart';
@@ -358,21 +359,23 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
         if (_ctrl.isLoading.value) return _buildShimmer();
         if (_ctrl.from.value == null) {
           return SliverToBoxAdapter(
-            child: _buildMessage(
+            child: EmptyStateView(
               icon: Iconsax.location,
               title: 'Pick where you start',
               subtitle: 'Tap From to choose a city',
+              palette: ModulePalette.taxi,
             ),
           );
         }
         final failed = _ctrl.loadFailed.value;
         final hint = _ctrl.to.value != null ? 'Try another city' : 'Pick a To city for route taxis';
         return SliverToBoxAdapter(
-          child: _buildMessage(
+          child: EmptyStateView(
             icon: failed ? Iconsax.cloud_cross : Iconsax.car,
             title: failed ? "Couldn't load taxis" : 'No taxis yet',
             subtitle: failed ? 'Check your connection and try again' : hint,
             onRetry: failed ? _ctrl.retry : null,
+            palette: ModulePalette.taxi,
           ),
         );
       }
@@ -397,47 +400,6 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
         itemCount: 4,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (_, _) => const TaxiCardSkeleton(),
-      ),
-    );
-  }
-
-  Widget _buildMessage({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    VoidCallback? onRetry,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 48, 32, 0),
-      child: Column(
-        children: [
-          Icon(icon, size: 40, color: AppColors.textHint),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-          ),
-          if (onRetry != null) ...[
-            const SizedBox(height: 16),
-            SizedBox(
-              width: 160,
-              child: GradientButton(
-                label: 'Retry',
-                height: 42,
-                gradient: TaxiColors.gradient,
-                shadowColor: TaxiColors.accent,
-                onPressed: onRetry,
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }

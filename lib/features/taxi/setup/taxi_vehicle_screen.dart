@@ -8,11 +8,14 @@ import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import 'package:permission_handler/permission_handler.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
+import '../../../config/app_routes.dart';
 import '../../../controllers/auth_controller.dart';
+import '../../../models/city_model.dart';
 import '../../../screens/add_listing_location_mixin.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../../widgets/onboarding_closed_dialog.dart';
 import '../../stay/setup/stay_option_grid.dart';
 import '../taxi_option_sets.dart';
 import '../taxi_vehicle_types_controller.dart';
@@ -78,7 +81,12 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
   @override
   void initState() {
     super.initState();
-    initLocationTracking(style: _locationStyle, onLocationStale: _handleLocationStale);
+    initLocationTracking(
+      style: _locationStyle,
+      onLocationStale: _handleLocationStale,
+      onOnboardingClosed: _onResolveOnboardingClosed,
+      onboardingGrandfathered: _onboardingGrandfathered,
+    );
     _types.ensureLoaded();
     final t = _ctrl.taxi.value;
     _wasApproved = t?.isApproved ?? false;
@@ -176,6 +184,28 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     if (!mounted || _step != 2) return;
     _resolvedPin = null;
     AppToast.info('Your location may have changed — please recheck your pin.');
+  }
+
+  bool _onboardingGrandfathered(DistrictModel d) {
+    final t = _ctrl.taxi.value;
+    return t != null && t.everApproved && t.districtId == d.id;
+  }
+
+  // Keeps _resolvedPin: clearing it makes build() re-resolve the same pin and reopen this dialog.
+  void _showOnboardingClosed() {
+    if (!mounted) return;
+    final t = _ctrl.taxi.value;
+    final canCorrect = (t == null || t.isDraft) && (Get.find<AuthController>().user.value?.canCorrectRole ?? false);
+    final percent = t?.percent ?? 0;
+    OnboardingClosedDialog.show(context,
+        onChangeRole: canCorrect
+            ? () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent})
+            : null);
+  }
+
+  void _onResolveOnboardingClosed() {
+    if (_step != 2) return;
+    _showOnboardingClosed();
   }
 
   void _scheduleBaseResolve() {
@@ -406,6 +436,10 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
     }
     if (isResolvingDistrict) return false;
     if (selectedDistrictId == null) {
+      if (lastResolveOnboardingClosed) {
+        _showOnboardingClosed();
+        return false;
+      }
       AppToast.error('Pin your base inside a served district');
       _resolvedPin = null;
       setState(() {});
@@ -534,6 +568,8 @@ class _TaxiVehicleScreenState extends State<TaxiVehicleScreen> with AddListingLo
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) _dlFocus.requestFocus();
             });
+          } else if (type == 'OnboardingClosed') {
+            _showOnboardingClosed();
           } else if (type == 'TaxiBaseOutsideDistrict') {
             _resolvedPin = null;
             setState(() {});

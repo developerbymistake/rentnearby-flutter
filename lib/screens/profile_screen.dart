@@ -8,6 +8,7 @@ import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/plan_controller.dart';
+import '../features/trip/trip_navigation.dart';
 import '../utils/app_date_format.dart';
 import '../utils/app_toast.dart';
 import '../utils/input_formatters.dart';
@@ -156,6 +157,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // (reports), grouped together and separate from the pure app-meta
             // Support section below.
             _sectionGroup('ACTIVITY', [
+              _legalTile(icon: Iconsax.routing_2, label: 'My Trips', onTap: () => TripNavigation.openMyTrips()),
+              Divider(height: 1, indent: 56, color: AppColors.divider),
               _legalTile(icon: Iconsax.flag, label: 'My Reports', onTap: () => Get.toNamed(AppRoutes.myFiledReports)),
             ]),
 

@@ -135,6 +135,7 @@ class TaxiSetupController extends GetxController {
     lastErrorType = DioErrorMapper.errorType(e);
     lastErrorMessage = DioErrorMapper.serverMessage(e);
     if (e is DioException && e.response?.statusCode == 401) return;
+    if (lastErrorType == 'OnboardingClosed') return;
     if (lastErrorType == 'IdentityCipherNotConfigured') {
       AppToast.warning(cipherUnavailableMessage);
       return;

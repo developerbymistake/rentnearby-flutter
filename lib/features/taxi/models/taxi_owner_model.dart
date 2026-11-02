@@ -78,6 +78,7 @@ class TaxiOwnerModel {
   final int pendingReportCount;
   final bool hasDrivingLicence;
   final bool hasDateOfBirth;
+  final bool everApproved;
 
   const TaxiOwnerModel({
     required this.id,
@@ -112,6 +113,7 @@ class TaxiOwnerModel {
     this.pendingReportCount = 0,
     this.hasDrivingLicence = false,
     this.hasDateOfBirth = false,
+    this.everApproved = false,
   });
 
   bool get isDraft => status == TaxiStatus.draft;
@@ -164,6 +166,7 @@ class TaxiOwnerModel {
       pendingReportCount: (json['pendingReportCount'] as num?)?.toInt() ?? 0,
       hasDrivingLicence: json['hasDrivingLicence'] == true,
       hasDateOfBirth: json['hasDateOfBirth'] == true,
+      everApproved: json['everApproved'] == true,
     );
   }
 }

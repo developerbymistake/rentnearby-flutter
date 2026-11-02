@@ -5,6 +5,7 @@ class TaxiBrowseItem {
   final String? vehicleCategory;
   final int? seats;
   final String plateDisplay;
+  final String? cityId;
   final String? cityName;
   final String? districtName;
   final int? minFare;
@@ -24,6 +25,7 @@ class TaxiBrowseItem {
     this.vehicleCategory,
     this.seats,
     required this.plateDisplay,
+    this.cityId,
     this.cityName,
     this.districtName,
     this.minFare,
@@ -44,6 +46,7 @@ class TaxiBrowseItem {
         vehicleCategory: json['vehicleCategory'] as String?,
         seats: (json['seats'] as num?)?.toInt(),
         plateDisplay: json['plateDisplay'] as String? ?? '',
+        cityId: json['cityId'] as String?,
         cityName: json['cityName'] as String?,
         districtName: json['districtName'] as String?,
         minFare: (json['minFare'] as num?)?.toInt(),

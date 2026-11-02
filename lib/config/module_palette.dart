@@ -58,6 +58,14 @@ class ModulePalette {
     gradient: AppColors.taxiGradient,
   );
 
+  static const trip = ModulePalette(
+    accent: AppColors.trip,
+    accentDark: AppColors.tripDark,
+    accentLight: AppColors.tripLight,
+    surface: AppColors.tripSurface,
+    gradient: AppColors.tripGradient,
+  );
+
   static ModulePalette forListingKind(String kind) => switch (kind) {
         'Stay' => stays,
         'Taxi' => taxi,

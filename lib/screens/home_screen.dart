@@ -26,6 +26,7 @@ import '../features/stay/setup/stay_option_sets.dart';
 import '../features/taxi/models/taxi_browse_item.dart';
 import '../features/taxi/setup/taxi_flow.dart';
 import '../features/taxi/taxi_option_sets.dart';
+import '../features/trip/widgets/trip_home_card.dart';
 import '../services/add_listing_flow.dart';
 import '../utils/app_toast.dart';
 import '../widgets/home_owner_carousel.dart';
@@ -99,6 +100,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 delay: const Duration(milliseconds: 120),
                 from: 14,
                 child: _buildOwnerQuickActions(),
+              ),
+              const SizedBox(height: 15),
+              FadeInUp(
+                duration: const Duration(milliseconds: 260),
+                delay: const Duration(milliseconds: 150),
+                from: 14,
+                child: _buildTripCard(),
               ),
               const SizedBox(height: 15),
               FadeInUp(
@@ -1015,6 +1023,8 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id}),
     );
   }
+
+  Widget _buildTripCard() => const TripHomeCard();
 
   Widget _buildInstagramCard() {
     return Padding(

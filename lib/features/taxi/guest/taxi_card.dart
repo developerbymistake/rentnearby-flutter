@@ -11,8 +11,10 @@ import '../taxi_option_sets.dart';
 class TaxiCard extends StatelessWidget {
   final TaxiBrowseItem item;
   final VoidCallback onOpen;
+  final VoidCallback? onSelect;
+  final bool selected;
 
-  const TaxiCard({super.key, required this.item, required this.onOpen});
+  const TaxiCard({super.key, required this.item, required this.onOpen, this.onSelect, this.selected = false});
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +37,9 @@ class TaxiCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
+          border: selected
+              ? Border.all(color: TaxiColors.accent, width: 1.5)
+              : Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
           boxShadow: AppShadows.premium(TaxiColors.accent, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -120,6 +124,16 @@ class TaxiCard extends StatelessWidget {
                     color: AppColors.whatsApp,
                   ),
                 ),
+                if (onSelect != null)
+                  Expanded(
+                    child: _action(
+                      icon: Icon(selected ? Iconsax.tick_circle : Iconsax.add_circle,
+                          size: 14, color: selected ? AppColors.success : TaxiColors.accentDark),
+                      label: selected ? 'Selected' : 'Select',
+                      color: selected ? AppColors.success : TaxiColors.accentDark,
+                      onTap: onSelect,
+                    ),
+                  ),
               ]),
             ),
           ),
@@ -173,8 +187,9 @@ class TaxiCard extends StatelessWidget {
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: TaxiColors.accent)),
       );
 
-  Widget _action({required Widget icon, required String label, required Color color}) => InkWell(
-        onTap: onOpen,
+  Widget _action({required Widget icon, required String label, required Color color, VoidCallback? onTap}) =>
+      InkWell(
+        onTap: onTap ?? onOpen,
         child: SizedBox(
           height: 36,
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [

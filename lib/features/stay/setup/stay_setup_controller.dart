@@ -21,7 +21,7 @@ class StaySetupController extends GetxController {
   String? lastErrorType;
   String? lastErrorMessage;
 
-  static const _stayErrorTypes = {'StayStepLocked', 'StayLocked', 'StayNotApproved', 'StayAlreadyExists', 'StayRoomLimit', 'StayRegistrationRequired'};
+  static const _stayErrorTypes = {'StayStepLocked', 'StayLocked', 'StayNotApproved', 'StayAlreadyExists', 'StayRoomLimit', 'StayRegistrationRequired', 'StayOutsideDistrict'};
 
   void clear() {
     stay.value = null;
@@ -137,6 +137,7 @@ class StaySetupController extends GetxController {
     lastErrorType = DioErrorMapper.errorType(e);
     lastErrorMessage = DioErrorMapper.serverMessage(e);
     if (e is DioException && e.response?.statusCode == 401) return;
+    if (lastErrorType == 'OnboardingClosed') return;
     if (_stayErrorTypes.contains(lastErrorType)) {
       AppToast.warning(DioErrorMapper.toMessage(e, fallback));
       return;

@@ -120,6 +120,7 @@ class StayOwnerModel {
   final DateTime? submittedAt;
   final DateTime createdAt;
   final int pendingReportCount;
+  final bool everApproved;
 
   const StayOwnerModel({
     required this.id,
@@ -156,6 +157,7 @@ class StayOwnerModel {
     this.submittedAt,
     required this.createdAt,
     this.pendingReportCount = 0,
+    this.everApproved = false,
   });
 
   bool get isDraft => status == StayStatus.draft;
@@ -220,6 +222,7 @@ class StayOwnerModel {
       submittedAt: json['submittedAt'] != null ? DateTime.tryParse(json['submittedAt'].toString()) : null,
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
       pendingReportCount: (json['pendingReportCount'] as num?)?.toInt() ?? 0,
+      everApproved: json['everApproved'] == true,
     );
   }
 }

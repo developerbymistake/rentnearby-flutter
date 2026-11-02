@@ -32,6 +32,12 @@ class AppColors {
   static const Color taxiSurface = Color(0xFFF0FDFA);
   static const Color taxiHeroEnd = Color(0xFF5EEAD4);
 
+  // Trip palette
+  static const Color trip = Color(0xFFF97316);
+  static const Color tripDark = Color(0xFFEA580C);
+  static const Color tripLight = Color(0xFFFB923C);
+  static const Color tripSurface = Color(0xFFFFF7ED);
+
   // Hex strings for native MapLibre layer APIs, which require a String not a Color.
   static String hexOf(Color c) =>
       '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
@@ -40,6 +46,7 @@ class AppColors {
   static String get stayHex => hexOf(stay);
   static String get jobHex => hexOf(job);
   static String get taxiHex => hexOf(taxi);
+  static String get tripHex => hexOf(trip);
   static String get userDotHex => hexOf(userDot);
 
   // Gradients
@@ -74,6 +81,12 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [taxiLight, taxi],
+  );
+
+  static const LinearGradient tripGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [tripLight, trip],
   );
 
   static const LinearGradient warningGradient = LinearGradient(

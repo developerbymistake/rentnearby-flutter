@@ -8,6 +8,7 @@ import '../../../controllers/auth_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../../widgets/onboarding_closed_dialog.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_setup_controller.dart';
 
@@ -42,7 +43,19 @@ class _TaxiSubmitScreenState extends State<TaxiSubmitScreen> {
       return;
     }
     final ok = await _ctrl.submit();
-    if (!ok || !mounted) return;
+    if (!ok) {
+      if (mounted && _ctrl.lastErrorType == 'OnboardingClosed') {
+        final cur = _ctrl.taxi.value;
+        final canCorrect = (cur == null || cur.isDraft) && (Get.find<AuthController>().user.value?.canCorrectRole ?? false);
+        final percent = cur?.percent ?? 0;
+        OnboardingClosedDialog.show(context,
+            onChangeRole: canCorrect
+                ? () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent})
+                : null);
+      }
+      return;
+    }
+    if (!mounted) return;
     final auth = Get.find<AuthController>();
     AppToast.success('Submitted for review');
     if (_ctrl.mainBelow) {

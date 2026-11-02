@@ -3,12 +3,15 @@ class DistrictModel {
   final String name;
   final String? stateName;
   final bool isActive;
+  // Null = unknown (old server or cached context); only false blocks.
+  final bool? businessOnboardingEnabled;
 
   DistrictModel({
     required this.id,
     required this.name,
     this.stateName,
     this.isActive = true,
+    this.businessOnboardingEnabled,
   });
 
   factory DistrictModel.fromJson(Map<String, dynamic> json) => DistrictModel(
@@ -18,6 +21,7 @@ class DistrictModel {
         // Absent on /listings/context (that endpoint only ever returns an
         // already-active district), present on /admin/districts.
         isActive: json['isActive'] as bool? ?? true,
+        businessOnboardingEnabled: json['businessOnboardingEnabled'] as bool?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -25,6 +29,7 @@ class DistrictModel {
         'name': name,
         'stateName': stateName,
         'isActive': isActive,
+        'businessOnboardingEnabled': businessOnboardingEnabled,
       };
 }
 

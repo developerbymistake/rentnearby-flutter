@@ -9,12 +9,16 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_constants.dart';
 import '../../../config/app_insets.dart';
+import '../../../config/app_routes.dart';
+import '../../../controllers/auth_controller.dart';
+import '../../../models/city_model.dart';
 import '../../../screens/add_listing_location_mixin.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/concurrency.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../../widgets/onboarding_closed_dialog.dart';
 import '../../../widgets/selectable_chip.dart';
 import '../models/stay_owner_model.dart';
 import '../models/stay_registration_type_model.dart';
@@ -90,7 +94,12 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
   @override
   void initState() {
     super.initState();
-    initLocationTracking(style: _locationStyle, onLocationStale: _handleLocationStale);
+    initLocationTracking(
+      style: _locationStyle,
+      onLocationStale: _handleLocationStale,
+      onOnboardingClosed: _onResolveOnboardingClosed,
+      onboardingGrandfathered: _onboardingGrandfathered,
+    );
     _types.ensureLoaded();
     _regTypes.ensureLoaded();
     final s = _ctrl.stay.value;
@@ -235,6 +244,27 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
         if (mounted) f.requestFocus();
       });
     }
+  }
+
+  bool _onboardingGrandfathered(DistrictModel d) {
+    final s = _ctrl.stay.value;
+    return s != null && s.everApproved && s.districtId == d.id;
+  }
+
+  void _onResolveOnboardingClosed() {
+    if (_step < 1) return;
+    _showOnboardingClosed();
+  }
+
+  void _showOnboardingClosed() {
+    if (!mounted) return;
+    final s = _ctrl.stay.value;
+    final canCorrect = (s == null || s.isDraft) && (Get.find<AuthController>().user.value?.canCorrectRole ?? false);
+    final percent = s?.setupPercent ?? 0;
+    OnboardingClosedDialog.show(context,
+        onChangeRole: canCorrect
+            ? () => Get.toNamed(AppRoutes.roleSelect, arguments: {'correction': true, 'percent': percent})
+            : null);
   }
 
   void _handleLocationStale() {
@@ -495,6 +525,11 @@ class _StayBasicDetailsScreenState extends State<StayBasicDetailsScreen>
     });
     if (!mounted) return;
     if (!ok) {
+      if (_ctrl.lastErrorType == 'OnboardingClosed') {
+        setState(() => _step = 1);
+        _showOnboardingClosed();
+        return;
+      }
       _showServerRegistrationError();
       return;
     }
