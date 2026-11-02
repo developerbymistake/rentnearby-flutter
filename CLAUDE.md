@@ -15,12 +15,13 @@ and owner plans (free by default, paid via Google Play subscriptions).
 ```bash
 flutter pub get                 # install dependencies
 
-flutter analyze                 # lint/static analysis (flutter_lints, see analysis_options.yaml)
+flutter analyze --no-pub        # lint/static analysis (flutter_lints, see analysis_options.yaml); 0 errors at build 56
 
 flutter run                     # run on a connected device/emulator (debug)
 flutter run -d chrome           # run on web
 flutter run --release           # run in release mode
 
+flutter clean && flutter pub get && flutter build apk --release   # release APK (clean first); output build/app/outputs/flutter-apk/app-release.apk, signed with the upload keystore
 flutter build apk               # Android APK
 flutter build appbundle         # Android App Bundle (Play Store)
 flutter build ios               # iOS (requires macOS/Xcode)
@@ -34,6 +35,8 @@ flutter test --plain-name "app smoke test placeholder"  # run a single test by n
 There is effectively one placeholder test (`test/widget_test.dart`) — the comment in it notes "Full
 integration tests require backend". Don't assume meaningful test coverage exists; when adding tests,
 there's no existing suite convention to follow beyond `flutter_test`.
+
+Current version is `1.0.0+56` (2026-11-02, Trip Planner build). Never bump the `pubspec.yaml` build number unless the user explicitly asks. Project state: `F:\Dhasu\PROJECT_STATUS_2026_11_02.md`.
 
 Only `flutter analyze *` is pre-approved in `.claude/settings.json`; other commands may prompt for
 permission.
@@ -136,7 +139,7 @@ the derived getters screens should read rather than picking through the raw fiel
 gates the whole app behind full-screen states driven by this controller: offline, GPS-disabled, and
 "district not supported yet" — see `_buildOfflineGate`/`_buildGpsGate`/`_buildDistrictGate`. This gate
 wraps the whole app above the `IndexedStack`, regardless of tab count/order.
-Business onboarding (Stay/Taxi only): `DistrictModel.businessOnboardingEnabled` (null = unknown) comes from the context call; `stay_basic_details_screen.dart`/`taxi_vehicle_screen.dart` opt in via `initLocationTracking(onOnboardingClosed:, onboardingGrandfathered:)` and show `OnboardingClosedDialog` on `false` (skipped for the saved pin of an `everApproved` row in the same district) and on a server 400 `OnboardingClosed` at basic save/Submit; Rooms/Plots pass neither. Spec `F:\Dhasu\District_resume\ONBOARDING_CONTRACT.md`.
+Business onboarding (Stay/Taxi only): `DistrictModel.businessOnboardingEnabled` (null = unknown) comes from the context call; `stay_basic_details_screen.dart`/`taxi_vehicle_screen.dart` opt in via `initLocationTracking(onOnboardingClosed:, onboardingGrandfathered:)` and show `OnboardingClosedDialog` (`lib/widgets/onboarding_closed_dialog.dart`, title "Not open here yet", with a Change role action when the one-time correction is available) at the pin step on `false` (skipped for the saved pin of an `everApproved` row in the same district) and on a server 400 `OnboardingClosed` at basic save/Submit; Rooms/Plots pass neither. Spec `F:\Dhasu\District_resume\ONBOARDING_CONTRACT.md`.
 
 **Pin/radius mechanics** (client-side only — the backend does not currently re-validate either of these,
 see the Backend repo's CLAUDE.md "Known gap" note): new-listing pin placement is capped to 500m from the
@@ -176,12 +179,13 @@ role cannot open lands on the notifications screen instead (same guard in `notif
 **Roles (Seeker / Rent Owner / Property Owner)**: one account, one role; spec in `F:\Dhasu\ROLE_FEATURE.md`.
 - **Stay Owner (4th role, uncompiled)**: `UserRoleKeys.stayOwner`/`canListStays`; `AppTabs.stays = 3` (Stays is the third module tab); gated owner goes to `/stay-setup` until submit (`postLoginRoute`). Code in `lib/features/stay/`. Rooms have a fixed room name (no bathroom). Jobs (`lib/features/jobs/`, Jobs tab `AppTabs.jobs`): all fields required, own phone + WhatsApp on the job, detail bar is the shared `DetailActionBar` with `showDirections: false`, `whatsAppPhone`, `callLabel`, `reportLabel`, `safetyText` (defaults keep Rooms/Plots/Stay unchanged), no Chat; experience is years with Fresher / N+ yrs tags and filter buckets. Seeker push opens `/job-detail` through the generic `action_route` path. Spec: `F:\Dhasu\STAY_FEATURE.md`, `F:\Dhasu\STAY_JOBS_FEATURE.md`.
 - **Taxi Driver (5th role, uncompiled)**: `UserRoleKeys.taxiDriver`/`canListTaxis` (counts as owner everywhere); Taxi tab `AppTabs.taxi` (root `TaxiListScreen(root: true)`, tag `taxi`; pushed copy tag `taxi-push`), no Taxi tile on the Stays landing. The stay detail "Getting there" row searches From = traveller's current GPS city (`travellerCity`, never the browsing city) to To = stay city centroid; See all pushes the Taxi list prefilled. Gated driver goes to `/taxi-setup` until submit (`postLoginRoute`). Code in `lib/features/taxi/`. Taxi list From/To use `LocationSwitchSheet.pick`; driver route From/To use `LocationSearchSheet` (Photon, bbox limits it to roughly Uttarakhand). Share link type `t` opens `/taxi-detail` directly. Spec: `F:\Dhasu\TAXI_FEATURE.md`.
-- **Trip Planner (any role, not a tab, uncompiled)**: code in `lib/features/trip/`; entry = Home `TripHomeCard` (above the Instagram card, opens `LocationSwitchSheet.pick`) and the Profile `My Trips` tile; routes `/trip-spots`, `/trip-plan`, `/trip-taxi`, `/trip-stay`, `/trip-map`, `/my-trips` are pushed on the global navigator (all in `MapPauseObserver._pauseRoutes`).
+- **Trip Planner (any role, not a tab; shipped in build 56, backend deployed 2026-11-02)**: code in `lib/features/trip/`; entry = Home `TripHomeCard` (above the Instagram card, opens `TripCitySheet.pick`) and the Profile `My Trips` tile; routes `/trip-spots`, `/trip-plan`, `/trip-taxi`, `/trip-stay`, `/trip-map`, `/my-trips` are pushed on the global navigator (all in `MapPauseObserver._pauseRoutes`).
   `TripPlanController` (lazy `to`, deleted by `releaseIfIdle()` when `openPages == 0`) holds the working `TripPlan`; the trip row is created at Plan my days and autosaved (debounced); a failed save keeps the plan and shows `Not saved yet` + Retry. `/trips/plan` splits days (`auto`) or recomputes times (`recalculate`, never reorders).
-  Spots come from `GET /trips/cities/{cityId}/spots` (Atlas-backed, `NotReady` = "Not ready yet"); category chips filter client-side after loading every page.
-  Taxi/Stay pages reuse `TaxiCard` (`onSelect`/`selected`), `NearbyItemRow` (`trailing`), `/taxis/browse?cityOnly=true` and `/stays/nearby` (sorted by `distanceKm`); a 403 `TabInactive` hides that option. WhatsApp from a trip taxi is pre-filled via `TaxiNavigation.openDetail(whatsAppMessage:)`.
+  City pick = `TripCitySheet` (Atlas cities via `GET /trips/cities`, NotReady rows "Coming soon") over its own cache `TripCityCatalog` (keys `trip_cities_cache*`, 24 h, revalidated by `GET /trips/cities/version` every 10 min, local search); it never touches the city-switch caches. Spots come from `GET /trips/cities/{cityKey}/spots` (`NotReady` or 404 `CityNotFound` = "Not ready yet"); category chips filter client-side after loading every page.
+  The trip stores the Atlas `cityKey`, city lat/lon and a nullable `districtId` (server point-in-polygon at create). Day tiles: `districtId` set = Taxi/Stay active; draft not created yet = "Checking..."; saved with null district = "Not available here yet".
+  Taxi/Stay pages reuse `TaxiCard` (`onSelect`/`selected`), `NearbyItemRow` (`trailing`), district-wide `/taxis/browse` and `/stays/nearby` (sorted by `distanceKm`); a 403 `TabInactive` hides that option. WhatsApp from a trip taxi is pre-filled via `TaxiNavigation.openDetail(whatsAppMessage:)`.
   403 `TripPlannerDisabled` (server flag) shows "Not available right now". Shared empty/error layout: `lib/widgets/empty_state_view.dart`. Colours `AppColors.trip*`, `ModulePalette.trip`, `TripColors`.
-  Spec: `F:\Dhasu\TRIP_PLANNER_FEATURE.md`, contract `F:\Dhasu\TripPlanner_resume\TRIP_CONTRACT.md`.
+  Spec: `F:\Dhasu\TRIP_PLANNER_FEATURE.md`, contract `F:\Dhasu\TripPlanner_resume\TRIP_CONTRACT.md` (city identity superseded by `F:\Dhasu\TripRework_resume\PART3_CONTRACT.md`).
 - `lib/config/user_roles.dart` is the single capability map: `UserRoleKeys` (`SEEKER`/`RENT_OWNER`/
   `PROPERTY_OWNER`, `claim = 'role'`; names via `RoleVisuals.displayName` in `role_option_card.dart`), `RoleCapabilities.byRole` (role key -> `canListRooms`,
   `canListPlots`; Seeker has neither, an unknown key falls back to none), `RoleRequestErrorTypes` and

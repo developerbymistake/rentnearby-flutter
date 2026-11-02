@@ -8,10 +8,10 @@ import '../trip_constants.dart';
 import '../trip_strings.dart';
 
 class TripSpotsController extends GetxController {
-  final String cityId;
+  final int cityKey;
   final Set<String> existingIds;
 
-  TripSpotsController(this.cityId, {this.existingIds = const {}});
+  TripSpotsController(this.cityKey, {this.existingIds = const {}});
 
   final _repo = const TripRepository();
 
@@ -57,7 +57,7 @@ class TripSpotsController extends GetxController {
     loadFailed.value = false;
     plannerOff.value = false;
     try {
-      final page = await _repo.spots(cityId);
+      final page = await _repo.spots(cityKey);
       if (seq != _seq) return;
       items.assignAll(page.items);
       status.value = page.status;
@@ -67,8 +67,11 @@ class TripSpotsController extends GetxController {
       nextCursor = page.nextCursor;
     } catch (e) {
       if (seq != _seq) return;
-      if (DioErrorMapper.errorType(e) == TripErrorTypes.plannerDisabled) {
+      final type = DioErrorMapper.errorType(e);
+      if (type == TripErrorTypes.plannerDisabled) {
         plannerOff.value = true;
+      } else if (type == TripErrorTypes.cityNotFound) {
+        status.value = TripSpotStatus.notReady;
       } else if (!(e is DioException && e.response?.statusCode == 401)) {
         loadFailed.value = true;
       }
@@ -83,7 +86,7 @@ class TripSpotsController extends GetxController {
     _moreInFlight = true;
     isLoadingMore.value = true;
     try {
-      final page = await _repo.spots(cityId, cursor: nextCursor);
+      final page = await _repo.spots(cityKey, cursor: nextCursor);
       if (seq != _seq) return false;
       final known = items.map((s) => s.id).toSet();
       items.addAll(page.items.where((s) => known.add(s.id)));

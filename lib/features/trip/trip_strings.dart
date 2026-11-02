@@ -37,4 +37,14 @@ class TripStrings {
   static const String start = 'Start';
   static const String maxPlaces = 'A trip can have up to 40 places';
   static const String freeDay = 'Free day';
+  static const String pickCity = 'Pick a city';
+  static const String searchCity = 'Search city';
+  static String noCityMatch(String q) => 'No city matches "$q"';
+  static const String citiesFailed = "Couldn't load cities";
+  static const String noCitiesYet = 'No cities yet';
+  static const String noCitiesYetSubtitle = 'Trips are coming soon';
+  static const String notAvailableHere = 'Not available here yet';
+  static const String notAvailableHereSubtitle = 'No stays or taxis in this area yet';
+  static const String checking = 'Checking...';
+  static const String cityUnavailable = 'City not available';
 }

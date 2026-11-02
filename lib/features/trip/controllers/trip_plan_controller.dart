@@ -6,11 +6,11 @@ import '../../../controllers/tab_config_controller.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
-import '../../../widgets/location_switch_sheet.dart';
 import '../../stay/models/stay_nearby_model.dart';
 import '../../taxi/guest/taxi_browse_repository.dart';
 import '../../taxi/models/taxi_browse_item.dart';
 import '../data/trip_repository.dart';
+import '../models/trip_city_model.dart';
 import '../models/trip_model.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
@@ -46,7 +46,7 @@ class TripPlanController extends GetxController {
   final stayTabOff = false.obs;
   final cityHasTaxis = Rxn<bool>();
   final selectedMapDay = 1.obs;
-  PickedPlace? picked;
+  TripCityModel? picked;
   int openPages = 0;
 
   String? _title;
@@ -112,6 +112,10 @@ class TripPlanController extends GetxController {
   bool get showTaxiOption => !taxiTabOff.value && cityHasTaxis.value != false;
 
   bool get showStayOption => !stayTabOff.value;
+
+  bool get supplyAvailable => plan.value?.districtId != null;
+
+  bool get supplyPending => !supplyAvailable && trip.value == null;
 
   int get dayLimitMinutes => plan.value?.settings.dayLimitMinutes ?? TripConstants.dayLimitMinutes;
 
@@ -217,8 +221,17 @@ class TripPlanController extends GetxController {
       final seconds = int.tryParse(raw ?? '') ?? 60;
       _planBlockedUntil = DateTime.now().add(Duration(seconds: seconds <= 0 ? 60 : seconds));
     }
-    planError.value = DioErrorMapper.toMessage(e, TripStrings.checkConnection);
-    planRetryable.value = status != 400;
+    final type = DioErrorMapper.errorType(e);
+    if (type == TripErrorTypes.cityNotFound) {
+      planError.value = TripStrings.cityUnavailable;
+      planRetryable.value = false;
+    } else if (type == TripErrorTypes.citiesUnavailable) {
+      planError.value = TripStrings.citiesFailed;
+      planRetryable.value = true;
+    } else {
+      planError.value = DioErrorMapper.toMessage(e, TripStrings.checkConnection);
+      planRetryable.value = status != 400;
+    }
     planFailed.value = true;
   }
 
@@ -230,7 +243,12 @@ class TripPlanController extends GetxController {
   }
 
   void _onSaveError(Object e, TripPlan p) {
-    if (_status(e) == 400) {
+    final type = DioErrorMapper.errorType(e);
+    if (type == TripErrorTypes.cityNotFound) {
+      AppToast.error(TripStrings.cityUnavailable);
+    } else if (type == TripErrorTypes.citiesUnavailable) {
+      AppToast.error(TripStrings.citiesFailed);
+    } else if (_status(e) == 400) {
       _rejectedPlan = p;
       _rejectedTitle = _title;
       AppToast.error(DioErrorMapper.toMessage(e, TripStrings.saveFailed));
@@ -266,15 +284,16 @@ class TripPlanController extends GetxController {
     };
   }
 
-  Future<void> startFromSelection(PickedPlace picked, List<TripSpotModel> chosen) async {
+  Future<void> startFromSelection(TripCityModel city, List<TripSpotModel> chosen) async {
     final pendingSave = _detachPendingSave();
     _reset();
     if (pendingSave != null) unawaited(pendingSave());
-    this.picked = picked;
+    picked = city;
     plan.value = TripPlan(
-      cityId: picked.cityId,
-      districtId: picked.districtId,
-      cityName: picked.name,
+      cityKey: city.cityKey,
+      cityName: city.name,
+      centreLatitude: city.latitude,
+      centreLongitude: city.longitude,
       days: [TripDay(day: 1, spots: chosen.take(TripConstants.maxSpots).map(TripSpotRef.fromSpot).toList())],
     );
     checkSupply();
@@ -304,6 +323,7 @@ class TripPlanController extends GetxController {
       final created = await _repo.create(title: _title, status: TripStatuses.draft, plan: p);
       if (flow != _flow) return created;
       trip.value = created;
+      _adoptDistrict(created);
       saveFailed.value = false;
       lastSavedAt.value = DateTime.now();
       return created;
@@ -321,6 +341,13 @@ class TripPlanController extends GetxController {
     }
   }
 
+  void _adoptDistrict(TripModel saved) {
+    final p = plan.value;
+    if (p == null || p.districtId != null || saved.districtId == null) return;
+    plan.value = p.copyWith(districtId: saved.districtId);
+    checkSupply();
+  }
+
   Future<void> open(String tripId) async {
     if (trip.value?.id == tripId && plan.value != null) return;
     if (_openingId == tripId && isOpening.value) return;
@@ -334,14 +361,11 @@ class TripPlanController extends GetxController {
       if (_openingId != tripId) return;
       trip.value = t;
       plan.value = t.plan;
-      final first = t.plan.allSpots.isEmpty ? null : t.plan.allSpots.first;
-      picked = PickedPlace(
+      picked = TripCityModel(
+        cityKey: t.cityKey,
         name: t.cityName,
-        latitude: t.plan.centreLatitude ?? first?.latitude ?? 0,
-        longitude: t.plan.centreLongitude ?? first?.longitude ?? 0,
-        cityId: t.cityId,
-        districtId: t.districtId,
-        districtName: '',
+        latitude: t.cityLatitude,
+        longitude: t.cityLongitude,
       );
       checkSupply();
       await _runRecalculate();
@@ -371,7 +395,7 @@ class TripPlanController extends GetxController {
   }
 
   Map<String, dynamic> _planBody(TripPlan p, String mode) => {
-        'cityId': p.cityId,
+        'cityKey': p.cityKey,
         'mode': mode,
         if (mode == 'auto') 'spots': p.allSpots.map((s) => s.toPlanInput()).toList(),
         if (mode != 'auto')
@@ -649,10 +673,14 @@ class TripPlanController extends GetxController {
     taxiTabOff.value = !tabs.isActiveForIndex(AppTabs.taxi);
     stayTabOff.value = !tabs.isActiveForIndex(AppTabs.stays);
     final seq = ++_supplySeq;
+    final districtId = p.districtId;
+    if (districtId == null) {
+      cityHasTaxis.value = null;
+      return;
+    }
     if (taxiTabOff.value) return;
     try {
-      final page = await const TaxiBrowseRepository()
-          .browseLocal(districtId: p.districtId, cityId: p.cityId, cityOnly: true, pageSize: 1);
+      final page = await const TaxiBrowseRepository().browseLocal(districtId: districtId, pageSize: 1);
       if (seq != _supplySeq) return;
       cityHasTaxis.value = page.items.isNotEmpty;
     } catch (e) {
@@ -712,6 +740,7 @@ class TripPlanController extends GetxController {
           : await _update(current.id, _title, _statusFor(markPlanned, p), p);
       if (flow != _flow) return false;
       trip.value = saved;
+      _adoptDistrict(saved);
       saveFailed.value = false;
       lastSavedAt.value = DateTime.now();
       return true;

@@ -184,9 +184,8 @@ class TripSettings {
 
 class TripPlan {
   final int version;
-  final String cityId;
-  final String districtId;
-  final int? cityKey;
+  final int cityKey;
+  final String? districtId;
   final String cityName;
   final double? centreLatitude;
   final double? centreLongitude;
@@ -194,10 +193,9 @@ class TripPlan {
   final TripSettings settings;
 
   const TripPlan({
-    this.version = 1,
-    required this.cityId,
-    required this.districtId,
-    this.cityKey,
+    this.version = TripConstants.planVersion,
+    required this.cityKey,
+    this.districtId,
     required this.cityName,
     this.centreLatitude,
     this.centreLongitude,
@@ -235,6 +233,7 @@ class TripPlan {
   }
 
   TripPlan copyWith({
+    String? districtId,
     double? centreLatitude,
     double? centreLongitude,
     List<TripDay>? days,
@@ -242,9 +241,8 @@ class TripPlan {
   }) =>
       TripPlan(
         version: version,
-        cityId: cityId,
-        districtId: districtId,
         cityKey: cityKey,
+        districtId: districtId ?? this.districtId,
         cityName: cityName,
         centreLatitude: centreLatitude ?? this.centreLatitude,
         centreLongitude: centreLongitude ?? this.centreLongitude,
@@ -253,10 +251,9 @@ class TripPlan {
       );
 
   factory TripPlan.fromJson(Map<String, dynamic> json) => TripPlan(
-        version: (json['version'] as num?)?.toInt() ?? 1,
-        cityId: json['cityId'] as String,
-        districtId: json['districtId'] as String,
-        cityKey: (json['cityKey'] as num?)?.toInt(),
+        version: (json['version'] as num?)?.toInt() ?? TripConstants.planVersion,
+        cityKey: (json['cityKey'] as num).toInt(),
+        districtId: json['districtId'] as String?,
         cityName: json['cityName'] as String? ?? '',
         centreLatitude: (json['centreLatitude'] as num?)?.toDouble(),
         centreLongitude: (json['centreLongitude'] as num?)?.toDouble(),
@@ -270,9 +267,8 @@ class TripPlan {
 
   Map<String, dynamic> toJson() => {
         'version': version,
-        'cityId': cityId,
-        'districtId': districtId,
-        'cityKey': ?cityKey,
+        'cityKey': cityKey,
+        'districtId': ?districtId,
         'cityName': cityName,
         'centreLatitude': ?centreLatitude,
         'centreLongitude': ?centreLongitude,

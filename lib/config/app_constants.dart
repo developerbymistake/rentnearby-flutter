@@ -44,6 +44,13 @@ class AppConstants {
   static const String appTabsCacheKey = 'app_tabs_cache';
   static const Duration locationsCacheTtl = Duration(hours: 24);
 
+  // Trip city catalog, separate from the city-switch caches above.
+  static const String tripCitiesCacheKey = 'trip_cities_cache';
+  static const String tripCitiesCacheVersionKey = 'trip_cities_cache_version';
+  static const String tripCitiesCacheSavedAtKey = 'trip_cities_cache_savedAt';
+  static const Duration tripCitiesCacheTtl = Duration(hours: 24);
+  static const Duration tripCitiesRevalidateAfter = Duration(minutes: 10);
+
   // App version gate (force/soft update).
   static const String androidPackageId = 'com.rentnearby.rentnearby';
   static const String playStoreUrl = 'https://play.google.com/store/apps/details?id=$androidPackageId';

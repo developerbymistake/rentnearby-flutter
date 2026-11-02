@@ -9,10 +9,11 @@ class TripModel {
   final String id;
   final String title;
   final String status;
-  final String cityId;
-  final String districtId;
-  final int? cityKey;
+  final int cityKey;
+  final String? districtId;
   final String cityName;
+  final double cityLatitude;
+  final double cityLongitude;
   final int dayCount;
   final int spotCount;
   final TripPlan plan;
@@ -23,10 +24,11 @@ class TripModel {
     required this.id,
     required this.title,
     required this.status,
-    required this.cityId,
-    required this.districtId,
-    this.cityKey,
+    required this.cityKey,
+    this.districtId,
     required this.cityName,
+    required this.cityLatitude,
+    required this.cityLongitude,
     required this.dayCount,
     required this.spotCount,
     required this.plan,
@@ -40,10 +42,11 @@ class TripModel {
         id: json['id'] as String,
         title: json['title'] as String? ?? '',
         status: json['status'] as String? ?? TripStatuses.draft,
-        cityId: json['cityId'] as String,
-        districtId: json['districtId'] as String,
-        cityKey: (json['cityKey'] as num?)?.toInt(),
+        cityKey: (json['cityKey'] as num).toInt(),
+        districtId: json['districtId'] as String?,
         cityName: json['cityName'] as String? ?? '',
+        cityLatitude: (json['cityLatitude'] as num?)?.toDouble() ?? 0,
+        cityLongitude: (json['cityLongitude'] as num?)?.toDouble() ?? 0,
         dayCount: (json['dayCount'] as num?)?.toInt() ?? 0,
         spotCount: (json['spotCount'] as num?)?.toInt() ?? 0,
         plan: TripPlan.fromJson(json['plan'] as Map<String, dynamic>),

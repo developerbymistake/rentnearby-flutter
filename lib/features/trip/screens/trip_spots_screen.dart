@@ -7,13 +7,14 @@ import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/gradient_button.dart';
-import '../../../widgets/location_switch_sheet.dart';
 import '../../../widgets/selectable_chip.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_spots_controller.dart';
+import '../models/trip_city_model.dart';
 import '../models/trip_spot_category.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
+import '../widgets/trip_city_sheet.dart';
 import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_spot_row.dart';
 
@@ -25,7 +26,7 @@ class TripSpotsScreen extends StatefulWidget {
 }
 
 class _TripSpotsScreenState extends State<TripSpotsScreen> {
-  late final PickedPlace _picked;
+  late final TripCityModel _city;
   late final bool _adding;
   late final Set<String> _existingIds;
   late final TripSpotsController _ctrl;
@@ -38,13 +39,13 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   void initState() {
     super.initState();
     final args = Get.arguments as Map;
-    _picked = args['picked'] as PickedPlace;
+    _city = args['city'] as TripCityModel;
     _adding = args['adding'] == true;
     _existingIds = (args['existingIds'] as Set<String>?) ?? const <String>{};
-    final tag = _picked.cityId;
+    final tag = '${_city.cityKey}';
     _ctrl = Get.isRegistered<TripSpotsController>(tag: tag)
         ? Get.find<TripSpotsController>(tag: tag)
-        : Get.put(TripSpotsController(_picked.cityId, existingIds: _existingIds), tag: tag);
+        : Get.put(TripSpotsController(_city.cityKey, existingIds: _existingIds), tag: tag);
     _plan = TripPlanController.to;
     _plan.openPages++;
     _scroll.addListener(_onScroll);
@@ -54,7 +55,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   void dispose() {
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
-    final tag = _picked.cityId;
+    final tag = '${_city.cityKey}';
     if (Get.isRegistered<TripSpotsController>(tag: tag) && identical(Get.find<TripSpotsController>(tag: tag), _ctrl)) {
       Get.delete<TripSpotsController>(tag: tag);
     }
@@ -74,9 +75,9 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     if (_picking) return;
     _picking = true;
     try {
-      final picked = await LocationSwitchSheet.pick(context, palette: TripColors.palette, title: TripStrings.planATrip);
-      if (picked == null || !mounted || picked.cityId == _picked.cityId) return;
-      Get.offNamed(AppRoutes.tripSpots, arguments: {'picked': picked}, preventDuplicates: false);
+      final picked = await TripCitySheet.pick(context);
+      if (picked == null || !mounted || picked.cityKey == _city.cityKey) return;
+      Get.offNamed(AppRoutes.tripSpots, arguments: {'city': picked}, preventDuplicates: false);
     } finally {
       _picking = false;
     }
@@ -92,7 +93,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       Get.back();
       return;
     }
-    unawaited(_plan.startFromSelection(_picked, chosen));
+    unawaited(_plan.startFromSelection(_city, chosen));
     Get.offNamed(AppRoutes.tripPlan);
   }
 
@@ -131,7 +132,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _picked.name,
+                  _city.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
@@ -239,7 +240,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
         return _message(EmptyStateView(
           icon: Iconsax.map_1,
           title: TripStrings.notReadyTitle,
-          subtitle: TripStrings.notReadySubtitle(_picked.name),
+          subtitle: TripStrings.notReadySubtitle(_city.name),
           palette: TripColors.palette,
         ));
       }

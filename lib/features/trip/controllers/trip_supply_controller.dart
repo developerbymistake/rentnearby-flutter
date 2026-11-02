@@ -71,7 +71,8 @@ class TripSupplyController extends GetxController {
 
   Future<void> loadTaxis({bool reset = true}) async {
     final p = _plan.plan.value;
-    if (p == null) return;
+    final districtId = p?.districtId;
+    if (p == null || districtId == null) return;
     if (!reset && (!taxiHasMore.value || taxiLoadingMore.value || taxiLoading.value)) return;
     final seq = ++_taxiSeq;
     final page = reset ? 1 : _taxiPage + 1;
@@ -88,9 +89,7 @@ class TripSupplyController extends GetxController {
     _taxisLoaded = true;
     try {
       final res = await const TaxiBrowseRepository().browseLocal(
-        districtId: p.districtId,
-        cityId: p.cityId,
-        cityOnly: true,
+        districtId: districtId,
         page: page,
         pageSize: _taxiPageSize,
       );
@@ -135,7 +134,8 @@ class TripSupplyController extends GetxController {
 
   Future<void> loadStays() async {
     final p = _plan.plan.value;
-    if (p == null) return;
+    final districtId = p?.districtId;
+    if (p == null || districtId == null) return;
     final d = day.value;
     final seq = ++_staySeq;
     _staysDay = d;
@@ -150,7 +150,7 @@ class TripSupplyController extends GetxController {
             'latitude': point.lat,
             'longitude': point.lng,
             'radius': stayRadiusKm.value,
-            'districtId': p.districtId,
+            'districtId': districtId,
           }));
       if (seq != _staySeq) return;
       final data = res['data'];

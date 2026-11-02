@@ -130,6 +130,29 @@ class StorageService {
     return val == null ? null : DateTime.tryParse(val);
   }
 
+  // ── Trip city catalog ──────────────────────────────────────────────────────
+
+  static Future<void> saveTripCitiesCache(List<Map<String, dynamic>> items, String version) async {
+    await _box.write(AppConstants.tripCitiesCacheKey, items);
+    await _box.write(AppConstants.tripCitiesCacheVersionKey, version);
+    await _box.write(AppConstants.tripCitiesCacheSavedAtKey, DateTime.now().toIso8601String());
+  }
+
+  static Future<void> touchTripCitiesCache() =>
+      _box.write(AppConstants.tripCitiesCacheSavedAtKey, DateTime.now().toIso8601String());
+
+  static List<Map<String, dynamic>>? getTripCitiesCache() {
+    final raw = _box.read<List>(AppConstants.tripCitiesCacheKey);
+    return raw?.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  static String? getTripCitiesCacheVersion() => _box.read<String>(AppConstants.tripCitiesCacheVersionKey);
+
+  static DateTime? getTripCitiesCacheSavedAt() {
+    final val = _box.read<String>(AppConstants.tripCitiesCacheSavedAtKey);
+    return val == null ? null : DateTime.tryParse(val);
+  }
+
   // ── App-tabs cache — see AppConstants.appTabsCacheKey's doc comment ────────
 
   static void saveAppTabsCache(List<Map<String, dynamic>> items) =>

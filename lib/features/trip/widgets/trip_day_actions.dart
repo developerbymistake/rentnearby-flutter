@@ -5,11 +5,14 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../controllers/tab_config_controller.dart';
 import '../../../models/browse_item.dart';
+import '../../../utils/app_toast.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../../taxi/taxi_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+
+enum TripTileState { active, pending, disabled }
 
 class TripDayActions extends StatelessWidget {
   final int day;
@@ -27,6 +30,42 @@ class TripDayActions extends StatelessWidget {
       final showStay = c.showStayOption;
       final d = c.plan.value?.dayAt(day);
       if (d == null || (!showTaxi && !showStay)) return const SizedBox.shrink();
+      if (!c.supplyAvailable) {
+        final state = c.supplyPending ? TripTileState.pending : TripTileState.disabled;
+        final subtitle = state == TripTileState.pending ? TripStrings.checking : TripStrings.notAvailableHere;
+        final onTap = state == TripTileState.pending ? () {} : () => AppToast.warning(TripStrings.notAvailableHereSubtitle);
+        return Row(
+          children: [
+            if (showTaxi)
+              Expanded(
+                child: _ActionTile(
+                  icon: Iconsax.car,
+                  accent: TaxiColors.accent,
+                  surface: TaxiColors.surface,
+                  title: 'Taxi',
+                  subtitle: subtitle,
+                  selected: false,
+                  state: state,
+                  onTap: onTap,
+                ),
+              ),
+            if (showTaxi && showStay) const SizedBox(width: 8),
+            if (showStay)
+              Expanded(
+                child: _ActionTile(
+                  icon: Iconsax.building_4,
+                  accent: StayColors.accent,
+                  surface: StayColors.surface,
+                  title: 'Stay',
+                  subtitle: subtitle,
+                  selected: false,
+                  state: state,
+                  onTap: onTap,
+                ),
+              ),
+          ],
+        );
+      }
       final taxi = d.taxi;
       final stay = d.stay;
       final sameStay = stay != null && stay.isSameStay;
@@ -147,6 +186,7 @@ class _ActionTile extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  final TripTileState state;
 
   const _ActionTile({
     required this.icon,
@@ -157,28 +197,32 @@ class _ActionTile extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.onLongPress,
+    this.state = TripTileState.active,
   });
 
   @override
   Widget build(BuildContext context) {
+    final active = state == TripTileState.active;
+    final muted = state == TripTileState.pending ? AppColors.textLight : AppColors.textHint;
+    final iconColor = active ? accent : muted;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      onLongPress: onLongPress,
+      onLongPress: active ? onLongPress : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         decoration: BoxDecoration(
           color: selected ? surface : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? accent.withValues(alpha: 0.6) : AppColors.divider),
+          border: Border.all(color: active && selected ? accent.withValues(alpha: 0.6) : AppColors.divider),
         ),
         child: Row(
           children: [
             Container(
               width: 28,
               height: 28,
-              decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-              child: Icon(icon, size: 15, color: accent),
+              decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+              child: Icon(icon, size: 15, color: iconColor),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -189,19 +233,22 @@ class _ActionTile extends StatelessWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                    style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: active ? AppColors.textDark : muted),
                   ),
                   Text(
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, color: AppColors.textLight),
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, color: active ? AppColors.textLight : muted),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, size: 18, color: selected ? accent : AppColors.textHint),
+            if (active) Icon(Icons.chevron_right_rounded, size: 18, color: selected ? accent : AppColors.textHint),
           ],
         ),
       ),
