@@ -90,6 +90,7 @@ class TripSupplyController extends GetxController {
     try {
       final res = await const TaxiBrowseRepository().browseLocal(
         districtId: districtId,
+        localRate: true,
         page: page,
         pageSize: _taxiPageSize,
       );
@@ -158,6 +159,7 @@ class TripSupplyController extends GetxController {
       final items = list.map((e) => StayNearbyModel.fromJson(e as Map<String, dynamic>)).toList()
         ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
       stays.assignAll(items);
+      _plan.fillStayCoordinates(items);
     } catch (e) {
       if (seq != _staySeq) return;
       if (_isTabInactive(e)) {

@@ -29,6 +29,14 @@ class TripLeg {
         km: (json['km'] as num?)?.toDouble() ?? 0,
         isEstimate: json['isEstimate'] == true,
       );
+
+  Map<String, dynamic> toJson() => {
+        'fromId': fromId,
+        'toId': toId,
+        'minutes': minutes,
+        'km': km,
+        'isEstimate': isEstimate,
+      };
 }
 
 class TripWarning {
@@ -45,6 +53,13 @@ class TripWarning {
         spotId: json['spotId'] as String?,
         day: (json['day'] as num?)?.toInt(),
       );
+
+  Map<String, dynamic> toJson() => {
+        'code': code,
+        'message': message,
+        'spotId': ?spotId,
+        'day': ?day,
+      };
 }
 
 class TripPlanDay {
@@ -93,6 +108,19 @@ class TripPlanDay {
             .toList(),
         routeGeoJson: json['routeGeoJson'] is Map<String, dynamic> ? json['routeGeoJson'] as Map<String, dynamic> : null,
       );
+
+  Map<String, dynamic> toJson() => {
+        'day': day,
+        'spotIds': spotIds,
+        'visitMinutes': visitMinutes,
+        'driveMinutes': driveMinutes,
+        'totalMinutes': totalMinutes,
+        'km': km,
+        'overLimit': overLimit,
+        'isEstimate': isEstimate,
+        'legs': legs.map((e) => e.toJson()).toList(),
+        'routeGeoJson': ?routeGeoJson,
+      };
 }
 
 class TripPlanResult {
@@ -135,4 +163,13 @@ class TripPlanResult {
         osrmAvailable: json['osrmAvailable'] == true,
         dayLimitMinutes: (json['dayLimitMinutes'] as num?)?.toInt() ?? 450,
       );
+
+  Map<String, dynamic> toJson() => {
+        'days': days.map((e) => e.toJson()).toList(),
+        'centreLatitude': ?centreLatitude,
+        'centreLongitude': ?centreLongitude,
+        'warnings': warnings.map((e) => e.toJson()).toList(),
+        'osrmAvailable': osrmAvailable,
+        'dayLimitMinutes': dayLimitMinutes,
+      };
 }

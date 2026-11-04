@@ -20,6 +20,7 @@ class NearbyItemRow extends StatelessWidget {
   final bool isFeatured;
   final VoidCallback onTap;
   final Widget? trailing;
+  final List<Widget>? actions;
 
   const NearbyItemRow({
     super.key,
@@ -36,18 +37,23 @@ class NearbyItemRow extends StatelessWidget {
     this.elevated = false,
     this.isFeatured = false,
     this.trailing,
+    this.actions,
   });
 
   @override
   Widget build(BuildContext context) {
     final accent = palette.accent;
     final size = elevated ? 64.0 : 54.0;
+    final hasActions = actions != null && actions!.isNotEmpty;
+    final rowPadding = EdgeInsets.symmetric(horizontal: elevated ? 10 : 12, vertical: 10);
+    final content = _content(accent, size);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
         margin: elevated ? EdgeInsets.zero : const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-        padding: EdgeInsets.symmetric(horizontal: elevated ? 10 : 12, vertical: 10),
+        padding: hasActions ? null : rowPadding,
+        clipBehavior: hasActions ? Clip.antiAlias : Clip.none,
         decoration: BoxDecoration(
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(16),
@@ -56,7 +62,25 @@ class NearbyItemRow extends StatelessWidget {
               ? AppShadows.premium(accent, alpha: 0.14, blur: 18, offset: const Offset(0, 6))
               : AppShadows.premium(accent, alpha: 0.06, blur: 10, offset: const Offset(0, 3)),
         ),
-        child: Row(
+        child: hasActions
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(padding: rowPadding, child: content),
+                  const Divider(height: 1, thickness: 1, color: AppColors.divider),
+                  Material(
+                    color: Colors.transparent,
+                    child: Row(children: [for (final a in actions!) Expanded(child: a)]),
+                  ),
+                ],
+              )
+            : content,
+      ),
+    );
+  }
+
+  Widget _content(Color accent, double size) {
+    return Row(
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -124,13 +148,38 @@ class NearbyItemRow extends StatelessWidget {
             const SizedBox(width: 4),
             trailing ?? Icon(Iconsax.arrow_right_3, size: 16, color: accent),
           ],
-        ),
-      ),
     );
   }
 
   Widget _placeholder(Color accent) => Container(
         decoration: BoxDecoration(gradient: palette.gradient),
         child: Center(child: Icon(placeholderIcon, size: 22, color: Colors.white70)),
+      );
+}
+
+class NearbyRowAction extends StatelessWidget {
+  final Widget icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const NearbyRowAction({super.key, required this.icon, required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            icon,
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+            ),
+          ]),
+        ),
       );
 }

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
-import '../../../utils/app_toast.dart';
 import '../../../widgets/empty_state_view.dart';
+import '../../../widgets/selectable_chip.dart';
 import '../controllers/my_trips_controller.dart';
 import '../models/trip_model.dart';
 import '../trip_colors.dart';
@@ -47,8 +47,14 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
     if (p.maxScrollExtent > 0 && p.pixels >= p.maxScrollExtent - 300) _ctrl.loadMore();
   }
 
+  void _openPlan(TripSummaryModel t) {
+    TripNavigation.openPlan(tripId: t.id)?.then((_) {
+      if (mounted) _ctrl.load();
+    });
+  }
+
   void _openMap(TripSummaryModel t) {
-    TripNavigation.openPlan(tripId: t.id);
+    _openPlan(t);
     // Get.arguments is global; the plan screen must read its args before the map route is pushed.
     WidgetsBinding.instance.addPostFrameCallback((_) => TripNavigation.openMap());
   }
@@ -58,22 +64,23 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete this trip?', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-        content: const Text('This cannot be undone.', style: TextStyle(fontFamily: 'Poppins')),
+        title: const Text(TripStrings.deleteTrip, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+        content: const Text(TripStrings.deleteConfirmBody, style: TextStyle(fontFamily: 'Poppins')),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+            child: const Text(TripStrings.cancelAction, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
-              minimumSize: Size.zero,
+              minimumSize: const Size(64, 44),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(fontFamily: 'Poppins')),
+            child: const Text(TripStrings.delete, style: TextStyle(fontFamily: 'Poppins')),
           ),
         ],
       ),
@@ -115,19 +122,53 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       padding: EdgeInsets.fromLTRB(12, top + 8, 20, 18),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconButton(
-            onPressed: () => Get.back(),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => Get.back(),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 2),
+              const Expanded(
+                child: Text(
+                  TripStrings.myTrips,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 2),
-          const Expanded(
-            child: Text(
-              'My Trips',
-              maxLines: 1,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-            ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: Obx(() {
+              final c = _ctrl.counts.value;
+              const chipPad = EdgeInsets.symmetric(vertical: 13, horizontal: 14);
+              return Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  SelectableChip(
+                    label: TripStrings.upcomingChip(c.upcoming),
+                    selected: _ctrl.state.value == 'upcoming',
+                    activeColor: TripColors.accentDark,
+                    padding: chipPad,
+                    onTap: () => _ctrl.selectState('upcoming'),
+                  ),
+                  SelectableChip(
+                    label: TripStrings.completedChip(c.completed),
+                    selected: _ctrl.state.value == 'completed',
+                    activeColor: TripColors.accentDark,
+                    padding: chipPad,
+                    onTap: () => _ctrl.selectState('completed'),
+                  ),
+                ],
+              );
+            }),
           ),
         ],
       ),
@@ -150,7 +191,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
       if (items.isEmpty) {
         if (_ctrl.isLoading.value) {
           return SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: EdgeInsets.fromLTRB(_sidePad(context), 16, _sidePad(context), 0),
             sliver: SliverList.separated(
               itemCount: 3,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -159,6 +200,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
           );
         }
         final failed = _ctrl.loadFailed.value;
+        final completed = _ctrl.state.value == 'completed';
         return SliverToBoxAdapter(
           child: failed
               ? EmptyStateView(
@@ -168,18 +210,25 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                   onRetry: _ctrl.load,
                   palette: TripColors.palette,
                 )
-              : EmptyStateView(
-                  icon: Iconsax.routing_2,
-                  title: TripStrings.noTrips,
-                  subtitle: TripStrings.noTripsSubtitle,
-                  onRetry: () => TripNavigation.start(context),
-                  retryLabel: TripStrings.planATrip,
-                  palette: TripColors.palette,
-                ),
+              : completed
+                  ? const EmptyStateView(
+                      icon: Iconsax.routing_2,
+                      title: TripStrings.noCompletedTrips,
+                      subtitle: TripStrings.noCompletedSub,
+                      palette: TripColors.palette,
+                    )
+                  : EmptyStateView(
+                      icon: Iconsax.routing_2,
+                      title: TripStrings.noUpcomingTrips,
+                      subtitle: TripStrings.noTripsSubtitle,
+                      onRetry: () => TripNavigation.start(context),
+                      retryLabel: TripStrings.planATrip,
+                      palette: TripColors.palette,
+                    ),
         );
       }
       return SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        padding: EdgeInsets.fromLTRB(_sidePad(context), 16, _sidePad(context), 0),
         sliver: SliverList.separated(
           itemCount: items.length,
           separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -188,15 +237,20 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
             return TripCard(
               key: ValueKey(t.id),
               trip: t,
-              onOpen: () => TripNavigation.openPlan(tripId: t.id),
+              onOpen: () => _openPlan(t),
               onMap: () => _openMap(t),
-              onShare: () => AppToast.info(TripStrings.comingSoon),
+              onSummary: () => TripNavigation.openSummary(t.id),
               onDelete: () => _delete(t),
             );
           },
         ),
       );
     });
+  }
+
+  static double _sidePad(BuildContext context) {
+    final w = MediaQuery.sizeOf(context).width;
+    return w > 640 ? (w - 640) / 2 : 16;
   }
 
   Widget _buildFooter() {

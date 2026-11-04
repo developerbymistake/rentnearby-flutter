@@ -4,6 +4,8 @@ import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
 import '../../../models/browse_item.dart';
+import '../../../utils/app_toast.dart';
+import '../../../utils/contact_launcher.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/nearby_item_row.dart';
 import '../../stay/models/stay_nearby_model.dart';
@@ -13,10 +15,11 @@ import '../controllers/trip_supply_controller.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../utils/trip_format.dart';
-import '../widgets/trip_back_to_plan_bar.dart';
 import '../widgets/trip_route_strip.dart';
 import '../widgets/trip_shimmers.dart';
+import '../widgets/trip_shortlist_bar.dart';
 import '../widgets/trip_taxi_stay_toggle.dart';
+import '../widgets/trip_withdraw_sheet.dart';
 
 class TripStayScreen extends StatefulWidget {
   const TripStayScreen({super.key});
@@ -38,7 +41,12 @@ class _TripStayScreenState extends State<TripStayScreen> {
     final args = Get.arguments;
     final day = args is Map ? args['day'] as int? : null;
     if (day != null) _supply.setDay(day);
-    _supply.ensureStays();
+    if (!_plan.isLastDay(_supply.day.value)) _supply.ensureStays();
+  }
+
+  void _changeDay(int d) {
+    _supply.setDay(d);
+    if (!_plan.isLastDay(d)) _supply.ensureStays();
   }
 
   @override
@@ -69,12 +77,31 @@ class _TripStayScreenState extends State<TripStayScreen> {
         ],
       ),
       bottomNavigationBar: Obx(() {
-        final stay = _plan.plan.value?.dayAt(_supply.day.value)?.stay;
-        if (stay == null) return const SizedBox.shrink();
-        return TripBackToPlanBar(text: '${stay.name} selected');
+        final d = _supply.day.value;
+        if (_plan.isLastDay(d)) return const SizedBox.shrink();
+        return TripShortlistBar(key: ValueKey('shortlist-$d'), day: d);
       }),
     );
   }
+
+  void _toggle(int day, StayNearbyModel s) {
+    if (!_plan.toggleShortlist(day, s)) AppToast.warning(TripStrings.shortlistFull);
+  }
+
+  Future<void> _remove(int day, StayNearbyModel s) async {
+    final open = _plan.enquiriesForNight(day).where((e) => e.listingId == s.id && e.isUnconfirmed).toList();
+    if (open.isNotEmpty && !await TripWithdrawSheet.showForRemove(context, open: open)) return;
+    _plan.removeShortlist(day, s.id);
+  }
+
+  Widget _noSupply() => EmptyStateView(
+        icon: Iconsax.building_4,
+        title: TripStrings.noStaysHere,
+        subtitle: TripStrings.addOwnToKeep,
+        retryLabel: TripStrings.haveStay,
+        onRetry: () => TripShortlistBar.openOwn(context, _supply.day.value),
+        palette: TripColors.palette,
+      );
 
   Widget _buildHeader(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
@@ -104,7 +131,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _plan.cityName,
+                      _headerSubtitle(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -122,6 +149,13 @@ class _TripStayScreenState extends State<TripStayScreen> {
     );
   }
 
+  String _headerSubtitle() {
+    final d = _supply.day.value;
+    final date = _plan.dateOf(d);
+    if (date == null || _plan.isLastDay(d)) return _plan.cityName;
+    return '${TripFormat.shortDate(date)} · ${TripStrings.night(d)}';
+  }
+
   Widget _buildTop() {
     return Obx(() {
       final d = _supply.day.value;
@@ -133,8 +167,8 @@ class _TripStayScreenState extends State<TripStayScreen> {
             const SizedBox(height: 12),
             TripRouteStrip(
               day: d,
-              text: 'Near your Day $d spots · sorted by distance',
-              onDayChanged: _supply.setDay,
+              text: _plan.isLastDay(d) ? TripStrings.checkoutDaySubtitle : 'Near your Day $d spots · sorted by distance',
+              onDayChanged: _changeDay,
             ),
           ],
         ),
@@ -146,6 +180,17 @@ class _TripStayScreenState extends State<TripStayScreen> {
     return Obx(() {
       final items = _supply.stays;
       final d = _supply.day.value;
+      if (_plan.isLastDay(d)) {
+        return SliverToBoxAdapter(
+          child: EmptyStateView(
+            icon: Iconsax.building_4,
+            title: TripStrings.checkoutDay,
+            subtitle: TripStrings.checkoutDaySubtitle,
+            palette: TripColors.palette,
+          ),
+        );
+      }
+      if (!_plan.supplyAvailable && !_plan.supplyPending) return SliverToBoxAdapter(child: _noSupply());
       if (_supply.stayLoading.value) {
         return SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -168,38 +213,50 @@ class _TripStayScreenState extends State<TripStayScreen> {
             ),
           );
         }
+        if (!_supply.canWidenRadius) return SliverToBoxAdapter(child: _noSupply());
         return SliverToBoxAdapter(
           child: EmptyStateView(
             icon: Iconsax.building_4,
             title: TripStrings.noStays,
             subtitle: 'Within ${TripFormat.km(_supply.stayRadiusKm.value)} of your Day $d spots',
-            onRetry: _supply.canWidenRadius ? () => _supply.widenRadius() : null,
+            onRetry: () => _supply.widenRadius(),
             retryLabel: TripStrings.widerRadius,
             palette: TripColors.palette,
           ),
         );
       }
-      final chosenId = _plan.plan.value?.dayAt(d)?.stay?.stayId;
+      final day = _plan.plan.value?.dayAt(d);
+      final listed = {for (final s in day?.stayShortlist ?? const []) s.stayId};
       return SliverPadding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
         sliver: SliverList.builder(
           itemCount: items.length,
-          itemBuilder: (_, i) => _row(items[i], d, chosenId == items[i].id),
+          itemBuilder: (_, i) => Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: _row(items[i], d, listed.contains(items[i].id)),
+            ),
+          ),
         ),
       );
     });
   }
 
   Widget _row(StayNearbyModel s, int day, bool selected) {
+    final rawPhone = s.ownerPhone;
+    final phone = (rawPhone == null || ContactLauncher.tenDigits(rawPhone).isEmpty) ? null : rawPhone;
+    final off = !s.isActive;
     return NearbyItemRow(
       key: ValueKey(s.id),
       thumbnailUrl: s.thumbnailUrl,
-      tag: 'FOR STAY',
+      tag: off ? TripStrings.notAvailableNow.toUpperCase() : 'FOR STAY',
       title: s.title,
-      subtitle: [
-        if (s.stayTypeName != null && s.stayTypeName!.isNotEmpty) s.stayTypeName!,
-        '${s.distanceKm.toStringAsFixed(1)} km',
-      ].join(' · '),
+      subtitle: off
+          ? TripStrings.stayPaused
+          : [
+              if (s.stayTypeName != null && s.stayTypeName!.isNotEmpty) s.stayTypeName!,
+              '${s.distanceKm.toStringAsFixed(1)} km',
+            ].join(' · '),
       caption: 'FROM',
       value: s.minPricePerNight != null ? BrowseItem.inr(s.minPricePerNight!) : 'On request',
       unit: s.minPricePerNight != null ? '/night' : '',
@@ -207,31 +264,52 @@ class _TripStayScreenState extends State<TripStayScreen> {
       placeholderIcon: Iconsax.building_4,
       isFeatured: s.isFeatured,
       onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, 'distanceKm': s.distanceKm}),
-      trailing: _selectPill(selected, () => _plan.selectStay(day, s)),
+      actions: [
+        if (phone != null && !off)
+          NearbyRowAction(
+            icon: const Icon(Iconsax.call, size: 14, color: StayColors.accentDark),
+            label: TripStrings.call,
+            color: StayColors.accentDark,
+            onTap: () => ContactLauncher.call(phone),
+          ),
+        if (phone != null && !off)
+          NearbyRowAction(
+            icon: Image.asset('assets/images/whatsapp_icon.png',
+                width: 14,
+                height: 14,
+                errorBuilder: (_, _, _) => const Icon(Icons.chat, color: AppColors.whatsApp, size: 14)),
+            label: TripStrings.whatsApp,
+            color: AppColors.whatsApp,
+            onTap: () => ContactLauncher.whatsApp(phone, message: _whatsAppText()),
+          ),
+        if (off && selected)
+          NearbyRowAction(
+            icon: const Icon(Iconsax.close_circle, size: 14, color: AppColors.error),
+            label: TripStrings.remove,
+            color: AppColors.error,
+            onTap: () => _remove(day, s),
+          )
+        else if (!off)
+          NearbyRowAction(
+            icon: Icon(selected ? Iconsax.tick_circle : Iconsax.add_circle,
+                size: 14, color: selected ? AppColors.success : StayColors.accentDark),
+            label: selected ? TripStrings.shortlisted : TripStrings.shortlist,
+            color: selected ? AppColors.success : StayColors.accentDark,
+            onTap: () => selected ? _remove(day, s) : _toggle(day, s),
+          ),
+      ],
     );
   }
 
-  Widget _selectPill(bool selected, VoidCallback onTap) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? StayColors.accent : Colors.white,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: StayColors.accent, width: 1.3),
-        ),
-        child: Text(
-          selected ? '✓ Selected' : 'Select',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: selected ? Colors.white : StayColors.accentDark,
-          ),
-        ),
-      ),
+  String _whatsAppText() {
+    final p = _plan.plan.value;
+    final settings = _plan.settings;
+    final start = settings.startDate;
+    final end = p == null ? null : settings.endDate(p.days.length);
+    return TripStrings.stayWhatsAppText(
+      _plan.cityName,
+      start == null ? null : (end == null ? TripFormat.shortDate(start) : TripFormat.dateRange(start, end)),
+      settings.peopleSummary,
     );
   }
 }

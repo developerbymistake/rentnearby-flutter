@@ -17,6 +17,9 @@ class TaxiBrowseItem {
   final bool matchReversed;
   final DateTime createdAt;
   final bool isFeatured;
+  final int? localDayRate;
+  final int? localDayKm;
+  final String tripReplyLabel;
 
   const TaxiBrowseItem({
     required this.id,
@@ -37,6 +40,9 @@ class TaxiBrowseItem {
     required this.matchReversed,
     required this.createdAt,
     this.isFeatured = false,
+    this.localDayRate,
+    this.localDayKm,
+    this.tripReplyLabel = 'new',
   });
 
   factory TaxiBrowseItem.fromJson(Map<String, dynamic> json) => TaxiBrowseItem(
@@ -58,6 +64,9 @@ class TaxiBrowseItem {
         matchReversed: json['matchReversed'] as bool? ?? false,
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
         isFeatured: json['isFeatured'] == true,
+        localDayRate: (json['localDayRate'] as num?)?.toInt(),
+        localDayKm: (json['localDayKm'] as num?)?.toInt(),
+        tripReplyLabel: json['tripReplyLabel'] as String? ?? 'new',
       );
 
   bool get isMatch => matchedFare != null;

@@ -11,12 +11,14 @@ import '../../../widgets/selectable_chip.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_spots_controller.dart';
 import '../models/trip_city_model.dart';
+import '../models/trip_plan_model.dart';
 import '../models/trip_spot_category.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../widgets/trip_city_sheet.dart';
 import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_spot_row.dart';
+import 'trip_details_sheet.dart';
 
 class TripSpotsScreen extends StatefulWidget {
   const TripSpotsScreen({super.key});
@@ -83,7 +85,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     }
   }
 
-  void _planMyDays() {
+  Future<void> _planMyDays() async {
     if (_starting) return;
     final chosen = _ctrl.chosen;
     if (chosen.isEmpty) return;
@@ -93,7 +95,12 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       Get.back();
       return;
     }
-    unawaited(_plan.startFromSelection(_city, chosen));
+    final settings = await TripDetailsSheet.collect(context, initial: const TripSettings(), dayCount: 1);
+    if (!mounted) {
+      _starting = false;
+      return;
+    }
+    unawaited(_plan.startFromSelection(_city, chosen, settings: settings));
     Get.offNamed(AppRoutes.tripPlan);
   }
 

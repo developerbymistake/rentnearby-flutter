@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../../trip/trip_strings.dart';
 import '../guest/stay_landing_controller.dart';
 import '../models/stay_owner_model.dart';
 import 'stay_repository.dart';
@@ -60,6 +61,9 @@ class StaySetupController extends GetxController {
 
   Future<bool> updateRoomPrice(String roomId, int price) =>
       _mutate(() => _repo.updateRoomPrice(roomId, price), 'Could not update the price.');
+
+  Future<bool> saveAdvanceDetails({String? upiId, String? whatsAppNumber}) =>
+      _mutate(() => _repo.saveAdvanceDetails(upiId: upiId, whatsAppNumber: whatsAppNumber), TripStrings.couldNotLoad);
 
   Future<bool> deleteStay() async {
     try {

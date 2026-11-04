@@ -22,6 +22,8 @@ class TaxiDetailModel {
   final String? whatsAppNumber;
   final bool hasReported;
   final DateTime createdAt;
+  final int? localDayRate;
+  final int? localDayKm;
 
   TaxiDetailModel.fromJson(Map<String, dynamic> json)
       : id = json['id'] as String,
@@ -46,7 +48,9 @@ class TaxiDetailModel {
         contactPhone = _nonEmpty(json['contactPhone']),
         whatsAppNumber = _nonEmpty(json['whatsAppNumber']),
         hasReported = json['hasReported'] as bool? ?? false,
-        createdAt = DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now();
+        createdAt = DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+        localDayRate = (json['localDayRate'] as num?)?.toInt(),
+        localDayKm = (json['localDayKm'] as num?)?.toInt();
 
   static String? _nonEmpty(Object? v) => v is String && v.isNotEmpty ? v : null;
 

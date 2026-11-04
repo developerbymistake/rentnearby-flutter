@@ -65,6 +65,9 @@ class TaxiSetupController extends GetxController {
   Future<bool> updateFare(String routeId, int fare) =>
       _mutate(() => _repo.updateFare(routeId, fare), 'Could not update the fare.');
 
+  Future<bool> saveLocalRate({int? dayRate, int? kmPerDay}) =>
+      _mutate(() => _repo.updateLocalRate(dayRate: dayRate, kmPerDay: kmPerDay), 'Could not save the rate.');
+
   Future<bool> submit() => _mutate(_repo.submit, 'Could not submit your taxi.', awaitProfile: true);
 
   Future<bool> setAvailable(bool available) =>

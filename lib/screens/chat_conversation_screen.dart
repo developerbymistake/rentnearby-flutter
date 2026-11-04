@@ -1,19 +1,44 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import '../config/app_colors.dart';
+import '../config/app_routes.dart';
 import '../controllers/chat_controller.dart';
+import '../features/stay/enquiries/host_confirm_dialog.dart';
+import '../features/stay/enquiries/stay_enquiries_controller.dart';
+import '../features/stay/enquiries/stay_enquiry_actions.dart';
+import '../features/stay/enquiries/trip_owner_action_bar.dart';
+import '../features/trip/controllers/trip_enquiry_controller.dart';
+import '../features/trip/data/trip_enquiry_repository.dart';
+import '../features/trip/controllers/trip_plan_controller.dart';
+import '../features/trip/models/trip_enquiry_model.dart';
+import '../features/trip/trip_navigation.dart';
+import '../features/trip/trip_strings.dart';
+import '../features/trip/utils/trip_report.dart';
+import '../features/trip/widgets/trip_accept_sheet.dart';
+import '../features/trip/widgets/trip_cancel_sheet.dart';
+import '../features/trip/widgets/trip_change_request_sheet.dart';
+import '../features/trip/widgets/trip_counter_sheet.dart';
+import '../features/trip/widgets/trip_enquiry_strip.dart';
+import '../features/trip/widgets/trip_withdraw_sheet.dart';
+import '../models/browse_item.dart';
 import '../models/message_model.dart';
 import '../models/question_template_model.dart';
 import '../services/chat_hub_service.dart';
 import '../services/notification_service.dart';
+import '../utils/app_toast.dart';
+import '../utils/contact_launcher.dart';
 import '../utils/listing_kind_visuals.dart';
 import '../widgets/chat_message_bubble.dart';
 import '../widgets/chat_next_slot_bubble.dart';
 import '../widgets/chat_plus_menu_sheet.dart';
 import '../widgets/chat_schedule_picker_sheet.dart';
+import '../widgets/trip_chat_cards.dart';
+import '../widgets/trip_offer_cards.dart';
+import '../widgets/trip_report_traveller_sheet.dart';
 
 class ChatConversationScreen extends StatefulWidget {
   const ChatConversationScreen({super.key});
@@ -36,6 +61,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   late final String _listingTitle;
   late final String? _area;
   late final bool _isOwner;
+  late final String? _argListingId;
+  bool get _isStay => _listingType == 'Stay';
+  final _enquiry = Rxn<TripEnquiryModel>();
+  bool _enquiryBusy = false;
+  bool _enquiryDirty = false;
+  bool _movedOn = false;
   final _status = ''.obs;
   // Only meaningful when _status.value == 'Blocked' — true if the CURRENT user did the
   // blocking. Never inferred from _isOwner (either party can block the other regardless of
@@ -92,12 +123,14 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     _listingTitle = args['listingTitle'] as String? ?? '';
     _area = args['area'] as String?;
     _isOwner = args['isOwner'] as bool? ?? false;
+    _argListingId = args['listingId'] as String?;
     _status.value = args['status'] as String? ?? 'Active';
     _isBlockedByMe.value = args['isBlockedByMe'] as bool? ?? false;
 
     WidgetsBinding.instance.addObserver(this);
     _scrollCtrl.addListener(_onScroll);
     _loadHistory();
+    _refreshEnquiry();
     ChatHubService.to.joinConversation(_conversationId);
     _chatCtrl.markRead(_conversationId);
     _chatCtrl.loadQuestionTemplates();
@@ -110,6 +143,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     _incomingWorker = ever<MessageModel?>(_chatCtrl.incomingMessage, (m) {
       if (m == null || m.conversationId != _conversationId || !mounted) return;
       _insertIfNew(m);
+      if (_affectsEnquiry(m)) _refreshEnquiry();
       // The backend pushes this echo to the sender's own SignalR connection before the
       // sender's own REST call returns — so for our own messages, this is usually the
       // *first* confirmation of delivery, arriving before _send()'s finally block. Clear
@@ -151,12 +185,330 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       if (m == null || m.conversationId != _conversationId || !mounted) return;
       final idx = _messages.indexWhere((x) => x.id == m.id);
       if (idx != -1) _messages[idx] = m;
+      if (_affectsEnquiry(m)) _refreshEnquiry();
     });
 
     // SignalR's automatic-reconnect gets a brand-new connection id, so anything sent by the
     // other party during the drop was missed entirely by this screen (not just delayed) —
     // catch up on exactly what was missed instead of waiting for a manual reopen.
-    _reconnectWorker = ever<DateTime?>(_chatCtrl.hubReconnected, (_) => _catchUpAfterReconnect());
+    _reconnectWorker = ever<DateTime?>(_chatCtrl.hubReconnected, (_) {
+      _catchUpAfterReconnect();
+      _refreshEnquiry();
+    });
+  }
+
+  bool _affectsEnquiry(MessageModel m) => _isStay && (m.type.startsWith('trip_') || m.type == 'system');
+
+  Future<void> _refreshEnquiry() async {
+    if (!_isStay) return;
+    if (_enquiryBusy) {
+      _enquiryDirty = true;
+      return;
+    }
+    _enquiryBusy = true;
+    try {
+      do {
+        _enquiryDirty = false;
+        final e = await TripEnquiryController.to.forConversation(_conversationId);
+        if (!mounted) return;
+        if (e != null) _enquiry.value = e;
+      } while (_enquiryDirty);
+    } finally {
+      _enquiryBusy = false;
+    }
+  }
+
+  String? get _listingId {
+    if (_argListingId != null) return _argListingId;
+    final fromEnquiry = _enquiry.value?.listingId;
+    if (fromEnquiry != null && fromEnquiry.isNotEmpty) return fromEnquiry;
+    final i = _chatCtrl.conversations.indexWhere((c) => c.id == _conversationId);
+    return i == -1 ? null : _chatCtrl.conversations[i].listingId;
+  }
+
+  Future<void> _openStrip(TripEnquiryModel e) async {
+    if (_isOwner) {
+      Get.toNamed(AppRoutes.stayEnquiries, arguments: {'enquiryId': e.id});
+      return;
+    }
+    await _openReplies(e);
+  }
+
+  Future<void> _openReplies(TripEnquiryModel e) async {
+    final tripId = e.tripId;
+    if (tripId == null) {
+      AppToast.info(TripStrings.closed);
+      return;
+    }
+    final plan = TripPlanController.to;
+    if (plan.trip.value?.id != tripId) await plan.open(tripId);
+    if (!mounted) return;
+    TripNavigation.openReplies(e.day ?? 1, enquiryId: e.id);
+  }
+
+  Future<void> _onStripAction(String id, TripEnquiryModel e) async {
+    switch (id) {
+      case TripStripAction.withdraw:
+        if (await TripWithdrawSheet.show(context, enquiry: e)) _refreshEnquiry();
+      case TripStripAction.phoneBooking:
+      case TripStripAction.editBooking:
+        await _openReplies(e);
+      case TripStripAction.copyLink when _cachedLink(e.id) != null:
+        await Clipboard.setData(ClipboardData(text: _cachedLink(e.id)!.confirmLink));
+        AppToast.success(TripStrings.linkCopied);
+      case TripStripAction.resendLink:
+      case TripStripAction.copyLink:
+        final res = await TripEnquiryController.to.resendLink(e.id);
+        if (res == null) return;
+        if (Get.isRegistered<TripPlanController>()) Get.find<TripPlanController>().rememberLink(res);
+        _refreshEnquiry();
+        final phone = e.phoneBooking?.hostPhone;
+        if (id == TripStripAction.resendLink && phone != null && phone.isNotEmpty) {
+          await ContactLauncher.whatsApp(phone, message: res.whatsAppText);
+        } else {
+          await Clipboard.setData(ClipboardData(text: res.confirmLink));
+          AppToast.success(TripStrings.linkCopied);
+        }
+      case TripStripAction.cancel:
+        if (await TripCancelSheet.show(context, enquiry: e, ownerSide: false)) _refreshEnquiry();
+      case TripStripAction.callHost:
+        final phone = e.owner.phone;
+        if (phone != null && phone.isNotEmpty) await ContactLauncher.call(phone);
+      case TripStripAction.report:
+        await _reportHost(e.listingId, enquiryId: e.id);
+      case TripStripAction.counter:
+        if (await TripCounterSheet.show(context, enquiry: e)) _refreshEnquiry();
+      case TripStripAction.changeRequest:
+        if (await TripChangeRequestSheet.show(context, enquiry: e)) _refreshEnquiry();
+    }
+  }
+
+  TripPhoneBookingResult? _cachedLink(String enquiryId) =>
+      Get.isRegistered<TripPlanController>() ? Get.find<TripPlanController>().confirmLinks[enquiryId] : null;
+
+  Future<void> _reportHost(String? listingId, {String? enquiryId}) async {
+    if (listingId == null || listingId.isEmpty) {
+      AppToast.error(TripStrings.couldNotLoad);
+      return;
+    }
+    await TripReport.stay(context, listingId, tripEnquiryId: enquiryId ?? _enquiry.value?.id);
+  }
+
+  Future<void> _reportTraveller() async {
+    final e = _enquiry.value;
+    if (e == null) return;
+    await TripReportTravellerSheet.show(context, enquiry: e);
+  }
+
+  Future<TripEnquiryModel?> _freshEnquiry(String enquiryId) async {
+    final enq = await TripEnquiryController.to.refreshOne(enquiryId);
+    if (!mounted) return null;
+    if (enq == null) {
+      AppToast.warning(TripStrings.noNetwork);
+      return null;
+    }
+    if (enq.conversationId == _conversationId) _enquiry.value = enq;
+    return enq;
+  }
+
+  void _changed() {
+    AppToast.warning(TripStrings.justChanged);
+    _refreshEnquiry();
+  }
+
+  Future<void> _guardAction(String key, Future<void> Function() run) async {
+    if (!_pendingActionMessageIds.add(key)) return;
+    try {
+      await run();
+    } finally {
+      _pendingActionMessageIds.remove(key);
+    }
+  }
+
+  Future<void> _hostAcceptPrice(String messageId, String enquiryId, String offerId) => _guardAction(messageId, () async {
+        final enq = await _freshEnquiry(enquiryId);
+        if (enq == null || !mounted) return;
+        final counter = enq.pendingCounter;
+        if (counter == null || counter.id != offerId) {
+          _changed();
+          return;
+        }
+        if (await StayEnquiryActions.sendOffer(context, enq, counter: counter)) _refreshEnquiry();
+      });
+
+  Future<void> _hostDifferentOffer(String messageId, String enquiryId, String offerId) => _guardAction(messageId, () async {
+        final enq = await _freshEnquiry(enquiryId);
+        if (enq == null || !mounted) return;
+        final change = enq.pendingChange;
+        if (change != null && change.id == offerId) {
+          if (await StayEnquiryActions.revisedOffer(context, enq, changeRequest: change)) _refreshEnquiry();
+          return;
+        }
+        final counter = enq.pendingCounter;
+        if (counter == null || counter.id != offerId || !enq.isUnconfirmed) {
+          _changed();
+          return;
+        }
+        if (await StayEnquiryActions.sendOffer(context, enq)) _refreshEnquiry();
+      });
+
+  Future<void> _hostAcceptChange(String messageId, String enquiryId, String offerId) => _guardAction(messageId, () async {
+        final enq = await _freshEnquiry(enquiryId);
+        if (enq == null || !mounted) return;
+        final change = enq.pendingChange;
+        if (change == null || change.id != offerId) {
+          _changed();
+          return;
+        }
+        if (await StayEnquiryActions.acceptChange(context, enq, offerId)) _refreshEnquiry();
+      });
+
+  Future<void> _acceptNewPrice(String messageId, String enquiryId, String offerId) => _guardAction(messageId, () async {
+        final enq = await _freshEnquiry(enquiryId);
+        if (enq == null || !mounted) return;
+        final revised = enq.pendingRevised;
+        if (revised == null || revised.id != offerId) {
+          _changed();
+          return;
+        }
+        if (await TripAcceptSheet.show(context, enquiry: enq, offer: revised)) _refreshEnquiry();
+      });
+
+  Future<void> _keepPrice(String messageId, String enquiryId, String offerId) => _guardAction(messageId, () async {
+        final cached = _enquiry.value;
+        final enq = cached != null && cached.id == enquiryId ? cached : await _freshEnquiry(enquiryId);
+        if (enq == null || !mounted) return;
+        final money = BrowseItem.inr(enq.agreedTotalLocked ?? 0);
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(TripStrings.keepPriceQ(money),
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600)),
+            content: const Text(TripStrings.keepPriceBody,
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.4)),
+            actions: [
+              TextButton(
+                style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text(TripStrings.cancelAction, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(TripStrings.keepPrice(money),
+                    style: const TextStyle(fontFamily: 'Poppins', color: AppColors.textDark, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        );
+        if (ok != true || !mounted) return;
+        if (await TripEnquiryController.to.keepPrice(enquiryId, offerId)) _refreshEnquiry();
+      });
+
+  Future<void> _cancelStay(String messageId, String enquiryId) => _guardAction(messageId, () async {
+        final cached = _enquiry.value;
+        final enq = cached != null && cached.id == enquiryId ? cached : await _freshEnquiry(enquiryId);
+        if (enq == null || !mounted) return;
+        if (await TripCancelSheet.show(context, enquiry: enq, ownerSide: false)) _refreshEnquiry();
+      });
+
+  Future<void> _acceptOffer(String messageId, String enquiryId, String offerId) async {
+    if (!_pendingActionMessageIds.add(messageId)) return;
+    try {
+      final enq = await TripEnquiryController.to.refreshOne(enquiryId);
+      if (!mounted) return;
+      final offer = enq?.openOffer;
+      if (enq == null || offer == null || offer.id != offerId) {
+        AppToast.warning(enq == null ? TripStrings.noNetwork : TripStrings.justChanged);
+        _refreshEnquiry();
+        return;
+      }
+      if (await TripAcceptSheet.show(context, enquiry: enq, offer: offer)) _refreshEnquiry();
+    } finally {
+      _pendingActionMessageIds.remove(messageId);
+    }
+  }
+
+  Future<void> _declineOffer(String messageId, String enquiryId, String offerId) async {
+    if (!_pendingActionMessageIds.add(messageId)) return;
+    try {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(TripStrings.declineQuestion,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600)),
+          content: const Text(TripStrings.declineNote,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.4)),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text(TripStrings.keep, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text(TripStrings.decline,
+                  style: TextStyle(fontFamily: 'Poppins', color: AppColors.error, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+      if (await TripEnquiryController.to.decline(enquiryId, offerId)) _refreshEnquiry();
+    } finally {
+      _pendingActionMessageIds.remove(messageId);
+    }
+  }
+
+  Future<void> _hostAnswer(String messageId, String enquiryId, bool confirm) async {
+    if (!_pendingActionMessageIds.add(messageId)) return;
+    try {
+      final cached = _enquiry.value;
+      final enq = cached != null && cached.id == enquiryId ? cached : await TripEnquiryController.to.refreshOne(enquiryId);
+      if (enq == null || !mounted) return;
+      final ok = await HostConfirmDialog.show(context, confirm: confirm, enquiry: enq);
+      if (ok != true) return;
+      final done = await StayEnquiriesController.ensure().hostConfirm(enquiryId, confirm: confirm);
+      if (done) _refreshEnquiry();
+    } finally {
+      _pendingActionMessageIds.remove(messageId);
+    }
+  }
+
+  Future<void> _proofSent(String enquiryId) async {
+    if (!_pendingActionMessageIds.add('proof:$enquiryId')) return;
+    try {
+      if (await TripEnquiryController.to.proofSent(enquiryId)) _refreshEnquiry();
+    } finally {
+      _pendingActionMessageIds.remove('proof:$enquiryId');
+    }
+  }
+
+  Future<void> _markReceived(String enquiryId) async {
+    if (!_pendingActionMessageIds.add('recv:$enquiryId')) return;
+    try {
+      final ctrl = StayEnquiriesController.ensure();
+      if (await ctrl.markReceived(enquiryId)) {
+        if (mounted) setState(() => _movedOn = false);
+      } else if (ctrl.lastErrorType == TripEnquiryErrorTypes.travellerMovedOn && mounted) {
+        setState(() => _movedOn = true);
+      }
+      _refreshEnquiry();
+    } finally {
+      _pendingActionMessageIds.remove('recv:$enquiryId');
+    }
+  }
+
+  Future<void> _notYet(String enquiryId) async {
+    if (!_pendingActionMessageIds.add('notyet:$enquiryId')) return;
+    try {
+      if (await StayEnquiriesController.ensure().notYet(enquiryId)) _refreshEnquiry();
+    } finally {
+      _pendingActionMessageIds.remove('notyet:$enquiryId');
+    }
   }
 
   Future<void> _catchUpAfterReconnect() async {
@@ -525,6 +877,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       body: Column(
         children: [
           _buildHeader(context),
+          if (_isStay) _buildTripStrip(),
           _buildSafetyStrip(),
           Expanded(
             child: SafeArea(
@@ -589,6 +942,18 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     );
   }
 
+  Widget _buildTripStrip() => Obx(() {
+        final e = _enquiry.value;
+        if (e == null) return const SizedBox.shrink();
+        return TripEnquiryStrip(
+          enquiry: e,
+          ownerSide: _isOwner,
+          onTap: () => _openStrip(e),
+          actions: _isOwner ? const [] : TripStripAction.forTraveller(e, linkCached: _cachedLink(e.id) != null),
+          onAction: _isOwner ? null : (id) => _onStripAction(id, e),
+        );
+      });
+
   // Groups every answered quick_reply question together with its own answer, positioned
   // at the question's own slot — regardless of when the answer actually arrived relative
   // to any other pending question. An answer message is never rendered a second time at
@@ -649,6 +1014,15 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     // message near the TOP of the screen (matching chat-live-demo-v4.html's plain
     // flex-column thread) instead of being glued to the bottom of the screen.
     if (_status.value == 'Active') {
+      final enquiry = _enquiry.value;
+      if (_isOwner && enquiry != null) {
+        items.add(
+          KeyedSubtree(
+            key: const ValueKey('trip-owner-bar'),
+            child: TripOwnerActionBar(enquiry: enquiry, onChanged: _refreshEnquiry),
+          ),
+        );
+      }
       items.add(
         KeyedSubtree(
           key: const ValueKey('ghost-slot'),
@@ -786,9 +1160,26 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    onSelected: (_) =>
-                        isBlocked ? _confirmUnblockUser() : _confirmBlockUser(),
+                    onSelected: (v) {
+                      if (v == 'report') {
+                        _isOwner ? _reportTraveller() : _reportHost(_listingId);
+                      } else {
+                        isBlocked ? _confirmUnblockUser() : _confirmBlockUser();
+                      }
+                    },
                     itemBuilder: (_) => [
+                      if (_isStay && (!_isOwner || _enquiry.value != null))
+                        const PopupMenuItem(
+                          value: 'report',
+                          height: 48,
+                          child: Row(
+                            children: [
+                              Icon(Icons.flag_outlined, size: 18, color: AppColors.textMedium),
+                              SizedBox(width: 10),
+                              Text(TripStrings.report, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textDark)),
+                            ],
+                          ),
+                        ),
                       PopupMenuItem(
                         value: isBlocked ? 'unblock' : 'block',
                         child: Row(
@@ -1014,6 +1405,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     // notice below the list — the backend now rejects these calls too (see RespondContact/
     // RespondSchedule's Status check), so a stale-rendered button must never stay tappable.
     final conversationActive = _status.value == 'Active';
+    // ChatMessageBubble has no case for these card types, so they are built here.
+    if (TripOfferCards.handles(m.type)) {
+      return TripChatCards.build(
+        context,
+        m,
+        isOwner: _isOwner,
+        accent: _accent,
+        callbacks: _tripCallbacks(m, pending: pending, active: conversationActive),
+      );
+    }
     final canAnswer =
         !answered && !pending && conversationActive && m.type == 'quick_reply' && (_isOwner || !m.isMine);
     // A schedule_proposal or contact_request that's already been answered must never
@@ -1055,6 +1456,37 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         final phone = m.payload['phone'] as String?;
         if (phone != null) _call(phone);
       },
+      isOwner: _isOwner,
+      trip: TripChatCards.handles(m.type) ? _tripCallbacks(m, pending: pending, active: conversationActive) : null,
+    );
+  }
+
+  TripChatCallbacks _tripCallbacks(MessageModel m, {required bool pending, required bool active}) {
+    final enabled = active && !pending;
+    return TripChatCallbacks(
+      listingTitle: _listingTitle,
+      onAccept: enabled && !_isOwner ? (e, o) => _acceptOffer(m.id, e, o) : null,
+      onDecline: enabled && !_isOwner ? (e, o) => _declineOffer(m.id, e, o) : null,
+      onAskNewOffer: active && !_isOwner ? _openPlusMenu : null,
+      onHostYes: enabled && _isOwner ? (e) => _hostAnswer(m.id, e, true) : null,
+      onHostNotMe: enabled && _isOwner ? (e) => _hostAnswer(m.id, e, false) : null,
+      onProofSent: enabled && !_isOwner ? _proofSent : null,
+      onMarkReceived: enabled && _isOwner ? _markReceived : null,
+      onNotYet: enabled && _isOwner ? _notYet : null,
+      onAcceptPrice: enabled && _isOwner ? (e, o) => _hostAcceptPrice(m.id, e, o) : null,
+      onSendDifferentOffer: enabled && _isOwner ? (e, o) => _hostDifferentOffer(m.id, e, o) : null,
+      onAcceptChange: enabled && _isOwner ? (e, o) => _hostAcceptChange(m.id, e, o) : null,
+      onAcceptNewPrice: enabled && !_isOwner ? (e, o) => _acceptNewPrice(m.id, e, o) : null,
+      onKeepPrice: enabled && !_isOwner ? (e, o) => _keepPrice(m.id, e, o) : null,
+      onCancelStay: enabled && !_isOwner ? (e) => _cancelStay(m.id, e) : null,
+      agreedTotal: _enquiry.value?.agreedTotalLocked,
+      advance: _enquiry.value?.advance,
+      guestName: _enquiry.value?.traveller.name ?? (_isOwner ? _otherPartyName : null),
+      guestPhone: _enquiry.value?.traveller.phone,
+      hostPhone: _enquiry.value?.owner.phone,
+      tripId: _enquiry.value?.tripId,
+      day: _enquiry.value?.day,
+      movedOn: _movedOn,
     );
   }
 

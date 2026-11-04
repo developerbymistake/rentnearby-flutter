@@ -12,6 +12,8 @@ class StayStepRow extends StatelessWidget {
   final StayStepState state;
   final VoidCallback? onTap;
   final Color accent;
+  final IconData? icon;
+  final String? trailing;
 
   const StayStepRow({
     super.key,
@@ -21,13 +23,16 @@ class StayStepRow extends StatelessWidget {
     required this.state,
     this.onTap,
     required this.accent,
+    this.icon,
+    this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.of(context).disableAnimations;
-    final locked = state == StayStepState.locked;
-    final current = state == StayStepState.current;
+    final optional = icon != null;
+    final locked = !optional && state == StayStepState.locked;
+    final current = !optional && state == StayStepState.current;
     return AnimatedOpacity(
       opacity: locked ? 0.45 : 1,
       duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 300),
@@ -53,6 +58,8 @@ class StayStepRow extends StatelessWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                 const SizedBox(height: 2),
@@ -71,6 +78,7 @@ class StayStepRow extends StatelessWidget {
   }
 
   Widget _badge(bool reduceMotion) {
+    if (icon != null) return _circle(accent.withValues(alpha: 0.12), Icon(icon, size: 18, color: accent));
     switch (state) {
       case StayStepState.done:
         return TweenAnimationBuilder<double>(
@@ -103,6 +111,14 @@ class StayStepRow extends StatelessWidget {
       style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: color));
 
   Widget _trailing() {
+    if (icon != null) {
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        if (trailing != null)
+          Text(trailing!,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: accent)),
+        Icon(Icons.chevron_right_rounded, size: 20, color: accent),
+      ]);
+    }
     switch (state) {
       case StayStepState.done:
         return Text('Edit',

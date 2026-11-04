@@ -1,11 +1,14 @@
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../config/app_colors.dart';
+import '../config/app_constants.dart';
 import '../controllers/location_controller.dart';
 import '../models/city_model.dart';
 import '../models/location_context.dart';
@@ -533,7 +536,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
                   MapLibreMap(
                     styleString: 'assets/map_style.json',
                     initialCameraPosition: CameraPosition(
-                      target: _userLocation ?? const LatLng(30.3165, 78.0322),
+                      target: _userLocation ?? const LatLng(AppConstants.fallbackLat, AppConstants.fallbackLng),
                       zoom: 14.0,
                     ),
                     compassEnabled: false,
@@ -541,6 +544,7 @@ mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
                     tiltGesturesEnabled: false,
                     myLocationEnabled: false,
                     trackCameraPosition: true,
+                    gestureRecognizers: {Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer())},
                     attributionButtonMargins: const Point(-200.0, 0.0),
                     // Panning/zooming is capped to the current district's own
                     // padded bounds (set once its boundary loads) instead of a

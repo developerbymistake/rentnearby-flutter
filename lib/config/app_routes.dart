@@ -25,6 +25,7 @@ import '../screens/role_change_screen.dart';
 import '../features/stay/stay_routes.dart';
 import '../features/jobs/jobs_routes.dart';
 import '../features/taxi/taxi_routes.dart';
+import '../features/taxi/ways/taxi_ways_routes.dart';
 import '../features/trip/trip_routes.dart';
 
 class AppRoutes {
@@ -75,6 +76,11 @@ class AppRoutes {
   static const String myTaxi = '/my-taxi';
   static const String taxiDetail = '/taxi-detail';
   static const String taxiList = '/taxi-list';
+  static const String taxiWays = '/taxi-ways';
+  static const String journeyPlan = '/journey-plan';
+  static const String journeyRoad = '/journey-road';
+  static const String myJourneys = '/my-journeys';
+  static const String savedJourney = '/saved-journey';
 
   static const String tripSpots = '/trip-spots';
   static const String tripPlan = '/trip-plan';
@@ -82,12 +88,18 @@ class AppRoutes {
   static const String tripStay = '/trip-stay';
   static const String tripMap = '/trip-map';
   static const String myTrips = '/my-trips';
+  static const String tripReplies = '/trip-replies';
+  static const String stayEnquiries = '/stay-enquiries';
+  static const String tripLeads = '/trip-leads';
+  static const String tripTaxiReplies = '/trip-taxi-replies';
+  static const String tripSummary = '/trip-summary';
+  static const String stayAdvanceDetails = '/stay-advance-details';
 
   static const Set<String> ownerOnly = {plansBilling, planHistory};
   static const Set<String> roomOwnerOnly = {myListings, addListing};
   static const Set<String> plotOwnerOnly = {myPlots, addPlot};
-  static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob};
-  static const Set<String> taxiDriverOnly = {taxiSetup, taxiVehicle, taxiRoutes, taxiSubmit, myTaxi};
+  static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob, stayEnquiries, stayAdvanceDetails};
+  static const Set<String> taxiDriverOnly = {taxiSetup, taxiVehicle, taxiRoutes, taxiSubmit, myTaxi, tripLeads};
 
   static const Map<String, String> _routeTabKeys = {
     listingDetail: AppTabKeys.rooms,
@@ -101,6 +113,7 @@ class AppRoutes {
     stayRooms: AppTabKeys.stays,
     stayRules: AppTabKeys.stays,
     staySubmit: AppTabKeys.stays,
+    stayAdvanceDetails: AppTabKeys.stays,
     myStays: AppTabKeys.stays,
     stayDetail: AppTabKeys.stays,
     myJobs: AppTabKeys.jobs,
@@ -113,6 +126,11 @@ class AppRoutes {
     myTaxi: AppTabKeys.taxi,
     taxiDetail: AppTabKeys.taxi,
     taxiList: AppTabKeys.taxi,
+    taxiWays: AppTabKeys.taxi,
+    journeyPlan: AppTabKeys.taxi,
+    journeyRoad: AppTabKeys.taxi,
+    myJourneys: AppTabKeys.taxi,
+    savedJourney: AppTabKeys.taxi,
   };
 
   static String? tabKeyForRoute(String route) => _routeTabKeys[route];
@@ -254,6 +272,7 @@ class AppRoutes {
     ...stayPages,
     ...jobPages,
     ...taxiPages,
+    ...taxiWaysPages,
     ...tripPages,
   ];
 }

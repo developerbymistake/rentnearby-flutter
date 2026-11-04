@@ -1,7 +1,9 @@
 import 'package:get/get.dart';
 import '../../config/app_routes.dart';
+import 'enquiries/stay_enquiries_screen.dart';
 import 'guest/stay_detail_screen.dart';
 import 'setup/my_stays_screen.dart';
+import 'setup/stay_advance_details_screen.dart';
 import 'setup/stay_basic_details_screen.dart';
 import 'setup/stay_rooms_screen.dart';
 import 'setup/stay_rules_screen.dart';
@@ -50,5 +52,17 @@ final List<GetPage> stayPages = [
     page: () => const StayDetailScreen(),
     transition: Transition.downToUp,
     transitionDuration: const Duration(milliseconds: 350),
+  ),
+  GetPage(
+    name: AppRoutes.stayAdvanceDetails,
+    page: () => const StayAdvanceDetailsScreen(),
+    transition: Transition.rightToLeft,
+    transitionDuration: const Duration(milliseconds: 300),
+  ),
+  GetPage(
+    name: AppRoutes.stayEnquiries,
+    page: () => const StayEnquiriesScreen(),
+    transition: Transition.rightToLeft,
+    transitionDuration: const Duration(milliseconds: 300),
   ),
 ];

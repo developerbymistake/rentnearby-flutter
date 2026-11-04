@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../../config/app_routes.dart';
 import 'guest/taxi_detail_screen.dart';
 import 'guest/taxi_list_screen.dart';
+import 'leads/trip_leads_screen.dart';
 import 'setup/my_taxi_screen.dart';
 import 'setup/taxi_routes_screen.dart';
 import 'setup/taxi_setup_hub_screen.dart';
@@ -48,6 +49,12 @@ final List<GetPage> taxiPages = [
   GetPage(
     name: AppRoutes.taxiList,
     page: () => const TaxiListScreen(),
+    transition: Transition.rightToLeft,
+    transitionDuration: const Duration(milliseconds: 300),
+  ),
+  GetPage(
+    name: AppRoutes.tripLeads,
+    page: () => const TripLeadsScreen(),
     transition: Transition.rightToLeft,
     transitionDuration: const Duration(milliseconds: 300),
   ),

@@ -4,13 +4,16 @@ import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_shadows.dart';
 import '../controllers/trip_plan_controller.dart';
+import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
 import '../screens/trip_edit_spot_sheet.dart';
 import '../trip_colors.dart';
+import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../utils/trip_format.dart';
 import 'trip_day_actions.dart';
+import 'trip_status.dart';
 
 class TripDayTile extends StatelessWidget {
   final int day;
@@ -44,7 +47,7 @@ class TripDayTile extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _header(color, total, over, c.isEstimate(day), d.spots.isEmpty),
+            _header(color, total, over, c.isEstimate(day), d.spots.isEmpty, plan.settings.dateOf(day)),
             for (final text in closed)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
@@ -90,9 +93,137 @@ class TripDayTile extends StatelessWidget {
               ),
             const SizedBox(height: 10),
             TripDayActions(day),
+            _taxiRedNote(c),
+            _redNote(c, d),
           ],
         );
       }),
+    );
+  }
+
+  Widget _redNote(TripPlanController c, TripDay d) {
+    final e = c.primaryEnquiry(day);
+    if (e == null || !e.isRed || c.isLastDay(day) || !c.showStayOption || c.isCompleted) return const SizedBox.shrink();
+    if (e.display == TripDisplayStatus.holdExpired) {
+      final replied = c
+          .enquiriesForNight(day)
+          .where((x) => x.id != e.id && x.display == TripDisplayStatus.offered)
+          .map((x) => x.listingName)
+          .where((n) => n.isNotEmpty)
+          .toList();
+      return _note(
+        text: '${e.listingName} · ${TripStrings.holdExpired}',
+        detail: replied.isEmpty
+            ? TripStrings.holdExpiredNote
+            : TripStrings.otherStaysReplied(replied.length, replied.join(', ')),
+        action: TripStrings.askOtherStays,
+        onAction: () => replied.isEmpty ? TripNavigation.openStay(day) : TripNavigation.openReplies(day),
+      );
+    }
+    final asked = {for (final x in c.enquiriesForNight(day)) x.listingId};
+    final others = d.stayShortlist.where((s) => !asked.contains(s.stayId)).length;
+    final label = e.display == TripDisplayStatus.cancelled && e.cancelledBy == 'owner'
+        ? TripStrings.hostCancelled
+        : TripStatusVisuals.label(e.display);
+    final again = c.canAskAgain(TripEnquiryKinds.stay, day);
+    return _note(
+      text: '${e.listingName} · $label',
+      action: again ? TripStrings.askAgain : (others > 0 ? TripStrings.askOther(others) : TripStrings.findAnother),
+      onAction: again ? () => _askAgain(c, TripEnquiryKinds.stay) : () => TripNavigation.openStay(day),
+      busy: again && c.askBusy.value,
+    );
+  }
+
+  Widget _taxiRedNote(TripPlanController c) {
+    final e = c.primaryTaxiEnquiry(day);
+    if (e == null || !e.isRed || !c.showTaxiOption || c.isCompleted) return const SizedBox.shrink();
+    final other = c
+        .taxiEnquiriesForDay(day)
+        .where((x) => x.id != e.id && x.listingId != e.listingId && x.display.isOpen)
+        .map((x) => x.listingName)
+        .where((n) => n.isNotEmpty)
+        .firstOrNull;
+    final label = e.display == TripDisplayStatus.cancelled && e.cancelledBy == 'owner'
+        ? TripStrings.hostCancelled
+        : TripStatusVisuals.label(e.display, taxi: true);
+    final again = other == null && c.canAskAgain(TripEnquiryKinds.taxi, day);
+    return _note(
+      text: '${e.listingName} · $label',
+      detail: other == null ? null : TripStrings.driverAlsoGot(other),
+      action: again ? TripStrings.askAgain : (other == null ? TripStrings.findAnotherTaxi : TripStrings.askAnother),
+      onAction: again
+          ? () => _askAgain(c, TripEnquiryKinds.taxi)
+          : () => other == null ? TripNavigation.openTaxi(day) : TripNavigation.openTaxiReplies(day),
+      busy: again && c.askBusy.value,
+    );
+  }
+
+  Future<void> _askAgain(TripPlanController c, String kind) async {
+    final batch = await c.askAgain(kind: kind, day: day);
+    if (batch == null) return;
+    if (kind == TripEnquiryKinds.taxi) {
+      TripNavigation.openTaxiReplies(day);
+    } else {
+      TripNavigation.openReplies(day);
+    }
+  }
+
+  Widget _note({
+    required String text,
+    String? detail,
+    required String action,
+    required VoidCallback onAction,
+    bool busy = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.only(left: 10),
+      decoration: BoxDecoration(color: TripStatusColors.failedSurface, borderRadius: BorderRadius.circular(10)),
+      child: Row(
+        children: [
+          const Icon(Iconsax.warning_2, size: 14, color: TripStatusColors.failed),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    text,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.errorText),
+                  ),
+                  if (detail != null)
+                    Text(
+                      detail,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.errorText),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 140),
+            child: TextButton(
+              onPressed: busy ? null : onAction,
+              style: TextButton.styleFrom(minimumSize: const Size(0, 44), padding: const EdgeInsets.symmetric(horizontal: 10)),
+              child: Text(
+                action,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w700, color: TripStatusColors.failed),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -102,14 +233,18 @@ class TripDayTile extends StatelessWidget {
     return name == null ? w.message : '$name is closed on that day';
   }
 
-  Widget _header(Color color, int total, bool over, bool estimate, bool free) {
+  Widget _header(Color color, int total, bool over, bool estimate, bool free, DateTime? date) {
     return Row(
       children: [
-        Text(
-          'Day $day',
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: color),
+        Expanded(
+          child: Text(
+            date == null ? 'Day $day' : 'Day $day · ${TripFormat.shortDate(date)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: color),
+          ),
         ),
-        const Spacer(),
+        const SizedBox(width: 8),
         if (estimate) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),

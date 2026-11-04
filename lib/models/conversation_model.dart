@@ -1,3 +1,5 @@
+import '../features/trip/models/trip_enquiry_model.dart';
+
 class ConversationModel {
   final String id;
   final String listingType; // "Room" | "Plot" | "Stay"
@@ -22,6 +24,7 @@ class ConversationModel {
   final DateTime lastMessageAt;
   final String? lastMessagePreview;
   final int unreadCount;
+  final TripEnquiryModel? tripEnquiry;
 
   ConversationModel({
     required this.id,
@@ -41,6 +44,7 @@ class ConversationModel {
     required this.lastMessageAt,
     this.lastMessagePreview,
     required this.unreadCount,
+    this.tripEnquiry,
   });
 
   bool get isActive => status == 'Active';
@@ -63,5 +67,8 @@ class ConversationModel {
         lastMessageAt: DateTime.parse(json['lastMessageAt'] as String),
         lastMessagePreview: json['lastMessagePreview'] as String?,
         unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
+        tripEnquiry: json['tripEnquiry'] is Map<String, dynamic>
+            ? TripEnquiryModel.fromJson(json['tripEnquiry'] as Map<String, dynamic>)
+            : null,
       );
 }

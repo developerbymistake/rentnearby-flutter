@@ -33,10 +33,11 @@ class ReportController extends GetxController {
     required String listingType, // 'Room' | 'Plot' | 'Stay' | 'Taxi'
     required String reasonId,
     required String details,
+    String? tripEnquiryId,
   }) async {
     try {
       final path = '${_basePath(listingType)}/$listingId/report';
-      await ApiService.post(path, {'reasonId': reasonId, 'details': details});
+      await ApiService.post(path, {'reasonId': reasonId, 'details': details, 'tripEnquiryId': ?tripEnquiryId});
       reportedListingIds.add(listingId);
       return true;
     } catch (e) {

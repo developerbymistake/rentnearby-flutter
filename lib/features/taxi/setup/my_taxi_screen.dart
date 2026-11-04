@@ -12,6 +12,7 @@ import '../../../utils/app_toast.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/plan_cap_strip.dart';
 import '../../../widgets/gradient_button.dart';
+import '../leads/trip_leads_controller.dart';
 import '../models/taxi_owner_model.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_owner_card.dart';
@@ -26,12 +27,14 @@ class MyTaxiScreen extends StatefulWidget {
 class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver {
   final _ctrl = TaxiSetupController.ensure();
   final _isSharing = false.obs;
+  final _leads = TripLeadsController.ensure();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _ctrl.load();
+    _leads.loadBadge(force: true);
   }
 
   @override
@@ -42,7 +45,10 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _ctrl.load();
+    if (state == AppLifecycleState.resumed) {
+      _ctrl.load();
+      _leads.loadBadge(force: true);
+    }
   }
 
   Future<void> _openSetup() async {
@@ -98,7 +104,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
                         else if (taxi == null)
                           _empty()
                         else ...[
-                          Builder(builder: (ctx) => _card(ctx, taxi)),
+                          Builder(builder: (ctx) => Obx(() => _card(ctx, taxi))),
                           if (!taxi.isPendingReview)
                             Center(
                               child: TextButton.icon(
@@ -156,6 +162,12 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
           'title': t.plateDisplay ?? 'Taxi',
         }),
         onOpenSetup: _openSetup,
+        newLeads: _leads.newCount.value,
+        onTripLeads: () async {
+          await Get.toNamed(AppRoutes.tripLeads);
+          if (mounted) _leads.loadBadge(force: true);
+        },
+        onLocalRate: _openSetup,
       );
 
   Widget _empty() => Padding(

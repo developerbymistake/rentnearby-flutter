@@ -1,3 +1,5 @@
+import '../../../utils/search_fold.dart';
+
 class TripCityStatus {
   static const String ready = 'Ready';
   static const String notReady = 'NotReady';
@@ -13,6 +15,7 @@ class TripCityModel {
   final String? imageUrl;
   final String status;
   final int spotCount;
+  final bool isPopularDestination;
 
   const TripCityModel({
     required this.cityKey,
@@ -24,6 +27,7 @@ class TripCityModel {
     this.imageUrl,
     this.status = TripCityStatus.ready,
     this.spotCount = 0,
+    this.isPopularDestination = false,
   });
 
   bool get isReady => status == TripCityStatus.ready;
@@ -40,6 +44,7 @@ class TripCityModel {
         imageUrl: json['imageUrl'] as String?,
         status: json['status'] as String? ?? TripCityStatus.ready,
         spotCount: (json['spotCount'] as num?)?.toInt() ?? 0,
+        isPopularDestination: json['isPopularDestination'] == true,
       );
 
   Map<String, dynamic> toJson() => {
@@ -52,6 +57,7 @@ class TripCityModel {
         'imageUrl': imageUrl,
         'status': status,
         'spotCount': spotCount,
+        'isPopularDestination': isPopularDestination,
       };
 }
 
@@ -97,20 +103,25 @@ class TripCityVersion {
 
 class TripCitySearch {
   static List<TripCityModel> filter(List<TripCityModel> all, String q) {
-    final query = q.trim().toLowerCase();
+    final query = SearchFold.fold(q);
     if (query.isEmpty) return List.of(all);
     final prefix = <TripCityModel>[];
     final contains = <TripCityModel>[];
     for (final c in all) {
-      final name = c.name.toLowerCase();
+      final name = SearchFold.fold(c.name);
       if (name.startsWith(query)) {
         prefix.add(c);
-      } else if (name.contains(query) || c.placeLine.toLowerCase().contains(query)) {
+      } else if (name.contains(query) || SearchFold.contains(c.placeLine, query)) {
         contains.add(c);
       }
     }
     return [...prefix, ...contains];
   }
+
+  static List<TripCityModel> popularFirst(List<TripCityModel> items) => [
+        ...items.where((c) => c.isPopularDestination),
+        ...items.where((c) => !c.isPopularDestination),
+      ];
 
   static List<TripCityModel> dedupe(Iterable<TripCityModel> items) {
     final seen = <int>{};

@@ -79,6 +79,8 @@ class TaxiOwnerModel {
   final bool hasDrivingLicence;
   final bool hasDateOfBirth;
   final bool everApproved;
+  final int? localDayRate;
+  final int? localDayKm;
 
   const TaxiOwnerModel({
     required this.id,
@@ -114,6 +116,8 @@ class TaxiOwnerModel {
     this.hasDrivingLicence = false,
     this.hasDateOfBirth = false,
     this.everApproved = false,
+    this.localDayRate,
+    this.localDayKm,
   });
 
   bool get isDraft => status == TaxiStatus.draft;
@@ -122,6 +126,7 @@ class TaxiOwnerModel {
   bool get isRejected => status == TaxiStatus.rejected;
   bool get canEditSetup => !isPendingReview;
   bool get identityDone => hasDrivingLicence && hasDateOfBirth;
+  bool get hasLocalRate => localDayRate != null;
 
   String get locality => cityName ?? districtName ?? '';
 
@@ -167,6 +172,8 @@ class TaxiOwnerModel {
       hasDrivingLicence: json['hasDrivingLicence'] == true,
       hasDateOfBirth: json['hasDateOfBirth'] == true,
       everApproved: json['everApproved'] == true,
+      localDayRate: (json['localDayRate'] as num?)?.toInt(),
+      localDayKm: (json['localDayKm'] as num?)?.toInt(),
     );
   }
 }

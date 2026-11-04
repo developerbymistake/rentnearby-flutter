@@ -2,16 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
-import '../../../controllers/location_controller.dart';
 import '../../../models/browse_item.dart';
-import '../../../models/place_result_model.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/gradient_button.dart';
-import '../../../widgets/location_search_sheet.dart';
+import '../../../widgets/location_switch_sheet.dart';
 import '../../stay/setup/dashed_add_row.dart';
 import '../../stay/setup/stay_option_grid.dart';
 import '../taxi_option_sets.dart';
@@ -24,11 +21,11 @@ class _Place {
   final double lng;
   const _Place({required this.name, this.label, required this.lat, required this.lng});
 
-  factory _Place.fromResult(PlaceResult p) => _Place(
-        name: _cut(p.name.trim().isNotEmpty ? p.name.trim() : p.subtitle.trim(), 80),
-        label: p.subtitle.trim().isNotEmpty ? _cut(p.subtitle.trim(), 160) : null,
-        lat: p.latLng.latitude,
-        lng: p.latLng.longitude,
+  factory _Place.fromPicked(PickedPlace p) => _Place(
+        name: _cut(p.name.trim(), 80),
+        label: p.districtName.trim().isNotEmpty ? _cut(p.districtName.trim(), 160) : null,
+        lat: p.latitude,
+        lng: p.longitude,
       );
 
   static String _cut(String s, int max) => s.length > max ? s.substring(0, max) : s;
@@ -56,6 +53,9 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
   final _ctrl = TaxiSetupController.ensure();
   final _fareCtrl = TextEditingController();
   final _fareFocusNode = FocusNode();
+  final _rateCtrl = TextEditingController();
+  final _kmCtrl = TextEditingController();
+  bool _savingRate = false;
   final List<_RouteDraft> _routes = [];
   bool _formOpen = false;
   int? _editingIndex;
@@ -82,13 +82,99 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
     }
     _formOpen = _routes.length < _max;
     _from = _defaultFrom;
+    _syncRateFields();
   }
 
   @override
   void dispose() {
     _fareCtrl.dispose();
     _fareFocusNode.dispose();
+    _rateCtrl.dispose();
+    _kmCtrl.dispose();
     super.dispose();
+  }
+
+  String get _storedRate => '${_ctrl.taxi.value?.localDayRate ?? ''}';
+  String get _storedKm => '${_ctrl.taxi.value?.localDayKm ?? ''}';
+  bool get _rateEditable => _ctrl.taxi.value?.canEditSetup ?? true;
+  bool get _rateDirty => _rateCtrl.text.trim() != _storedRate || _kmCtrl.text.trim() != _storedKm;
+
+  void _syncRateFields() {
+    _rateCtrl.text = _storedRate;
+    _kmCtrl.text = _storedKm;
+  }
+
+  Future<bool> _confirmClearRate() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Clear your day rate?',
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        content: const Text('You leave the trip planning list.',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep',
+                style: TextStyle(fontFamily: 'Poppins', color: TaxiColors.accentDark, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(0, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Clear', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
+  Future<void> _saveRate() async {
+    if (_savingRate || _ctrl.isSaving.value) return;
+    FocusScope.of(context).unfocus();
+    final rateText = _rateCtrl.text.trim();
+    final kmText = _kmCtrl.text.trim();
+    int? rate;
+    int? km;
+    if (rateText.isEmpty) {
+      if (kmText.isNotEmpty) {
+        AppToast.error('Add a day rate first');
+        return;
+      }
+      if (_ctrl.taxi.value?.hasLocalRate != true) {
+        AppToast.error('Enter a day rate');
+        return;
+      }
+      if (!await _confirmClearRate() || !mounted) return;
+    } else {
+      rate = int.tryParse(rateText) ?? 0;
+      if (rate < TaxiOptionSets.minFare || rate > TaxiOptionSets.maxFare) {
+        AppToast.error('Fare must be between ₹100 and ₹99,00,000');
+        return;
+      }
+      if (kmText.isNotEmpty) {
+        km = int.tryParse(kmText) ?? 0;
+        if (km > TaxiOptionSets.localDayKmMax) {
+          AppToast.error('Km per day must be 0 to ${TaxiOptionSets.localDayKmMax}');
+          return;
+        }
+      }
+    }
+    setState(() => _savingRate = true);
+    final ok = await _ctrl.saveLocalRate(dayRate: rate, kmPerDay: km);
+    if (!mounted) return;
+    setState(() {
+      _savingRate = false;
+      if (ok) _syncRateFields();
+    });
+    if (ok) AppToast.success(rate == null ? 'Rate cleared' : 'Rate saved');
   }
 
   int get _count => _routes.length + (_formOpen ? 1 : 0);
@@ -101,12 +187,6 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
   }
 
   bool get _formBlank => _fromIsDefault && _to == null && _fareCtrl.text.trim().isEmpty && _tripType == null;
-
-  LatLng get _bias {
-    final t = _ctrl.taxi.value;
-    if (t?.latitude != null && t?.longitude != null) return LatLng(t!.latitude!, t.longitude!);
-    return Get.find<LocationController>().effectiveSearchCenter;
-  }
 
   _Place? get _defaultFrom {
     if (_routes.isNotEmpty) return _routes.last.from;
@@ -132,13 +212,14 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
     _picking = true;
     FocusScope.of(context).unfocus();
     try {
-      final picked = await LocationSearchSheet.show(context, bias: _bias, palette: TaxiColors.palette);
+      final picked = await LocationSwitchSheet.pick(context,
+          palette: TaxiColors.palette, title: isFrom ? 'From city' : 'To city');
       if (picked == null || !mounted) return;
       setState(() {
         if (isFrom) {
-          _from = _Place.fromResult(picked);
+          _from = _Place.fromPicked(picked);
         } else {
-          _to = _Place.fromResult(picked);
+          _to = _Place.fromPicked(picked);
         }
         _dirty = true;
       });
@@ -312,7 +393,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
 
   void _onBack() {
     if (_ctrl.isSaving.value) return;
-    if (_dirty || !_formBlank) {
+    if (_dirty || !_formBlank || _rateDirty) {
       _confirmDiscard();
     } else {
       Get.back();
@@ -335,6 +416,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  _localRateCard(),
                   for (var i = 0; i < _routes.length; i++) _summaryCard(i),
                   if (_formOpen) _form(),
                   _addRow(),
@@ -345,7 +427,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
           ]),
         ),
         Obx(() => _ctrl.isSaving.value
-            ? AppLoadingOverlay.stackChild(message: 'Saving routes...', indicatorColor: TaxiColors.accent)
+            ? AppLoadingOverlay.stackChild(message: _savingRate ? 'Saving rate...' : 'Saving routes...', indicatorColor: TaxiColors.accent)
             : const SizedBox.shrink()),
       ]),
     );
@@ -508,6 +590,77 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
           }),
           accent: TaxiColors.accent,
         ),
+      ]),
+    );
+  }
+
+  InputDecoration _numberDecoration({required String hint, String? prefix, String? suffix}) => InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
+        prefixText: prefix,
+        prefixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
+        suffixText: suffix,
+        suffixStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
+        filled: true,
+        fillColor: TaxiColors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        enabledBorder:
+            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
+        focusedBorder:
+            OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: TaxiColors.accent, width: 1.5)),
+      );
+
+  Widget _localRateCard() {
+    final editable = _rateEditable;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Local sightseeing',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        const SizedBox(height: 2),
+        const Text('Needed to appear in trip planning',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+        _label('Rate per day (₹)'),
+        TextFormField(
+          controller: _rateCtrl,
+          readOnly: !editable,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(7)],
+          onChanged: (_) => setState(() {}),
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+          decoration: _numberDecoration(hint: 'e.g. 2500', prefix: '₹ '),
+        ),
+        _label('Km included per day (optional)'),
+        TextFormField(
+          controller: _kmCtrl,
+          readOnly: !editable,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)],
+          onChanged: (_) => setState(() {}),
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
+          decoration: _numberDecoration(hint: 'e.g. 120', suffix: 'km'),
+        ),
+        const SizedBox(height: 12),
+        const Text('Travellers see this rate. You can quote a different fare for a trip after you read the itinerary.',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, height: 1.4, color: AppColors.textMedium)),
+        if (editable) ...[
+          const SizedBox(height: 14),
+          GradientButton(
+            onPressed: _savingRate || !_rateDirty ? null : _saveRate,
+            isLoading: _savingRate,
+            label: 'Save rate',
+            height: 48,
+            gradient: TaxiColors.gradient,
+            shadowColor: TaxiColors.accent,
+          ),
+        ],
       ]),
     );
   }

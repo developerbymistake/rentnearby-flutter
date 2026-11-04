@@ -16,6 +16,8 @@ import '../taxi_option_sets.dart';
 import 'taxi_card.dart';
 import 'taxi_list_controller.dart';
 import 'taxi_navigation.dart';
+import '../ways/taxi_ways_strings.dart';
+import '../ways/widgets/taxi_ways_entry_card.dart';
 
 class TaxiListScreen extends StatefulWidget {
   final bool root;
@@ -110,6 +112,7 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
             SliverToBoxAdapter(child: _buildReviewStrip()),
             SliverToBoxAdapter(child: _buildTiles()),
             SliverToBoxAdapter(child: _buildListHeader()),
+            SliverToBoxAdapter(child: _buildWaysEntry()),
             _buildBody(),
             SliverToBoxAdapter(child: _buildFooter()),
           ],
@@ -331,7 +334,14 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            const Spacer(),
+            Expanded(
+              child: _OptionTile(
+                label: TaxiWaysStrings.myJourneysTile,
+                icon: Iconsax.routing_2,
+                gradient: AppColors.warningGradient,
+                onTap: () => Get.toNamed(AppRoutes.myJourneys),
+              ),
+            ),
             const SizedBox(width: 10),
             const Spacer(),
           ],
@@ -352,6 +362,15 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
     );
   }
 
+  Widget _buildWaysEntry() {
+    return Obx(() {
+      final f = _ctrl.from.value;
+      final t = _ctrl.to.value;
+      if (!_ctrl.isSearch || _ctrl.items.isEmpty || f == null || t == null) return const SizedBox.shrink();
+      return TaxiWaysEntryCard(from: f, to: t, fromMyLocation: _ctrl.fromIsCurrent.value);
+    });
+  }
+
   Widget _buildBody() {
     return Obx(() {
       final items = _ctrl.items;
@@ -368,6 +387,13 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
           );
         }
         final failed = _ctrl.loadFailed.value;
+        final f = _ctrl.from.value;
+        final t = _ctrl.to.value;
+        if (_ctrl.isSearch && !failed && !_ctrl.isLoading.value && f != null && t != null) {
+          return SliverToBoxAdapter(
+            child: TaxiWaysEntryCard(from: f, to: t, empty: true, fromMyLocation: _ctrl.fromIsCurrent.value),
+          );
+        }
         final hint = _ctrl.to.value != null ? 'Try another city' : 'Pick a To city for route taxis';
         return SliverToBoxAdapter(
           child: EmptyStateView(

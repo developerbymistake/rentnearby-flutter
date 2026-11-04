@@ -7,6 +7,7 @@ import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/global_location_gates.dart';
+import '../../trip/trip_strings.dart';
 import '../models/stay_owner_model.dart';
 import 'stay_option_sets.dart';
 import 'stay_setup_controller.dart';
@@ -66,6 +67,11 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
       return;
     }
     await Get.toNamed(route);
+    if (mounted) _ctrl.load();
+  }
+
+  Future<void> _openAdvance() async {
+    await Get.toNamed(AppRoutes.stayAdvanceDetails);
     if (mounted) _ctrl.load();
   }
 
@@ -212,6 +218,33 @@ class _StaySetupHubScreenState extends State<StaySetupHubScreen> {
         accent: StayColors.accent,
         state: state(u4, d4),
         onTap: () => _open(AppRoutes.staySubmit),
+      ),
+      if (d1 && s != null) ..._advanceRow(s),
+    ];
+  }
+
+  List<Widget> _advanceRow(StayOwnerModel s) {
+    final has = s.hasAdvanceDetails;
+    return [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(4, 8, 4, 8),
+        child: Text(TripStrings.optionalLabel,
+            style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1,
+                color: AppColors.textLight)),
+      ),
+      StayStepRow(
+        number: 0,
+        icon: Iconsax.wallet_3,
+        title: TripStrings.advanceDetails,
+        subtitle: has ? TripStrings.advanceSet : TripStrings.advanceNotSet,
+        accent: StayColors.accent,
+        state: has ? StayStepState.done : StayStepState.current,
+        trailing: has ? TripStrings.edit : TripStrings.add,
+        onTap: _openAdvance,
       ),
     ];
   }

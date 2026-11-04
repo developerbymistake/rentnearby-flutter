@@ -9,10 +9,15 @@ import '../../taxi/models/taxi_browse_item.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_supply_controller.dart';
 import '../trip_colors.dart';
+import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../widgets/trip_back_to_plan_bar.dart';
 import '../widgets/trip_route_strip.dart';
+import '../widgets/trip_status.dart';
+import '../widgets/trip_taxi_booking_sheet.dart';
 import '../widgets/trip_taxi_stay_toggle.dart';
+import 'trip_details_sheet.dart';
+import 'trip_taxi_enquiry_sheet.dart';
 
 class TripTaxiScreen extends StatefulWidget {
   const TripTaxiScreen({super.key});
@@ -60,6 +65,80 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
         whatsAppMessage: _plan.whatsAppMessage(_supply.day.value, t.driverName),
       );
 
+  Future<void> _select(TaxiBrowseItem t) async {
+    final d = _supply.day.value;
+    final current = _plan.plan.value?.dayAt(d)?.taxi;
+    if (current != null && current.isBooked) {
+      if (current.taxiId == t.id) return;
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(TripStrings.replaceBooking('Day $d', current.name),
+              style: const TextStyle(
+                  fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          content: const Text(TripStrings.replaceQuestion,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+              child: const Text(TripStrings.keep, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textMedium)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+              child: const Text(TripStrings.replace,
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      _plan.clearTaxiBooking(current.taxiId);
+    }
+    _plan.selectTaxi(d, t);
+  }
+
+  Future<void> _book(TaxiBrowseItem t) async {
+    if (!_plan.hasDates) {
+      final ok = await TripDetailsSheet.edit(
+        context,
+        heading: TripStrings.addYourDates,
+        description: TripStrings.datesNeededBooking,
+      );
+      if (!ok || !mounted) return;
+    }
+    await TripTaxiBookingSheet.show(context, taxi: t, day: _supply.day.value);
+  }
+
+  Future<void> _enquire(TaxiBrowseItem t) async {
+    if (!_plan.hasDates) {
+      final ok = await TripDetailsSheet.edit(
+        context,
+        heading: TripStrings.addYourDates,
+        description: TripStrings.addYourDatesOwners,
+      );
+      if (!ok || !mounted) return;
+    }
+    await TripTaxiEnquirySheet.show(context, taxi: t, day: _supply.day.value);
+  }
+
+  TripDisplayStatus? _enquiryStatus(String taxiId) {
+    for (final e in _plan.taxiEnquiriesForDay(_supply.day.value)) {
+      if (e.listingId != taxiId) continue;
+      final d = e.display;
+      if (d == TripDisplayStatus.asked ||
+          d == TripDisplayStatus.fareSent ||
+          d == TripDisplayStatus.bookedByYou ||
+          d == TripDisplayStatus.confirmedByBoth) {
+        return d;
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -82,8 +161,10 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
       bottomNavigationBar: Obx(() {
         final d = _supply.day.value;
         final taxi = _plan.plan.value?.dayAt(d)?.taxi;
-        if (taxi == null) return const SizedBox.shrink();
-        return TripBackToPlanBar(text: '${taxi.name} selected for Day $d');
+        if (taxi != null && !taxi.isBooked) return TripBackToPlanBar(text: '${taxi.name} selected for Day $d');
+        final booked = taxi ?? _plan.bookedTaxi;
+        if (booked == null) return const SizedBox.shrink();
+        return TripBackToPlanBar(text: TripStrings.bookedBar(booked.name));
       }),
     );
   }
@@ -170,13 +251,18 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
           child: EmptyStateView(
             icon: failed ? Iconsax.cloud_cross : Iconsax.car,
             title: failed ? TripStrings.taxisFailed : TripStrings.noTaxis,
-            subtitle: failed ? TripStrings.checkConnection : TripStrings.noTaxisSubtitle(_plan.cityName),
-            onRetry: failed ? () => _supply.loadTaxis() : null,
+            subtitle: failed ? TripStrings.checkConnection : TripStrings.noTripTaxisSubtitle,
+            onRetry: failed
+                ? () => _supply.loadTaxis()
+                : (_plan.taxiTabOff.value ? null : () => TaxiNavigation.openList()),
+            retryLabel: failed ? 'Retry' : TripStrings.seeAllTaxis,
             palette: TripColors.palette,
           ),
         );
       }
+      _plan.enquiryList.length;
       final chosenId = _plan.plan.value?.dayAt(d)?.taxi?.taxiId;
+      final bookedId = _plan.bookedTaxi?.taxiId;
       return SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         sliver: SliverList.separated(
@@ -188,8 +274,19 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
               key: ValueKey(t.id),
               item: t,
               onOpen: () => _open(t),
-              onSelect: () => _plan.selectTaxi(d, t),
+              onSelect: () => _select(t),
               selected: chosenId == t.id,
+              onBook: () => _book(t),
+              booked: bookedId == t.id,
+              onEnquire: () {
+                final status = _enquiryStatus(t.id);
+                if (status == null) {
+                  _enquire(t);
+                } else {
+                  TripNavigation.openTaxiReplies(d);
+                }
+              },
+              enquiryStatus: _enquiryStatus(t.id),
             );
           },
         ),

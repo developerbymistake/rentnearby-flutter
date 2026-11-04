@@ -1,12 +1,74 @@
+import 'trip_strings.dart';
+
 class TripConstants {
   static const int dayLimitMinutes = 450;
   static const double stayRadiusKm = 5;
   static const double stayRadiusWideKm = 12;
   static const int spotsPageSize = 20;
   static const int maxSpots = 40;
-  static const int planVersion = 2;
+  static const int planVersion = 3;
   static const int citiesPageSize = 200;
   static const int citiesMaxPages = 50;
   static const Duration autosaveDebounce = Duration(milliseconds: 1500);
   static const Duration recalcDebounce = Duration(milliseconds: 600);
+  static const int maxAdults = 30;
+  static const int maxKids = 20;
+  static const int maxRooms = 15;
+  static const int maxStartDaysAhead = 365;
+  static const int pickupPlaceMax = 80;
+  static const int noteMax = 300;
+  static const int defaultAdults = 2;
+  static const int defaultRooms = 1;
+  static const String defaultPickupTime = '08:30';
+  static const int maxShortlist = 3;
+  static const int enquiryHours = 48;
+  static const int replyBeforeHours = 12;
+  static const int floorHours = 2;
+  static const int offerHours = 24;
+  static const int offerUrgentHours = 2;
+  static const int urgentHours = 72;
+  static const int hostLinkResendHours = 24;
+  static const int hostNameMax = 60;
+  static const int roomNameMax = 40;
+  static const int cancelReasonMax = 300;
+  static const int maxAmount = 2000000;
+  static const int holdMinHours = 1;
+  static const int holdDefaultHours = 6;
+  static const int holdMaxHours = 48;
+  static const int holdCheckInCutoffHour = 12;
+  static const int upiMax = 60;
+  static const int maxFareEdits = 3;
+  static const int leadsPerTripPerDay = 5;
+  static const int maxLeadDays = 5;
+  static const int driverNoteMax = 300;
+  static const int maxCounters = 3;
+  static const int counterMin = 100;
+  static const int counterMax = 200000;
+  static const int maxRevised = 5;
+  static const int autoCompleteDays = 7;
+  static const int noReplyHours = 24;
+  static const int summaryShareMax = 4000;
+  static const int problemNoteMax = 300;
+  static const int reasonMax = 300;
+  static const int problemQueueTries = 1;
+  static final RegExp upiPattern = RegExp(r'^[A-Za-z0-9._-]{2,50}@[A-Za-z]{2,64}$');
+}
+
+class TripNeeds {
+  static const String noStairs = 'no_stairs';
+  static const String kidsSafe = 'kids_safe';
+  static const String vegFood = 'veg_food';
+  static const List<String> all = [noStairs, kidsSafe, vegFood];
+
+  static String label(String key) => switch (key) {
+        noStairs => TripStrings.needNoStairs,
+        kidsSafe => TripStrings.needKidsSafe,
+        vegFood => TripStrings.needVegFood,
+        _ => key,
+      };
+}
+
+class TripPace {
+  static const int relaxed = 300;
+  static const int normal = 450;
 }

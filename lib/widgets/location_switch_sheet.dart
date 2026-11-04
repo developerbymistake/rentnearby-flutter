@@ -6,6 +6,7 @@ import '../config/module_palette.dart';
 import '../controllers/location_controller.dart';
 import '../models/city_model.dart';
 import '../utils/input_formatters.dart';
+import '../utils/search_fold.dart';
 
 class PickedPlace {
   final String name;
@@ -504,13 +505,13 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
         _viewingDistrict!.id == _locationCtrl.selectedDistrict.value!.id;
     final activeCityId = pickOnly ? null : _locationCtrl.browsingCity.value?.id;
 
+    final q = SearchFold.fold(_query);
     final filtered = _cities
-        .where((c) => _query.isEmpty ||
-            c.name.toLowerCase().contains(_query.toLowerCase()))
+        .where((c) => q.isEmpty || SearchFold.contains(c.name, q))
         .toList();
 
     final items = <Widget>[];
-    if (isOwnDistrict && (_query.isEmpty || 'current'.contains(_query.toLowerCase()))) {
+    if (isOwnDistrict && (q.isEmpty || 'current'.contains(q))) {
       items.add(_locationRow(
         icon: Icons.my_location_rounded,
         label: 'Current',
@@ -540,14 +541,14 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
       return _errorState(_districtsError!, _loadDistricts);
     }
 
+    final q = SearchFold.fold(_query);
     final filtered = _allDistricts
         .where((d) =>
             // Defensive: if we somehow have no state to filter by (e.g. a
             // district missing stateName), show all districts rather than
             // silently rendering an unexplained empty list.
             (_stateFilter == null || d.stateName == _stateFilter) &&
-            (_query.isEmpty ||
-                d.name.toLowerCase().contains(_query.toLowerCase())))
+            (q.isEmpty || SearchFold.contains(d.name, q)))
         .toList();
 
     if (filtered.isEmpty) return _emptyState('No district matches "$_query"');
@@ -578,9 +579,9 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
       return _errorState(_districtsError!, _loadDistricts);
     }
 
+    final q = SearchFold.fold(_query);
     final states = _locationCtrl.browsableStates
-        .where((s) =>
-            _query.isEmpty || s.toLowerCase().contains(_query.toLowerCase()))
+        .where((s) => q.isEmpty || SearchFold.contains(s, q))
         .toList();
 
     if (states.isEmpty) return _emptyState('No state matches "$_query"');

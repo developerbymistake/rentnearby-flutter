@@ -222,11 +222,34 @@ class _TripCitySheetState extends State<TripCitySheet> {
       if (_query.trim().isEmpty) return _messageState(TripStrings.noCitiesYet, TripStrings.noCitiesYetSubtitle);
       return _emptyState(TripStrings.noCityMatch(_query));
     }
+    final sectioned = _query.trim().isEmpty && _items.any((c) => c.isPopularDestination);
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      children: _items.map(_cityRow).toList(),
+      children: sectioned ? _sectionedRows() : _items.map(_cityRow).toList(),
     );
   }
+
+  List<Widget> _sectionedRows() {
+    final popular = _items.where((c) => c.isPopularDestination).toList();
+    final rest = _items.where((c) => !c.isPopularDestination).toList();
+    return [
+      _sectionHeader(TripStrings.popular),
+      ...popular.map(_cityRow),
+      if (rest.isNotEmpty) ...[
+        _sectionHeader(TripStrings.allCities),
+        ...rest.map(_cityRow),
+      ],
+    ];
+  }
+
+  Widget _sectionHeader(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+        child: Text(
+          text,
+          style: const TextStyle(
+              fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
+        ),
+      );
 
   Widget _cityRow(TripCityModel city) {
     final ready = city.isReady;

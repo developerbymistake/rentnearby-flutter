@@ -50,6 +50,9 @@ class AppConstants {
   static const String tripCitiesCacheSavedAtKey = 'trip_cities_cache_savedAt';
   static const Duration tripCitiesCacheTtl = Duration(hours: 24);
   static const Duration tripCitiesRevalidateAfter = Duration(minutes: 10);
+  static const String tripTodayCacheKeyPrefix = 'trip_today_';
+  static const String tripResultCacheKeyPrefix = 'trip_result_';
+  static const String tripProblemQueueKey = 'trip_problem_queue';
 
   // App version gate (force/soft update).
   static const String androidPackageId = 'com.rentnearby.rentnearby';
@@ -86,7 +89,7 @@ class AppConstants {
   static const int maxPhotos = 5;
 
   // Map defaults
-  static const double fallbackLat = 30.0668; // Uttarakhand centre
+  static const double fallbackLat = 30.0668; // Last-resort map centre (no GPS, no city)
   static const double fallbackLng = 79.0193;
   static const double clusterRadius = 500.0;
   static const int maxMapMarkers = 50;

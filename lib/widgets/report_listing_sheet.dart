@@ -11,12 +11,14 @@ class ReportListingSheet extends StatefulWidget {
   final String listingId;
   final String listingType; // 'Room' | 'Plot' | 'Stay' | 'Taxi'
   final ModulePalette palette;
+  final String? tripEnquiryId;
 
   const ReportListingSheet({
     super.key,
     required this.listingId,
     required this.listingType,
     this.palette = ModulePalette.rooms,
+    this.tripEnquiryId,
   });
 
   static Future<void> show(
@@ -24,6 +26,7 @@ class ReportListingSheet extends StatefulWidget {
     required String listingId,
     required String listingType,
     ModulePalette palette = ModulePalette.rooms,
+    String? tripEnquiryId,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -40,6 +43,7 @@ class ReportListingSheet extends StatefulWidget {
           listingId: listingId,
           listingType: listingType,
           palette: palette,
+          tripEnquiryId: tripEnquiryId,
         ),
       ),
     );
@@ -158,6 +162,7 @@ class _ReportListingSheetState extends State<ReportListingSheet> {
       listingType: widget.listingType,
       reasonId: _selectedReasonId!,
       details: _detailsCtrl.text.trim(),
+      tripEnquiryId: widget.tripEnquiryId,
     );
     if (mounted) {
       if (ok) {

@@ -12,6 +12,7 @@ import '../../../utils/app_toast.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/plan_cap_strip.dart';
 import '../../../widgets/gradient_button.dart';
+import '../enquiries/stay_enquiries_controller.dart';
 import '../models/stay_owner_model.dart';
 import 'stay_option_sets.dart';
 import 'stay_owner_card.dart';
@@ -25,13 +26,14 @@ class MyStaysScreen extends StatefulWidget {
 
 class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserver {
   final _ctrl = StaySetupController.ensure();
+  final _enquiries = StayEnquiriesController.ensure();
   final _isSharing = false.obs;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _ctrl.load();
+    _load();
   }
 
   @override
@@ -42,12 +44,23 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _ctrl.load();
+    if (state == AppLifecycleState.resumed) _load();
+  }
+
+  Future<void> _load() async {
+    await _ctrl.load();
+    final stay = _ctrl.stay.value;
+    if (mounted && stay != null && !stay.isDraft) _enquiries.loadBadge();
+  }
+
+  Future<void> _openEnquiries() async {
+    await Get.toNamed(AppRoutes.stayEnquiries);
+    if (mounted) _enquiries.loadBadge();
   }
 
   Future<void> _openSetup() async {
     await Get.toNamed(AppRoutes.staySetup, arguments: {'fromMyStays': true});
-    if (mounted) _ctrl.load();
+    if (mounted) _load();
   }
 
   Future<void> _share(BuildContext ctx, StayOwnerModel s) async {
@@ -85,7 +98,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
                   if (!loaded && loading) return _shimmer();
                   return RefreshIndicator(
                     color: StayColors.accent,
-                    onRefresh: _ctrl.load,
+                    onRefresh: _load,
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + AppInsets.bottomViewPadding(context)),
@@ -139,6 +152,8 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
           'title': s.name ?? 'Stay',
         }),
         onOpenSetup: _openSetup,
+        onEnquiries: _openEnquiries,
+        enquiryNewCount: _enquiries.newCount,
       );
 
   Widget _empty() => Padding(

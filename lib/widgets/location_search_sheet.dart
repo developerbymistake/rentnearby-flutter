@@ -17,10 +17,12 @@ import '../utils/input_formatters.dart';
 class LocationSearchSheet extends StatefulWidget {
   final LatLng? bias;
   final ModulePalette palette;
-  const LocationSearchSheet({super.key, this.bias, this.palette = ModulePalette.rooms});
+  final String? preferState;
+  const LocationSearchSheet(
+      {super.key, this.bias, this.palette = ModulePalette.rooms, this.preferState});
 
   static Future<PlaceResult?> show(BuildContext context,
-      {LatLng? bias, ModulePalette palette = ModulePalette.rooms}) {
+      {LatLng? bias, ModulePalette palette = ModulePalette.rooms, String? preferState}) {
     return showModalBottomSheet<PlaceResult>(
       context: context,
       isScrollControlled: true,
@@ -28,7 +30,7 @@ class LocationSearchSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => LocationSearchSheet(bias: bias, palette: palette),
+      builder: (_) => LocationSearchSheet(bias: bias, palette: palette, preferState: preferState),
     );
   }
 
@@ -88,7 +90,7 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
       _error = null;
     });
     try {
-      final results = await PhotonService.search(query, bias: widget.bias);
+      final results = await PhotonService.search(query, bias: widget.bias, preferState: widget.preferState);
       if (!mounted) return;
       setState(() {
         _results = results;
@@ -252,35 +254,10 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
                 ],
               ),
             ),
-            if (result.placeType != null && result.placeType!.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: widget.palette.surface,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  _capitalize(result.placeType!),
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textMedium,
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),
     );
-  }
-
-  String _capitalize(String s) {
-    if (s.isEmpty) return s;
-    final withSpaces = s.replaceAll('_', ' ');
-    return '${withSpaces[0].toUpperCase()}${withSpaces.substring(1)}';
   }
 
   Widget _loadingIndicator() => Padding(

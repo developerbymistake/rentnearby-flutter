@@ -8,6 +8,9 @@ class PlaceResult {
   final String subtitle;
   final LatLng latLng;
   final String? placeType;
+  final String? osmValue;
+  final String? district;
+  final String? state;
   final List<double>? extent;
 
   PlaceResult({
@@ -15,8 +18,22 @@ class PlaceResult {
     required this.subtitle,
     required this.latLng,
     this.placeType,
+    this.osmValue,
+    this.district,
+    this.state,
     this.extent,
   });
+
+  static String? _clean(Object? v) {
+    final s = (v as String?)?.trim();
+    return s == null || s.isEmpty ? null : s;
+  }
+
+  static String _typeLabel(String? osmValue) {
+    if (osmValue == null) return '';
+    final s = osmValue.replaceAll('_', ' ');
+    return '${s[0].toUpperCase()}${s.substring(1)}';
+  }
 
   factory PlaceResult.fromFeature(Map<String, dynamic> feature) {
     final props = feature['properties'] as Map<String, dynamic>? ?? {};
@@ -26,22 +43,22 @@ class PlaceResult {
     final lon = coords != null && coords.length >= 2 ? coords[0].toDouble() : 0.0;
 
     final name = props['name'] as String? ?? '';
-    final city = props['city'] as String?;
-    final state = props['state'] as String?;
-    final country = props['country'] as String?;
+    final district = _clean(props['county']) ?? _clean(props['district']);
+    final state = _clean(props['state']);
+    // Photon's `type` is unreliable; `osm_value` is the accurate OSM type tag.
+    final osmValue = _clean(props['osm_value']);
 
-    final subtitleParts = <String>[
-      if (city != null && city != name) city,
-      ?state,
-      ?country,
-    ];
+    final area = [?district, ?state].join(', ');
+    final subtitle = [_typeLabel(osmValue), area].where((s) => s.isNotEmpty).join(' · ');
 
     return PlaceResult(
       name: name,
-      subtitle: subtitleParts.join(', '),
+      subtitle: subtitle,
       latLng: LatLng(lat, lon),
-      // Photon's `type` is unreliable; `osm_value` is the accurate OSM type tag.
-      placeType: props['osm_value'] as String?,
+      placeType: osmValue,
+      osmValue: osmValue,
+      district: district,
+      state: state,
       extent: (props['extent'] as List?)?.map((e) => (e as num).toDouble()).toList(),
     );
   }

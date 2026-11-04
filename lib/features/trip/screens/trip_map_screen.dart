@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
@@ -6,18 +8,15 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_constants.dart';
-import '../../../config/app_insets.dart';
-import '../../../config/app_shadows.dart';
 import '../../../widgets/empty_state_view.dart';
+import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
-import '../utils/trip_format.dart';
-import '../widgets/trip_day_actions.dart';
 import '../widgets/trip_day_chips.dart';
-import '../widgets/trip_route_strip.dart';
+import '../widgets/trip_map_day_card.dart';
 
 class TripMapScreen extends StatefulWidget {
   const TripMapScreen({super.key});
@@ -38,8 +37,17 @@ class _TripMapScreenState extends State<TripMapScreen> {
   final _circles = <int, List<Circle>>{};
   final _symbols = <int, List<Symbol>>{};
   final _hasRoute = <int, bool>{};
+  final _stayPins = <int, Symbol>{};
+  final _topKey = GlobalKey();
+  final _cardKey = GlobalKey();
+  String? _drawnStaySignature;
+  bool _stayPinReady = false;
+  bool _dayPicked = false;
+  bool _awaitingDefaultDay = false;
 
+  static const String _stayPinImage = 'trip_stay_pin';
   static final String _white = AppColors.hexOf(AppColors.textWhite);
+  static final String _stayText = AppColors.hexOf(StayColors.accentDark);
 
   @override
   void initState() {
@@ -48,14 +56,29 @@ class _TripMapScreenState extends State<TripMapScreen> {
     _plan.openPages++;
     final args = Get.arguments;
     final day = args is Map ? args['day'] as int? : null;
-    _plan.selectedMapDay.value = day ?? 1;
-    _workers.add(ever(_plan.plan, (_) => _sync()));
+    _dayPicked = day != null;
+    _awaitingDefaultDay = day == null && _plan.plan.value == null;
+    _plan.selectedMapDay.value = day ?? (_plan.plan.value == null ? 1 : _plan.defaultMapDay);
+    _workers.add(ever(_plan.plan, (_) {
+      _applyDefaultDay();
+      _sync();
+    }));
     _workers.add(ever(_plan.result, (_) => _sync()));
     _workers.add(ever(_plan.isPlanning, (_) => _sync()));
+    _workers.add(ever(_plan.planFailed, (failed) {
+      if (!failed) _recalculateIfRouteMissing();
+    }));
+  }
+
+  void _applyDefaultDay() {
+    if (!_awaitingDefaultDay || _plan.plan.value == null) return;
+    _awaitingDefaultDay = false;
+    if (!_dayPicked) _plan.selectedMapDay.value = _plan.defaultMapDay;
   }
 
   @override
   void dispose() {
+    _map?.onSymbolTapped.remove(_onSymbolTapped);
     for (final w in _workers) {
       w.dispose();
     }
@@ -99,9 +122,24 @@ class _TripMapScreenState extends State<TripMapScreen> {
     if (map == null || _styleLoaded) return;
     await map.setSymbolTextAllowOverlap(true);
     await map.setSymbolTextIgnorePlacement(true);
+    await map.setSymbolIconAllowOverlap(true);
+    await map.setSymbolIconIgnorePlacement(true);
+    try {
+      await map.addImage(_stayPinImage, await _buildStayPinImage());
+      _stayPinReady = true;
+    } catch (_) {
+      _stayPinReady = false;
+    }
     if (!mounted) return;
     setState(() => _styleLoaded = true);
     await _sync();
+    _recalculateIfRouteMissing();
+  }
+
+  void _recalculateIfRouteMissing() {
+    final p = _plan.plan.value;
+    if (p == null || _plan.isPlanning.value || _plan.isOpening.value || _plan.plannerOff.value) return;
+    if (p.days.any((d) => d.spots.length >= 2 && _plan.routeFor(d.day) == null)) _plan.recalculate().ignore();
   }
 
   Future<void> _sync() async {
@@ -125,27 +163,134 @@ class _TripMapScreenState extends State<TripMapScreen> {
     final p = _plan.plan.value;
     if (!mounted || map == null || !_styleLoaded || p == null) return;
     if (_selected != TripDayChips.all && p.dayAt(_selected) == null) _plan.selectedMapDay.value = 1;
+    if (_selected == TripDayChips.all && p.days.length <= 1) _plan.selectedMapDay.value = 1;
     final signature = _signature(p);
+    final staySignature = _staySignature(p);
     if (signature != _drawnSignature) {
+      final edited = _drawnSignature != null;
       await _redraw(map, p);
       _drawnSignature = signature;
+      _drawnStaySignature = staySignature;
       await _fitCamera();
+      if (edited) _recalculateIfRouteMissing();
     } else {
       for (final d in _drawnDays) {
         _hasRoute[d] = _plan.routeFor(d) != null;
         await map.setGeoJsonSource(_sourceId(d), _source(d));
       }
-      await _applySelection();
+      if (staySignature != _drawnStaySignature) {
+        await _drawStayPins(map, p);
+        _drawnStaySignature = staySignature;
+        await _applySelection();
+        await _fitCamera();
+      } else {
+        await _applySelection();
+      }
     }
+  }
+
+  String _staySignature(TripPlan p) => [
+        p.days.length,
+        for (final d in p.days)
+          '${d.day}:${d.stay?.stayId}:${d.stay?.sameAsDay}:${d.stay?.latitude}:${d.stay?.longitude}',
+      ].join('|');
+
+  TripStayChoice? _pinnedStay(TripDay day) {
+    final s = day.stay;
+    if (s == null || s.isSameStay || !s.hasCoordinates) return null;
+    return s;
+  }
+
+  int? _pinDayFor(int day) {
+    final s = _plan.plan.value?.dayAt(day)?.stay;
+    if (s == null) return null;
+    return s.sameAsDay ?? day;
+  }
+
+  bool _isStayPinSelected(int pinDay) => _selected == TripDayChips.all || _pinDayFor(_selected) == pinDay;
+
+  Future<void> _drawStayPins(MapLibreMapController map, TripPlan p) async {
+    if (_stayPins.isNotEmpty) {
+      final old = _stayPins.values.toList();
+      _stayPins.clear();
+      await map.removeSymbols(old);
+    }
+    if (!_stayPinReady) return;
+    for (final day in p.days) {
+      final s = _pinnedStay(day);
+      if (s == null) continue;
+      final on = _isStayPinSelected(day.day);
+      _stayPins[day.day] = await map.addSymbol(SymbolOptions(
+        geometry: LatLng(s.latitude!, s.longitude!),
+        iconImage: _stayPinImage,
+        iconSize: 1,
+        iconOpacity: on ? 1 : 0.35,
+        textField: p.days.length > 1 ? TripStrings.night(day.day) : TripStrings.stay,
+        fontNames: const ['Noto Sans Medium'],
+        textSize: 11,
+        textAnchor: 'top',
+        textOffset: const Offset(0, 1.9),
+        textColor: _stayText,
+        textHaloColor: _white,
+        textHaloWidth: 1,
+        textOpacity: on ? 1 : 0.35,
+        zIndex: 10,
+      ));
+    }
+  }
+
+  void _onSymbolTapped(Symbol symbol) {
+    for (final e in _stayPins.entries) {
+      if (e.value == symbol || e.value.id == symbol.id) {
+        _select(e.key);
+        return;
+      }
+    }
+  }
+
+  static Future<Uint8List> _buildStayPinImage() async {
+    const double size = 48, c = size / 2, r = 19;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, size, size));
+    canvas.drawCircle(
+      const Offset(c, c + 1.5),
+      r + 1,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.25)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+    );
+    canvas.drawCircle(const Offset(c, c), r, Paint()..color = StayColors.accent);
+    canvas.drawCircle(
+      const Offset(c, c),
+      r,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+    const icon = Iconsax.building_4;
+    final glyph = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          fontSize: 20,
+          color: Colors.white,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    glyph.paint(canvas, Offset(c - glyph.width / 2, c - glyph.height / 2));
+    final img = await recorder.endRecording().toImage(size.toInt(), size.toInt());
+    final bytes = (await img.toByteData(format: ui.ImageByteFormat.png))!;
+    return bytes.buffer.asUint8List();
   }
 
   String _sourceId(int day) => 'trip-route-$day';
 
   Map<String, dynamic> _source(int day) {
     final route = _plan.routeFor(day);
-    if (route == null && _plan.isPlanning.value) {
-      return {'type': 'FeatureCollection', 'features': <Map<String, dynamic>>[]};
-    }
     final geometry = route ??
         <String, dynamic>{
           'type': 'LineString',
@@ -186,6 +331,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
     _circles.clear();
     _symbols.clear();
     _hasRoute.clear();
+    _stayPins.clear();
     await map.clearCircles();
     await map.clearSymbols();
     final below = map.circleManager?.layerIds.first;
@@ -225,6 +371,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
       _symbols[d] = symbols;
       _drawnDays.add(d);
     }
+    await _drawStayPins(map, p);
   }
 
   Future<void> _applySelection() async {
@@ -241,17 +388,41 @@ class _TripMapScreenState extends State<TripMapScreen> {
         await map.updateSymbol(s, SymbolOptions(textOpacity: selected ? 1 : 0.35));
       }
     }
+    for (final e in _stayPins.entries) {
+      final on = _isStayPinSelected(e.key);
+      await map.updateSymbol(e.value, SymbolOptions(iconOpacity: on ? 1 : 0.35, textOpacity: on ? 1 : 0.35));
+    }
+  }
+
+  double _overlayHeight(GlobalKey key, double fallback) {
+    final box = key.currentContext?.findRenderObject();
+    if (box is RenderBox && box.hasSize && box.size.height > 0) return box.size.height;
+    return fallback;
+  }
+
+  List<LatLng> _focusPoints(TripPlan p) {
+    final all = _selected == TripDayChips.all;
+    final points = <LatLng>[
+      for (final s in all ? p.allSpots : _spotsOf(_selected)) LatLng(s.latitude, s.longitude),
+    ];
+    final pinDay = all ? null : _pinDayFor(_selected);
+    for (final day in p.days) {
+      if (!all && day.day != pinDay) continue;
+      final s = _pinnedStay(day);
+      if (s != null) points.add(LatLng(s.latitude!, s.longitude!));
+    }
+    return points;
   }
 
   Future<void> _fitCamera() async {
     final map = _map;
     final p = _plan.plan.value;
-    if (map == null || p == null) return;
-    final spots = _selected == TripDayChips.all ? p.allSpots : _spotsOf(_selected);
-    if (spots.isEmpty) return;
-    var minLat = spots.first.latitude, maxLat = minLat;
-    var minLng = spots.first.longitude, maxLng = minLng;
-    for (final s in spots) {
+    if (map == null || p == null || !mounted) return;
+    final points = _focusPoints(p);
+    if (points.isEmpty) return;
+    var minLat = points.first.latitude, maxLat = minLat;
+    var minLng = points.first.longitude, maxLng = minLng;
+    for (final s in points) {
       minLat = min(minLat, s.latitude);
       maxLat = max(maxLat, s.latitude);
       minLng = min(minLng, s.longitude);
@@ -261,17 +432,28 @@ class _TripMapScreenState extends State<TripMapScreen> {
       await map.animateCamera(CameraUpdate.newLatLngZoom(LatLng(minLat, minLng), 14));
       return;
     }
+    final size = MediaQuery.sizeOf(context);
+    var top = _overlayHeight(_topKey, 120) + 24;
+    var bottom = _overlayHeight(_cardKey, 220) + 24;
+    final room = size.height - 120;
+    if (top + bottom > room && room > 0) {
+      final scale = room / (top + bottom);
+      top *= scale;
+      bottom *= scale;
+    }
+    final side = min(48.0, size.width * 0.12);
     await map.animateCamera(CameraUpdate.newLatLngBounds(
       LatLngBounds(southwest: LatLng(minLat, minLng), northeast: LatLng(maxLat, maxLng)),
-      left: 48,
-      top: 120,
-      right: 48,
-      bottom: 220,
+      left: side,
+      top: top,
+      right: side,
+      bottom: bottom,
     ));
   }
 
   Future<void> _select(int day) async {
     if (day == _selected) return;
+    _dayPicked = true;
     _plan.selectedMapDay.value = day;
     if (_busy) {
       _again = true;
@@ -300,15 +482,23 @@ class _TripMapScreenState extends State<TripMapScreen> {
                 trackCameraPosition: true,
                 attributionButtonMargins: const Point(-200.0, 0.0),
                 annotationOrder: const [AnnotationType.circle, AnnotationType.symbol],
-                onMapCreated: (MapLibreMapController ctrl) => _map = ctrl,
+                onMapCreated: (MapLibreMapController ctrl) {
+                  _map = ctrl;
+                  ctrl.onSymbolTapped.add(_onSymbolTapped);
+                },
                 onStyleLoadedCallback: _onStyleLoaded,
               ),
             ),
           ),
-          if (!_styleLoaded) Positioned.fill(child: _buildMapShimmer()),
+          Positioned.fill(
+            child: Obx(() {
+              final opening = _plan.isOpening.value && _plan.plan.value == null;
+              return !_styleLoaded || opening ? _buildMapShimmer() : const IgnorePointer(child: SizedBox.shrink());
+            }),
+          ),
           Positioned.fill(child: _buildState()),
-          Positioned(left: 0, right: 0, top: 0, child: _buildTop(context)),
-          Positioned(left: 0, right: 0, bottom: 0, child: _buildBottomCard(context)),
+          Positioned(left: 0, right: 0, top: 0, child: KeyedSubtree(key: _topKey, child: _buildTop(context))),
+          Positioned(left: 0, right: 0, bottom: 0, child: KeyedSubtree(key: _cardKey, child: _buildBottomCard(context))),
         ],
       ),
     );
@@ -378,15 +568,25 @@ class _TripMapScreenState extends State<TripMapScreen> {
                   ? _dayRouteMissing(selected)
                   : p.days.any((d) => _dayRouteMissing(d.day)));
           return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            padding: const EdgeInsets.only(top: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (count > 1) TripDayChips(dayCount: count, selected: selected, onChanged: _select, includeAll: true),
-                if (missing) ...[
-                  const SizedBox(height: 10),
-                  _routeMissingChip(),
-                ],
+                if (count > 1)
+                  TripDayChips(
+                    dayCount: count,
+                    selected: selected,
+                    onChanged: _select,
+                    includeAll: true,
+                    compact: true,
+                    allFirst: true,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                if (missing)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                    child: _routeMissingChip(),
+                  ),
               ],
             ),
           );
@@ -408,9 +608,13 @@ class _TripMapScreenState extends State<TripMapScreen> {
         children: [
           Icon(Iconsax.warning_2, size: 14, color: AppColors.warning),
           SizedBox(width: 6),
-          Text(
-            TripStrings.routeMissing,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+          Flexible(
+            child: Text(
+              TripStrings.routeMissing,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+            ),
           ),
         ],
       ),
@@ -419,54 +623,14 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
   Widget _buildBottomCard(BuildContext context) {
     return Obx(() {
-      _plan.result.value;
       final p = _plan.plan.value;
-      if (p == null || p.days.isEmpty || _plan.plannerOff.value) return const SizedBox.shrink();
-      final selected = _selected;
-      final all = selected == TripDayChips.all;
-      final title = all ? '${p.days.length} ${p.days.length == 1 ? 'day' : 'days'}' : 'Day $selected';
-      final km = p.days.fold<double>(0, (sum, d) => sum + _plan.dayKm(d.day));
-      final line = all ? TripFormat.km(km) : TripRouteStrip.routeLine(_plan, selected);
-      return Container(
-        margin: EdgeInsets.fromLTRB(16, 0, 16, AppInsets.bottomViewPadding(context) + 16),
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: AppShadows.premium(TripColors.accent, alpha: 0.16, blur: 18, offset: const Offset(0, 6)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: all ? AppColors.textDark : TripColors.dayColor(selected),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    line,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-                  ),
-                ),
-              ],
-            ),
-            if (!all) ...[
-              const SizedBox(height: 12),
-              TripDayActions(selected),
-            ],
-          ],
-        ),
+      if (p == null || p.days.isEmpty || _plan.plannerOff.value || _plan.openFailed.value) {
+        return const SizedBox.shrink();
+      }
+      return TripMapDayCard(
+        dayCount: p.days.length,
+        selected: _selected,
+        onDaySelected: _select,
       );
     });
   }

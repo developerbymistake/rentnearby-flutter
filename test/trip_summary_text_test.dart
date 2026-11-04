@@ -1,0 +1,102 @@
+import 'package:bakhli/features/trip/models/trip_summary_model.dart';
+import 'package:bakhli/features/trip/trip_constants.dart';
+import 'package:bakhli/features/trip/trip_strings.dart';
+import 'package:bakhli/features/trip/utils/trip_summary_text.dart';
+import 'package:bakhli/models/browse_item.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  Map<String, dynamic> night(int n, {String name = 'Deodar Homestay', String? cancellation = 'Free till 25 Oct'}) => {
+        'night': n,
+        'date': '2026-11-0$n',
+        'listingName': name,
+        'enquiryId': 'e$n',
+        'isOwn': false,
+        'displayStatus': 'confirmedByBoth',
+        'roomLines': [
+          {'roomName': 'Family room', 'units': 1, 'guests': 4},
+        ],
+        'agreedTotal': 3800,
+        'advanceStatus': 'Received',
+        'advanceAmount': 500,
+        'cancellationText': cancellation,
+        'gstInvoice': true,
+        'confirmedBy': 'both',
+        'confirmedAt': '2026-10-30T10:00:00Z',
+      };
+
+  Map<String, dynamic> taxi() => {
+        'enquiryId': 't1',
+        'listingName': 'Mohan Bisht',
+        'vehicleTypeName': 'Sedan',
+        'days': [1, 2],
+        'checkIn': '2026-11-01',
+        'checkOut': '2026-11-02',
+        'isOwn': false,
+        'displayStatus': 'bookedByYou',
+        'agreedFare': 3400,
+        'tollExtra': true,
+        'pickupTime': '08:30',
+        'pickupPlace': 'Mallital',
+        'confirmedBy': 'you',
+        'confirmedAt': '2026-10-30T10:00:00Z',
+      };
+
+  Map<String, dynamic> record({List<Map<String, dynamic>>? nights, List<Map<String, dynamic>>? taxis}) => {
+        'tripId': 'trip1',
+        'title': 'Nainital trip',
+        'city': 'Nainital',
+        'startDate': '2026-11-01',
+        'endDate': '2026-11-03',
+        'adults': 2,
+        'kids': 2,
+        'bookingState': 'ready',
+        'agreedTotal': 7200,
+        'nights': nights ?? [night(1)],
+        'taxis': taxis ?? [taxi()],
+      };
+
+  test('plain text carries the stay, the taxi, the total and the footer', () {
+    final text = TripSummaryText.build(TripSummaryRecord.fromJson(record()));
+    expect(text, contains('Nainital'));
+    expect(text, contains('Night 1'));
+    expect(text, contains('Deodar Homestay'));
+    expect(text, contains('Mohan Bisht'));
+    expect(text, contains(BrowseItem.inr(3800)));
+    expect(text, contains(BrowseItem.inr(3400)));
+    expect(text, contains(TripStrings.agreedInTotal(BrowseItem.inr(7200))));
+    expect(text, contains(TripStrings.summaryFooter));
+  });
+
+  test('taxi pay line only appears with a taxi', () {
+    final withTaxi = TripSummaryText.build(TripSummaryRecord.fromJson(record()));
+    final without = TripSummaryText.build(TripSummaryRecord.fromJson(record(taxis: [])));
+    expect(withTaxi, contains(TripStrings.taxiPayLine));
+    expect(without, isNot(contains(TripStrings.taxiPayLine)));
+    expect(without, contains(TripStrings.summaryFooter));
+  });
+
+  test('no UPI id or payment wording leaks into the text', () {
+    final text = TripSummaryText.build(TripSummaryRecord.fromJson(record())).toLowerCase();
+    expect(text, isNot(contains('upi')));
+    expect(text, isNot(contains('@')));
+    expect(text, isNot(contains('verified')));
+    expect(text, isNot(contains('guaranteed')));
+  });
+
+  test('stays under the share limit with many long nights', () {
+    final nights = [
+      for (var i = 1; i <= 13; i++)
+        night(i % 9 + 1, name: 'A very long homestay name number $i in the hills', cancellation: 'Free cancellation till ${'x' * 120}'),
+    ];
+    final text = TripSummaryText.build(TripSummaryRecord.fromJson(record(nights: nights)));
+    expect(text.length, lessThanOrEqualTo(TripConstants.summaryShareMax));
+    expect(text, contains(TripStrings.summaryFooter));
+  });
+
+  test('empty record still builds a short text', () {
+    final text = TripSummaryText.build(TripSummaryRecord.fromJson(record(nights: [], taxis: [])));
+    expect(text, contains('Nainital'));
+    expect(text.length, lessThan(TripConstants.summaryShareMax));
+  });
+}

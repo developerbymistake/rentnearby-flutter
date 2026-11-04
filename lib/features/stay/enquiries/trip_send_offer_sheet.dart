@@ -1,0 +1,561 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
+import '../../../config/app_colors.dart';
+import '../../../models/browse_item.dart';
+import '../../../utils/app_toast.dart';
+import '../../../utils/input_formatters.dart';
+import '../../../widgets/gradient_button.dart';
+import '../../../widgets/selectable_chip.dart';
+import '../../trip/models/trip_enquiry_model.dart';
+import '../../trip/models/trip_offer_model.dart';
+import '../../trip/trip_constants.dart';
+import '../../trip/trip_strings.dart';
+import '../../trip/utils/trip_format.dart';
+import '../../trip/widgets/trip_payment_line.dart';
+import '../../trip/widgets/trip_sheet_frame.dart';
+import '../models/stay_owner_model.dart';
+import '../setup/stay_option_sets.dart';
+import 'stay_enquiries_controller.dart';
+import 'stay_enquiry_format.dart';
+import 'stay_enquiry_strings.dart';
+
+class TripSendOfferSheet {
+  static Future<bool> show(
+    BuildContext context, {
+    required TripEnquiryModel enquiry,
+    required StayOwnerModel stay,
+    TripOfferModel? counter,
+    TripOfferModel? changeRequest,
+    bool revised = false,
+  }) async {
+    final body = _OfferBody(enquiry: enquiry, stay: stay, counter: counter, changeRequest: changeRequest, revised: revised);
+    final sent = await TripSheetFrame.show<bool>(context, body);
+    return sent == true;
+  }
+}
+
+class _Line {
+  _Line({this.roomName, this.isOther = false, this.units = 1, this.guests = 2, String price = ''})
+      : priceCtrl = TextEditingController(text: price),
+        otherCtrl = TextEditingController();
+
+  String? roomName;
+  bool isOther;
+  int units;
+  int guests;
+  final TextEditingController priceCtrl;
+  final TextEditingController otherCtrl;
+
+  int get price => int.tryParse(priceCtrl.text.trim()) ?? 0;
+
+  String? get name {
+    final v = isOther ? otherCtrl.text.trim() : roomName;
+    return v == null || v.isEmpty ? null : v;
+  }
+
+  void dispose() {
+    priceCtrl.dispose();
+    otherCtrl.dispose();
+  }
+}
+
+class _OfferBody extends StatefulWidget {
+  const _OfferBody({required this.enquiry, required this.stay, this.counter, this.changeRequest, this.revised = false});
+
+  final TripEnquiryModel enquiry;
+  final StayOwnerModel stay;
+  final TripOfferModel? counter;
+  final TripOfferModel? changeRequest;
+  final bool revised;
+
+  @override
+  State<_OfferBody> createState() => _OfferBodyState();
+}
+
+class _OfferBodyState extends State<_OfferBody> {
+  static const int _maxLines = 5;
+  static const int _maxNights = 13;
+
+  late DateTime _checkIn;
+  late DateTime _checkOut;
+  final _lines = <_Line>[];
+  final _advance = TextEditingController();
+  final _balance = TextEditingController(text: TripStrings.atCheckIn);
+  final _cancel = TextEditingController();
+  final _inclusions = TextEditingController();
+  final _reason = TextEditingController();
+  final _needs = <String>{};
+  bool _gst = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.enquiry;
+    final today = _dateOnly(DateTime.now());
+    final src = widget.revised ? (widget.changeRequest ?? e.acceptedOffer) : null;
+    _checkIn = src?.checkIn ?? e.checkIn ?? today;
+    _checkOut = src?.checkOut ?? e.checkOut ?? _checkIn.add(const Duration(days: 1));
+    // A change request carries only dates, people and lines; terms come from the accepted offer.
+    final terms = widget.revised ? (e.acceptedOffer ?? src) : null;
+    _cancel.text = terms?.cancellationText ?? widget.stay.rules?.cancellationPolicy ?? '';
+    final seed = src ?? widget.counter;
+    if (seed != null && seed.lines.isNotEmpty) {
+      for (final l in seed.lines) {
+        _lines.add(_lineFrom(l));
+      }
+    } else {
+      _lines.add(_newLine());
+    }
+    if (terms != null) {
+      final adv = terms.advanceAmount;
+      if (adv != null) _advance.text = '$adv';
+      final bal = terms.balanceNote;
+      if (bal != null && bal.isNotEmpty) _balance.text = bal;
+      _inclusions.text = terms.inclusions ?? '';
+      _gst = terms.gstInvoice ?? false;
+    }
+    for (final c in [_advance, _balance, _cancel, _inclusions, _reason]) {
+      c.addListener(_refresh);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final l in _lines) {
+      l.dispose();
+    }
+    for (final c in [_advance, _balance, _cancel, _inclusions, _reason]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  _Line _newLine() {
+    final rooms = widget.stay.rooms;
+    final used = _lines.map((l) => l.roomName).toSet();
+    final room = rooms.firstWhereOrNull((r) => !used.contains(r.label)) ?? (rooms.isNotEmpty ? rooms.first : null);
+    final c = widget.enquiry.context;
+    final party = (c.adults ?? 0) + (c.kids ?? 0);
+    final guests = (party > 0 ? party : (room?.maxGuests ?? 2)).clamp(1, 40);
+    final line = _Line(
+      roomName: room?.label,
+      isOther: room == null,
+      guests: guests,
+      price: room == null ? '' : '${room.pricePerNight}',
+    );
+    line.priceCtrl.addListener(_refresh);
+    line.otherCtrl.addListener(_refresh);
+    return line;
+  }
+
+  _Line _lineFrom(TripOfferLine src) {
+    final rooms = widget.stay.rooms;
+    final name = src.roomName;
+    final match = name == null ? null : rooms.firstWhereOrNull((r) => r.label == name);
+    final fallback = name == null && rooms.isNotEmpty ? rooms.first : null;
+    final line = _Line(
+      roomName: match?.label ?? fallback?.label,
+      isOther: match == null && fallback == null,
+      units: src.units.clamp(1, 10),
+      guests: src.guests.clamp(1, 40),
+      price: '${src.pricePerNight}',
+    );
+    if (match == null && name != null) line.otherCtrl.text = name;
+    line.priceCtrl.addListener(_refresh);
+    line.otherCtrl.addListener(_refresh);
+    return line;
+  }
+
+  int get _nights => _checkOut.difference(_checkIn).inDays;
+
+  int get _perNight => _lines.fold(0, (sum, l) => sum + l.units * l.price);
+
+  int get _total => _nights > 0 ? _nights * _perNight : 0;
+
+  Future<void> _pickDate({required bool isCheckIn}) async {
+    final today = _dateOnly(DateTime.now());
+    final initial = isCheckIn ? _checkIn : _checkOut;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial.isBefore(today) ? today : initial,
+      firstDate: isCheckIn ? today : _checkIn.add(const Duration(days: 1)),
+      lastDate: today.add(const Duration(days: 365)),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: StayColors.accent)),
+        child: child ?? const SizedBox.shrink(),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      if (isCheckIn) {
+        _checkIn = picked;
+        if (!_checkOut.isAfter(_checkIn)) _checkOut = _checkIn.add(const Duration(days: 1));
+      } else {
+        _checkOut = picked;
+      }
+    });
+  }
+
+  String? _validate() {
+    if (_nights < 1) return StayEnquiryStrings.datesInvalid;
+    if (_nights > _maxNights) return StayEnquiryStrings.datesInvalid;
+    for (final l in _lines) {
+      if (l.price < 1 || l.price > 200000) return StayEnquiryStrings.enterPrice;
+    }
+    final adv = int.tryParse(_advance.text.trim());
+    if (adv != null && adv > _total) return StayEnquiryStrings.advanceTooHigh;
+    if (widget.revised && _reason.text.trim().isEmpty) return StayEnquiryStrings.reasonRequired;
+    return null;
+  }
+
+  Future<void> _submit() async {
+    if (_saving) return;
+    final error = _validate();
+    if (error != null) {
+      AppToast.error(error);
+      return;
+    }
+    final adv = int.tryParse(_advance.text.trim());
+    final balance = _balance.text.trim();
+    final cancel = _cancel.text.trim();
+    final inclusions = _inclusions.text.trim();
+    final body = <String, dynamic>{
+      'checkIn': StayEnquiryFormat.iso(_checkIn),
+      'checkOut': StayEnquiryFormat.iso(_checkOut),
+      'lines': [
+        for (final l in _lines)
+          TripOfferLine(roomName: l.name, units: l.units, guests: l.guests, pricePerNight: l.price).toJson(),
+      ],
+      'advanceAmount': ?adv,
+      'balanceNote': balance.isEmpty ? null : balance,
+      'cancellationText': cancel.isEmpty ? null : cancel,
+      'gstInvoice': _gst,
+      'inclusions': inclusions.isEmpty ? null : inclusions,
+    };
+    if (widget.revised) {
+      body['reason'] = _reason.text.trim();
+      body['changeRequestId'] = widget.changeRequest?.id;
+    } else {
+      body['needsEchoed'] = _needs.toList();
+      if (widget.counter != null) body['counterOfferId'] = widget.counter!.id;
+    }
+    setState(() => _saving = true);
+    final ctrl = StayEnquiriesController.ensure();
+    final ok = widget.revised ? await ctrl.revisedOffer(widget.enquiry, body) : await ctrl.sendOffer(widget.enquiry, body);
+    if (!mounted) return;
+    if (ok) {
+      Navigator.pop(context, true);
+    } else {
+      setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final e = widget.enquiry;
+    final revised = widget.revised;
+    final counterLine = widget.counter?.lines.firstOrNull;
+    final guest = StayEnquiryFormat.guest(e);
+    final description = revised
+        ? (e.listingName.isEmpty ? null : e.listingName)
+        : counterLine != null
+            ? TripStrings.proposesPrice(guest, BrowseItem.inr(counterLine.pricePerNight))
+            : StayEnquiryStrings.offerTo(guest);
+    return TripSheetFrame(
+      title: revised ? TripStrings.revisedOffer : TripStrings.sendOffer,
+      description: description,
+      footer: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        GradientButton(
+          onPressed: _saving ? null : _submit,
+          isLoading: _saving,
+          label: revised ? TripStrings.sendRevisedOffer : TripStrings.sendOffer,
+          gradient: StayColors.gradient,
+          shadowColor: StayColors.accent,
+        ),
+        const SizedBox(height: 10),
+        TripPaymentLine(text: revised ? TripStrings.revisedFooter : TripStrings.sendOfferFooter),
+      ]),
+      children: [
+        _twoUp(
+          _dateField(TripStrings.checkIn, _checkIn, () => _pickDate(isCheckIn: true)),
+          _dateField(TripStrings.checkOut, _checkOut, () => _pickDate(isCheckIn: false)),
+        ),
+        const SizedBox(height: 16),
+        _heading(TripStrings.roomLines),
+        const SizedBox(height: 8),
+        for (var i = 0; i < _lines.length; i++) ...[
+          _lineCard(i),
+          const SizedBox(height: 10),
+        ],
+        if (_lines.length < _maxLines)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              style: TextButton.styleFrom(minimumSize: const Size(44, 44), foregroundColor: StayColors.accentDark),
+              onPressed: () => setState(() => _lines.add(_newLine())),
+              icon: const Icon(Iconsax.add_circle, size: 18),
+              label: const Text(TripStrings.addRoomLine),
+            ),
+          ),
+        const SizedBox(height: 8),
+        _totalBox(),
+        if (revised) ...[
+          const SizedBox(height: 16),
+          _field(_reason, TripStrings.reasonLabel, maxLength: TripConstants.noteMax, lines: 2, hint: TripStrings.reasonHint),
+        ],
+        const SizedBox(height: 16),
+        _twoUp(
+          _field(_advance, TripStrings.advance, digits: true, maxLength: 7, prefix: '₹ ', hint: StayEnquiryStrings.optional),
+          _field(_balance, TripStrings.balanceNote, maxLength: 120),
+        ),
+        const SizedBox(height: 12),
+        _field(_cancel, TripStrings.cancellationTerms, maxLength: 300, lines: 2),
+        const SizedBox(height: 12),
+        _field(_inclusions, StayEnquiryStrings.inclusions, maxLength: 200, hint: StayEnquiryStrings.optional),
+        const SizedBox(height: 8),
+        _gstRow(),
+        if (!revised && e.context.needs.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _heading(StayEnquiryStrings.needsCovered),
+          for (final need in e.context.needs) _needRow(need),
+        ],
+        if (!revised) ...[
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: Text(TripStrings.validForLabel,
+                  style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+            ),
+            Text(StayEnquiryStrings.offerValid(e.isUrgent),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          ]),
+        ],
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _heading(String text) => Text(text,
+      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark));
+
+  Widget _twoUp(Widget a, Widget b) => LayoutBuilder(
+        builder: (context, c) {
+          if (c.maxWidth >= 340) {
+            return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: a),
+              const SizedBox(width: 10),
+              Expanded(child: b),
+            ]);
+          }
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [a, const SizedBox(height: 12), b]);
+        },
+      );
+
+  InputDecoration _dec(String label, {String? prefix, String? hint}) => InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixText: prefix,
+        counterText: '',
+        filled: true,
+        fillColor: StayColors.surface,
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.divider)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: StayColors.accent, width: 1.5)),
+      );
+
+  Widget _field(
+    TextEditingController ctrl,
+    String label, {
+    bool digits = false,
+    int maxLength = 100,
+    int lines = 1,
+    String? prefix,
+    String? hint,
+  }) {
+    return TextField(
+      controller: ctrl,
+      enabled: !_saving,
+      maxLength: maxLength,
+      minLines: 1,
+      maxLines: lines,
+      keyboardType: digits ? TextInputType.number : TextInputType.text,
+      inputFormatters: digits ? [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(maxLength)] : noEmojiInputFormatters,
+      style: const TextStyle(fontSize: 14),
+      decoration: _dec(label, prefix: prefix, hint: hint),
+    );
+  }
+
+  Widget _dateField(String label, DateTime value, VoidCallback onTap) {
+    return InkWell(
+      onTap: _saving ? null : onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: _dec(label).copyWith(suffixIcon: const Icon(Iconsax.calendar_1, size: 18, color: StayColors.accentDark)),
+        child: Text(TripFormat.shortDate(value),
+            maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, color: AppColors.textDark)),
+      ),
+    );
+  }
+
+  Widget _lineCard(int i) {
+    final l = _lines[i];
+    final rooms = widget.stay.rooms;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Expanded(
+            child: Wrap(spacing: 8, runSpacing: 6, children: [
+              for (final r in rooms)
+                SelectableChip(
+                  label: r.label,
+                  selected: !l.isOther && l.roomName == r.label,
+                  activeColor: StayColors.accent,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  onTap: () => setState(() {
+                    l.isOther = false;
+                    l.roomName = r.label;
+                    l.priceCtrl.text = '${r.pricePerNight}';
+                  }),
+                ),
+              SelectableChip(
+                label: TripStrings.other,
+                selected: l.isOther,
+                activeColor: StayColors.accent,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                onTap: () => setState(() => l.isOther = true),
+              ),
+            ]),
+          ),
+          if (_lines.length > 1)
+            IconButton(
+              tooltip: StayEnquiryStrings.removeRoom,
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              onPressed: () => setState(() {
+                _lines.removeAt(i).dispose();
+              }),
+              icon: const Icon(Iconsax.trash, size: 18, color: AppColors.error),
+            ),
+        ]),
+        if (l.isOther) ...[
+          const SizedBox(height: 10),
+          _field(l.otherCtrl, StayEnquiryStrings.roomName, maxLength: TripConstants.roomNameMax),
+        ],
+        const SizedBox(height: 10),
+        Wrap(spacing: 10, runSpacing: 8, children: [
+          _stepper(TripStrings.units, l.units, 1, 10, (v) => setState(() => l.units = v)),
+          _stepper(TripStrings.guests, l.guests, 1, 40, (v) => setState(() => l.guests = v)),
+        ]),
+        const SizedBox(height: 10),
+        _field(l.priceCtrl, TripStrings.pricePerNight, digits: true, maxLength: 6, prefix: '₹ '),
+      ]),
+    );
+  }
+
+  Widget _stepper(String label, int value, int min, int max, ValueChanged<int> onChanged) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
+      Container(
+        decoration: BoxDecoration(
+          color: StayColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          IconButton(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            onPressed: value > min ? () => onChanged(value - 1) : null,
+            icon: const Icon(Icons.remove_rounded, size: 18),
+          ),
+          SizedBox(
+            width: 28,
+            child: Text('$value',
+                textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          ),
+          IconButton(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            onPressed: value < max ? () => onChanged(value + 1) : null,
+            icon: const Icon(Icons.add_rounded, size: 18),
+          ),
+        ]),
+      ),
+    ]);
+  }
+
+  Widget _totalBox() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
+      child: Row(children: [
+        Expanded(
+          child: Text('${TripStrings.total} · ${TripStrings.nights(_nights < 0 ? 0 : _nights)}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(BrowseItem.inr(_total),
+                maxLines: 1,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _gstRow() {
+    return InkWell(
+      onTap: _saving ? null : () => setState(() => _gst = !_gst),
+      borderRadius: BorderRadius.circular(12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Row(children: [
+          Expanded(child: Text(TripStrings.gstInvoice, style: const TextStyle(fontSize: 14, color: AppColors.textDark))),
+          Switch(
+            value: _gst,
+            onChanged: _saving ? null : (v) => setState(() => _gst = v),
+            activeThumbColor: AppColors.success,
+            activeTrackColor: AppColors.successTrack,
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _needRow(String need) {
+    final on = _needs.contains(need);
+    return InkWell(
+      onTap: _saving ? null : () => setState(() => on ? _needs.remove(need) : _needs.add(need)),
+      borderRadius: BorderRadius.circular(12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Row(children: [
+          Checkbox(
+            value: on,
+            activeColor: StayColors.accent,
+            onChanged: _saving ? null : (v) => setState(() => v == true ? _needs.add(need) : _needs.remove(need)),
+          ),
+          Expanded(child: Text(TripNeeds.label(need), style: const TextStyle(fontSize: 14, color: AppColors.textDark))),
+        ]),
+      ),
+    );
+  }
+}

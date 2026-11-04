@@ -21,6 +21,7 @@ class TripCityCatalog {
     if (_mem != null) return;
     final raw = StorageService.getTripCitiesCache();
     if (raw == null) return;
+    if (raw.isNotEmpty && !raw.first.containsKey('isPopularDestination')) return;
     try {
       _mem = raw.map(TripCityModel.fromJson).toList();
       _version = StorageService.getTripCitiesCacheVersion();
@@ -40,7 +41,18 @@ class TripCityCatalog {
     });
   }
 
-  List<TripCityModel> search(String q) => TripCitySearch.filter(_mem ?? const [], q);
+  List<TripCityModel> search(String q) {
+    final found = TripCitySearch.filter(_mem ?? const [], q);
+    return q.trim().isEmpty ? TripCitySearch.popularFirst(found) : found;
+  }
+
+  List<TripCityModel> popular({String? stateName}) {
+    final state = stateName?.trim().toLowerCase();
+    return [
+      for (final c in _mem ?? const <TripCityModel>[])
+        if (c.isPopularDestination && (state == null || state.isEmpty || c.stateName.toLowerCase() == state)) c,
+    ];
+  }
 
   Future<List<TripCityModel>> _load(bool force) async {
     warmFromDisk();

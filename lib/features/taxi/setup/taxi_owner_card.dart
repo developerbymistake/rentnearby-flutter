@@ -3,6 +3,7 @@ import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_shadows.dart';
 import '../../../models/browse_item.dart';
+import '../../trip/trip_strings.dart';
 import '../models/taxi_owner_model.dart';
 import '../taxi_option_sets.dart';
 
@@ -16,6 +17,9 @@ class TaxiOwnerCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onReportsTap;
   final VoidCallback? onOpenSetup;
+  final VoidCallback? onTripLeads;
+  final int newLeads;
+  final VoidCallback? onLocalRate;
 
   const TaxiOwnerCard({
     super.key,
@@ -28,6 +32,9 @@ class TaxiOwnerCard extends StatelessWidget {
     this.onDelete,
     this.onReportsTap,
     this.onOpenSetup,
+    this.onTripLeads,
+    this.newLeads = 0,
+    this.onLocalRate,
   });
 
   @override
@@ -267,6 +274,25 @@ class TaxiOwnerCard extends StatelessWidget {
             _routeRow(taxi.routes[i]),
           ],
         ],
+        if (!taxi.isDraft && (onTripLeads != null || onLocalRate != null)) ...[
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: AppColors.divider),
+          if (onTripLeads != null)
+            _linkRow(
+              icon: Iconsax.routing_2,
+              title: TripStrings.tripLeadsRow,
+              trailing: newLeads > 0 ? _countPill(newLeads) : null,
+              onTap: onTripLeads,
+            ),
+          if (onLocalRate != null)
+            _linkRow(
+              icon: Iconsax.car,
+              title: TripStrings.localSightseeing,
+              value: taxi.localDayRate == null ? null : TaxiOptionSets.localRateLabel(taxi.localDayRate!),
+              action: taxi.localDayRate == null ? TripStrings.addLocalRate : TripStrings.edit,
+              onTap: onLocalRate,
+            ),
+        ],
         if (onDelete != null || onPreview != null || onShare != null) ...[
           const SizedBox(height: 12),
           const Divider(height: 1, color: AppColors.divider),
@@ -320,6 +346,60 @@ class TaxiOwnerCard extends StatelessWidget {
             ),
         ]),
       ]),
+    );
+  }
+
+  Widget _countPill(int n) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(999)),
+        child: Text(TripStrings.newCount(n),
+            maxLines: 1,
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white)),
+      );
+
+  Widget _linkRow({
+    required IconData icon,
+    required String title,
+    String? value,
+    String? action,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Row(children: [
+          Icon(icon, size: 18, color: TaxiColors.accentDark),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+              if (value != null)
+                Text(value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight)),
+            ]),
+          ),
+          const SizedBox(width: 8),
+          if (trailing != null) trailing,
+          if (action != null)
+            Flexible(
+              child: Text(action,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: TaxiColors.accentDark)),
+            ),
+          if (trailing != null || action == null) const Icon(Iconsax.arrow_right_3, size: 16, color: AppColors.textHint),
+        ]),
+      ),
     );
   }
 

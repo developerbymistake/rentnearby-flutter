@@ -39,6 +39,9 @@ class TaxiRepository {
   Future<TaxiOwnerModel?> updateFare(String routeId, int fare) async =>
       _parse(await ApiService.put('/taxis/me/routes/$routeId/fare', {'fare': fare}));
 
+  Future<TaxiOwnerModel?> updateLocalRate({int? dayRate, int? kmPerDay}) async =>
+      _parse(await ApiService.put('/taxis/me/local-rate', {'dayRate': dayRate, 'kmPerDay': kmPerDay}));
+
   Future<TaxiOwnerModel?> submit() async => _parse(await ApiService.post('/taxis/me/submit', {}));
 
   Future<TaxiOwnerModel?> setAvailable(bool available) async =>

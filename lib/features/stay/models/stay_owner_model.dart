@@ -121,6 +121,8 @@ class StayOwnerModel {
   final DateTime createdAt;
   final int pendingReportCount;
   final bool everApproved;
+  final String? upiId;
+  final String? whatsAppNumber;
 
   const StayOwnerModel({
     required this.id,
@@ -158,6 +160,8 @@ class StayOwnerModel {
     required this.createdAt,
     this.pendingReportCount = 0,
     this.everApproved = false,
+    this.upiId,
+    this.whatsAppNumber,
   });
 
   bool get isDraft => status == StayStatus.draft;
@@ -165,6 +169,7 @@ class StayOwnerModel {
   bool get isApproved => status == StayStatus.approved;
   bool get isRejected => status == StayStatus.rejected;
   bool get canEditSetup => isDraft || isRejected;
+  bool get hasAdvanceDetails => (upiId ?? '').isNotEmpty || (whatsAppNumber ?? '').isNotEmpty;
   bool get registrationDone => registrationTypeId != null && hasRegistrationNumber;
 
   int get setupPercent {
@@ -223,6 +228,8 @@ class StayOwnerModel {
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
       pendingReportCount: (json['pendingReportCount'] as num?)?.toInt() ?? 0,
       everApproved: json['everApproved'] == true,
+      upiId: json['upiId'] as String?,
+      whatsAppNumber: json['whatsAppNumber'] as String?,
     );
   }
 }

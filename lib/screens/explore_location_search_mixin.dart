@@ -34,7 +34,8 @@ mixin ExploreLocationSearchMixin<T extends StatefulWidget> on State<T> {
       _locSearchCtrl.endSearchOverride();
       return;
     }
-    final picked = await LocationSearchSheet.show(context, bias: searchCenter, palette: searchPalette);
+    final picked = await LocationSearchSheet.show(context, bias: searchCenter, palette: searchPalette,
+        preferState: _locSearchCtrl.effectiveDistrict?.stateName);
     if (picked == null || !mounted) return;
     await _applyPickedPlace(picked);
   }

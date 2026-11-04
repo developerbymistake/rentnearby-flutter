@@ -297,6 +297,9 @@ class _TaxiDetailScreenState extends State<TaxiDetailScreen> {
       if (t.plateDisplay.isNotEmpty) _infoRow(Iconsax.car, 'Number plate', t.plateDisplay),
       if (t.seats != null) _infoRow(Iconsax.people, 'Seats', '${TaxiOptionSets.seatsLabel(t.seats!)} seats'),
       _infoRow(Iconsax.location, 'Base', _baseCity(t)),
+      if (t.localDayRate != null)
+        _infoRow(Iconsax.routing, 'Local sightseeing',
+            '${TaxiOptionSets.localRateLabel(t.localDayRate!)}${t.localDayKm != null ? ' · ${t.localDayKm} km/day' : ''}'),
     ];
     return Container(
       width: double.infinity,

@@ -1,0 +1,223 @@
+import 'package:flutter/material.dart';
+import '../../../config/app_colors.dart';
+import '../../../models/browse_item.dart';
+import '../models/trip_enquiry_model.dart';
+import '../trip_strings.dart';
+import '../utils/trip_format.dart';
+import 'trip_status.dart';
+
+class TripStripAction {
+  static const withdraw = 'withdraw';
+  static const phoneBooking = 'phoneBooking';
+  static const editBooking = 'editBooking';
+  static const resendLink = 'resendLink';
+  static const copyLink = 'copyLink';
+  static const cancel = 'cancel';
+  static const report = 'report';
+  static const callHost = 'callHost';
+  static const counter = 'counter';
+  static const changeRequest = 'changeRequest';
+
+  final String id;
+  final String label;
+  final bool destructive;
+  final bool enabled;
+
+  const TripStripAction(this.id, this.label, {this.destructive = false, this.enabled = true});
+
+  static List<TripStripAction> forTraveller(TripEnquiryModel e, {bool linkCached = false}) {
+    const reportAction = TripStripAction(report, TripStrings.report);
+    switch (e.display) {
+      case TripDisplayStatus.asked:
+      case TripDisplayStatus.offered:
+        return [
+          if (e.canCounter) const TripStripAction(counter, TripStrings.proposePrice),
+          const TripStripAction(withdraw, TripStrings.withdraw),
+          const TripStripAction(phoneBooking, TripStrings.iBookedByPhone),
+          reportAction,
+        ];
+      case TripDisplayStatus.confirmedByYou:
+        final canResend = e.hostConfirm.canResend(DateTime.now());
+        return [
+          const TripStripAction(editBooking, TripStrings.editBooking),
+          TripStripAction(resendLink, TripStrings.resendLink, enabled: canResend),
+          TripStripAction(copyLink, TripStrings.copyLink, enabled: canResend || linkCached),
+          const TripStripAction(cancel, TripStrings.cancelBooking, destructive: true),
+          reportAction,
+        ];
+      case TripDisplayStatus.confirmedByBoth:
+        return [
+          if (e.advance.isPending || e.advance.isProofSent) const TripStripAction(callHost, TripStrings.callHost),
+          if (e.canChangeRequest) const TripStripAction(changeRequest, TripStrings.changeRequest),
+          const TripStripAction(cancel, TripStrings.cancelBooking, destructive: true),
+          reportAction,
+        ];
+      default:
+        return [reportAction];
+    }
+  }
+}
+
+class TripEnquiryStrip extends StatelessWidget {
+  const TripEnquiryStrip({
+    super.key,
+    required this.enquiry,
+    required this.onTap,
+    this.ownerSide = false,
+    this.actions = const [],
+    this.onAction,
+  });
+
+  final TripEnquiryModel enquiry;
+  final VoidCallback onTap;
+  final bool ownerSide;
+  final List<TripStripAction> actions;
+  final ValueChanged<String>? onAction;
+
+  String _title() {
+    final parts = <String>[TripStrings.tripEnquiry];
+    final city = enquiry.context.city;
+    if (city.isNotEmpty) parts.add(city);
+    final cin = enquiry.checkIn;
+    if (cin != null) parts.add(TripFormat.shortDate(cin));
+    return parts.join(' · ');
+  }
+
+  String _detail() {
+    final c = enquiry.context;
+    final parts = <String>[];
+    final people = c.peopleLabel;
+    if (people != null) parts.add(people);
+    final rooms = c.roomsLabel;
+    if (rooms != null) parts.add(rooms);
+    final cin = enquiry.checkIn;
+    if (cin != null) {
+      final now = DateTime.now();
+      final days = DateTime(cin.year, cin.month, cin.day).difference(DateTime(now.year, now.month, now.day)).inDays;
+      parts.add(days <= 0 ? TripStrings.tonight : TripStrings.tripIn(days));
+    }
+    if (enquiry.isUrgent) parts.add(TripStrings.urgent);
+    return parts.join(' · ');
+  }
+
+  String _statusLine() {
+    final status = enquiry.display;
+    final agreed = enquiry.agreedTotalLocked;
+    if (status == TripDisplayStatus.confirmedByBoth && !enquiry.advance.hasRequest && agreed != null) {
+      return '${TripStrings.stayConfirmed} · ${BrowseItem.inr(agreed)}';
+    }
+    return TripStatusVisuals.label(status, ownerSide: ownerSide);
+  }
+
+  (String, Color)? _advanceLine() {
+    final a = enquiry.advance;
+    final status = enquiry.display;
+    if (!a.hasRequest) return null;
+    final money = BrowseItem.inr(a.amount ?? 0);
+    final color = TripStatusVisuals.advanceText(a.status);
+    if (status == TripDisplayStatus.holdExpired) return (TripStrings.holdExpired, color);
+    if (status != TripDisplayStatus.confirmedByBoth) return null;
+    final hold = a.holdUntil;
+    return switch (a.status) {
+      'Pending' => (
+        hold == null
+            ? TripStrings.advancePending(money)
+            : '${TripStrings.advancePending(money)} · ${TripStrings.holdTill(TripFormat.time12Of(hold))}',
+        color
+      ),
+      'ProofSent' => (TripStrings.waitingForHostBar(money), color),
+      'Received' => (TripStrings.advanceReceivedBar(money), color),
+      _ => null,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = enquiry.display;
+    final advance = _advanceLine();
+    final menu = actions.isNotEmpty && onAction != null;
+    return Material(
+      color: AppColors.cardBg,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.divider))),
+        child: IntrinsicHeight(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Container(width: 4, color: advance != null && status == TripDisplayStatus.confirmedByBoth ? TripStatusVisuals.advanceBar(enquiry.advance.status) : TripStatusVisuals.bar(status)),
+            Expanded(
+              child: InkWell(
+                onTap: onTap,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 56),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+                    child: Row(children: [
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                          Text(_title(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          Text(_detail(),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textMedium)),
+                          Text.rich(
+                              TextSpan(text: _statusLine(), children: [
+                                if (status == TripDisplayStatus.confirmedByBoth && enquiry.hasPendingRevised)
+                                  TextSpan(
+                                    text: ' · ${TripStrings.notAcceptedYet}',
+                                    style: const TextStyle(fontWeight: FontWeight.w500, color: AppColors.textLight),
+                                  ),
+                              ]),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: TripStatusVisuals.text(status))),
+                          if (advance != null)
+                            Text(advance.$1,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: advance.$2)),
+                        ]),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textHint),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+            if (menu)
+              SizedBox(
+                width: 44,
+                child: PopupMenuButton<String>(
+                  padding: EdgeInsets.zero,
+                  tooltip: '',
+                  icon: const Icon(Icons.more_vert_rounded, size: 20, color: AppColors.textMedium),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  onSelected: onAction,
+                  itemBuilder: (_) => [
+                    for (final a in actions)
+                      PopupMenuItem<String>(
+                        value: a.id,
+                        enabled: a.enabled,
+                        height: 44,
+                        child: Text(a.label,
+                            style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 13,
+                                color: a.destructive ? AppColors.error : AppColors.textDark)),
+                      ),
+                  ],
+                ),
+              ),
+          ]),
+        ),
+      ),
+    );
+  }
+}

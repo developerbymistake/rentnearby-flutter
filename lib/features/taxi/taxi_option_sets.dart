@@ -56,11 +56,12 @@ class TaxiOptionSets {
   static const int maxRoutes = 10;
   static const int minFare = 100;
   static const int maxFare = 9900000;
+  static const int localDayKmMax = 1000;
   static const int phoneLength = 10;
   static const double minEndpointDistanceMeters = 500;
 
   static const safetyLine = 'Bakhli takes no booking or payment. Confirm the fare and the vehicle before you travel.';
-  static const plateCheckedLabel = 'Plate photo checked';
+  static const plateCheckedLabel = 'Plate photo added';
   static const plateHelp = 'Enter a valid number plate, e.g. UK 07 TA 1234';
 
   static final List<TextInputFormatter> plateInputFormatters = [
@@ -133,6 +134,17 @@ class TaxiOptionSets {
     final n = t.routes.length;
     final min = t.minFare;
     final from = min != null ? ' · from ${BrowseItem.inr(min)}' : '';
-    return '$n route${n == 1 ? '' : 's'}$from';
+    final rate = t.localDayRate;
+    final local = rate != null ? ' · ${BrowseItem.inr(rate)} / day local' : '';
+    return '$n route${n == 1 ? '' : 's'}$from$local';
   }
+
+  static String localRateLabel(int rate) => '${BrowseItem.inr(rate)} / day local';
+
+  static String tripReplyLabelText(String label) => switch (label) {
+        'new' => 'New to trips',
+        'app' => 'Replies in app',
+        'phone' => 'Mostly on phone',
+        _ => '',
+      };
 }

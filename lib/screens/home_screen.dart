@@ -27,6 +27,7 @@ import '../features/taxi/models/taxi_browse_item.dart';
 import '../features/taxi/setup/taxi_flow.dart';
 import '../features/taxi/taxi_option_sets.dart';
 import '../features/trip/widgets/trip_home_card.dart';
+import '../features/trip/widgets/trip_popular_rail.dart';
 import '../services/add_listing_flow.dart';
 import '../utils/app_toast.dart';
 import '../widgets/home_owner_carousel.dart';
@@ -109,6 +110,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: _buildTripCard(),
               ),
               const SizedBox(height: 15),
+              FadeInUp(
+                duration: const Duration(milliseconds: 260),
+                delay: const Duration(milliseconds: 165),
+                from: 14,
+                child: const TripPopularRail(),
+              ),
               FadeInUp(
                 duration: const Duration(milliseconds: 260),
                 delay: const Duration(milliseconds: 180),

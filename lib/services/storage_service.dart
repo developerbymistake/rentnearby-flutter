@@ -48,6 +48,64 @@ class StorageService {
     clearUser();
     clearFcmToken();
     clearAllChatStackedLines();
+    clearAllTripCaches();
+  }
+
+  static void saveTripCache(String tripId, Map<String, dynamic> json) =>
+      _box.write('${AppConstants.tripTodayCacheKeyPrefix}$tripId', jsonEncode(json));
+
+  static Map<String, dynamic>? getTripCache(String tripId) =>
+      _readJsonMap('${AppConstants.tripTodayCacheKeyPrefix}$tripId');
+
+  static void saveTripResultCache(String tripId, Map<String, dynamic> json) =>
+      _box.write('${AppConstants.tripResultCacheKeyPrefix}$tripId', jsonEncode(json));
+
+  static Map<String, dynamic>? getTripResultCache(String tripId) =>
+      _readJsonMap('${AppConstants.tripResultCacheKeyPrefix}$tripId');
+
+  static void clearTripCache(String tripId) {
+    _box.remove('${AppConstants.tripTodayCacheKeyPrefix}$tripId');
+    _box.remove('${AppConstants.tripResultCacheKeyPrefix}$tripId');
+  }
+
+  static List<Map<String, dynamic>> getTripProblemQueue() {
+    final raw = _box.read<String>(AppConstants.tripProblemQueueKey);
+    if (raw == null) return [];
+    try {
+      final list = jsonDecode(raw);
+      if (list is! List) return [];
+      return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static void saveTripProblemQueue(List<Map<String, dynamic>> items) {
+    if (items.isEmpty) {
+      _box.remove(AppConstants.tripProblemQueueKey);
+    } else {
+      _box.write(AppConstants.tripProblemQueueKey, jsonEncode(items));
+    }
+  }
+
+  static void clearAllTripCaches() {
+    final keys = _box.getKeys().whereType<String>().where((k) =>
+        k.startsWith(AppConstants.tripTodayCacheKeyPrefix) || k.startsWith(AppConstants.tripResultCacheKeyPrefix));
+    for (final k in keys.toList()) {
+      _box.remove(k);
+    }
+    _box.remove(AppConstants.tripProblemQueueKey);
+  }
+
+  static Map<String, dynamic>? _readJsonMap(String key) {
+    final raw = _box.read<String>(key);
+    if (raw == null) return null;
+    try {
+      final v = jsonDecode(raw);
+      return v is Map ? Map<String, dynamic>.from(v) : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<void> saveFcmToken(String token) async =>
@@ -178,17 +236,6 @@ class StorageService {
   static Map<String, dynamic>? getSoftUpdateSnooze() => _readJsonMap(AppConstants.softUpdateSnoozeKey);
 
   static void clearSoftUpdateSnooze() => _box.remove(AppConstants.softUpdateSnoozeKey);
-
-  static Map<String, dynamic>? _readJsonMap(String key) {
-    try {
-      final raw = _box.read(key);
-      if (raw is! String) return null;
-      final decoded = jsonDecode(raw);
-      return decoded is Map ? Map<String, dynamic>.from(decoded) : null;
-    } catch (_) {
-      return null;
-    }
-  }
 
   // ── Chat notification stacking ──────────────────────────────────────────
   // See AppConstants.chatStackedLinesKeyPrefix — persists recent messages (text + the time

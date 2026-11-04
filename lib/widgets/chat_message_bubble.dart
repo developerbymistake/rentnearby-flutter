@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../models/message_model.dart';
 import '../models/question_template_model.dart';
+import 'trip_chat_cards.dart';
 
 class ChatMessageBubble extends StatelessWidget {
   final MessageModel message;
@@ -18,6 +19,8 @@ class ChatMessageBubble extends StatelessWidget {
   final VoidCallback? onCounterSchedule;
   final VoidCallback? onCall;
   final Color accent;
+  final bool isOwner;
+  final TripChatCallbacks? trip;
 
   const ChatMessageBubble({
     super.key,
@@ -31,6 +34,8 @@ class ChatMessageBubble extends StatelessWidget {
     this.onCounterSchedule,
     this.onCall,
     this.accent = AppColors.primary,
+    this.isOwner = false,
+    this.trip,
   });
 
   @override
@@ -46,6 +51,13 @@ class ChatMessageBubble extends StatelessWidget {
         return _scheduleProposal(context);
       case 'schedule_response':
         return _scheduleResponse(context);
+      case 'trip_enquiry':
+      case 'trip_offer':
+      case 'trip_offer_response':
+      case 'trip_phone_booking':
+      case 'trip_advance_request':
+      case 'trip_advance_proof_sent':
+        return TripChatCards.build(context, message, isOwner: isOwner, accent: accent, callbacks: trip);
       default:
         // Defensive fallback only — the backend never emits Type == "system" (or any other
         // unrecognized type) today. Kept so an unrecognized future type renders as a plain

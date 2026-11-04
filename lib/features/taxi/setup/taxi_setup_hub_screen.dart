@@ -8,8 +8,10 @@ import '../../../controllers/location_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/global_location_gates.dart';
 import '../../stay/setup/stay_step_row.dart';
+import '../../trip/trip_strings.dart';
 import '../models/taxi_owner_model.dart';
 import '../taxi_option_sets.dart';
+import 'taxi_popular_routes_nudge.dart';
 import 'taxi_setup_controller.dart';
 
 class TaxiSetupHubScreen extends StatefulWidget {
@@ -165,6 +167,7 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
     final u3 = d2 && stepDone;
     final d3 = u3 && (t != null && (t.isPendingReview || t.isApproved));
     final percent = t?.percent ?? 0;
+    final rateMissing = t != null && t.isApproved && t.localDayRate == null;
     final canCorrect = gated && (t == null || t.isDraft) && (_auth.user.value?.canCorrectRole ?? false);
 
     StayStepState state(bool unlocked, bool done) =>
@@ -174,6 +177,14 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
       if (t != null && t.isRejected) _rejectedStrip(t),
       if (t != null && t.isPendingReview) _pendingStrip(),
       if (t != null && (t.isDraft || t.isRejected) && !t.identityDone) _identityStrip(),
+      if (rateMissing)
+        _strip(
+          color: AppColors.warning,
+          icon: Iconsax.info_circle,
+          title: TripStrings.notInTripPlanning,
+          body: TripStrings.addRateHint,
+        ),
+      if (t != null && t.isApproved) TaxiPopularRoutesNudge(onTap: () => _open(AppRoutes.taxiRoutes)),
       _scoreCard(percent),
       if (canCorrect) _wrongRoleLink(percent),
       const SizedBox(height: 16),
@@ -190,7 +201,12 @@ class _TaxiSetupHubScreenState extends State<TaxiSetupHubScreen> {
       StayStepRow(
         number: 2,
         title: 'Routes and fares',
-        subtitle: !u2 ? 'Complete step 1 first' : d2 ? TaxiOptionSets.routesSummary(t!) : 'Add routes, up to 10',
+        subtitle: !u2
+            ? 'Complete step 1 first'
+            : d2
+                ? '${TaxiOptionSets.routesSummary(t!)}${rateMissing ? ' · ${TripStrings.rateMissing}' : ''}'
+                : 'Routes, fares, local rate',
+        trailing: rateMissing ? TripStrings.addRate : null,
         state: state(u2, d2),
         onTap: () => _open(AppRoutes.taxiRoutes),
         accent: TaxiColors.accent,

@@ -37,6 +37,10 @@ class AppColors {
   static const Color tripDark = Color(0xFFEA580C);
   static const Color tripLight = Color(0xFFFB923C);
   static const Color tripSurface = Color(0xFFFFF7ED);
+  static const Color tripBooked = Color(0xFF2563EB);
+  static const Color tripBookedSurface = Color(0xFFEFF6FF);
+  static const Color tripAdvance = Color(0xFF047857);
+  static const Color tripAdvanceSurface = Color(0xFFECFDF5);
 
   // Hex strings for native MapLibre layer APIs, which require a String not a Color.
   static String hexOf(Color c) =>

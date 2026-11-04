@@ -1,9 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_shadows.dart';
 import '../../../models/browse_item.dart';
+import '../../trip/trip_strings.dart';
+import '../enquiries/stay_enquiry_strings.dart';
 import '../models/stay_owner_model.dart';
 import 'stay_option_sets.dart';
 
@@ -16,6 +19,8 @@ class StayOwnerCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onReportsTap;
   final VoidCallback? onOpenSetup;
+  final VoidCallback? onEnquiries;
+  final RxInt? enquiryNewCount;
 
   const StayOwnerCard({
     super.key,
@@ -27,6 +32,8 @@ class StayOwnerCard extends StatelessWidget {
     this.onDelete,
     this.onReportsTap,
     this.onOpenSetup,
+    this.onEnquiries,
+    this.enquiryNewCount,
   });
 
   @override
@@ -289,6 +296,11 @@ class StayOwnerCard extends StatelessWidget {
             _roomRow(stay.rooms[i]),
           ],
         ],
+        if (onEnquiries != null && !stay.isDraft) ...[
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AppColors.divider),
+          _enquiriesRow(),
+        ],
         if (onDelete != null || onPreview != null || onShare != null) ...[
           const SizedBox(height: 12),
           const Divider(height: 1, color: AppColors.divider),
@@ -320,6 +332,49 @@ class StayOwnerCard extends StatelessWidget {
             ),
         ]),
       );
+
+  Widget _enquiriesRow() {
+    return InkWell(
+      onTap: onEnquiries,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 52),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(children: [
+            const Icon(Iconsax.message_question, size: 18, color: StayColors.accentDark),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text(TripStrings.enquiries,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                const Text(StayEnquiryStrings.rowSubtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+              ]),
+            ),
+            if (enquiryNewCount != null)
+              Obx(() {
+                final n = enquiryNewCount!.value;
+                if (n <= 0) return const SizedBox.shrink();
+                return Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(12)),
+                  child: Text(TripStrings.newCount(n),
+                      maxLines: 1,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                );
+              }),
+            const SizedBox(width: 4),
+            const Icon(Iconsax.arrow_right_3, size: 14, color: AppColors.textHint),
+          ]),
+        ),
+      ),
+    );
+  }
 
   Widget _actions() {
     final cells = <Widget>[

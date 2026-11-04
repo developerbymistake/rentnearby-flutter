@@ -26,6 +26,7 @@ class TaxiBrowseRepository {
     String? cityId,
     String? category,
     bool cityOnly = false,
+    bool localRate = false,
     int page = 1,
     int pageSize = 20,
   }) async =>
@@ -34,6 +35,7 @@ class TaxiBrowseRepository {
         'cityId': ?cityId,
         'category': ?category,
         'cityOnly': ?(cityOnly ? 'true' : null),
+        'localRate': ?(localRate ? 'true' : null),
         'page': page,
         'pageSize': pageSize,
       }));
