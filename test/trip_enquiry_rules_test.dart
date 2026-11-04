@@ -70,9 +70,11 @@ void main() {
 
     test('nightsFor: one night, or every remaining night', () {
       expect(TripEnquiryRules.nightsFor(4, 1, false), 1);
-      expect(TripEnquiryRules.nightsFor(4, 1, true), 3);
-      expect(TripEnquiryRules.nightsFor(4, 2, true), 2);
-      expect(TripEnquiryRules.nightsFor(4, 3, true), 1);
+      expect(TripEnquiryRules.nightsFor(4, 1, true), 4);
+      expect(TripEnquiryRules.nightsFor(4, 2, true), 3);
+      expect(TripEnquiryRules.nightsFor(4, 3, true), 2);
+      expect(TripEnquiryRules.nightsFor(4, 4, true), 1);
+      expect(TripEnquiryRules.nightsFor(1, 1, true), 1);
     });
   });
 }

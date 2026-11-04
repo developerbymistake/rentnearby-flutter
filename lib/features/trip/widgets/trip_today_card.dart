@@ -109,7 +109,6 @@ class TripTodayCard extends StatelessWidget {
       );
 
   List<Widget> _stayRow(TripPlanController c, int n) {
-    if (c.isLastDay(n)) return const [];
     final e = c.todayStay(n);
     if (e != null) {
       final room = e.phoneBooking?.roomName.isNotEmpty == true

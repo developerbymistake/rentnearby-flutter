@@ -147,11 +147,6 @@ class TripPlanController extends GetxController {
 
   DateTime? dateOf(int day) => settings.dateOf(day);
 
-  bool isLastDay(int day) {
-    final n = dayCount;
-    return n > 0 && day == n;
-  }
-
   int get defaultMapDay {
     final start = settings.startDate;
     final n = dayCount;
@@ -234,7 +229,7 @@ class TripPlanController extends GetxController {
 
   List<TripStayShortlistItem> askAgainStays(int day) {
     final date = dateOf(day);
-    if (date == null || isLastDay(day) || date.isBefore(_today)) return const [];
+    if (date == null || date.isBefore(_today)) return const [];
     final off = unavailableStayIds;
     final all = enquiriesForNight(day);
     return (plan.value?.dayAt(day)?.stayShortlist ?? const <TripStayShortlistItem>[]).where((s) {
@@ -957,7 +952,7 @@ class TripPlanController extends GetxController {
 
   void selectStay(int day, StayNearbyModel s) {
     final p = plan.value;
-    if (p == null || isLastDay(day)) return;
+    if (p == null) return;
     final choice = TripStayChoice(
       stayId: s.id,
       name: s.title,
@@ -973,14 +968,13 @@ class TripPlanController extends GetxController {
       latitude: s.latitude,
       longitude: s.longitude,
     );
-    final laterEmpty = p.days.where((d) => d.day > day && !isLastDay(d.day)).every((d) => d.stay == null);
+    final laterEmpty = p.days.where((d) => d.day > day).every((d) => d.stay == null);
     final prefill = day == 1 || laterEmpty;
     _applyChoice([
       for (final d in p.days)
         if (d.day == day)
           d.copyWith(stay: choice)
         else if (d.day > day &&
-            !isLastDay(d.day) &&
             (d.stay?.sameAsDay == day || (prefill && (d.stay == null || d.stay!.isSameStay))))
           d.copyWith(stay: copy)
         else
@@ -1140,7 +1134,6 @@ class TripPlanController extends GetxController {
 
   int? get firstRedDay {
     for (final d in plan.value?.days ?? const <TripDay>[]) {
-      if (isLastDay(d.day)) continue;
       if (primaryEnquiry(d.day)?.isRed ?? false) return d.day;
     }
     return null;
@@ -1343,7 +1336,7 @@ class TripPlanController extends GetxController {
     var changed = false;
     int? indexFor(DateTime date) {
       for (var i = 0; i < days.length; i++) {
-        if (!isLastDay(days[i].day) && _sameDate(dateOf(days[i].day), date)) return i;
+        if (_sameDate(dateOf(days[i].day), date)) return i;
       }
       return null;
     }
@@ -1463,7 +1456,7 @@ class TripPlanController extends GetxController {
   bool toggleShortlist(int day, StayNearbyModel s) {
     final p = plan.value;
     final d = p?.dayAt(day);
-    if (p == null || d == null || isLastDay(day)) return true;
+    if (p == null || d == null) return true;
     if (isShortlisted(day, s.id)) {
       removeShortlist(day, s.id);
       return true;
@@ -1478,8 +1471,7 @@ class TripPlanController extends GetxController {
       distanceKm: s.distanceKm,
     );
     final copy = item.copyWith(sameAsDay: day);
-    final laterEmpty =
-        p.days.where((x) => x.day > day && !isLastDay(x.day)).every((x) => x.stayShortlist.isEmpty);
+    final laterEmpty = p.days.where((x) => x.day > day).every((x) => x.stayShortlist.isEmpty);
     final prefill = day == 1 || laterEmpty;
     bool follows(TripDay x) =>
         x.stayShortlist.isEmpty ? prefill : x.stayShortlist.every((i) => i.sameAsDay == day);
@@ -1488,7 +1480,6 @@ class TripPlanController extends GetxController {
         if (x.day == day)
           x.copyWith(stayShortlist: [...x.stayShortlist, item])
         else if (x.day > day &&
-            !isLastDay(x.day) &&
             x.stay == null &&
             follows(x) &&
             x.stayShortlist.length < TripConstants.maxShortlist &&
@@ -1524,7 +1515,7 @@ class TripPlanController extends GetxController {
 
   void setOwnStay(int day, {required String name, String? phone, String? note}) {
     final p = plan.value;
-    if (p == null || isLastDay(day) || p.dayAt(day) == null) return;
+    if (p == null || p.dayAt(day) == null) return;
     final ph = phone?.trim();
     final nt = note?.trim();
     final own = TripStayChoice(

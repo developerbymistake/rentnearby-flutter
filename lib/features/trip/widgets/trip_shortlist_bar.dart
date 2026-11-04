@@ -39,7 +39,6 @@ class TripShortlistBar extends StatelessWidget {
       c.enquiryList.length;
       final supply = Get.isRegistered<TripSupplyController>() ? Get.find<TripSupplyController>() : null;
       final noSupply = supply != null && !supply.stayLoading.value && supply.stays.isEmpty;
-      if (c.isLastDay(day)) return const SizedBox.shrink();
       final n = c.shortlistCount(day);
       final sendable = c.sendableShortlist(day).length;
       final link = TextButton(

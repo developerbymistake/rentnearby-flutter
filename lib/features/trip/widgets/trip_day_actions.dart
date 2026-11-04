@@ -21,7 +21,7 @@ import 'trip_withdraw_sheet.dart';
 
 enum TripTileState { active, pending, disabled }
 
-enum TripTileStatus { none, selected, booked, checkout, asked, offered, confirmedByYou, confirmedByBoth, red, own }
+enum TripTileStatus { none, selected, booked, asked, offered, confirmedByYou, confirmedByBoth, red, own }
 
 class TripDayActions extends StatelessWidget {
   final int day;
@@ -62,7 +62,7 @@ class TripDayActions extends StatelessWidget {
             if (showTaxi && showStay) const SizedBox(width: 8),
             if (showStay)
               Expanded(
-                child: state == TripTileState.disabled && !c.isLastDay(day)
+                child: state == TripTileState.disabled
                     ? _stayTile(context, c, d, noSupply: true)
                     : _ActionTile(
                         icon: Iconsax.building_4,
@@ -81,7 +81,6 @@ class TripDayActions extends StatelessWidget {
       }
       final taxi = d.taxi;
       final booking = taxi?.booking;
-      final checkout = c.isLastDay(day);
       final taxiEnquiry = _taxiTile(context, c);
       return Row(
         children: [
@@ -118,19 +117,7 @@ class TripDayActions extends StatelessWidget {
           if (showTaxi && showStay) const SizedBox(width: 8),
           if (showStay)
             Expanded(
-              child: checkout
-                  ? _ActionTile(
-                      icon: Iconsax.building_4,
-                      accent: StayColors.accent,
-                      surface: StayColors.surface,
-                      title: TripStrings.checkoutDay,
-                      subtitle: TripStrings.noStayNeeded,
-                      selected: false,
-                      state: TripTileState.disabled,
-                      status: TripTileStatus.checkout,
-                      onTap: () {},
-                    )
-                  : _stayTile(context, c, d),
+              child: _stayTile(context, c, d),
             ),
         ],
       );

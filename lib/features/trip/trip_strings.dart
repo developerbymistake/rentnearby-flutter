@@ -79,9 +79,6 @@ class TripStrings {
   static const String saved = 'Saved';
   static const String addYourDates = 'Add your dates';
   static const String datesNeededBooking = 'Needed for a booking.';
-  static const String checkoutDay = 'Check-out day';
-  static const String noStayNeeded = 'No stay needed';
-  static const String checkoutDaySubtitle = 'The last day has no night to book';
   static const String bookedByYou = 'Booked by you';
   static const String iBooked = 'I booked';
   static const String booked = 'Booked';

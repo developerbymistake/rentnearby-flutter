@@ -41,12 +41,12 @@ class _TripStayScreenState extends State<TripStayScreen> {
     final args = Get.arguments;
     final day = args is Map ? args['day'] as int? : null;
     if (day != null) _supply.setDay(day);
-    if (!_plan.isLastDay(_supply.day.value)) _supply.ensureStays();
+    _supply.ensureStays();
   }
 
   void _changeDay(int d) {
     _supply.setDay(d);
-    if (!_plan.isLastDay(d)) _supply.ensureStays();
+    _supply.ensureStays();
   }
 
   @override
@@ -78,7 +78,6 @@ class _TripStayScreenState extends State<TripStayScreen> {
       ),
       bottomNavigationBar: Obx(() {
         final d = _supply.day.value;
-        if (_plan.isLastDay(d)) return const SizedBox.shrink();
         return TripShortlistBar(key: ValueKey('shortlist-$d'), day: d);
       }),
     );
@@ -152,7 +151,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
   String _headerSubtitle() {
     final d = _supply.day.value;
     final date = _plan.dateOf(d);
-    if (date == null || _plan.isLastDay(d)) return _plan.cityName;
+    if (date == null) return _plan.cityName;
     return '${TripFormat.shortDate(date)} · ${TripStrings.night(d)}';
   }
 
@@ -167,7 +166,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
             const SizedBox(height: 12),
             TripRouteStrip(
               day: d,
-              text: _plan.isLastDay(d) ? TripStrings.checkoutDaySubtitle : 'Near your Day $d spots · sorted by distance',
+              text: 'Near your Day $d spots · sorted by distance',
               onDayChanged: _changeDay,
             ),
           ],
@@ -180,16 +179,6 @@ class _TripStayScreenState extends State<TripStayScreen> {
     return Obx(() {
       final items = _supply.stays;
       final d = _supply.day.value;
-      if (_plan.isLastDay(d)) {
-        return SliverToBoxAdapter(
-          child: EmptyStateView(
-            icon: Iconsax.building_4,
-            title: TripStrings.checkoutDay,
-            subtitle: TripStrings.checkoutDaySubtitle,
-            palette: TripColors.palette,
-          ),
-        );
-      }
       if (!_plan.supplyAvailable && !_plan.supplyPending) return SliverToBoxAdapter(child: _noSupply());
       if (_supply.stayLoading.value) {
         return SliverPadding(

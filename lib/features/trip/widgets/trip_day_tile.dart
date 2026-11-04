@@ -103,7 +103,7 @@ class TripDayTile extends StatelessWidget {
 
   Widget _redNote(TripPlanController c, TripDay d) {
     final e = c.primaryEnquiry(day);
-    if (e == null || !e.isRed || c.isLastDay(day) || !c.showStayOption || c.isCompleted) return const SizedBox.shrink();
+    if (e == null || !e.isRed || !c.showStayOption || c.isCompleted) return const SizedBox.shrink();
     if (e.display == TripDisplayStatus.holdExpired) {
       final replied = c
           .enquiriesForNight(day)

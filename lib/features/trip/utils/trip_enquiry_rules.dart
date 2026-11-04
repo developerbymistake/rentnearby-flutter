@@ -46,7 +46,7 @@ class TripEnquiryRules {
 
   static int nightsFor(int dayCount, int day, bool allNights) {
     if (!allNights) return 1;
-    final n = dayCount - day;
+    final n = dayCount - day + 1;
     return n < 1 ? 1 : n;
   }
 
