@@ -18,11 +18,9 @@ class PhotonService {
   // Excludes must use the `!key:value` form; `key:!value` is not Photon syntax.
   static const _osmTagFilter = [
     'place',
-    'landuse:residential',
-    'amenity',
     'tourism',
     'railway:station',
-    'man_made:tower',
+    'amenity:place_of_worship',
     '!place:county',
     '!place:state',
     '!place:country',
@@ -37,32 +35,19 @@ class PhotonService {
     '!place:isolated_dwelling',
     '!place:house',
     '!place:district',
-    '!amenity:bench',
-    '!amenity:parking',
-    '!amenity:parking_space',
-    '!amenity:parking_entrance',
-    '!amenity:bicycle_parking',
-    '!amenity:motorcycle_parking',
-    '!amenity:toilets',
-    '!amenity:waste_basket',
-    '!amenity:waste_disposal',
-    '!amenity:recycling',
-    '!amenity:drinking_water',
-    '!amenity:vending_machine',
-    '!amenity:atm',
-    '!amenity:shelter',
-    '!amenity:telephone',
-    '!amenity:post_box',
-    '!amenity:charging_station',
-    '!amenity:grit_bin',
-    '!amenity:bbq',
-    '!amenity:hunting_stand',
+    '!place:hamlet',
+    '!place:locality',
     '!tourism:information',
     '!tourism:artwork',
     '!tourism:picnic_site',
+    '!tourism:hotel',
+    '!tourism:guest_house',
+    '!tourism:hostel',
+    '!tourism:motel',
+    '!tourism:apartment',
+    '!tourism:chalet',
+    '!tourism:camp_site',
   ];
-
-  static const _bbox = '77.5,28.7,81.1,31.5';
 
   static Future<List<PlaceResult>> search(String query, {LatLng? bias, int limit = 8}) async {
     final trimmed = query.trim();
@@ -72,7 +57,6 @@ class PhotonService {
       'q': trimmed,
       'limit': limit,
       'osm_tag': _osmTagFilter,
-      'bbox': _bbox,
     };
     if (bias != null) {
       params['lat'] = bias.latitude;
