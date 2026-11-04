@@ -66,7 +66,7 @@ class TripShortlistBar extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: onlyLink
-                ? Align(alignment: Alignment.centerLeft, child: link)
+                ? Align(alignment: Alignment.centerLeft, heightFactor: 1, child: link)
                 : LayoutBuilder(builder: (context, box) {
                     final info = Wrap(
                       spacing: 8,
