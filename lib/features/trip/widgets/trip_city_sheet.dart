@@ -8,6 +8,31 @@ import '../data/trip_repository.dart';
 import '../models/trip_city_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a4.dart';
+
+class TripCitySupplyCache {
+  static const _ttl = Duration(minutes: 10);
+  static final _cache = <int, (TripCitySupply, DateTime)>{};
+  static final _inFlight = <int, Future<TripCitySupply>>{};
+
+  static TripCitySupply? cached(int cityKey) {
+    final hit = _cache[cityKey];
+    if (hit == null || DateTime.now().difference(hit.$2) > _ttl) return null;
+    return hit.$1;
+  }
+
+  static Future<TripCitySupply> load(int cityKey) {
+    final hit = cached(cityKey);
+    if (hit != null) return Future.value(hit);
+    return _inFlight[cityKey] ??= _fetch(cityKey).whenComplete(() => _inFlight.remove(cityKey));
+  }
+
+  static Future<TripCitySupply> _fetch(int cityKey) async {
+    final s = await const TripRepository().citySupply(cityKey);
+    _cache[cityKey] = (s, DateTime.now());
+    return s;
+  }
+}
 
 class TripCitySheet extends StatefulWidget {
   const TripCitySheet({super.key});
@@ -38,6 +63,9 @@ class _TripCitySheetState extends State<TripCitySheet> {
   String _query = '';
   bool _loading = false;
   _LoadError _error = _LoadError.none;
+  int? _expanded;
+  final _supply = <int, TripCitySupply>{};
+  final _supplyFailed = <int>{};
 
   double? _baseHeight;
   double? _baseTopPadding;
@@ -251,49 +279,165 @@ class _TripCitySheetState extends State<TripCitySheet> {
         ),
       );
 
+  void _toggle(TripCityModel city) {
+    final key = city.cityKey;
+    if (_expanded == key) {
+      setState(() => _expanded = null);
+      return;
+    }
+    setState(() => _expanded = key);
+    _loadSupply(key);
+  }
+
+  void _loadSupply(int key) {
+    final hit = TripCitySupplyCache.cached(key);
+    if (hit != null) {
+      _supply[key] = hit;
+      _supplyFailed.remove(key);
+      return;
+    }
+    _supplyFailed.remove(key);
+    TripCitySupplyCache.load(key).then((s) {
+      if (mounted) setState(() => _supply[key] = s);
+    }).catchError((Object _) {
+      if (mounted) setState(() => _supplyFailed.add(key));
+    });
+  }
+
   Widget _cityRow(TripCityModel city) {
     final ready = city.isReady;
     final color = ready ? AppColors.textDark : AppColors.textHint;
     final place = city.placeLine;
-    return InkWell(
-      onTap: ready ? () => Navigator.pop(context, city) : null,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-        child: Row(
-          children: [
-            Icon(Iconsax.location, size: 17, color: color),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    city.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: color),
-                  ),
-                  if (place.isNotEmpty)
-                    Text(
-                      place,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+    final open = ready && _expanded == city.cityKey;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      decoration: BoxDecoration(
+        color: open ? TripColors.surface : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: ready ? () => _toggle(city) : null,
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+                child: Row(
+                  children: [
+                    Icon(Iconsax.location, size: 17, color: color),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            city.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: color),
+                          ),
+                          if (place.isNotEmpty)
+                            Text(
+                              place,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+                            ),
+                        ],
+                      ),
                     ),
-                ],
+                    const SizedBox(width: 8),
+                    if (ready) ...[
+                      const Text(
+                        TripStringsA4.ready,
+                        style: TextStyle(
+                            fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.successText),
+                      ),
+                      Icon(open ? Icons.expand_less_rounded : Icons.expand_more_rounded, size: 20, color: AppColors.textHint),
+                    ] else
+                      const Text(
+                        TripStrings.comingSoon,
+                        style: TextStyle(
+                            fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textHint),
+                      ),
+                  ],
+                ),
               ),
             ),
-            if (ready)
-              const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textHint)
-            else
-              const Text(
-                TripStrings.comingSoon,
-                style: TextStyle(
-                    fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textHint),
+          ),
+          if (open) _supplyPanel(city),
+        ],
+      ),
+    );
+  }
+
+  Widget _supplyPanel(TripCityModel city) {
+    final key = city.cityKey;
+    final s = _supply[key];
+    final failed = _supplyFailed.contains(key);
+    final String line;
+    final IconData icon;
+    if (s != null) {
+      line = s.isEmpty ? TripStringsA4.noSupplyLine : TripStringsA4.supplyLine(s.stays, s.drivers);
+      icon = s.isEmpty ? Iconsax.info_circle : Iconsax.building_4;
+    } else if (failed) {
+      line = TripStringsA4.supplyFailed;
+      icon = Iconsax.cloud_cross;
+    } else {
+      line = TripStringsA4.supplyChecking;
+      icon = Iconsax.clock;
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(37, 0, 8, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: AppColors.textMedium),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  line,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
+                ),
               ),
-          ],
-        ),
+              if (failed)
+                TextButton(
+                  onPressed: () => setState(() => _loadSupply(key)),
+                  style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                  child: const Text(
+                    TripStrings.retry,
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: TripColors.accentDark),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 44,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context, city),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: TripColors.accent,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text(
+                TripStringsA4.planHere,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

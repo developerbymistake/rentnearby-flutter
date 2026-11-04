@@ -24,6 +24,12 @@ class TripEnquiryController extends GetxController {
 
   String? lastErrorMessage;
 
+  int? lastRetryAfterMinutes;
+
+  int? lastAsksLeft;
+
+  bool get lastWasAskLimit => lastErrorType == TripEnquiryErrorTypes.enquiryLimit;
+
   String? errorTypeOf(Object e) => DioErrorMapper.errorType(e);
 
   TripNightConflict? conflictOf(Object e) {
@@ -61,6 +67,10 @@ class TripEnquiryController extends GetxController {
       AppToast.error(TripStrings.noNetwork);
       return;
     }
+    if (type == TripEnquiryErrorTypes.enquiryLimit) {
+      AppToast.warning('${TripStrings.askLimitTitle}. ${TripStrings.askLimitBody(lastRetryAfterMinutes ?? 1)}');
+      return;
+    }
     if (type == TripEnquiryErrorTypes.executionDisabled) {
       AppToast.warning(DioErrorMapper.serverMessage(e) ?? fallback);
       return;
@@ -74,9 +84,11 @@ class TripEnquiryController extends GetxController {
     lastConflict = null;
     lastErrorType = null;
     lastErrorMessage = null;
+    lastRetryAfterMinutes = null;
     try {
       return await run();
     } catch (e) {
+      _readLimits(e);
       lastConflict = conflictOf(e);
       final network = DioErrorMapper.isNetworkError(e);
       lastErrorType = network ? null : DioErrorMapper.errorType(e);
@@ -90,16 +102,34 @@ class TripEnquiryController extends GetxController {
 
   Future<String?> _tripId() async {
     final plan = TripPlanController.to;
-    if (plan.trip.value == null) await plan.saveNow();
+    final ok = await plan.flushPendingSave();
     final id = plan.trip.value?.id;
-    if (id == null) AppToast.warning(TripStrings.notSavedYet);
+    if (!ok || id == null) {
+      AppToast.warning(TripStrings.notSavedCheckConnection);
+      return null;
+    }
     return id;
+  }
+
+  void _readLimits(Object e) {
+    if (e is! DioException) return;
+    final res = e.response;
+    lastAsksLeft = TripEnquiryRepository.asksLeftOf(res) ?? lastAsksLeft;
+    if (res?.statusCode != 429) return;
+    final seconds = int.tryParse(res?.headers.value('retry-after') ?? '');
+    lastRetryAfterMinutes = seconds == null || seconds <= 0 ? 1 : (seconds / 60).ceil();
+  }
+
+  void _readBatch(TripEnquiryBatch? batch) {
+    if (batch != null) lastAsksLeft = batch.asksLeft ?? lastAsksLeft;
   }
 
   Future<TripEnquiryBatch?> sendEnquiry({required int day, required List<String> stayIds, required bool allNights}) async {
     final tripId = await _tripId();
     if (tripId == null) return null;
-    final batch = await _guard(null, () => _repo.create(tripId, day: day, stayIds: stayIds, allNights: allNights));
+    final batch = await _guard(null, () => _repo.create(tripId, day: day, stayIds: stayIds, allNights: allNights),
+        silent: const {TripEnquiryErrorTypes.enquiryLimit});
+    _readBatch(batch);
     if (batch != null) _applyToPlan(batch.items);
     return batch;
   }
@@ -115,7 +145,9 @@ class TripEnquiryController extends GetxController {
     final batch = await _guard(
       null,
       () => _repo.createLead(tripId, days: days, taxiIds: taxiIds, pickupTime: pickupTime, pickupPlace: pickupPlace),
+      silent: const {TripEnquiryErrorTypes.enquiryLimit, TripEnquiryErrorTypes.leadLimit},
     );
+    _readBatch(batch);
     if (batch != null) _applyToPlan(batch.items);
     return batch;
   }
@@ -369,6 +401,7 @@ class TripEnquiryController extends GetxController {
     if (tripId == null) return null;
     const copy = {TripEnquiryErrorTypes.askAgainNothing: TripStrings.askAgainNothing};
     final batch = await _guard(null, () => _repo.askAgain(tripId, kind: kind, day: day), silent: copy.keys.toSet());
+    _readBatch(batch);
     if (batch == null) {
       _mapped(copy);
       return null;

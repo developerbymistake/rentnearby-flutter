@@ -9,20 +9,25 @@ import '../../../models/browse_item.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../taxi/ways/widgets/trip_ways_link.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a4.dart';
 import '../utils/trip_format.dart';
 import '../widgets/trip_day_tile.dart';
 import '../widgets/trip_lifecycle_actions.dart';
+import '../widgets/trip_not_found_view.dart';
+import '../widgets/trip_plan_hint_strip.dart';
 import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_status.dart';
 import '../widgets/trip_status_card.dart';
 import '../widgets/trip_summary_strip.dart';
 import '../widgets/trip_today_card.dart';
+import '../widgets/trip_update_app_card.dart';
 import 'trip_details_sheet.dart';
 
 class TripPlanScreen extends StatefulWidget {
@@ -51,13 +56,14 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     _c.openPages++;
     final args = Get.arguments;
     final tripId = args is Map ? args['tripId'] as String? : null;
+    final fresh = args is Map && args['fresh'] == true;
     if (tripId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        if (_c.trip.value?.id == tripId && _c.plan.value != null) {
+        if (!fresh && _c.trip.value?.id == tripId && _c.plan.value != null) {
           _c.refreshEnquiries();
         } else {
-          _c.open(tripId);
+          _c.open(tripId, fresh: fresh);
         }
       });
     }
@@ -74,7 +80,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   }
 
   Future<void> _save() async {
-    if (_saving || _c.isSaving.value) return;
+    if (_saving || _c.isSaving.value || _c.spotCount == 0) return;
     setState(() => _saving = true);
     await _c.saveNow(markPlanned: true);
     if (mounted) setState(() => _saving = false);
@@ -221,8 +227,13 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         final off = _c.plannerOff.value;
         final days = _c.dayCount;
         final spots = _c.spotCount;
-        final saved = (_c.isPlanned || _c.isCompleted) && !_c.saveFailed.value && !_c.isSaving.value;
+        _c.enquiryList.length;
+        _c.result.value;
+        _c.needsUpdate.value;
+        final saved =(_c.isPlanned || _c.isCompleted) && !_c.saveFailed.value && !_c.isSaving.value;
         final completed = _c.isCompleted;
+        final pill = _headerPill();
+        final overDay = plan == null ? null : _overLimitDay(plan);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
@@ -249,9 +260,9 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                                   fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
                             ),
                           ),
-                          if (completed) ...[
+                          if (pill != null) ...[
                             const SizedBox(width: 8),
-                            const TripBookingStatePill(TripBookingState.completed),
+                            pill,
                           ],
                         ],
                       ),
@@ -298,10 +309,65 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                   ],
                 ),
               ),
+            if (plan != null && !off && overDay != null && !completed)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(48, 8, 12, 0),
+                child: Row(
+                  children: [
+                    const Icon(Iconsax.warning_2, size: 14, color: Colors.white),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        TripStringsA4.overLimitHint(overDay),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: _subtitleStyle,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         );
       }),
     );
+  }
+
+  int? _overLimitDay(TripPlan plan) {
+    if (plan.settings.maxDays == null) return null;
+    for (final d in plan.days) {
+      if (d.spots.isNotEmpty && _c.isOverLimit(d.day)) return d.day;
+    }
+    return null;
+  }
+
+  Widget? _headerPill() {
+    if (_c.isCompleted) return const TripBookingStatePill(TripBookingState.completed);
+    if (_c.plan.value == null) return null;
+    if (_c.isPastTrip) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+        ),
+        child: const Text(
+          TripStrings.pastTrip,
+          maxLines: 1,
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white),
+        ),
+      );
+    }
+    if (_c.isPlanned && _isPlanOnly()) return const TripBookingStatePill(TripBookingState.planOnly);
+    return null;
+  }
+
+  bool _isPlanOnly() {
+    if (_c.spotCount == 0) return false;
+    if (!_c.hasDates) return true;
+    final live = _c.enquiryList.any((e) => e.isOpen || e.isBooked);
+    return !_c.hasChoice && !live;
   }
 
   static final TextStyle _subtitleStyle = TextStyle(
@@ -334,7 +400,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         widthFactor: 1,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => TripDetailsSheet.edit(context),
+          onTap: _c.isReadOnly || _c.needsUpdate.value ? null : () => TripDetailsSheet.edit(context),
           child: Container(
             constraints: const BoxConstraints(minHeight: 36),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -393,12 +459,13 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       onSelected: _onMenu,
       itemBuilder: (_) {
         final saved = _c.trip.value != null;
+        final editable = !_c.isReadOnly && !_c.needsUpdate.value;
         return [
-          _menuItem(_MenuAction.rename, Iconsax.edit_2, 'Rename'),
-          _menuItem(_MenuAction.addPlaces, Iconsax.add_circle, 'Add places'),
+          if (!_c.needsUpdate.value) _menuItem(_MenuAction.rename, Iconsax.edit_2, 'Rename'),
+          if (editable) _menuItem(_MenuAction.addPlaces, Iconsax.add_circle, TripStringsA4.addPlaces),
           if (saved) _menuItem(_MenuAction.summary, Iconsax.receipt_text, TripStrings.summary),
           if (saved) _muteItem(),
-          if (saved && _c.isLastDayOrAfter && !_c.isCompleted)
+          if (saved && _c.canComplete)
             _menuItem(_MenuAction.complete, Iconsax.tick_circle, TripStrings.markTripComplete),
           _menuItem(_MenuAction.myTrips, Iconsax.routing_2, TripStrings.myTrips),
           _menuItem(_MenuAction.delete, Iconsax.trash, 'Delete trip', color: AppColors.error),
@@ -508,6 +575,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
 
   Widget _buildBody() {
     return Obx(() {
+      if (_c.tripGone.value) return ListView(children: const [TripNotFoundView()]);
       if (_c.plannerOff.value) {
         return ListView(children: const [
           EmptyStateView(
@@ -548,8 +616,10 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
             const SizedBox(height: 20),
           ],
           _offlineStrip(),
+          _waysLink(plan),
+          const TripPlanHintStrip(),
           const TripTodayCard(),
-          _redBanner(),
+          if (!_c.isReadOnly) _redBanner(),
           for (final d in plan.days) ...[
             TripDayTile(d.day, key: ValueKey('trip-day-${d.day}')),
             const SizedBox(height: 14),
@@ -559,6 +629,21 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         ],
       );
     });
+  }
+
+  Widget _waysLink(TripPlan plan) {
+    final lat = plan.centreLatitude ?? _c.picked?.latitude;
+    final lng = plan.centreLongitude ?? _c.picked?.longitude;
+    if (lat == null || lng == null || _c.isReadOnly || plan.cityName.isEmpty) return const SizedBox.shrink();
+    final people = plan.settings.peopleCount;
+    return TripWaysLink(
+      cityName: plan.cityName,
+      lat: lat,
+      lng: lng,
+      date: plan.settings.startDate,
+      people: people > 0 ? people : null,
+      padding: const EdgeInsets.only(bottom: 14),
+    );
   }
 
   Widget _offlineStrip() {
@@ -669,15 +754,19 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         TripStatusCard(
           key: ValueKey('outside-${e.id}'),
           status: e.display,
-          onTap: () => TripNavigation.openReplies(e.day ?? 1, enquiryId: e.id),
+          onTap: () => e.isTaxi
+              ? TripNavigation.openTaxiReplies(e.days.isEmpty ? 1 : e.days.first, enquiryId: e.id)
+              : TripNavigation.openReplies(e.day ?? 1, enquiryId: e.id),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
+                  Icon(e.isTaxi ? Iconsax.car : Iconsax.building_4, size: 15, color: AppColors.textMedium),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      e.listingName,
+                      e.listingName.isEmpty ? (e.isTaxi ? TripStrings.driver : TripStrings.stay) : e.listingName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -685,14 +774,12 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Flexible(child: TripStatusPill(e.display)),
+                  Flexible(child: TripStatusPill(e.display, taxi: e.isTaxi)),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
-                (e.agreedTotal ?? e.openOffer?.total) == null
-                    ? e.datesLabel
-                    : TripStrings.oldDates(e.datesLabel, BrowseItem.inr((e.agreedTotal ?? e.openOffer?.total)!)),
+                _outsidePrice(e) == null ? e.datesLabel : TripStrings.oldDates(e.datesLabel, BrowseItem.inr(_outsidePrice(e)!)),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
@@ -706,6 +793,9 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     ];
   }
 
+  static int? _outsidePrice(TripEnquiryModel e) =>
+      e.isTaxi ? (e.taxi?.agreedFare ?? e.taxi?.driverFare) : (e.agreedTotal ?? e.openOffer?.total);
+
   Widget _skeletons() => ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
         itemCount: 2,
@@ -714,7 +804,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       );
 
   Widget _completeBar(BuildContext context) {
-    if (!_c.isLastDayOrAfter) return const SizedBox.shrink();
+    if (!_c.isLastDayOrAfter || !_c.canComplete) return const SizedBox.shrink();
     return Container(
       padding: EdgeInsets.fromLTRB(16, 10, 16, AppInsets.bottomViewPadding(context) + 10),
       decoration: BoxDecoration(
@@ -753,8 +843,11 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   Widget _buildBottomBar(BuildContext context) {
     return Obx(() {
       _c.trip.value;
+      if (_c.tripGone.value) return const SizedBox.shrink();
+      if (_c.needsUpdate.value) return const TripUpdateAppCard();
       if (_c.plannerOff.value || _c.plan.value == null || _c.isCompleted) return const SizedBox.shrink();
       if (_c.isPlanned) return _completeBar(context);
+      final empty = _c.spotCount == 0;
       return Container(
         padding: EdgeInsets.fromLTRB(16, 10, 16, AppInsets.bottomViewPadding(context) + 10),
         decoration: BoxDecoration(
@@ -765,13 +858,30 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
           heightFactor: 1,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
-            child: GradientButton(
-              label: TripStrings.saveTrip,
-              height: 52,
-              isLoading: _saving || _c.isSaving.value,
-              gradient: TripColors.gradient,
-              shadowColor: TripColors.accent,
-              onPressed: _save,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (empty) ...[
+                  const Text(
+                    TripStringsA4.addPlaceToSave,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                GradientButton(
+                  label: TripStrings.saveTrip,
+                  height: 52,
+                  isLoading: _saving || _c.isSaving.value,
+                  gradient: TripColors.gradient,
+                  shadowColor: TripColors.accent,
+                  onPressed: empty ? null : _save,
+                ),
+              ],
             ),
           ),
         ),

@@ -23,6 +23,7 @@ import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_status.dart';
 import '../widgets/trip_status_card.dart';
 import '../widgets/trip_taxi_booking_sheet.dart';
+import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_withdraw_sheet.dart';
 import 'trip_details_sheet.dart';
 
@@ -124,8 +125,10 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
     await TripReport.taxi(context, e.listingId, tripEnquiryId: e.id);
   }
 
+  bool get _readOnly => _c.isReadOnly || _c.isDayPast(_day);
+
   bool _canAskAgain(TripEnquiryModel e) =>
-      e.isRed && !_c.isCompleted && _c.askAgainTaxis(_day).any((s) => s.taxiId == e.listingId);
+      e.isRed && !_readOnly && _c.askAgainTaxis(_day).any((s) => s.taxiId == e.listingId);
 
   Future<void> _askAgain() async {
     final batch = await _c.askAgain(kind: TripEnquiryKinds.taxi, day: _day);
@@ -210,6 +213,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
 
   Widget _buildBody() {
     return Obx(() {
+      if (_c.tripGone.value) return const TripNotFoundView();
       if (_c.plannerOff.value) {
         return _scroll(const [
           EmptyStateView(
@@ -264,8 +268,10 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
             subtitle: TripStrings.driversReply,
             palette: TripColors.palette,
           ),
-          const SizedBox(height: 16),
-          _findTaxiButton(),
+          if (!_readOnly) ...[
+            const SizedBox(height: 16),
+            _findTaxiButton(),
+          ],
         ]);
       }
       return _scroll([
@@ -422,13 +428,15 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
         status == TripDisplayStatus.fareSent ||
         status == TripDisplayStatus.bookedByYou ||
         status == TripDisplayStatus.confirmedByBoth;
-    if (live && canCall) add(Iconsax.call, TripStrings.call, () => ContactLauncher.call(phone!));
+    if (live && canCall) add(Iconsax.call, TripStrings.call, () => ContactLauncher.call(phone));
     if (live && canChat) {
       add(Iconsax.message, TripStrings.whatsApp,
-          () => ContactLauncher.whatsApp(whatsApp!, message: _c.whatsAppMessage(day, TripLeadFormat.driver(e))),
+          () => ContactLauncher.whatsApp(whatsApp, message: _c.whatsAppMessage(day, TripLeadFormat.driver(e))),
           color: AppColors.whatsApp);
     }
     switch (status) {
+      case _ when _readOnly:
+        break;
       case TripDisplayStatus.asked:
         add(Iconsax.receipt_edit, TripStrings.iBooked, () => _book(e));
         add(Iconsax.undo, TripStrings.withdraw, () => TripWithdrawSheet.show(context, enquiry: e), color: AppColors.error);

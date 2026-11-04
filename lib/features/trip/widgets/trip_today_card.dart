@@ -11,7 +11,9 @@ import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
+import '../models/trip_plan_model.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a5.dart';
 import '../utils/trip_format.dart';
 import 'trip_problem_sheet.dart';
 
@@ -108,15 +110,45 @@ class TripTodayCard extends StatelessWidget {
         ),
       );
 
+  static DateTime get _todayDate {
+    final d = DateTime.now();
+    return DateTime(d.year, d.month, d.day);
+  }
+
+  static String _checkOutLine(DateTime checkOut) {
+    final t = _todayDate;
+    final tomorrow = DateTime(t.year, t.month, t.day + 1);
+    return checkOut == tomorrow ? TripStringsA5.checkOutTomorrow : TripStringsA5.checkOutOn(TripFormat.shortDate(checkOut));
+  }
+
+  static ({int k, int total, DateTime checkOut}) _nightOf(TripEnquiryModel e) {
+    final today = _todayDate;
+    final inDate = e.checkIn == null ? null : DateTime(e.checkIn!.year, e.checkIn!.month, e.checkIn!.day);
+    final total = inDate == null ? 1 : e.nights.clamp(1, 1 << 20);
+    final k = inDate == null ? 1 : (today.difference(inDate).inDays + 1).clamp(1, total);
+    final out = e.checkOut == null
+        ? DateTime(today.year, today.month, today.day + total - k + 1)
+        : DateTime(e.checkOut!.year, e.checkOut!.month, e.checkOut!.day);
+    return (k: k, total: total, checkOut: out);
+  }
+
+  static ({int k, int total, int last}) _ownNight(TripPlanController c, int day) {
+    final days = c.plan.value?.days ?? const <TripDay>[];
+    final base = days.firstWhereOrNull((d) => d.day == day)?.stay?.sameAsDay ?? day;
+    final chain = days.where((d) => d.day == base || d.stay?.sameAsDay == base).map((d) => d.day).toList()..sort();
+    return (k: chain.indexOf(day) + 1, total: chain.length, last: chain.last);
+  }
+
   List<Widget> _stayRow(TripPlanController c, int n) {
     final e = c.todayStay(n);
     if (e != null) {
       final room = e.phoneBooking?.roomName.isNotEmpty == true
           ? e.phoneBooking!.roomName
           : (e.acceptedOffer?.lines.firstOrNull?.roomName ?? '');
+      final night = _nightOf(e);
       final sub = [
         if (room.isNotEmpty) room,
-        if (e.agreedTotal != null) BrowseItem.inr(e.agreedTotal!),
+        TripStringsA5.nightOf(night.k, night.total, e.agreedTotal == null ? null : BrowseItem.inr(e.agreedTotal!)),
         e.isConfirmedByBoth ? TripStrings.bothConfirmedShort : TripStrings.confirmedByYou,
       ].join(' · ');
       return [
@@ -125,7 +157,7 @@ class TripTodayCard extends StatelessWidget {
           accent: StayColors.accent,
           surface: StayColors.surface,
           title: e.listingName.isEmpty ? TripStrings.stay : e.listingName,
-          subtitle: sub,
+          subtitle: '$sub\n${_checkOutLine(night.checkOut)}',
           actionLabel: stayPhone(e) == null ? null : TripStrings.call,
           onAction: () => ContactLauncher.call(stayPhone(e)!),
         ),
@@ -134,13 +166,19 @@ class TripTodayCard extends StatelessWidget {
     final own = c.ownStayOf(n);
     if (own == null) return const [];
     final phone = _validPhone(own.ownPhone);
+    final chain = _ownNight(c, n);
+    final lastDate = c.dateOf(chain.last);
+    final ownSub = TripStringsA5.nightOf(chain.k, chain.total, null);
+    final checkOut = lastDate == null
+        ? null
+        : _checkOutLine(DateTime(lastDate.year, lastDate.month, lastDate.day + 1));
     return [
       _Row(
         icon: Iconsax.building_4,
         accent: StayColors.accent,
         surface: StayColors.surface,
         title: own.name,
-        subtitle: TripStrings.ownBookingShort,
+        subtitle: [TripStrings.ownBookingShort, ownSub].join(' · ') + (checkOut == null ? '' : '\n$checkOut'),
         actionLabel: phone == null ? null : TripStrings.call,
         onAction: () => ContactLauncher.call(phone!),
       ),
@@ -283,7 +321,7 @@ class _Row extends StatelessWidget {
               if (subtitle.isNotEmpty)
                 Text(
                   subtitle,
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
                 ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../features/trip/models/trip_enquiry_model.dart';
 import '../features/trip/trip_strings.dart';
+import '../features/trip/trip_strings_a5.dart';
 import '../features/trip/utils/trip_format.dart';
 import '../features/trip/widgets/trip_payment_line.dart';
 import '../features/trip/widgets/trip_status.dart';
@@ -245,7 +246,7 @@ class TripChatCards {
     final guests = (line['guests'] as num?)?.toInt();
     final price = line['pricePerNight'] as num?;
     final name = (room == null || room.isEmpty) ? TripStrings.room : room;
-    final priceText = price == null ? '' : ' · $units x ${BrowseItem.inr(price)}';
+    final priceText = price == null ? '' : ' · ${TripStringsA5.unitsAtPrice(units, BrowseItem.inr(price))}';
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(

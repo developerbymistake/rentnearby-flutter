@@ -26,13 +26,21 @@ class TripNavigation {
         },
       );
 
-  static Future<void>? openPlan({String? tripId}) => Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId});
+  static Future<void>? openPlan({String? tripId, bool fresh = false}) =>
+      Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId, 'fresh': fresh});
 
-  static Future<void>? openTaxi(int day) => Get.toNamed(AppRoutes.tripTaxi, arguments: {'day': day});
+  static Future<void>? openTaxi(int day, {double? nearLat, double? nearLng}) => Get.toNamed(
+        AppRoutes.tripTaxi,
+        arguments: {'day': day, 'nearLat': ?nearLat, 'nearLng': ?nearLng},
+      );
 
-  static Future<void>? openStay(int day) => Get.toNamed(AppRoutes.tripStay, arguments: {'day': day});
+  static Future<void>? openStay(int day, {double? nearLat, double? nearLng}) => Get.toNamed(
+        AppRoutes.tripStay,
+        arguments: {'day': day, 'nearLat': ?nearLat, 'nearLng': ?nearLng},
+      );
 
-  static Future<void>? openMap({int? day}) => Get.toNamed(AppRoutes.tripMap, arguments: {'day': day});
+  static Future<void>? openMap({int? day, String? tripId}) =>
+      Get.toNamed(AppRoutes.tripMap, arguments: {'day': day, 'tripId': tripId});
 
   static Future<void>? openReplies(int day, {String? enquiryId}) {
     final tripId = TripPlanController.to.trip.value?.id;

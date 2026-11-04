@@ -146,6 +146,8 @@ class TripSummaryModel {
   final int taxisConfirmed;
   final int taxisTotal;
   final int agreedTotal;
+  final int staysOwn;
+  final int taxisOwn;
   final DateTime? mutedAt;
   final DateTime? completedAt;
 
@@ -171,9 +173,29 @@ class TripSummaryModel {
     this.taxisConfirmed = 0,
     this.taxisTotal = 0,
     this.agreedTotal = 0,
+    this.staysOwn = 0,
+    this.taxisOwn = 0,
     this.mutedAt,
     this.completedAt,
   });
+
+  bool get hasOwnBooking => staysOwn + taxisOwn > 0;
+
+  bool isRunningOn(DateTime today) {
+    final s = startDate;
+    if (s == null || isCompleted) return false;
+    final end = endDate ?? DateTime(s.year, s.month, s.day + (dayCount < 1 ? 0 : dayCount - 1));
+    final t = DateTime(today.year, today.month, today.day);
+    final tomorrow = DateTime(t.year, t.month, t.day + 1);
+    return (!t.isBefore(s) && !t.isAfter(end)) || s == tomorrow;
+  }
+
+  int? dayNumberOn(DateTime today) {
+    final s = startDate;
+    if (s == null) return null;
+    final n = DateTime.utc(today.year, today.month, today.day).difference(DateTime.utc(s.year, s.month, s.day)).inDays + 1;
+    return n >= 1 && n <= dayCount ? n : null;
+  }
 
   bool get isPlanned => status == TripStatuses.planned;
   bool get isCompleted => status == TripStatuses.completed;
@@ -201,6 +223,8 @@ class TripSummaryModel {
         taxisConfirmed: taxisConfirmed,
         taxisTotal: taxisTotal,
         agreedTotal: agreedTotal,
+        staysOwn: staysOwn,
+        taxisOwn: taxisOwn,
         mutedAt: mutedAt,
         completedAt: completedAt ?? this.completedAt,
       );
@@ -232,6 +256,8 @@ class TripSummaryModel {
         taxisConfirmed: (json['taxisConfirmed'] as num?)?.toInt() ?? 0,
         taxisTotal: (json['taxisTotal'] as num?)?.toInt() ?? 0,
         agreedTotal: (json['agreedTotal'] as num?)?.toInt() ?? 0,
+        staysOwn: (json['staysOwn'] as num?)?.toInt() ?? 0,
+        taxisOwn: (json['taxisOwn'] as num?)?.toInt() ?? 0,
         mutedAt: _instant(json['mutedAt']),
         completedAt: _instant(json['completedAt']),
       );

@@ -4,12 +4,15 @@ import '../../../../models/browse_item.dart';
 import '../../../../utils/contact_launcher.dart';
 import '../../../trip/trip_colors.dart';
 import '../../taxi_option_sets.dart';
+import '../../ways/models/taxi_ways_models.dart';
 import '../../ways/taxi_ways_strings.dart';
+import '../../ways/trip_strings_a6.dart';
 import '../journey_models.dart';
 import '../journey_strings.dart';
 
 class JourneyLegCard extends StatelessWidget {
   final SavedJourneyLeg leg;
+  final int people;
   final Color color;
   final bool busy;
   final bool canChange;
@@ -19,6 +22,7 @@ class JourneyLegCard extends StatelessWidget {
   const JourneyLegCard({
     super.key,
     required this.leg,
+    this.people = 0,
     required this.color,
     required this.busy,
     required this.canChange,
@@ -60,6 +64,7 @@ class JourneyLegCard extends StatelessWidget {
     final fare = leg.listedFare;
     final previous = leg.previousFare;
     final quoted = leg.lastQuotedFare;
+    final cars = people > 0 ? WayCars.needed(people, d.seats) : 1;
 
     return Container(
       decoration: BoxDecoration(
@@ -109,6 +114,11 @@ class JourneyLegCard extends StatelessWidget {
                       ),
                     ],
                   ]),
+                  if (cars > 1) ...[
+                    const SizedBox(height: 6),
+                    Text(TripStringsA6.seatsNote(d.seats, cars, people),
+                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.warningText)),
+                  ],
                   if (previous != null && fare != null && previous != fare) ...[
                     const SizedBox(height: 6),
                     Text(TaxiWaysStrings.fareChanged(previous, fare),

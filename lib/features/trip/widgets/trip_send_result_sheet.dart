@@ -5,6 +5,7 @@ import '../../../widgets/gradient_button.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a5.dart';
 import 'trip_sheet_frame.dart';
 
 class TripSendResultSheet {
@@ -20,6 +21,7 @@ class TripSendResultSheet {
         TripSkipReasons.notAvailable => TripStrings.notAvailableNow,
         TripSkipReasons.blocked => TripStrings.cannotBeAsked,
         TripSkipReasons.limitReached => TripStrings.threeOpen,
+        TripSkipReasons.alreadyBooked => TripStringsA5.alreadyBookedOther,
         _ => TripStrings.cannotBeAsked,
       };
 }
@@ -63,9 +65,12 @@ class _ResultBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TripSheetFrame(
-      title: TripStrings.sentTo(batch.items.length),
-      footer: const Text(TripStrings.eachStayReplies,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.35)),
+      title: batch.items.isEmpty ? TripStringsA5.couldNotSend : TripStrings.sentTo(batch.items.length),
+      description: batch.items.isEmpty ? TripStringsA5.couldNotSendSub : null,
+      footer: batch.items.isEmpty
+          ? null
+          : const Text(TripStrings.eachStayReplies,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.35)),
       children: [
         for (final e in batch.items) _row(e.listingName, TripStrings.sent, true),
         for (final s in batch.skipped)

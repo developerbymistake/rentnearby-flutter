@@ -14,6 +14,7 @@ import 'models/taxi_ways_models.dart';
 import 'taxi_ways_controller.dart';
 import 'taxi_ways_navigation.dart';
 import 'taxi_ways_strings.dart';
+import 'trip_strings_a6.dart';
 import 'widgets/journey_total_bar.dart';
 import 'widgets/way_driver_row.dart';
 import 'widgets/way_plan_ribbon_card.dart';
@@ -31,6 +32,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
 
   TaxiWaysController? _c;
   late final String _tag;
+  bool _fromTrip = false;
 
   @override
   void initState() {
@@ -40,6 +42,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     if (args is Map && args['from'] is PlaceResult && args['to'] is PlaceResult) {
       final date = args['date'];
       final people = args['people'];
+      _fromTrip = args['fromTrip'] == true;
       _c = Get.put(
         TaxiWaysController(
           from: args['from'] as PlaceResult,
@@ -71,12 +74,16 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
       return Scaffold(
         backgroundColor: AppColors.scaffoldBg,
         appBar: AppBar(title: const Text(TaxiWaysStrings.title)),
-        body: EmptyStateView(
-          icon: Iconsax.routing_2,
-          title: TaxiWaysStrings.noWays,
-          subtitle: TaxiWaysStrings.entryEmptyBody,
-          palette: ModulePalette.taxi,
-        ),
+        body: ListView(children: [
+          EmptyStateView(
+            icon: Iconsax.routing_2,
+            title: TaxiWaysStrings.noWays,
+            subtitle: TripStringsA6.journeyGoneBody,
+            onRetry: () => Get.back(),
+            retryLabel: TripStringsA6.goBack,
+            palette: ModulePalette.taxi,
+          ),
+        ]),
       );
     }
     return Scaffold(
@@ -114,13 +121,22 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
             ),
           ),
           const SizedBox(width: 2),
-          const Expanded(
-            child: Text(
-              TaxiWaysStrings.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-            ),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text(
+                TaxiWaysStrings.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
+              ),
+              if (_fromTrip)
+                Obx(() => Text(
+                      TripStringsA6.feedSubtitle(c.date.value, c.people.value),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Colors.white.withValues(alpha: 0.9)),
+                    )),
+            ]),
           ),
           _journeysButton(),
         ]),

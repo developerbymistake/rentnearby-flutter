@@ -200,6 +200,7 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: JourneyLegCard(
               leg: leg,
+              people: j.people,
               color: c,
               busy: busy,
               canChange: canChange,

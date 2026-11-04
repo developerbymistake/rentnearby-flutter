@@ -4,10 +4,12 @@ import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../controllers/trip_plan_controller.dart';
+import '../controllers/trip_supply_controller.dart';
+import '../data/trip_enquiry_repository.dart';
 import '../models/trip_enquiry_model.dart';
-import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
@@ -28,10 +30,16 @@ class TripStayEnquirySheet {
     };
     final batch = await TripSheetFrame.show<TripEnquiryBatch>(context, _EnquiryBody(day: day));
     if (batch == null) return null;
-    final first = batch.items.isEmpty ? null : batch.items.first;
-    if (batch.skipped.isEmpty && batch.items.length == 1 && first?.conversationId != null) {
+    final left = batch.asksLeft;
+    if (left != null) TripSupplyController.to.asksLeft.value = left;
+    if (batch.items.isEmpty) {
+      if (context.mounted) await TripSendResultSheet.show(context, batch: batch, names: names);
+      return batch;
+    }
+    final first = batch.items.first;
+    if (batch.skipped.isEmpty && batch.items.length == 1 && first.conversationId != null) {
       TripBackToPlanBar.backToPlan();
-      TripNavigation.openChatForEnquiry(first!);
+      TripNavigation.openChatForEnquiry(first);
       return batch;
     }
     if (batch.skipped.isEmpty) {
@@ -57,11 +65,12 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
   final _c = TripPlanController.to;
   bool? _allNights;
   bool _sending = false;
+  int? _limitMinutes;
 
   int get _day => widget.day;
 
   bool _canAllNights(List<String> ids) {
-    final last = _c.dayCount - 1;
+    final last = _c.dayCount;
     if (_day >= last) return false;
     for (var d = _day + 1; d <= last; d++) {
       final have = {for (final s in _c.plan.value?.dayAt(d)?.stayShortlist ?? const []) s.stayId};
@@ -72,12 +81,47 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
 
   Future<void> _send(List<String> ids, bool allNights) async {
     if (_sending || ids.isEmpty) return;
-    setState(() => _sending = true);
-    final batch = await TripEnquiryController.to.sendEnquiry(day: _day, stayIds: ids, allNights: allNights);
+    setState(() {
+      _sending = true;
+      _limitMinutes = null;
+    });
+    final enquiries = TripEnquiryController.to;
+    final batch = await enquiries.sendEnquiry(day: _day, stayIds: ids, allNights: allNights);
     if (!mounted) return;
-    setState(() => _sending = false);
+    setState(() {
+      _sending = false;
+      if (batch == null && enquiries.lastErrorType == TripEnquiryErrorTypes.enquiryLimit) {
+        _limitMinutes = enquiries.lastRetryAfterMinutes ?? 1;
+      }
+    });
     if (batch != null) Navigator.pop(context, batch);
   }
+
+  Widget _limitCard(int minutes) => Container(
+        margin: const EdgeInsets.only(top: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Iconsax.timer_1, size: 16, color: AppColors.warningText),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(TripStrings.askLimitTitle,
+                      style: const TextStyle(
+                          fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.warningText)),
+                  const SizedBox(height: 2),
+                  Text(TripStrings.askLimitBody(minutes),
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.warningText, height: 1.35)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _row(String label, String value) => InkWell(
         onTap: () => TripDetailsSheet.edit(context),
@@ -143,6 +187,8 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
             TripPreviewDay(day: d, spots: p.dayAt(d)?.spots.map((x) => x.name).toList() ?? const []),
         ],
       );
+      final asksLeft = TripSupplyController.to.asksLeft.value;
+      final limit = _limitMinutes;
       final reply = short
           ? TripStrings.replyExpectedToday('${TripConstants.floorHours} h')
           : (daysLeft <= 0
@@ -158,6 +204,12 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
             const SizedBox(height: 4),
             Text(reply,
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.35)),
+            if (asksLeft != null) ...[
+              const SizedBox(height: 4),
+              Text(TripStrings.asksLeft(asksLeft),
+                  style: const TextStyle(
+                      fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+            ],
           ],
         ),
         children: [
@@ -170,7 +222,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
               value: allNights,
-              activeTrackColor: TripColors.accent,
+              activeTrackColor: StayColors.accent,
               onChanged: _sending ? null : (v) => setState(() => _allNights = v),
               title: Text(TripStrings.allNights,
                   maxLines: 2,
@@ -183,7 +235,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -217,14 +269,15 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
               ),
             ),
           ],
+          if (limit != null) _limitCard(limit),
           const SizedBox(height: 16),
           GradientButton(
             label: TripStrings.sendToStays(ids.length),
             height: 52,
             isLoading: _sending,
-            gradient: TripColors.gradient,
-            shadowColor: TripColors.accent,
-            onPressed: ids.isEmpty ? null : () => _send(ids, allNights),
+            gradient: StayColors.gradient,
+            shadowColor: StayColors.accent,
+            onPressed: ids.isEmpty || limit != null ? null : () => _send(ids, allNights),
           ),
         ],
       );

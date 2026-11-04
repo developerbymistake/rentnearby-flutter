@@ -202,6 +202,32 @@ void main() {
     expect(b.veryShortNotice, isTrue);
   });
 
+  test('batch parses updated ids, AlreadyBooked and asks left', () {
+    final b = TripEnquiryBatch.fromJson({
+      'items': [full()],
+      'skipped': [
+        {'listingId': 's3', 'reason': TripSkipReasons.alreadyBooked},
+      ],
+      'updated': ['e1'],
+    }, asksLeft: 7);
+    expect(b.isUpdated('e1'), isTrue);
+    expect(b.skipped.single.reason, 'AlreadyBooked');
+    expect(b.asksLeft, 7);
+  });
+
+  test('taxi dates and last date', () {
+    final e = TripEnquiryModel.fromJson({
+      'id': 't1',
+      'kind': 'Taxi',
+      'checkIn': '2026-11-01',
+      'days': [1, 2, 3],
+    });
+    expect(e.taxiDates.last, DateTime(2026, 11, 3));
+    expect(e.lastDate, DateTime(2026, 11, 3));
+    expect(e.coversTaxiDate(DateTime(2026, 11, 2)), isTrue);
+    expect(e.coversTaxiDate(DateTime(2026, 11, 4)), isFalse);
+  });
+
   test('owner page parses counts', () {
     final p = TripOwnerEnquiryPage.fromJson({
       'items': [full()],

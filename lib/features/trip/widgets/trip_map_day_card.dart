@@ -6,14 +6,18 @@ import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_shadows.dart';
+import '../../../utils/contact_launcher.dart';
 import '../../stay/setup/stay_option_sets.dart';
+import '../../taxi/taxi_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a4.dart';
 import '../utils/trip_format.dart';
 import 'trip_day_actions.dart';
 import 'trip_day_chips.dart';
 import 'trip_route_strip.dart';
+import 'trip_today_card.dart';
 
 class TripMapDayCard extends StatefulWidget {
   final int dayCount;
@@ -217,6 +221,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
   Widget _dayPage(TripPlanController c, int day) {
     return Obx(() {
       c.result.value;
+      c.enquiryList.length;
       final d = c.plan.value?.dayAt(day);
       if (d == null) return const SizedBox.shrink();
       final date = c.dateOf(day);
@@ -245,9 +250,108 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
           ],
           const SizedBox(height: 12),
           TripDayActions(day),
+          ..._contactRows(c, day),
         ],
       );
     });
+  }
+
+  static String? _phone(String? raw) => raw != null && ContactLauncher.tenDigits(raw).isNotEmpty ? raw : null;
+
+  List<Widget> _contactRows(TripPlanController c, int day) {
+    final rows = <Widget>[];
+    final stay = c.primaryEnquiry(day);
+    if (stay != null && stay.isBooked) {
+      final phone = TripTodayCard.stayPhone(stay);
+      if (phone != null) {
+        rows.add(_contactRow(
+          icon: Iconsax.building_4,
+          accent: StayColors.accent,
+          text: stay.listingName.isEmpty ? TripStrings.stay : stay.listingName,
+          action: TripStringsA4.callHost,
+          phone: phone,
+        ));
+      }
+    } else {
+      final own = c.ownStayOf(day);
+      final phone = _phone(own?.ownPhone);
+      if (own != null && phone != null) {
+        rows.add(_contactRow(
+          icon: Iconsax.building_4,
+          accent: StayColors.accent,
+          text: own.name,
+          action: TripStringsA4.callHost,
+          phone: phone,
+        ));
+      }
+    }
+    final taxi = c.primaryTaxiEnquiry(day);
+    if (taxi != null && taxi.isBooked) {
+      final pickup = taxi.taxi?.pickupTime;
+      final text = [
+        if (pickup != null && pickup.isNotEmpty) TripStrings.pickupAt(TripFormat.time12(pickup)),
+        taxi.isConfirmedByBoth ? TripStrings.bothConfirmedShort : TripStrings.bookedByYouShort,
+      ].join(' · ');
+      rows.add(_contactRow(
+        icon: Iconsax.car,
+        accent: TaxiColors.accent,
+        text: text,
+        action: TripStringsA4.callDriver,
+        phone: _phone(taxi.owner.phone),
+      ));
+    } else {
+      final own = c.ownTaxiOf(day);
+      if (own != null) {
+        final pickup = own.booking?.pickupTime;
+        rows.add(_contactRow(
+          icon: Iconsax.car,
+          accent: TaxiColors.accent,
+          text: [
+            if (pickup != null && pickup.isNotEmpty) TripStrings.pickupAt(TripFormat.time12(pickup)),
+            TripStrings.ownBookingShort,
+          ].join(' · '),
+          action: TripStringsA4.callDriver,
+          phone: _phone(own.ownPhone),
+        ));
+      }
+    }
+    return [
+      for (final r in rows) ...[const SizedBox(height: 8), r],
+    ];
+  }
+
+  Widget _contactRow({
+    required IconData icon,
+    required Color accent,
+    required String text,
+    required String action,
+    required String? phone,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: accent),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+          ),
+        ),
+        if (phone != null)
+          TextButton.icon(
+            onPressed: () => ContactLauncher.call(phone),
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44), padding: const EdgeInsets.symmetric(horizontal: 10)),
+            icon: Icon(Iconsax.call, size: 16, color: accent),
+            label: Text(
+              action,
+              maxLines: 1,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: accent),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _allPage(TripPlanController c) {

@@ -402,7 +402,7 @@ class TripStrings {
   static String dayLine(int n, String d, String s) => 'Day $n · $d · $s';
   static const String enquiry = 'Enquiry';
   static const String enquirySentWaiting = 'Enquiry sent · waiting';
-  static const String leadLimit = 'Up to 5 taxi enquiries a day for this trip.';
+  static const String leadLimit = 'Up to 10 taxi enquiries a day for this trip.';
 
   static const String taxiReplies = 'Taxi replies';
   static const String replied = 'Replied';
@@ -491,7 +491,7 @@ class TripStrings {
   static const String acceptPriceOpens = 'Accept price opens Send offer with this price.';
   static const String priceAccepted = 'Price accepted';
   static const String priceReplaced = 'Replaced by a newer price';
-  static const String errPriceRange = 'Price must be between ₹100 and ₹2,00,000';
+  static const String errPriceRange = 'Price must be between ₹100 and ₹99,00,000';
   static String priceProposed(String p) => 'Proposed $p a night';
 
   static const String revisedOffer = 'Revised offer';
@@ -612,7 +612,7 @@ class TripStrings {
   static const String nothingBookedYet = 'Nothing booked yet';
   static const String nothingBookedSub = 'Confirmed stays and taxis show here.';
   static String shareSubject(String c) => '$c trip';
-  static String summaryHeader(String c, String d, String p) => '$c · $d · $p';
+  static String summaryHeader(String c, String d, String p) => joinDots([c, d, p]);
   static const String ownBookingShort = 'Own booking';
   static String moreSpots(int n) => '+$n more';
 
@@ -624,4 +624,39 @@ class TripStrings {
   static const String reportFooter = 'The admin reads every report. Bakhli does not guarantee any booking or payment.';
   static const String reportSent = 'Report sent';
   static const String pickReason = 'Pick a reason';
+
+  static String peopleText(int n) => n <= 0 ? '' : (n == 1 ? '1 person' : '$n people');
+  static String joinDots(List<String?> parts) =>
+      parts.map((p) => p?.trim() ?? '').where((p) => p.isNotEmpty).join(' · ');
+  static String nightTitle(int n, {bool today = false}) => today ? 'Stay for tonight' : 'Stay for Night $n';
+  static String dayTitle(int n, {bool today = false}) => today ? 'Taxi for today' : 'Taxi for Day $n';
+  static String nightWithCheckOut(int n, String date, String checkOut) => 'Night $n · $date · check-out $checkOut';
+  static const String checkOutTomorrow = 'Check-out tomorrow morning';
+  static const String addOwnTaxi = 'Add your own taxi';
+  static const String haveTaxi = 'I already have a taxi';
+  static const String ownTaxiTitle = 'Own taxi';
+  static const String noStayTonight = 'No stay tonight';
+  static const String travelling = 'Travelling';
+  static const String sameAsLastNight = 'Same stay as last night';
+  static const String nightByNight = 'Night by night';
+  static const String forThisNight = 'For this night';
+  static const String planOnly = 'Plan only';
+  static const String pastTrip = 'Past trip';
+  static const String tripNotFoundTitle = 'Trip not found';
+  static const String tripNotFoundBody = 'It was deleted or is not yours.';
+  static const String myTripsAction = 'My trips';
+  static const String updateAppTitle = 'Update the app';
+  static const String updateAppBody = 'This trip was edited on a newer version.';
+  static const String openPlayStore = 'Open Play Store';
+  static const String cancelBookingFirst = 'Cancel the booking first';
+  static String bookedForDay(String driver, int d) => '$driver is booked for Day $d. Cancel it, then pick another driver.';
+  static const String askLimitTitle = 'Ask limit reached';
+  static String askLimitBody(int minutes) =>
+      'Up to 20 asks an hour and 60 a day. Try again in ${minutes < 1 ? 1 : minutes} min.';
+  static String asksLeft(int n) => n == 1 ? '1 ask left this hour' : '$n asks left this hour';
+  static const String notSavedCheckConnection = 'Not saved yet. Check your connection.';
+  static const String tripCompletedEdits = 'This trip is complete. Plan changes are off.';
+  static const String noDatesYet = 'No dates yet';
+  static const String offlineCopy = 'Offline copy';
+  static String offlineCopySaved(String t) => 'Offline copy · saved $t';
 }

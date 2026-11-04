@@ -170,6 +170,8 @@ class WayLeg {
   final bool hasRoadLine;
   final List<WayDriver> drivers;
   final List<LatLngPair>? geometry;
+  final int carsNeeded;
+  final String? seatsNote;
 
   const WayLeg({
     required this.legKey,
@@ -186,6 +188,8 @@ class WayLeg {
     this.hasRoadLine = false,
     this.drivers = const [],
     this.geometry,
+    this.carsNeeded = 1,
+    this.seatsNote,
   });
 
   factory WayLeg.fromJson(Map<String, dynamic> json) => WayLeg(
@@ -203,6 +207,8 @@ class WayLeg {
         hasRoadLine: json['hasRoadLine'] == true,
         drivers: _list(json['drivers'], WayDriver.fromJson),
         geometry: _geometry(json['geometry']),
+        carsNeeded: _i(json['carsNeeded']) < 1 ? 1 : _i(json['carsNeeded']),
+        seatsNote: _sn(json['seatsNote']),
       );
 
   static List<LatLngPair>? _geometry(Object? v) {
@@ -228,6 +234,15 @@ class WayLeg {
   int get otherCount {
     final n = driverCount > 0 ? driverCount : allDrivers.length;
     return n > 1 ? n - 1 : 0;
+  }
+}
+
+class WayCars {
+  const WayCars._();
+
+  static int needed(int people, int? seats) {
+    if (seats == null || seats < 1 || people <= seats) return 1;
+    return (people + seats - 1) ~/ seats;
   }
 }
 
@@ -277,10 +292,13 @@ class WayPlan {
 
   List<WayPlace> get changePlaces => [for (var i = 0; i < legs.length - 1; i++) legs[i].to];
 
+  int get maxCarsNeeded => legs.fold(1, (m, l) => l.carsNeeded > m ? l.carsNeeded : m);
+
   int totalWith(Map<int, WayDriver> chosen) {
     var sum = 0;
     for (final leg in legs) {
-      sum += chosen[leg.index]?.listedFare ?? leg.listedFare;
+      final d = chosen[leg.index];
+      sum += d == null ? leg.listedFare : d.listedFare * leg.carsNeeded;
     }
     return sum;
   }

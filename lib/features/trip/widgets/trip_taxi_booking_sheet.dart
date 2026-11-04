@@ -18,7 +18,9 @@ import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a3.dart';
 import '../utils/trip_format.dart';
+import 'trip_sheet_frame.dart';
 import 'trip_status.dart';
 
 class TripTaxiBookingSheet {
@@ -85,10 +87,10 @@ class _BookingBodyState extends State<_BookingBody> {
     _item = widget.taxi ?? _fromEnquiry(enq!);
     final existing = _existingBooking(plan);
     final server = enq?.taxi;
-    final all = plan.days.map((d) => d.day).toSet();
+    final ahead = plan.days.map((d) => d.day).where((d) => !_plan.isDayPast(d)).toSet();
     final base = (enq != null && enq.days.isNotEmpty) ? enq.days.toSet() : existing?.days.toSet();
-    _days = base == null ? all : base.where(all.contains).toSet();
-    if (_days.isEmpty) _days.addAll(all);
+    _days = base == null ? ahead : base.where(ahead.contains).toSet();
+    if (_days.isEmpty) _days.addAll(ahead);
     _time = _parseTime(server?.pickupTime ?? existing?.pickupTime ?? _plan.settings.pickupTime) ??
         _parseTime(TripConstants.defaultPickupTime)!;
     _place = TextEditingController(text: server?.pickupPlace ?? existing?.pickupPlace ?? _plan.settings.pickupPlace ?? '');
@@ -162,6 +164,7 @@ class _BookingBodyState extends State<_BookingBody> {
   }
 
   void _toggleDay(int d) {
+    if (_saving || _plan.isDayPast(d)) return;
     if (_days.contains(d)) {
       if (_days.length == 1) {
         AppToast.warning(TripStrings.errPickDay);
@@ -213,11 +216,8 @@ class _BookingBodyState extends State<_BookingBody> {
       (e.display == TripDisplayStatus.bookedByYou || e.display == TripDisplayStatus.confirmedByBoth));
 
   int _conflictDay(TripNightConflict c, List<int> days) {
-    for (final e in _plan.enquiries) {
-      if (e.id != c.enquiryId) continue;
-      for (final d in days) {
-        if (e.days.contains(d)) return d;
-      }
+    for (final d in days) {
+      if (_plan.taxiEnquiriesForDay(d).any((e) => e.id == c.enquiryId)) return d;
     }
     return days.first;
   }
@@ -307,6 +307,31 @@ class _BookingBodyState extends State<_BookingBody> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom + AppInsets.bottomViewPadding(context) + 16;
+    if (_days.isEmpty) {
+      return Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: TripSheetFrame(
+            title: TripStringsA3.daysPassedTitle,
+            description: TripStringsA3.daysPassedBody,
+            children: [
+              OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  side: const BorderSide(color: AppColors.divider),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text(TripStringsA3.close,
+                    style: TextStyle(
+                        fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: TripColors.accentDark)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Center(
       heightFactor: 1,
       child: ConstrainedBox(
@@ -495,14 +520,17 @@ class _BookingBodyState extends State<_BookingBody> {
       runSpacing: 8,
       children: [
         for (final d in dayNumbers)
-          ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: SelectableChip(
-              label: _dayLabel(d),
-              selected: _days.contains(d),
-              onTap: () => _toggleDay(d),
-              activeColor: TripColors.accent,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          Opacity(
+            opacity: _plan.isDayPast(d) ? 0.4 : 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: SelectableChip(
+                label: _dayLabel(d),
+                selected: _days.contains(d),
+                onTap: () => _toggleDay(d),
+                activeColor: TripColors.accent,
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              ),
             ),
           ),
       ],

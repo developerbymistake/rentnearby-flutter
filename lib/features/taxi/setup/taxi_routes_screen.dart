@@ -11,6 +11,7 @@ import '../../../widgets/gradient_button.dart';
 import '../../../widgets/location_switch_sheet.dart';
 import '../../stay/setup/dashed_add_row.dart';
 import '../../stay/setup/stay_option_grid.dart';
+import '../../trip/trip_strings_a3.dart';
 import '../taxi_option_sets.dart';
 import 'taxi_setup_controller.dart';
 
@@ -136,9 +137,8 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
     return ok == true;
   }
 
-  Future<void> _saveRate() async {
-    if (_savingRate || _ctrl.isSaving.value) return;
-    FocusScope.of(context).unfocus();
+  Future<bool> _persistRate({required bool quiet}) async {
+    if (_savingRate || _ctrl.isSaving.value) return false;
     final rateText = _rateCtrl.text.trim();
     final kmText = _kmCtrl.text.trim();
     int? rate;
@@ -146,35 +146,36 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
     if (rateText.isEmpty) {
       if (kmText.isNotEmpty) {
         AppToast.error('Add a day rate first');
-        return;
+        return false;
       }
       if (_ctrl.taxi.value?.hasLocalRate != true) {
         AppToast.error('Enter a day rate');
-        return;
+        return false;
       }
-      if (!await _confirmClearRate() || !mounted) return;
+      if (!await _confirmClearRate() || !mounted) return false;
     } else {
       rate = int.tryParse(rateText) ?? 0;
       if (rate < TaxiOptionSets.minFare || rate > TaxiOptionSets.maxFare) {
         AppToast.error('Fare must be between ₹100 and ₹99,00,000');
-        return;
+        return false;
       }
       if (kmText.isNotEmpty) {
         km = int.tryParse(kmText) ?? 0;
         if (km > TaxiOptionSets.localDayKmMax) {
           AppToast.error('Km per day must be 0 to ${TaxiOptionSets.localDayKmMax}');
-          return;
+          return false;
         }
       }
     }
     setState(() => _savingRate = true);
     final ok = await _ctrl.saveLocalRate(dayRate: rate, kmPerDay: km);
-    if (!mounted) return;
+    if (!mounted) return ok;
     setState(() {
       _savingRate = false;
       if (ok) _syncRateFields();
     });
-    if (ok) AppToast.success(rate == null ? 'Rate cleared' : 'Rate saved');
+    if (ok && !quiet) AppToast.success(rate == null ? 'Rate cleared' : 'Rate saved');
+    return ok;
   }
 
   int get _count => _routes.length + (_formOpen ? 1 : 0);
@@ -328,12 +329,19 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
   }
 
   Future<void> _save() async {
-    if (_ctrl.isSaving.value) return;
+    if (_ctrl.isSaving.value || _savingRate) return;
     FocusScope.of(context).unfocus();
     if (!_commitForm()) return;
-    if (_routes.isEmpty) {
+    final rateDirty = _rateEditable && _rateDirty;
+    if (_routes.isEmpty && !rateDirty) {
       AppToast.error('Add at least one route');
       setState(() => _formOpen = true);
+      return;
+    }
+    if (rateDirty && !await _persistRate(quiet: _routes.isNotEmpty)) return;
+    if (!mounted) return;
+    if (_routes.isEmpty) {
+      Get.back();
       return;
     }
     final ok = await _ctrl.saveRoutes([
@@ -627,7 +635,7 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
         const SizedBox(height: 2),
         const Text('Needed to appear in trip planning',
             style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-        _label('Rate per day (₹)'),
+        _label(TripStringsA3.driverRateLabel),
         TextFormField(
           controller: _rateCtrl,
           readOnly: !editable,
@@ -650,17 +658,6 @@ class _TaxiRoutesScreenState extends State<TaxiRoutesScreen> {
         const SizedBox(height: 12),
         const Text('Travellers see this rate. You can quote a different fare for a trip after you read the itinerary.',
             style: TextStyle(fontFamily: 'Poppins', fontSize: 12, height: 1.4, color: AppColors.textMedium)),
-        if (editable) ...[
-          const SizedBox(height: 14),
-          GradientButton(
-            onPressed: _savingRate || !_rateDirty ? null : _saveRate,
-            isLoading: _savingRate,
-            label: 'Save rate',
-            height: 48,
-            gradient: TaxiColors.gradient,
-            shadowColor: TaxiColors.accent,
-          ),
-        ],
       ]),
     );
   }

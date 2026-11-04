@@ -189,6 +189,7 @@ void main() {
     expect(TripBookingState.parse('draft'), TripBookingState.draft);
     expect(TripBookingState.parse('confirming'), TripBookingState.confirming);
     expect(TripBookingState.parse('ready'), TripBookingState.ready);
+    expect(TripBookingState.parse('planOnly'), TripBookingState.planOnly);
     expect(TripBookingState.parse('completed'), TripBookingState.completed);
     expect(TripBookingState.parse(null), TripBookingState.draft);
     expect(TripBookingState.parse(''), TripBookingState.draft);
@@ -200,6 +201,9 @@ void main() {
     expect(TripBookingStateVisuals.label(TripBookingState.draft), TripStrings.stateDraft);
     expect(TripBookingStateVisuals.label(TripBookingState.confirming), TripStrings.stateConfirming);
     expect(TripBookingStateVisuals.label(TripBookingState.ready), TripStrings.stateReady);
+    expect(TripBookingStateVisuals.label(TripBookingState.planOnly), TripStrings.planOnly);
+    expect(TripBookingStateVisuals.surface(TripBookingState.planOnly), AppColors.neutralChip);
+    expect(TripBookingStateVisuals.text(TripBookingState.planOnly), AppColors.textMedium);
     expect(TripBookingStateVisuals.label(TripBookingState.completed), TripStrings.stateCompleted);
     expect(TripBookingStateVisuals.bar(TripBookingState.confirming), TripStatusColors.confirmedByYou);
     expect(TripBookingStateVisuals.bar(TripBookingState.ready), TripStatusColors.both);

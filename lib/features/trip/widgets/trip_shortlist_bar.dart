@@ -1,25 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
-import '../../../config/app_shadows.dart';
-import '../../../widgets/gradient_button.dart';
+import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_supply_controller.dart';
 import '../screens/trip_details_sheet.dart';
 import '../screens/trip_stay_enquiry_sheet.dart';
-import '../trip_colors.dart';
+import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a2.dart';
+import 'trip_night_chooser.dart';
 import 'trip_own_booking_sheet.dart';
+import 'trip_page_bottom_bar.dart';
 
 class TripShortlistBar extends StatelessWidget {
   const TripShortlistBar({super.key, required this.day});
 
   final int day;
 
-  static Future<void> openOwn(BuildContext context, int day) {
+  static Future<void> openOwn(BuildContext context, int day) async {
     final stay = TripPlanController.to.plan.value?.dayAt(day)?.stay;
-    return TripOwnBookingSheet.show(context, day: day, existing: stay?.isOwn == true ? stay : null);
+    await TripOwnBookingSheet.show(context, day: day, existingStay: stay?.isOwn == true ? stay : null);
   }
 
   static Future<void> send(BuildContext context, int day) async {
@@ -31,82 +34,72 @@ class TripShortlistBar extends StatelessWidget {
     await TripStayEnquirySheet.show(context, day: day);
   }
 
+  static Set<String> askedIds(TripPlanController c, int day) => {
+        for (final e in c.enquiriesForNight(day))
+          if (e.isOpen) e.listingId,
+      };
+
+  static int usedCount(TripPlanController c, int day) => {
+        ...askedIds(c, day),
+        for (final s in c.plan.value?.dayAt(day)?.stayShortlist ?? const []) s.stayId,
+      }.length;
+
+  static bool isFull(TripPlanController c, int day) => usedCount(c, day) >= TripConstants.maxShortlist;
+
+  Widget _locked(BuildContext context, String text) => Container(
+        padding: EdgeInsets.fromLTRB(16, 12, 16, AppInsets.bottomViewPadding(context) + 12),
+        color: Colors.white,
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: Row(
+              children: [
+                const Icon(Iconsax.lock_1, size: 16, color: AppColors.textLight),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(text,
+                      style: const TextStyle(
+                          fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textLight)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final c = TripPlanController.to;
     return Obx(() {
       c.plan.value;
       c.enquiryList.length;
+      if (c.isReadOnly) return _locked(context, TripStringsA2.tripLocked);
+      if (c.isDayPast(day)) return _locked(context, TripStringsA2.nightPassed);
       final supply = Get.isRegistered<TripSupplyController>() ? Get.find<TripSupplyController>() : null;
-      final noSupply = supply != null && !supply.stayLoading.value && supply.stays.isEmpty;
       final n = c.shortlistCount(day);
+      final emptyList = supply != null &&
+          !supply.stayLoading.value &&
+          !supply.stayFailed.value &&
+          supply.stays.isEmpty &&
+          !supply.canWidenRadius;
+      final noSupply = c.stayTabOff.value || (!c.supplyAvailable && !c.supplyPending) || (emptyList && n == 0);
+      final mode = TripNightChooser.modeOf(c, day);
+      final ownOnly = noSupply || mode != TripNightMode.nightByNight;
+      final asked = askedIds(c, day);
+      final used = usedCount(c, day);
       final sendable = c.sendableShortlist(day).length;
-      final link = TextButton(
-        onPressed: () => openOwn(context, day),
-        style: TextButton.styleFrom(
-          minimumSize: const Size(0, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          alignment: Alignment.centerLeft,
-        ),
-        child: const Text(TripStrings.haveStay,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: TripColors.accentDark)),
-      );
-      final onlyLink = n == 0 && (noSupply || !c.supplyAvailable);
-      return Container(
-        padding: EdgeInsets.fromLTRB(16, 10, 16, AppInsets.bottomViewPadding(context) + 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: AppShadows.premium(TripColors.accent, alpha: 0.12, blur: 16, offset: const Offset(0, -4)),
-        ),
-        child: Center(
-          heightFactor: 1,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: onlyLink
-                ? Align(alignment: Alignment.centerLeft, heightFactor: 1, child: link)
-                : LayoutBuilder(builder: (context, box) {
-                    final info = Wrap(
-                      spacing: 8,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(TripStrings.ofThree(n),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textDark)),
-                        link,
-                      ],
-                    );
-                    final button = GradientButton(
-                      label: TripStrings.sendToStays(sendable),
-                      height: 48,
-                      gradient: TripColors.gradient,
-                      shadowColor: TripColors.accent,
-                      onPressed: sendable == 0 ? null : () => send(context, day),
-                    );
-                    if (box.maxWidth < 480) {
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [info, const SizedBox(height: 6), button],
-                      );
-                    }
-                    return Row(
-                      children: [
-                        Expanded(flex: 5, child: info),
-                        const SizedBox(width: 10),
-                        Expanded(flex: 6, child: button),
-                      ],
-                    );
-                  }),
-          ),
-        ),
+      return TripPageBottomBar(
+        counterText: ownOnly ? '' : TripStringsA2.counter(used, withAsked: asked.isNotEmpty),
+        secondaryLabel: TripStrings.haveStay,
+        secondaryIcon: Iconsax.home_hashtag,
+        onSecondary: () => openOwn(context, day),
+        primaryLabel: sendable == 0 ? TripStringsA2.sendEnquiry : TripStrings.sendToStays(sendable),
+        onPrimary: sendable == 0 ? null : () => send(context, day),
+        hint: !ownOnly && used >= TripConstants.maxShortlist ? TripStrings.shortlistFull : null,
+        showPrimary: !ownOnly,
+        accent: StayColors.accent,
+        gradient: StayColors.gradient,
       );
     });
   }

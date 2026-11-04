@@ -22,19 +22,43 @@ class MyTripsController extends GetxController {
   final hasMore = false.obs;
   final state = 'upcoming'.obs;
   final counts = const TripListCounts().obs;
+  final offlineCopyAt = Rxn<DateTime>();
+  final upcoming = <TripSummaryModel>[].obs;
   int page = 1;
   int _seq = 0;
+  bool _loadedOnce = false;
+  Future<void>? _ensuring;
+
+  TripSummaryModel? get runningTrip {
+    final now = DateTime.now();
+    final source = upcoming.isNotEmpty ? upcoming : (_repo.cachedList(_upcoming)?.value.items ?? const <TripSummaryModel>[]);
+    for (final t in source) {
+      if (t.isRunningOn(now)) return t;
+    }
+    return null;
+  }
+
+  Future<void> ensureLoaded() {
+    if (_loadedOnce) return Future.value();
+    return _ensuring ??= load().whenComplete(() => _ensuring = null);
+  }
+
+  static const String _upcoming = 'upcoming';
 
   Future<void> load() async {
     final seq = ++_seq;
+    final current = state.value;
     isLoading.value = true;
     loadFailed.value = false;
     plannerOff.value = false;
     try {
-      final res = await _repo.list(page: 1, pageSize: _pageSize, state: state.value);
+      final res = await _repo.list(page: 1, pageSize: _pageSize, state: current);
       if (seq != _seq) return;
+      _loadedOnce = true;
+      offlineCopyAt.value = null;
       counts.value = res.counts;
       items.assignAll(res.items);
+      if (current == _upcoming) upcoming.assignAll(res.items);
       hasMore.value = res.hasMore;
       page = 1;
     } catch (e) {
@@ -42,11 +66,24 @@ class MyTripsController extends GetxController {
       if (DioErrorMapper.errorType(e) == TripErrorTypes.plannerDisabled) {
         plannerOff.value = true;
       } else if (!(e is DioException && e.response?.statusCode == 401)) {
-        loadFailed.value = true;
+        if (!(DioErrorMapper.isNetworkError(e) && _fromCache(current))) loadFailed.value = true;
       }
     } finally {
       if (seq == _seq) isLoading.value = false;
     }
+  }
+
+  bool _fromCache(String current) {
+    final cached = _repo.cachedList(current);
+    if (cached == null) return false;
+    _loadedOnce = true;
+    counts.value = cached.value.counts;
+    items.assignAll(cached.value.items);
+    if (current == _upcoming) upcoming.assignAll(cached.value.items);
+    hasMore.value = false;
+    page = 1;
+    offlineCopyAt.value = cached.savedAt ?? DateTime.now();
+    return true;
   }
 
   Future<void> selectState(String v) async {
@@ -58,14 +95,16 @@ class MyTripsController extends GetxController {
   }
 
   Future<void> loadMore() async {
-    if (!hasMore.value || isLoading.value || isLoadingMore.value) return;
+    if (!hasMore.value || isLoading.value || isLoadingMore.value || offlineCopyAt.value != null) return;
     final seq = _seq;
     isLoadingMore.value = true;
     try {
       final res = await _repo.list(page: page + 1, pageSize: _pageSize, state: state.value);
       if (seq != _seq) return;
       final known = items.map((t) => t.id).toSet();
-      items.addAll(res.items.where((t) => known.add(t.id)));
+      final fresh = res.items.where((t) => known.add(t.id)).toList();
+      items.addAll(fresh);
+      if (state.value == _upcoming) upcoming.addAll(fresh);
       hasMore.value = res.hasMore;
       page++;
     } catch (_) {
@@ -79,6 +118,7 @@ class MyTripsController extends GetxController {
     final index = items.indexWhere((t) => t.id == id);
     if (index < 0) return false;
     final removed = items.removeAt(index);
+    upcoming.removeWhere((t) => t.id == id);
     _shiftCount(removed.isCompleted, -1);
     try {
       await _repo.delete(id);
@@ -86,6 +126,7 @@ class MyTripsController extends GetxController {
     } catch (e) {
       if (DioErrorMapper.errorType(e) == TripErrorTypes.tripNotFound) return true;
       items.insert(index.clamp(0, items.length), removed);
+      if (state.value == _upcoming) upcoming.insert(index.clamp(0, upcoming.length), removed);
       _shiftCount(removed.isCompleted, 1);
       AppToast.error(DioErrorMapper.toMessage(e, "Couldn't delete the trip."));
       return false;
@@ -93,6 +134,7 @@ class MyTripsController extends GetxController {
   }
 
   void removeLocal(String id) {
+    upcoming.removeWhere((t) => t.id == id);
     final index = items.indexWhere((t) => t.id == id);
     if (index < 0) return;
     _shiftCount(items[index].isCompleted, -1);
@@ -109,6 +151,7 @@ class MyTripsController extends GetxController {
   Future<bool> markComplete(String id) async {
     try {
       final trip = await _repo.complete(id);
+      upcoming.removeWhere((t) => t.id == id);
       final index = items.indexWhere((t) => t.id == id);
       if (index >= 0) {
         items.removeAt(index);

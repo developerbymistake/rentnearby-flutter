@@ -8,12 +8,14 @@ import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/gradient_button.dart';
-import '../data/trip_repository.dart';
 import '../models/trip_summary_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a5.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_summary_source.dart';
 import '../utils/trip_summary_text.dart';
+import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_payment_line.dart';
 import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_status.dart';
@@ -29,12 +31,12 @@ class TripSummaryScreen extends StatefulWidget {
 class _TripSummaryScreenState extends State<TripSummaryScreen> {
   static const double _maxWidth = 640;
 
-  final _repo = const TripRepository();
   late final String _tripId;
   TripSummaryRecord? _record;
+  DateTime? _cachedAt;
   bool _loading = true;
-  bool _failed = false;
   bool _offline = false;
+  bool _gone = false;
 
   @override
   void initState() {
@@ -47,19 +49,20 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
   Future<void> _load() async {
     setState(() {
       _loading = true;
-      _failed = false;
     });
     try {
-      final r = await _repo.summary(_tripId);
+      final snap = await TripSummarySource.load(_tripId);
       if (!mounted) return;
       setState(() {
-        _record = r;
+        _record = snap.record;
+        _cachedAt = snap.cachedAt;
+        _gone = false;
         _loading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _failed = true;
+        _gone = TripSummarySource.isGone(e);
         _offline = DioErrorMapper.isNetworkError(e);
         _loading = false;
       });
@@ -72,14 +75,14 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     try {
       await SharePlus.instance.share(ShareParams(text: TripSummaryText.build(r), subject: TripStrings.shareSubject(r.city)));
     } catch (_) {
-      AppToast.error(TripStrings.couldNotLoad);
+      AppToast.error(TripStringsA5.shareFailed);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final r = _record;
-    final canShare = r != null && !r.isEmpty;
+    final canShare = r != null && !_gone && TripSummaryText.canShare(r);
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: Column(
@@ -121,9 +124,9 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
                   ),
-                  if (r != null)
+                  if (r != null && !_gone)
                     Text(
-                      TripStrings.summaryHeader(r.city, TripSummaryText.datesOf(r), TripStrings.peopleCount(r.people)),
+                      TripSummaryText.headerLine(r),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Colors.white70),
@@ -147,12 +150,13 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
   }
 
   Widget _body(TripSummaryRecord? r) {
-    if (_loading) {
+    if (_gone) return const TripNotFoundView();
+    if (_loading && r == null) {
       return _column([
         for (var i = 0; i < 3; i++) ...[TripShimmers.rowBox(height: 150, radius: 18), const SizedBox(height: 12)],
       ]);
     }
-    if (_failed || r == null) {
+    if (r == null) {
       return _column([
         EmptyStateView(
           icon: Iconsax.cloud_cross,
@@ -163,29 +167,131 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
         ),
       ]);
     }
-    if (r.isEmpty) {
+    if (!TripSummaryText.hasContent(r)) {
       return _column([
         const EmptyStateView(
           icon: Iconsax.document_text,
-          title: TripStrings.nothingBookedYet,
-          subtitle: TripStrings.nothingBookedSub,
+          title: TripStringsA5.nothingHere,
+          subtitle: TripStringsA5.nothingHereSub,
           palette: TripColors.palette,
         ),
       ]);
     }
+    final days = r.days.where((d) => d.spots.isNotEmpty).toList();
     return RefreshIndicator(
       color: TripColors.accent,
       onRefresh: _load,
-      child: _column([
-        for (final n in r.nights) ...[_nightCard(n), const SizedBox(height: 12)],
-        for (final t in r.taxis) ...[_taxiCard(t), const SizedBox(height: 12)],
-        if (r.agreedTotal > 0) _totalStrip(r.agreedTotal),
-        const SizedBox(height: 12),
-        const Text(
-          TripStrings.summaryFooter,
-          style: TextStyle(fontSize: 11, color: AppColors.textLight, height: 1.35),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        children: [
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: _maxWidth),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_cachedAt != null) ...[_offlineStrip(_cachedAt!), const SizedBox(height: 12)],
+                    if (days.isNotEmpty) ...[
+                      _section(TripStringsA5.itinerary),
+                      for (final d in days) ...[_dayCard(d), const SizedBox(height: 12)],
+                    ],
+                    if (r.nights.isNotEmpty) ...[
+                      _section(TripStringsA5.staysSection),
+                      for (final n in r.nights) ...[_nightCard(n), const SizedBox(height: 12)],
+                    ],
+                    if (r.taxis.isNotEmpty) ...[
+                      _section(TripStringsA5.taxisSection),
+                      for (final t in r.taxis) ...[_taxiCard(t), const SizedBox(height: 12)],
+                    ],
+                    if (r.agreedTotal > 0) _totalStrip(r.agreedTotal),
+                    const SizedBox(height: 12),
+                    Text(
+                      TripSummaryText.footer(r),
+                      style: const TextStyle(fontSize: 11, color: AppColors.textLight, height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _section(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 8, top: 2),
+        child: Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textMedium),
         ),
-      ]),
+      );
+
+  Widget _offlineStrip(DateTime at) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(color: AppColors.neutralChip, borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          children: [
+            const Icon(Iconsax.cloud_cross, size: 16, color: AppColors.textMedium),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                TripStringsA5.offlineCopy(TripFormat.time12Of(at)),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _dayCard(TripSummaryDay d) {
+    final date = d.date == null ? null : TripFormat.shortDate(d.date!);
+    return TripStatusCard(
+      status: TripDisplayStatus.none,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            TripStringsA5.dayHeading(d.day, date),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
+          ),
+          if (d.minutes > 0)
+            Text(
+              TripStringsA5.aboutDuration(TripFormat.duration(d.minutes)),
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
+            ),
+          const SizedBox(height: 6),
+          for (var i = 0; i < d.spots.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 22,
+                    child: Text('${i + 1}',
+                        style: const TextStyle(
+                            fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+                  ),
+                  Expanded(
+                    child: Text(d.spots[i],
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textDark)),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -226,7 +332,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
             children: [
               Text(
                 title,
-                maxLines: 2,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                     fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
@@ -249,17 +355,25 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
 
   Widget _nightCard(TripSummaryNight n) {
     final date = n.date == null ? '' : TripFormat.shortDate(n.date!);
+    final heading = TripStringsA5.nightHeading(n.night, date, TripSummaryText.checkOutOf(n.date));
+    if (TripSummaryText.isSkipped(n)) {
+      return TripStatusCard(
+        status: TripDisplayStatus.none,
+        child: _titleRow(heading, TripStringsA5.noStayTonight, const SizedBox.shrink()),
+      );
+    }
+    final status = n.isOwn ? TripDisplayStatus.own : n.display;
     final label = n.isOwn
         ? TripStrings.ownBookingShort
         : n.isCancelled
             ? TripSummaryText.statusLabel(n.display, n.cancelledBy ?? 'owner')
             : null;
     return TripStatusCard(
-      status: n.display,
+      status: status,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _titleRow(TripStrings.nightCard(n.night, date), n.listingName, TripStatusPill(n.display, label: label)),
+          _titleRow(heading, n.listingName, TripStatusPill(status, label: label)),
           if (n.isOwn && (n.ownPhone ?? '').isNotEmpty) _kv(TripStrings.call, n.ownPhone!),
           for (final room in n.roomLines) _kv(TripStrings.room, TripSummaryText.roomLine(room)),
           if (n.agreedTotal != null) _kv(TripStrings.agreed, BrowseItem.inr(n.agreedTotal!)),
@@ -274,6 +388,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
 
   Widget _taxiCard(TripSummaryTaxi t) {
     final vehicle = (t.vehicleTypeName ?? '').isEmpty ? t.listingName : '${t.listingName} · ${t.vehicleTypeName}';
+    final status = t.isOwn ? TripDisplayStatus.own : t.display;
     final label = t.isOwn
         ? TripStrings.ownBookingShort
         : t.isCancelled
@@ -285,21 +400,23 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
       if ((t.pickupPlace ?? '').isNotEmpty) t.pickupPlace!,
     ].join(', ');
     return TripStatusCard(
-      status: t.display,
+      status: status,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _titleRow(
             TripStrings.taxiCardTitle(TripSummaryText.taxiDays(t)),
             vehicle,
-            TripStatusPill(t.display, taxi: true, label: label),
+            TripStatusPill(status, taxi: true, label: label),
           ),
           if (t.isOwn && (t.ownPhone ?? '').isNotEmpty) _kv(TripStrings.call, t.ownPhone!),
           if (fare.isNotEmpty) _kv(TripStrings.fare, fare),
           if (pickup.isNotEmpty) _kv(TripStrings.pickup, pickup),
           if (!t.isOwn) _kv(TripStrings.confirmedLabel, t.confirmedLine()),
-          const SizedBox(height: 10),
-          const TripPaymentLine(text: TripStrings.taxiPayLine),
+          if (!t.isOwn) ...[
+            const SizedBox(height: 10),
+            const TripPaymentLine(text: TripStrings.taxiPayLine),
+          ],
         ],
       ),
     );
@@ -331,7 +448,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
           constraints: const BoxConstraints(maxWidth: _maxWidth),
           child: GradientButton(
             onPressed: _share,
-            label: TripStrings.shareAsText,
+            label: TripStringsA5.shareTrip,
             height: 48,
             gradient: TripColors.gradient,
             shadowColor: TripColors.accent,

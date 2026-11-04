@@ -32,8 +32,8 @@ void main() {
     expect(TripConstants.holdCheckInCutoffHour, 12);
     expect(TripConstants.upiMax, 60);
     expect(TripConstants.maxFareEdits, 3);
-    expect(TripConstants.leadsPerTripPerDay, 5);
-    expect(TripConstants.maxLeadDays, 5);
+    expect(TripConstants.leadsPerTripPerDay, 10);
+    expect(TripConstants.maxLeadDays, 14);
     expect(TripConstants.driverNoteMax, 300);
   });
 

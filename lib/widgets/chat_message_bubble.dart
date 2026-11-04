@@ -4,6 +4,7 @@ import '../config/app_colors.dart';
 import '../models/message_model.dart';
 import '../models/question_template_model.dart';
 import 'trip_chat_cards.dart';
+import 'trip_offer_cards.dart';
 
 class ChatMessageBubble extends StatelessWidget {
   final MessageModel message;
@@ -57,6 +58,9 @@ class ChatMessageBubble extends StatelessWidget {
       case 'trip_phone_booking':
       case 'trip_advance_request':
       case 'trip_advance_proof_sent':
+      case TripOfferCards.counterType:
+      case TripOfferCards.revisedType:
+      case TripOfferCards.changeType:
         return TripChatCards.build(context, message, isOwner: isOwner, accent: accent, callbacks: trip);
       default:
         // Defensive fallback only — the backend never emits Type == "system" (or any other

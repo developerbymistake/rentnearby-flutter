@@ -11,6 +11,7 @@ import '../screens/trip_edit_spot_sheet.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a4.dart';
 import '../utils/trip_format.dart';
 import 'trip_day_actions.dart';
 import 'trip_status.dart';
@@ -35,8 +36,10 @@ class TripDayTile extends StatelessWidget {
       child: Obx(() {
         final plan = c.plan.value;
         c.result.value;
+        c.trip.value;
         final d = plan?.dayAt(day);
         if (plan == null || d == null) return const SizedBox.shrink();
+        final readOnly = c.isReadOnly || c.needsUpdate.value || c.isDayPast(day);
         final total = c.dayTotalMinutes(day);
         final over = c.isOverLimit(day);
         final closed = c
@@ -65,7 +68,9 @@ class TripDayTile extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 8),
-            if (d.spots.isEmpty)
+            if (d.spots.isEmpty && c.spotCount == 0 && !readOnly)
+              _addPlaces(c)
+            else if (d.spots.isEmpty)
               const Text(
                 TripStrings.freeDay,
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
@@ -76,7 +81,9 @@ class TripDayTile extends StatelessWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 buildDefaultDragHandles: false,
                 itemCount: d.spots.length,
-                onReorder: (oldIndex, newIndex) => c.reorder(day, oldIndex, newIndex),
+                onReorder: (oldIndex, newIndex) {
+                  if (!readOnly) c.reorder(day, oldIndex, newIndex);
+                },
                 itemBuilder: (context, i) {
                   final s = d.spots[i];
                   final isLast = i == d.spots.length - 1;
@@ -87,17 +94,44 @@ class TripDayTile extends StatelessWidget {
                     color: color,
                     driveMinutes: isLast ? null : c.legFrom(day, s.id)?.minutes,
                     showDrive: !isLast,
-                    onTap: () => TripEditSpotSheet.show(context, s.id),
+                    readOnly: readOnly,
+                    onTap: readOnly ? null : () => TripEditSpotSheet.show(context, s.id),
                   );
                 },
               ),
             const SizedBox(height: 10),
             TripDayActions(day),
-            _taxiRedNote(c),
-            _redNote(c, d),
+            if (!readOnly) ...[
+              _taxiRedNote(c),
+              _redNote(c, d),
+            ],
           ],
         );
       }),
+    );
+  }
+
+  Widget _addPlaces(TripPlanController c) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: OutlinedButton.icon(
+        onPressed: () {
+          final picked = c.picked;
+          final plan = c.plan.value;
+          if (picked == null || plan == null) return;
+          TripNavigation.openSpots(picked, tripId: c.trip.value?.id, existingIds: plan.spotIds);
+        },
+        icon: const Icon(Iconsax.add_circle, size: 18, color: TripColors.accentDark),
+        label: const Text(
+          TripStringsA4.addPlaces,
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: TripColors.accentDark),
+        ),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 44),
+          side: BorderSide(color: TripColors.accent.withValues(alpha: 0.6)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
     );
   }
 
@@ -285,7 +319,8 @@ class _StopItem extends StatelessWidget {
   final Color color;
   final int? driveMinutes;
   final bool showDrive;
-  final VoidCallback onTap;
+  final bool readOnly;
+  final VoidCallback? onTap;
 
   const _StopItem({
     super.key,
@@ -294,6 +329,7 @@ class _StopItem extends StatelessWidget {
     required this.color,
     required this.driveMinutes,
     required this.showDrive,
+    required this.readOnly,
     required this.onTap,
   });
 
@@ -338,13 +374,14 @@ class _StopItem extends StatelessWidget {
                     TripFormat.visit(spot.visitMinutes),
                     style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
                   ),
-                  ReorderableDelayedDragStartListener(
-                    index: index,
-                    child: const Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: Icon(Icons.drag_indicator_rounded, size: 20, color: AppColors.textHint),
+                  if (!readOnly)
+                    ReorderableDelayedDragStartListener(
+                      index: index,
+                      child: const Padding(
+                        padding: EdgeInsets.only(left: 6),
+                        child: Icon(Icons.drag_indicator_rounded, size: 20, color: AppColors.textHint),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

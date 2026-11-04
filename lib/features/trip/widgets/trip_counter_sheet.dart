@@ -11,6 +11,7 @@ import '../models/trip_enquiry_model.dart';
 import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a5.dart';
 import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
 
@@ -44,6 +45,14 @@ class _CounterBodyState extends State<_CounterBody> {
     return e.openOffer?.pricePerNight ?? e.pendingCounter?.listedPerNight;
   }
 
+  String? _totalLine() {
+    final price = int.tryParse(_price.text.trim());
+    if (price == null || price <= 0) return null;
+    final rooms = widget.enquiry.context.rooms ?? 1;
+    final nights = widget.enquiry.nights;
+    return TripStringsA5.roomsNightsTotal(rooms, nights, BrowseItem.inr(price * rooms * nights));
+  }
+
   @override
   void dispose() {
     _price.dispose();
@@ -56,7 +65,8 @@ class _CounterBodyState extends State<_CounterBody> {
     FocusScope.of(context).unfocus();
     final price = int.tryParse(_price.text.trim());
     if (price == null || price < TripConstants.counterMin || price > TripConstants.counterMax) {
-      setState(() => _fieldError = TripStrings.errPriceRange);
+      setState(() => _fieldError =
+          TripStringsA5.errPriceRange(BrowseItem.inr(TripConstants.counterMin), BrowseItem.inr(TripConstants.counterMax)));
       return;
     }
     setState(() {
@@ -90,18 +100,27 @@ class _CounterBodyState extends State<_CounterBody> {
           _listedRow(listed),
           const SizedBox(height: 14),
         ],
-        _label(TripStrings.yourPricePerNight),
+        _label(TripStringsA5.perRoomPerNight),
         TextField(
           controller: _price,
           enabled: !_busy,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(TripConstants.counterMax.toString().length),
+          ],
           style: _inputStyle,
-          onChanged: (_) {
-            if (_fieldError != null) setState(() => _fieldError = null);
-          },
+          onChanged: (_) => setState(() => _fieldError = null),
           decoration: _decoration(prefix: '₹ ', error: _fieldError),
         ),
+        if (_totalLine() != null) ...[
+          const SizedBox(height: 6),
+          Text(_totalLine()!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: TripColors.accentDark)),
+        ],
         const SizedBox(height: 14),
         _label(TripStrings.note),
         TextField(
@@ -162,7 +181,7 @@ class _CounterBodyState extends State<_CounterBody> {
                       color: AppColors.textLight,
                       decoration: TextDecoration.lineThrough,
                     )),
-                const Text(TripStrings.perNight,
+                const Text(TripStringsA5.perRoomNightShort,
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
               ],
             ),

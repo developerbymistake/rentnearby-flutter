@@ -13,6 +13,10 @@ class StayNearbyModel {
   final String? ownerPhone;
   final bool isActive;
   final bool isFeatured;
+  final int? maxGuests;
+  final String? meals;
+  final String? checkInTime;
+  final int roomCount;
 
   StayNearbyModel({
     required this.id,
@@ -27,6 +31,10 @@ class StayNearbyModel {
     this.ownerPhone,
     required this.isActive,
     this.isFeatured = false,
+    this.maxGuests,
+    this.meals,
+    this.checkInTime,
+    this.roomCount = 0,
   });
 
   String get title => (name == null || name!.isEmpty) ? 'Stay' : name!;
@@ -48,5 +56,9 @@ class StayNearbyModel {
         ownerPhone: json['ownerPhone'] as String?,
         isActive: json['isActive'] as bool? ?? true,
         isFeatured: json['isFeatured'] == true,
+        maxGuests: (json['maxGuests'] as num?)?.toInt(),
+        meals: json['meals'] as String?,
+        checkInTime: json['checkInTime'] as String?,
+        roomCount: (json['roomCount'] as num?)?.toInt() ?? 0,
       );
 }

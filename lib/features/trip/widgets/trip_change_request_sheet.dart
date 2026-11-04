@@ -9,6 +9,7 @@ import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
+import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
@@ -17,23 +18,24 @@ import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
 
 class TripChangeRequestSheet {
-  static Future<bool> show(BuildContext context, {required TripEnquiryModel enquiry}) async {
-    final ok = await TripSheetFrame.show<bool>(context, _ChangeBody(enquiry: enquiry));
+  static Future<bool> show(BuildContext context, {required TripEnquiryModel enquiry, TripSettings? prefill}) async {
+    final ok = await TripSheetFrame.show<bool>(context, _ChangeBody(enquiry: enquiry, prefill: prefill));
     return ok == true;
   }
 }
 
 class _ChangeBody extends StatefulWidget {
-  const _ChangeBody({required this.enquiry});
+  const _ChangeBody({required this.enquiry, this.prefill});
 
   final TripEnquiryModel enquiry;
+  final TripSettings? prefill;
 
   @override
   State<_ChangeBody> createState() => _ChangeBodyState();
 }
 
 class _ChangeBodyState extends State<_ChangeBody> {
-  static const int _maxNights = 13;
+  static const int _maxNights = TripConstants.maxDaysCap;
 
   final _note = TextEditingController();
   late DateTime? _checkIn;
@@ -47,7 +49,7 @@ class _ChangeBodyState extends State<_ChangeBody> {
   late final int _origKids;
   late final int _origRooms;
   DateTime? _tripFirst;
-  DateTime? _tripLast;
+  DateTime? _tripCheckOut;
   bool _busy = false;
   String? _serverError;
 
@@ -64,14 +66,16 @@ class _ChangeBodyState extends State<_ChangeBody> {
     _origRooms = acceptedRooms > 0 ? acceptedRooms : (e.context.rooms ?? TripConstants.defaultRooms);
     _checkIn = _origIn;
     _checkOut = _origOut;
-    _adults = _origAdults.clamp(1, TripConstants.maxAdults);
-    _kids = _origKids.clamp(0, TripConstants.maxKids);
-    _rooms = _origRooms.clamp(1, TripConstants.maxRooms);
+    final want = widget.prefill;
+    _adults = (want?.adults ?? _origAdults).clamp(1, TripConstants.maxAdults);
+    _kids = (want?.kids ?? _origKids).clamp(0, TripConstants.maxKids);
+    _rooms = (want?.rooms ?? _origRooms).clamp(1, TripConstants.maxRooms);
     if (Get.isRegistered<TripPlanController>()) {
       final plan = Get.find<TripPlanController>();
       if (plan.trip.value?.id != null && plan.trip.value?.id == e.tripId) {
         _tripFirst = _day(plan.dateOf(1));
-        _tripLast = _day(plan.settings.endDate(plan.dayCount));
+        final lastDay = _day(plan.settings.endDate(plan.dayCount));
+        _tripCheckOut = lastDay == null ? null : DateTime(lastDay.year, lastDay.month, lastDay.day + 1);
       }
     }
   }
@@ -121,11 +125,11 @@ class _ChangeBodyState extends State<_ChangeBody> {
   Future<void> _pickCheckIn() async {
     FocusScope.of(context).unfocus();
     final tripFirst = _tripFirst;
-    final tripLast = _tripLast;
+    final tripCheckOut = _tripCheckOut;
     var first = _today;
     if (tripFirst != null && tripFirst.isAfter(first)) first = tripFirst;
-    final last = tripLast != null
-        ? tripLast.subtract(const Duration(days: 1))
+    final last = tripCheckOut != null
+        ? DateTime(tripCheckOut.year, tripCheckOut.month, tripCheckOut.day - 1)
         : _today.add(const Duration(days: TripConstants.maxStartDaysAhead));
     if (last.isBefore(first)) return;
     final picked = await _pick(initial: _checkIn ?? first, first: first, last: last);
@@ -147,8 +151,8 @@ class _ChangeBodyState extends State<_ChangeBody> {
     if (cin == null) return;
     final first = DateTime(cin.year, cin.month, cin.day + 1);
     var last = DateTime(cin.year, cin.month, cin.day + _maxNights);
-    final tripLast = _tripLast;
-    if (tripLast != null && tripLast.isBefore(last)) last = tripLast;
+    final tripCheckOut = _tripCheckOut;
+    if (tripCheckOut != null && tripCheckOut.isBefore(last)) last = tripCheckOut;
     if (last.isBefore(first)) return;
     final picked = await _pick(initial: _checkOut ?? first, first: first, last: last);
     if (picked == null || !mounted) return;

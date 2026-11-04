@@ -488,6 +488,7 @@ class NotificationService extends GetxService {
           actionArguments = jsonDecode(argsJson) as Map<String, dynamic>;
         } catch (_) {}
       }
+      if (actionRoute == AppRoutes.tripPlan) actionArguments = {...?actionArguments, 'fresh': true};
       Get.toNamed(actionRoute, arguments: actionArguments);
       return;
     }

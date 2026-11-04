@@ -3,30 +3,39 @@ import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_shadows.dart';
+import '../../../utils/app_toast.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../../widgets/selectable_chip.dart';
 import '../controllers/trip_plan_controller.dart';
+import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a4.dart';
 import '../utils/trip_format.dart';
+import '../widgets/trip_change_request_sheet.dart';
+import '../widgets/trip_status.dart';
 
 class TripDetailsSheet {
   static Future<TripSettings?> collect(
     BuildContext context, {
     required TripSettings initial,
     required int dayCount,
+    int spotCount = 0,
     bool allowSkip = true,
   }) =>
-      _show(context, initial: initial, dayCount: dayCount, endKnown: false, allowSkip: allowSkip);
+      _show(context, initial: initial, dayCount: dayCount, spotCount: spotCount, endKnown: false, allowSkip: allowSkip);
 
   static Future<bool> edit(BuildContext context, {String? heading, String? description}) async {
     final c = TripPlanController.to;
-    if (c.plan.value == null) return false;
+    if (c.plan.value == null || c.isReadOnly) return false;
+    final old = c.settings;
     final result = await _show(
       context,
-      initial: c.settings,
+      initial: old,
       dayCount: c.dayCount,
+      spotCount: c.spotCount,
       endKnown: true,
       allowSkip: false,
       heading: heading,
@@ -34,30 +43,122 @@ class TripDetailsSheet {
       startLocked: c.isRunning,
     );
     if (result == null) return false;
-    final oldStart = c.settings.startDate;
     final newStart = result.startDate;
-    if (oldStart != null && newStart != null && newStart != oldStart) {
-      final stale = c.bookingsOutsideDates(newStart);
-      if (stale.isNotEmpty) {
+    if (newStart != null && newStart != old.startDate) {
+      final impact = c.dateChangeImpact(newStart);
+      if (!impact.isEmpty) {
         if (!context.mounted) return false;
-        final change = await _confirmDates(context, stale.length, TripFormat.dayMonthRange(oldStart, c.settings.endDate(c.dayCount) ?? oldStart));
+        final change = await _confirmDates(context, impact.all);
         if (change != true) return false;
       }
     }
-    return c.saveSettings(result);
+    final res = await c.saveSettings(result);
+    if (!res.saved) return false;
+    if (res.openAffected.isNotEmpty) AppToast.info(TripStringsA4.openSentOld);
+    if (res.confirmedAffected.isNotEmpty && context.mounted) {
+      await _askChangeRequest(context, old, result, res.confirmedAffected);
+    }
+    return true;
   }
 
-  static Future<bool?> _confirmDates(BuildContext context, int count, String range) => showDialog<bool>(
+  static Future<void> _askChangeRequest(
+    BuildContext context,
+    TripSettings old,
+    TripSettings next,
+    List<TripEnquiryModel> affected,
+  ) async {
+    final send = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          TripStringsA4.hostsStillHave(old.peopleSummary ?? TripStringsA4.notSet, old.roomsSummary ?? ''),
+          style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17),
+        ),
+        content: const Text(
+          TripStringsA4.sendChangeQ,
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
+        ),
+        actionsOverflowDirection: VerticalDirection.down,
+        actionsOverflowButtonSpacing: 4,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+            child: const Text(
+              TripStringsA4.later,
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textLight),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+            child: const Text(
+              TripStringsA4.sendChangeRequest,
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (send != true || !context.mounted) return;
+    var target = affected.first;
+    if (affected.length > 1) {
+      final picked = await showDialog<TripEnquiryModel>(
+        context: context,
+        builder: (ctx) => SimpleDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(
+            TripStringsA4.whichBooking,
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17),
+          ),
+          children: [
+            for (final e in affected)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(ctx, e),
+                child: ConstrainedBox(constraints: const BoxConstraints(minHeight: 44), child: _BookingLine(e)),
+              ),
+          ],
+        ),
+      );
+      if (picked == null || !context.mounted) return;
+      target = picked;
+    }
+    await TripChangeRequestSheet.show(context, enquiry: target, prefill: next);
+  }
+
+  static Future<bool?> _confirmDates(BuildContext context, List<TripEnquiryModel> items) => showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text(
-            TripStrings.bookingsKeepDates,
+            TripStringsA4.datesTitle,
             style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17),
           ),
-          content: Text(
-            TripStrings.bookingsStillSay(count, range),
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(ctx).height * 0.45,
+              minWidth: double.maxFinite,
+              maxWidth: double.maxFinite,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    TripStringsA4.datesBody(items.length),
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
+                  ),
+                  const SizedBox(height: 4),
+                  for (final e in items)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: _BookingLine(e),
+                    ),
+                ],
+              ),
+            ),
           ),
           actionsOverflowDirection: VerticalDirection.down,
           actionsOverflowButtonSpacing: 4,
@@ -86,6 +187,7 @@ class TripDetailsSheet {
     BuildContext context, {
     required TripSettings initial,
     required int dayCount,
+    required int spotCount,
     required bool endKnown,
     required bool allowSkip,
     String? heading,
@@ -102,6 +204,7 @@ class TripDetailsSheet {
         builder: (_) => _DetailsBody(
           initial: initial,
           dayCount: dayCount,
+          spotCount: spotCount,
           endKnown: endKnown,
           allowSkip: allowSkip,
           heading: heading,
@@ -111,9 +214,49 @@ class TripDetailsSheet {
       );
 }
 
+class _BookingLine extends StatelessWidget {
+  final TripEnquiryModel e;
+
+  const _BookingLine(this.e);
+
+  @override
+  Widget build(BuildContext context) {
+    final name = e.listingName.isEmpty ? (e.isTaxi ? TripStrings.driver : TripStrings.stay) : e.listingName;
+    return Row(
+      children: [
+        Icon(e.isTaxi ? Iconsax.car : Iconsax.building_4, size: 16, color: AppColors.textMedium),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark),
+              ),
+              Text(
+                e.datesLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 6),
+        Flexible(child: TripStatusPill(e.display, taxi: e.isTaxi)),
+      ],
+    );
+  }
+}
+
 class _DetailsBody extends StatefulWidget {
   final TripSettings initial;
   final int dayCount;
+  final int spotCount;
   final bool endKnown;
   final bool allowSkip;
   final String? heading;
@@ -123,6 +266,7 @@ class _DetailsBody extends StatefulWidget {
   const _DetailsBody({
     required this.initial,
     required this.dayCount,
+    required this.spotCount,
     required this.endKnown,
     required this.allowSkip,
     this.heading,
@@ -136,9 +280,10 @@ class _DetailsBody extends StatefulWidget {
 
 class _DetailsBodyState extends State<_DetailsBody> {
   late DateTime? _start = widget.initial.startDate;
-  late int _adults = widget.initial.adults ?? TripConstants.defaultAdults;
-  late int _kids = widget.initial.kids ?? 0;
-  late int _rooms = widget.initial.rooms ?? TripConstants.defaultRooms;
+  late int? _adults = widget.initial.adults;
+  late int? _kids = widget.initial.kids;
+  late int? _rooms = widget.initial.rooms;
+  late int? _maxDays = widget.initial.maxDays;
   late int _pace = widget.initial.dayLimitMinutes == TripPace.relaxed ? TripPace.relaxed : TripPace.normal;
   late final Set<String> _needs = widget.initial.needs.toSet();
   String? _error;
@@ -207,6 +352,7 @@ class _DetailsBodyState extends State<_DetailsBody> {
         needs: needs,
         pickupTime: base.pickupTime,
         pickupPlace: base.pickupPlace,
+        maxDays: _maxDays,
       ),
     );
   }
@@ -275,10 +421,27 @@ class _DetailsBodyState extends State<_DetailsBody> {
               _card(children: [
                 _stepperRow(TripStrings.adults, _adults, 1, TripConstants.maxAdults, (v) => setState(() => _adults = v)),
                 const Divider(height: 1, color: AppColors.divider),
-                _stepperRow(TripStrings.kids, _kids, 0, TripConstants.maxKids, (v) => setState(() => _kids = v)),
+                _stepperRow(TripStrings.kids, _kids, 0, TripConstants.maxKids, (v) => setState(() => _kids = v),
+                    unsetShowsMin: true),
                 const Divider(height: 1, color: AppColors.divider),
                 _stepperRow(TripStrings.rooms, _rooms, 1, TripConstants.maxRooms, (v) => setState(() => _rooms = v)),
               ]),
+              const SizedBox(height: 6),
+              const Text(
+                TripStringsA4.peopleHelp,
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+              ),
+              if (widget.spotCount > 0) ...[
+                const SizedBox(height: 16),
+                _label(TripStringsA4.days),
+                const SizedBox(height: 2),
+                const Text(
+                  TripStringsA4.daysHelp,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+                ),
+                const SizedBox(height: 8),
+                _daysRow(),
+              ],
               const SizedBox(height: 16),
               _label(TripStrings.pace),
               const SizedBox(height: 8),
@@ -439,7 +602,29 @@ class _DetailsBodyState extends State<_DetailsBody> {
     );
   }
 
-  Widget _stepperRow(String label, int value, int min, int max, ValueChanged<int> onChanged) {
+  Widget _daysRow() {
+    final top = widget.spotCount < TripConstants.maxDaysCap ? widget.spotCount : TripConstants.maxDaysCap;
+    final locked = widget.startLocked;
+    Widget chip(String label, int? value) => SelectableChip(
+          label: label,
+          selected: _maxDays == value,
+          onTap: locked ? () {} : () => setState(() => _maxDays = value),
+          activeColor: TripColors.accent,
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+        );
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        chip(TripStringsA4.auto, null),
+        for (var n = 1; n <= top; n++) chip('$n', n),
+      ],
+    );
+  }
+
+  Widget _stepperRow(String label, int? value, int min, int max, ValueChanged<int> onChanged,
+      {bool unsetShowsMin = false}) {
+    final shown = value ?? (unsetShowsMin ? min : null);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       child: Row(
@@ -452,18 +637,26 @@ class _DetailsBodyState extends State<_DetailsBody> {
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
             ),
           ),
-          _stepButton(Icons.remove_rounded, value > min ? () => onChanged(value - 1) : null),
+          _stepButton(Icons.remove_rounded, shown != null && shown > min ? () => onChanged(shown - 1) : null),
           SizedBox(
-            width: 44,
+            width: 56,
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                '$value',
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                shown == null ? TripStringsA4.notSet : '$shown',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: shown == null ? 12 : 16,
+                  fontWeight: FontWeight.w700,
+                  color: shown == null ? AppColors.textHint : AppColors.textDark,
+                ),
               ),
             ),
           ),
-          _stepButton(Icons.add_rounded, value < max ? () => onChanged(value + 1) : null),
+          _stepButton(
+            Icons.add_rounded,
+            shown == null ? () => onChanged(min) : (shown < max ? () => onChanged(shown + 1) : null),
+          ),
         ],
       ),
     );

@@ -6,6 +6,7 @@ import '../../../controllers/location_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
 import '../models/taxi_browse_item.dart';
 import '../taxi_option_sets.dart';
+import '../ways/widgets/trip_ways_link.dart';
 import 'taxi_browse_repository.dart';
 import 'taxi_card.dart';
 import 'taxi_navigation.dart';
@@ -18,9 +19,13 @@ class StayTaxisSection extends StatefulWidget {
   final String stayCityName;
   final double toLat;
   final double toLng;
+  final DateTime? date;
+  final int? people;
 
   const StayTaxisSection({
     super.key,
+    this.date,
+    this.people,
     this.stayCityId,
     required this.stayCityName,
     required this.toLat,
@@ -143,6 +148,15 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _header(label: label, value: value),
+      if (from != null && !local && TabConfigController.to.isTaxiActive)
+        TripWaysLink(
+          cityName: widget.stayCityName,
+          lat: widget.toLat,
+          lng: widget.toLng,
+          date: widget.date,
+          people: widget.people,
+          padding: const EdgeInsets.only(top: 10),
+        ),
       ...switch (_phase) {
         _Phase.locating => [_note('Finding your city...')],
         _Phase.loading => [

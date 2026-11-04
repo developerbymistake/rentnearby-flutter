@@ -12,6 +12,7 @@ import 'models/taxi_ways_models.dart';
 import 'taxi_ways_controller.dart';
 import 'taxi_ways_navigation.dart';
 import 'taxi_ways_strings.dart';
+import 'trip_strings_a6.dart';
 import 'widgets/journey_rail.dart';
 import 'widgets/journey_total_bar.dart';
 
@@ -29,6 +30,7 @@ class JourneyPlanLoader {
   bool loading = false;
   bool failed = false;
   bool offline = false;
+  bool refreshFailed = false;
   WayPlan? plan;
 
   JourneyPlanLoader(this.c, this.planKey, this.tag) : plan = c.planByKey(planKey);
@@ -43,6 +45,7 @@ class JourneyPlanLoader {
     loading = true;
     failed = false;
     offline = false;
+    refreshFailed = false;
     onChange();
     try {
       final d = await c.openPlan(planKey);
@@ -50,6 +53,7 @@ class JourneyPlanLoader {
     } catch (e) {
       failed = plan == null;
       offline = DioErrorMapper.isNetworkError(e);
+      refreshFailed = plan != null && !offline;
     } finally {
       loading = false;
       onChange();
@@ -90,12 +94,16 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
       return Scaffold(
         backgroundColor: AppColors.scaffoldBg,
         appBar: AppBar(title: const Text(TaxiWaysStrings.yourJourney)),
-        body: EmptyStateView(
-          icon: Iconsax.routing_2,
-          title: TaxiWaysStrings.noWays,
-          subtitle: TaxiWaysStrings.entryEmptyBody,
-          palette: ModulePalette.taxi,
-        ),
+        body: ListView(children: [
+          EmptyStateView(
+            icon: Iconsax.routing_2,
+            title: TripStringsA6.journeyGoneTitle,
+            subtitle: TripStringsA6.journeyGoneBody,
+            onRetry: () => Get.back(),
+            retryLabel: TripStringsA6.goBack,
+            palette: ModulePalette.taxi,
+          ),
+        ]),
       );
     }
     final c = l.c;
@@ -105,7 +113,7 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
       body: Column(children: [
         _header(context, l, plan),
         Expanded(child: _content(context, l, plan)),
-        if (plan != null)
+        if (plan != null && plan.legs.isNotEmpty)
           Obx(() {
             final chosen = c.chosenOf(plan.planKey);
             return JourneyTotalBar(
@@ -230,6 +238,18 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
       ]);
     }
     final c = l.c;
+    if (plan.legs.isEmpty) {
+      return ListView(children: [
+        EmptyStateView(
+          icon: Iconsax.routing_2,
+          title: TripStringsA6.planEmptyTitle,
+          subtitle: TripStringsA6.planEmptyBody,
+          onRetry: () => l.load(_changed),
+          retryLabel: TaxiWaysStrings.retry,
+          palette: ModulePalette.taxi,
+        ),
+      ]);
+    }
     return RefreshIndicator(
       color: TaxiColors.accent,
       onRefresh: () => l.load(_changed),
@@ -249,6 +269,10 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
                   _offline(),
                   const SizedBox(height: 12),
                 ],
+                if (l.refreshFailed && !l.loading) ...[
+                  _refreshFailed(l),
+                  const SizedBox(height: 12),
+                ],
                 Obx(() => JourneyRail(
                       plan: plan,
                       chosen: c.chosenOf(plan.planKey),
@@ -262,6 +286,26 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
       ),
     );
   }
+
+  Widget _refreshFailed(JourneyPlanLoader l) => Container(
+        padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+        child: Row(children: [
+          const Icon(Iconsax.info_circle, size: 18, color: AppColors.warningText),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              TripStringsA6.refreshFailedTitle,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
+            ),
+          ),
+          TextButton(
+            onPressed: () => l.load(_changed),
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44), foregroundColor: TaxiColors.accentDark),
+            child: const Text(TaxiWaysStrings.retry, style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700)),
+          ),
+        ]),
+      );
 
   Widget _offline() => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

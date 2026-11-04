@@ -148,6 +148,22 @@ class TripSummaryTaxi {
   String confirmedLine() => _confirmedLine(confirmedBy, confirmedAt);
 }
 
+class TripSummaryDay {
+  final int day;
+  final DateTime? date;
+  final List<String> spots;
+  final int minutes;
+
+  const TripSummaryDay({required this.day, this.date, this.spots = const [], this.minutes = 0});
+
+  factory TripSummaryDay.fromJson(Map<String, dynamic> json) => TripSummaryDay(
+        day: (json['day'] as num?)?.toInt() ?? 0,
+        date: tripDate(json['date']),
+        spots: ((json['spots'] as List?) ?? const []).whereType<String>().toList(),
+        minutes: (json['minutes'] as num?)?.toInt() ?? 0,
+      );
+}
+
 class TripSummaryRecord {
   final String tripId;
   final String title;
@@ -161,6 +177,7 @@ class TripSummaryRecord {
   final DateTime? generatedAt;
   final List<TripSummaryNight> nights;
   final List<TripSummaryTaxi> taxis;
+  final List<TripSummaryDay> days;
 
   const TripSummaryRecord({
     required this.tripId,
@@ -175,6 +192,7 @@ class TripSummaryRecord {
     this.generatedAt,
     this.nights = const [],
     this.taxis = const [],
+    this.days = const [],
   });
 
   factory TripSummaryRecord.fromJson(Map<String, dynamic> json) => TripSummaryRecord(
@@ -190,8 +208,13 @@ class TripSummaryRecord {
         generatedAt: tripInstant(json['generatedAt']),
         nights: _list(json['nights'], TripSummaryNight.fromJson),
         taxis: _list(json['taxis'], TripSummaryTaxi.fromJson),
+        days: _list(json['days'], TripSummaryDay.fromJson),
       );
 
   bool get isEmpty => nights.isEmpty && taxis.isEmpty;
+
+  bool get hasItinerary => days.any((d) => d.spots.isNotEmpty);
+
+  bool get isBlank => isEmpty && !hasItinerary;
   int get people => adults + kids;
 }

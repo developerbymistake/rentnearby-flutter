@@ -1,12 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../../../services/api_service.dart';
+import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../../utils/network_retry.dart';
 import '../../stay/models/stay_nearby_model.dart';
 import '../../taxi/guest/taxi_browse_repository.dart';
 import '../../taxi/models/taxi_browse_item.dart';
 import '../trip_constants.dart';
+import '../trip_strings_a2.dart';
 import 'trip_plan_controller.dart';
 
 class TripSupplyController extends GetxController {
@@ -16,6 +18,10 @@ class TripSupplyController extends GetxController {
           : Get.put(TripSupplyController(), permanent: true);
 
   static const _taxiPageSize = 20;
+  static const _homestay = 'Homestay';
+  static const _hostel = 'Hostel';
+  static const _suv = 'SUV';
+  static const pricePresets = [2000, 4000, 8000];
 
   final day = 1.obs;
 
@@ -35,6 +41,16 @@ class TripSupplyController extends GetxController {
   int _staySeq = 0;
   int? _staysDay;
   ({double lat, double lng})? _staysPoint;
+  ({double lat, double lng})? _searchPoint;
+
+  final maxPrice = RxnInt();
+  final onlyHomestay = false.obs;
+  final onlyHostel = false.obs;
+  final hostelAvailable = false.obs;
+  final asksLeft = RxnInt();
+
+  final minSeats = RxnInt();
+  final onlySuv = false.obs;
 
   TripPlanController get _plan => TripPlanController.to;
 
@@ -44,14 +60,57 @@ class TripSupplyController extends GetxController {
 
   bool _isUnauthorized(Object e) => e is DioException && e.response?.statusCode == 401;
 
+  bool get hasStayFilters => maxPrice.value != null || onlyHomestay.value || onlyHostel.value;
+
+  List<StayNearbyModel> get filteredStays {
+    final max = maxPrice.value;
+    final homestay = onlyHomestay.value;
+    final hostel = onlyHostel.value && hostelAvailable.value;
+    if (max == null && !homestay && !hostel) return stays.toList();
+    return stays.where((s) {
+      if (max != null) {
+        final price = s.minPricePerNight;
+        if (price == null || price > max) return false;
+      }
+      if (homestay || hostel) {
+        final type = s.stayTypeName;
+        final match = (homestay && type == _homestay) || (hostel && type == _hostel);
+        if (!match) return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  void clearStayFilters() {
+    maxPrice.value = null;
+    onlyHomestay.value = false;
+    onlyHostel.value = false;
+  }
+
+  List<TaxiBrowseItem> get filteredTaxis {
+    final seats = minSeats.value;
+    final suv = onlySuv.value;
+    if (seats == null && !suv) return taxis.toList();
+    return taxis.where((t) {
+      if (seats != null && (t.seats == null || t.seats! < seats)) return false;
+      if (suv && t.vehicleCategory != _suv) return false;
+      return true;
+    }).toList();
+  }
+
   void setDay(int d) {
     if (d == day.value) return;
     day.value = d;
-    if (_taxisLoaded) loadTaxis(reset: true);
-    if (_staysDay != null) {
-      stayRadiusKm.value = TripConstants.stayRadiusKm;
-      loadStays();
-    }
+    _searchPoint = null;
+    stayRadiusKm.value = TripConstants.stayRadiusKm;
+  }
+
+  void setSearchPoint(double lat, double lng) {
+    _searchPoint = (lat: lat, lng: lng);
+  }
+
+  void clearSearchPoint() {
+    _searchPoint = null;
   }
 
   Future<void> ensureTaxis() async {
@@ -103,6 +162,7 @@ class TripSupplyController extends GetxController {
       if (seq != _taxiSeq) return;
       if (_isTabInactive(e)) {
         _plan.taxiTabOff.value = true;
+        AppToast.warning(TripStringsA2.taxisOff);
         Get.back();
       } else if (reset && !_isUnauthorized(e)) {
         taxiFailed.value = true;
@@ -120,6 +180,8 @@ class TripSupplyController extends GetxController {
   }
 
   ({double lat, double lng})? _middlePoint(int d) {
+    final near = _searchPoint;
+    if (near != null) return near;
     final p = _plan.plan.value;
     final spots = p?.dayAt(d)?.spots ?? const [];
     if (spots.isNotEmpty) {
@@ -141,6 +203,7 @@ class TripSupplyController extends GetxController {
     final seq = ++_staySeq;
     _staysDay = d;
     stays.clear();
+    hostelAvailable.value = false;
     stayFailed.value = false;
     final point = _middlePoint(d);
     _staysPoint = point;
@@ -159,11 +222,13 @@ class TripSupplyController extends GetxController {
       final items = list.map((e) => StayNearbyModel.fromJson(e as Map<String, dynamic>)).toList()
         ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
       stays.assignAll(items);
+      hostelAvailable.value = items.any((s) => s.stayTypeName == _hostel);
       _plan.fillStayCoordinates(items);
     } catch (e) {
       if (seq != _staySeq) return;
       if (_isTabInactive(e)) {
         _plan.stayTabOff.value = true;
+        AppToast.warning(TripStringsA2.staysOff);
         Get.back();
       } else if (!_isUnauthorized(e)) {
         stayFailed.value = true;

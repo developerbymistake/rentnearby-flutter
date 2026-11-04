@@ -5,6 +5,7 @@ import '../../../trip/utils/trip_format.dart';
 import '../../taxi_option_sets.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
+import '../trip_strings_a6.dart';
 import 'journey_change_stop.dart';
 import 'journey_driver_card.dart';
 
@@ -50,6 +51,7 @@ class JourneyRail extends StatelessWidget {
             driver: d,
             color: c,
             otherCount: leg.otherCount,
+            seatsNote: TripStringsA6.legSeats(leg),
             onChange: onChangeDriver == null ? null : () => onChangeDriver!(leg),
           ),
         ));

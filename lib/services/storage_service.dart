@@ -63,9 +63,23 @@ class StorageService {
   static Map<String, dynamic>? getTripResultCache(String tripId) =>
       _readJsonMap('${AppConstants.tripResultCacheKeyPrefix}$tripId');
 
+  static const String _tripListCachePrefix = 'trip_list_cache_';
+  static const String _tripSummaryCachePrefix = 'trip_summary_cache_';
+
+  static void saveTripListCache(String state, Map<String, dynamic> json) =>
+      _box.write('$_tripListCachePrefix$state', jsonEncode(json));
+
+  static Map<String, dynamic>? getTripListCache(String state) => _readJsonMap('$_tripListCachePrefix$state');
+
+  static void saveTripSummaryCache(String tripId, Map<String, dynamic> json) =>
+      _box.write('$_tripSummaryCachePrefix$tripId', jsonEncode(json));
+
+  static Map<String, dynamic>? getTripSummaryCache(String tripId) => _readJsonMap('$_tripSummaryCachePrefix$tripId');
+
   static void clearTripCache(String tripId) {
     _box.remove('${AppConstants.tripTodayCacheKeyPrefix}$tripId');
     _box.remove('${AppConstants.tripResultCacheKeyPrefix}$tripId');
+    _box.remove('$_tripSummaryCachePrefix$tripId');
   }
 
   static List<Map<String, dynamic>> getTripProblemQueue() {
@@ -90,7 +104,10 @@ class StorageService {
 
   static void clearAllTripCaches() {
     final keys = _box.getKeys().whereType<String>().where((k) =>
-        k.startsWith(AppConstants.tripTodayCacheKeyPrefix) || k.startsWith(AppConstants.tripResultCacheKeyPrefix));
+        k.startsWith(AppConstants.tripTodayCacheKeyPrefix) ||
+        k.startsWith(AppConstants.tripResultCacheKeyPrefix) ||
+        k.startsWith(_tripListCachePrefix) ||
+        k.startsWith(_tripSummaryCachePrefix));
     for (final k in keys.toList()) {
       _box.remove(k);
     }

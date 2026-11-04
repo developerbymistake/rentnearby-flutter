@@ -1,5 +1,6 @@
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import 'trip_enquiry_model.dart';
 import 'trip_spot_model.dart';
 
 class TripSpotRef {
@@ -150,6 +151,15 @@ class TripTaxiChoice {
 
   bool get isBooked => booking != null;
 
+  factory TripTaxiChoice.own({required String name, String? phone, String? note, int? fare}) => TripTaxiChoice(
+        taxiId: '',
+        name: name,
+        fare: fare,
+        isOwn: true,
+        ownPhone: phone,
+        note: note,
+      );
+
   TripTaxiChoice copyWith({int? fare, TripTaxiBooking? booking, bool clearBooking = false}) => TripTaxiChoice(
         taxiId: taxiId,
         name: name,
@@ -177,7 +187,7 @@ class TripTaxiChoice {
       );
 
   Map<String, dynamic> toJson() => {
-        'taxiId': taxiId,
+        if (!isOwn) 'taxiId': taxiId,
         'name': name,
         'fare': ?fare,
         'vehicleTypeName': ?vehicleTypeName,
@@ -199,6 +209,7 @@ class TripStayChoice {
   final bool isOwn;
   final String? ownPhone;
   final String? note;
+  final bool skipped;
 
   const TripStayChoice({
     required this.stayId,
@@ -210,9 +221,26 @@ class TripStayChoice {
     this.isOwn = false,
     this.ownPhone,
     this.note,
+    this.skipped = false,
   });
 
+  const TripStayChoice.skippedNight()
+      : stayId = '',
+        name = TripStrings.noStayTonight,
+        pricePerNight = null,
+        sameAsDay = null,
+        latitude = null,
+        longitude = null,
+        isOwn = false,
+        ownPhone = null,
+        note = null,
+        skipped = true;
+
   bool get isSameStay => sameAsDay != null;
+
+  bool get isSkipped => skipped;
+
+  bool get hasListing => !isOwn && !skipped && stayId.isNotEmpty;
 
   bool get hasCoordinates => latitude != null && longitude != null;
 
@@ -227,6 +255,7 @@ class TripStayChoice {
         isOwn: isOwn,
         ownPhone: ownPhone,
         note: note,
+        skipped: skipped,
       );
 
   factory TripStayChoice.fromJson(Map<String, dynamic> json) {
@@ -243,11 +272,12 @@ class TripStayChoice {
       isOwn: json['isOwn'] == true,
       ownPhone: json['ownPhone'] as String?,
       note: json['note'] as String?,
+      skipped: json['skipped'] == true,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'stayId': stayId,
+        if (!isOwn && !skipped) 'stayId': stayId,
         'name': name,
         'pricePerNight': ?pricePerNight,
         'sameAsDay': ?sameAsDay,
@@ -256,6 +286,7 @@ class TripStayChoice {
         if (isOwn) 'isOwn': true,
         'ownPhone': ?ownPhone,
         'note': ?note,
+        if (skipped) 'skipped': true,
       };
 }
 
@@ -419,6 +450,7 @@ class TripSettings {
   final List<String> needs;
   final String? pickupTime;
   final String? pickupPlace;
+  final int? maxDays;
 
   const TripSettings({
     this.dayLimitMinutes = TripConstants.dayLimitMinutes,
@@ -429,7 +461,10 @@ class TripSettings {
     this.needs = const [],
     this.pickupTime,
     this.pickupPlace,
+    this.maxDays,
   });
+
+  int get peopleCount => (adults ?? 0) + (kids ?? 0);
 
   bool get hasDates => startDate != null;
 
@@ -463,6 +498,8 @@ class TripSettings {
 
   DateTime? endDate(int dayCount) => dateOf(dayCount < 1 ? 1 : dayCount);
 
+  DateTime? checkOutDate(int dayCount) => dateOf((dayCount < 1 ? 1 : dayCount) + 1);
+
   TripSettings copyWith({
     int? dayLimitMinutes,
     DateTime? startDate,
@@ -473,6 +510,8 @@ class TripSettings {
     List<String>? needs,
     String? pickupTime,
     String? pickupPlace,
+    int? maxDays,
+    bool clearMaxDays = false,
   }) =>
       TripSettings(
         dayLimitMinutes: dayLimitMinutes ?? this.dayLimitMinutes,
@@ -483,6 +522,7 @@ class TripSettings {
         needs: needs ?? this.needs,
         pickupTime: pickupTime ?? this.pickupTime,
         pickupPlace: pickupPlace ?? this.pickupPlace,
+        maxDays: clearMaxDays ? null : (maxDays ?? this.maxDays),
       );
 
   factory TripSettings.fromJson(Map<String, dynamic> json) {
@@ -496,8 +536,11 @@ class TripSettings {
       needs: ((json['needs'] as List?) ?? const []).whereType<String>().toList(),
       pickupTime: json['pickupTime'] as String?,
       pickupPlace: json['pickupPlace'] as String?,
+      maxDays: _validMaxDays((json['maxDays'] as num?)?.toInt()),
     );
   }
+
+  static int? _validMaxDays(int? v) => v == null || v < 1 || v > TripConstants.maxDaysCap ? null : v;
 
   Map<String, dynamic> toJson() => {
         'dayLimitMinutes': dayLimitMinutes,
@@ -508,7 +551,63 @@ class TripSettings {
         if (needs.isNotEmpty) 'needs': needs,
         'pickupTime': ?pickupTime,
         'pickupPlace': ?pickupPlace,
+        'maxDays': ?maxDays,
       };
+}
+
+sealed class OwnSaveResult {
+  const OwnSaveResult();
+}
+
+class OwnSaved extends OwnSaveResult {
+  const OwnSaved();
+}
+
+class OwnNeedsWithdraw extends OwnSaveResult {
+  final List<TripEnquiryModel> open;
+
+  const OwnNeedsWithdraw(this.open);
+}
+
+class OwnBlockedByConfirmed extends OwnSaveResult {
+  final TripEnquiryModel e;
+
+  const OwnBlockedByConfirmed(this.e);
+}
+
+class SettingsSaveResult {
+  final bool saved;
+  final List<TripEnquiryModel> confirmedAffected;
+  final List<TripEnquiryModel> openAffected;
+
+  const SettingsSaveResult({
+    required this.saved,
+    this.confirmedAffected = const [],
+    this.openAffected = const [],
+  });
+
+  bool get hasAffected => confirmedAffected.isNotEmpty || openAffected.isNotEmpty;
+}
+
+class DateChangeImpact {
+  final List<TripEnquiryModel> booked;
+  final List<TripEnquiryModel> open;
+
+  const DateChangeImpact({this.booked = const [], this.open = const []});
+
+  List<TripEnquiryModel> get all => [...booked, ...open];
+
+  bool get isEmpty => booked.isEmpty && open.isEmpty;
+
+  int get count => booked.length + open.length;
+}
+
+class EditImpact {
+  final List<int> droppedDaysWithBookings;
+
+  const EditImpact({this.droppedDaysWithBookings = const []});
+
+  bool get isEmpty => droppedDaysWithBookings.isEmpty;
 }
 
 class TripPlan {

@@ -5,7 +5,6 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../controllers/tab_config_controller.dart';
 import '../../../models/browse_item.dart';
-import '../../../utils/app_toast.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../../taxi/taxi_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
@@ -14,6 +13,7 @@ import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a4.dart';
 import 'trip_cancel_sheet.dart';
 import 'trip_own_booking_sheet.dart';
 import 'trip_status.dart';
@@ -35,96 +35,130 @@ class TripDayActions extends StatelessWidget {
     final c = TripPlanController.to;
     return Obx(() {
       TabConfigController.to.version.value;
-      final showTaxi = c.showTaxiOption;
-      final showStay = c.showStayOption;
+      c.taxiSupply.value;
+      c.taxiTabOff.value;
+      c.stayTabOff.value;
+      c.trip.value;
+      c.enquiryList.length;
       final d = c.plan.value?.dayAt(day);
-      if (d == null || (!showTaxi && !showStay)) return const SizedBox.shrink();
-      if (!c.supplyAvailable) {
-        final state = c.supplyPending ? TripTileState.pending : TripTileState.disabled;
-        final subtitle = state == TripTileState.pending ? TripStrings.checking : TripStrings.notAvailableHere;
-        final onTap = state == TripTileState.pending ? () {} : () => AppToast.warning(TripStrings.notAvailableHereSubtitle);
-        return Row(
-          children: [
-            if (showTaxi)
-              Expanded(
-                child: _ActionTile(
-                  icon: Iconsax.car,
-                  accent: TaxiColors.accent,
-                  surface: TaxiColors.surface,
-                  title: 'Taxi',
-                  subtitle: subtitle,
-                  selected: false,
-                  state: state,
-                  status: TripTileStatus.none,
-                  onTap: onTap,
-                ),
-              ),
-            if (showTaxi && showStay) const SizedBox(width: 8),
-            if (showStay)
-              Expanded(
-                child: state == TripTileState.disabled
-                    ? _stayTile(context, c, d, noSupply: true)
-                    : _ActionTile(
-                        icon: Iconsax.building_4,
-                        accent: StayColors.accent,
-                        surface: StayColors.surface,
-                        title: 'Stay',
-                        subtitle: subtitle,
-                        selected: false,
-                        state: state,
-                        status: TripTileStatus.none,
-                        onTap: onTap,
-                      ),
-              ),
-          ],
-        );
-      }
-      final taxi = d.taxi;
-      final booking = taxi?.booking;
-      final taxiEnquiry = _taxiTile(context, c);
+      if (d == null) return const SizedBox.shrink();
+      final readOnly = c.isReadOnly || c.needsUpdate.value || c.isDayPast(day);
       return Row(
         children: [
-          if (showTaxi && taxiEnquiry != null) Expanded(child: taxiEnquiry),
-          if (showTaxi && taxiEnquiry == null)
-            Expanded(
-              child: _ActionTile(
-                icon: Iconsax.car,
-                accent: TaxiColors.accent,
-                surface: TaxiColors.surface,
-                title: taxi?.name ?? 'Taxi',
-                subtitle: taxi == null
-                    ? 'Find a driver'
-                    : booking != null
-                        ? '${TripStrings.bookedByYou} · ${BrowseItem.inr(booking.agreedFare)}'
-                            '${booking.days.length > 1 ? ' · ${booking.days.length} days' : ''}'
-                        : (taxi.vehicleTypeName == null
-                            ? _price(taxi.fare)
-                            : '${_price(taxi.fare)} · ${taxi.vehicleTypeName}'),
-                selected: taxi != null,
-                status: taxi == null
-                    ? TripTileStatus.none
-                    : (booking != null ? TripTileStatus.booked : TripTileStatus.selected),
-                onTap: () => TripNavigation.openTaxi(day),
-                onLongPress: taxi == null
-                    ? null
-                    : booking != null
-                        ? () => _confirmClear(context, TripStrings.removeBooking, taxi.name,
-                            () => c.clearTaxiBooking(taxi.taxiId),
-                            note: TripStrings.removeBookingNote)
-                        : () => _confirmClear(context, 'Remove taxi?', taxi.name, () => c.clearTaxi(day)),
-              ),
-            ),
-          if (showTaxi && showStay) const SizedBox(width: 8),
-          if (showStay)
-            Expanded(
-              child: _stayTile(context, c, d),
-            ),
+          Expanded(child: _taxiSlot(context, c, d, readOnly)),
+          const SizedBox(width: 8),
+          Expanded(child: _stayTile(context, c, d, readOnly)),
         ],
       );
     });
   }
 
-  Widget? _taxiTile(BuildContext context, TripPlanController c) {
+  Widget _emptyTile({
+    required IconData icon,
+    required Color accent,
+    required Color surface,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+    TripTileState state = TripTileState.active,
+  }) =>
+      _ActionTile(
+        icon: icon,
+        accent: accent,
+        surface: surface,
+        title: title,
+        subtitle: subtitle,
+        selected: false,
+        state: state,
+        status: TripTileStatus.none,
+        onTap: onTap,
+      );
+
+  Widget _taxiSlot(BuildContext context, TripPlanController c, TripDay d, bool readOnly) {
+    final enquiryTile = _taxiTile(context, c, readOnly);
+    if (enquiryTile != null) return enquiryTile;
+    final taxi = d.taxi;
+    if (taxi != null && taxi.isOwn) {
+      final fare = taxi.fare;
+      return _ActionTile(
+        icon: Iconsax.car,
+        accent: TaxiColors.accent,
+        surface: TaxiColors.surface,
+        title: taxi.name.isEmpty ? TripStrings.ownTaxiTitle : taxi.name,
+        subtitle: fare == null ? TripStringsA4.ownBooking : '${TripStringsA4.ownBooking} · ${TripStringsA4.perDay(BrowseItem.inr(fare))}',
+        selected: true,
+        status: TripTileStatus.own,
+        display: TripDisplayStatus.own,
+        onTap: readOnly ? null : () => TripOwnBookingSheet.show(context, day: day, kind: TripOwnKind.taxi, existingTaxi: taxi),
+        onLongPress: readOnly
+            ? null
+            : () => _confirmClear(context, TripStrings.removeFromPlan, taxi.name, () => c.clearOwnTaxi(day)),
+      );
+    }
+    if (taxi != null) {
+      final booking = taxi.booking;
+      final rate = taxi.fare == null ? TripStringsA4.rateOnRequest : TripStringsA4.perDay(BrowseItem.inr(taxi.fare!));
+      return _ActionTile(
+        icon: Iconsax.car,
+        accent: TaxiColors.accent,
+        surface: TaxiColors.surface,
+        title: taxi.name,
+        subtitle: booking != null
+            ? '${TripStrings.bookedByYou} · ${BrowseItem.inr(booking.agreedFare)}'
+                '${booking.days.length > 1 ? ' · ${booking.days.length} days' : ''}'
+            : (taxi.vehicleTypeName == null ? rate : '$rate · ${taxi.vehicleTypeName}'),
+        selected: true,
+        status: booking != null ? TripTileStatus.booked : TripTileStatus.selected,
+        onTap: readOnly ? null : () => TripNavigation.openTaxi(day),
+        onLongPress: readOnly
+            ? null
+            : booking != null
+                ? () => _confirmClear(context, TripStrings.removeBooking, taxi.name, () => c.clearTaxiBooking(taxi.taxiId),
+                    note: TripStrings.removeBookingNote)
+                : () => _confirmClear(context, TripStringsA4.removeTaxi, taxi.name, () => c.clearTaxi(day)),
+      );
+    }
+    if (readOnly) {
+      return _emptyTile(
+        icon: Iconsax.car,
+        accent: TaxiColors.accent,
+        surface: TaxiColors.surface,
+        title: TripStringsA4.taxi,
+        subtitle: TripStringsA4.notBooked,
+        state: TripTileState.disabled,
+      );
+    }
+    if (c.supplyPending || (c.supplyAvailable && !c.taxiTabOff.value && c.taxiSupply.value == null)) {
+      return _emptyTile(
+        icon: Iconsax.car,
+        accent: TaxiColors.accent,
+        surface: TaxiColors.surface,
+        title: TripStringsA4.taxi,
+        subtitle: TripStrings.checking,
+        state: TripTileState.pending,
+      );
+    }
+    if (c.canFindTaxi) {
+      return _emptyTile(
+        icon: Iconsax.car,
+        accent: TaxiColors.accent,
+        surface: TaxiColors.surface,
+        title: TripStringsA4.taxi,
+        subtitle: TripStringsA4.findADriver,
+        onTap: () => TripNavigation.openTaxi(day),
+      );
+    }
+    return _emptyTile(
+      icon: Iconsax.car,
+      accent: TaxiColors.accent,
+      surface: TaxiColors.surface,
+      title: TripStringsA4.taxi,
+      subtitle: TripStrings.addOwnTaxi,
+      onTap: () => TripOwnBookingSheet.show(context, day: day, kind: TripOwnKind.taxi),
+    );
+  }
+
+  Widget? _taxiTile(BuildContext context, TripPlanController c, bool readOnly) {
     final e = c.primaryTaxiEnquiry(day);
     final s = e?.display;
     if (e == null || s == null || s == TripDisplayStatus.closed || s == TripDisplayStatus.none) return null;
@@ -151,7 +185,9 @@ class TripDayActions extends StatelessWidget {
         status = TripTileStatus.red;
     }
     VoidCallback? longPress;
-    if (e.isWithdrawable) {
+    if (readOnly) {
+      longPress = null;
+    } else if (e.isWithdrawable) {
       longPress = () => TripWithdrawSheet.show(context, enquiry: e);
     } else if (e.isBooked) {
       longPress = () => TripCancelSheet.show(context, enquiry: e, ownerSide: false);
@@ -183,7 +219,7 @@ class TripDayActions extends StatelessWidget {
     return TripStatusVisuals.label(s);
   }
 
-  Widget _stayTile(BuildContext context, TripPlanController c, TripDay d, {bool noSupply = false}) {
+  Widget _stayTile(BuildContext context, TripPlanController c, TripDay d, bool readOnly) {
     final stay = d.stay;
     final primary = c.primaryEnquiry(day);
     final display = primary?.display;
@@ -218,7 +254,9 @@ class TripDayActions extends StatelessWidget {
           status = TripTileStatus.red;
       }
       VoidCallback? longPress;
-      if (e.display.isConfirmed) {
+      if (readOnly) {
+        longPress = null;
+      } else if (e.display.isConfirmed) {
         longPress = () => TripCancelSheet.show(context, enquiry: e, ownerSide: false);
       } else if (e.display.isOpen) {
         longPress = () => _removeShortlist(context, c);
@@ -239,45 +277,56 @@ class TripDayActions extends StatelessWidget {
         onLongPress: longPress,
       );
     }
-    if (stay != null && stay.isOwn) {
+    if (stay != null && stay.isSkipped) {
       return _ActionTile(
         icon: Iconsax.building_4,
         accent: StayColors.accent,
         surface: StayColors.surface,
-        title: stay.name,
-        subtitle: TripStrings.ownBooking,
+        title: TripStrings.noStayTonight,
+        subtitle: TripStrings.travelling,
+        selected: false,
+        status: TripTileStatus.none,
+        onTap: readOnly ? null : () => TripNavigation.openStay(day),
+        onLongPress: readOnly
+            ? null
+            : () => _confirmClear(context, TripStrings.removeFromPlan, TripStrings.noStayTonight, () => c.clearSkippedNight(day)),
+      );
+    }
+    final own = c.ownStayOf(day);
+    if (stay != null && own != null) {
+      final same = stay.isSameStay;
+      return _ActionTile(
+        icon: Iconsax.building_4,
+        accent: StayColors.accent,
+        surface: StayColors.surface,
+        title: own.name,
+        subtitle: same ? '${TripStrings.ownBooking} · ${TripStrings.sameAsLastNight}' : TripStrings.ownBooking,
         selected: true,
         status: TripTileStatus.own,
         display: TripDisplayStatus.own,
-        onTap: () => TripOwnBookingSheet.show(context, day: day, existing: stay),
-        onLongPress: () => _confirmClear(context, TripStrings.removeFromPlan, stay.name, () => c.clearOwnStay(day)),
+        onTap: readOnly
+            ? null
+            : () => TripOwnBookingSheet.show(context, day: same ? stay.sameAsDay! : day, existingStay: own),
+        onLongPress: readOnly
+            ? null
+            : () => _confirmClear(context, TripStrings.removeFromPlan, own.name, () => same ? c.clearStay(day) : c.clearOwnStay(day)),
       );
     }
     final shortlist = d.stayShortlist;
-    if (noSupply) {
-      return _ActionTile(
-        icon: Iconsax.building_4,
-        accent: StayColors.accent,
-        surface: StayColors.surface,
-        title: TripStrings.stay,
-        subtitle: TripStrings.addOwnStay,
-        selected: false,
-        status: TripTileStatus.none,
-        onTap: () => TripOwnBookingSheet.show(context, day: day),
-      );
-    }
     if (stay != null) {
       final sameStay = stay.isSameStay;
       return _ActionTile(
         icon: Iconsax.building_4,
         accent: StayColors.accent,
         surface: StayColors.surface,
-        title: sameStay ? TripStrings.sameStay : stay.name,
-        subtitle: sameStay ? stay.name : '${_price(stay.pricePerNight)} / night',
+        title: stay.name,
+        subtitle: sameStay ? TripStrings.sameAsLastNight : '${_price(stay.pricePerNight)} / night',
         selected: true,
         status: TripTileStatus.selected,
-        onTap: () => TripNavigation.openStay(day),
-        onLongPress: () => _confirmClear(context, TripStrings.removeFromPlan, stay.name, () => c.clearStay(day)),
+        onTap: readOnly ? null : () => TripNavigation.openStay(day),
+        onLongPress: readOnly
+            ? null
+            : () => _confirmClear(context, TripStrings.removeFromPlan, stay.name, () => c.clearStay(day)),
       );
     }
     if (shortlist.isNotEmpty) {
@@ -290,19 +339,47 @@ class TripDayActions extends StatelessWidget {
         selected: true,
         status: TripTileStatus.selected,
         display: TripDisplayStatus.shortlisted,
-        onTap: () => TripNavigation.openStay(day),
-        onLongPress: () => _removeShortlist(context, c),
+        onTap: readOnly ? null : () => TripNavigation.openStay(day),
+        onLongPress: readOnly ? null : () => _removeShortlist(context, c),
       );
     }
-    return _ActionTile(
+    if (readOnly) {
+      return _emptyTile(
+        icon: Iconsax.building_4,
+        accent: StayColors.accent,
+        surface: StayColors.surface,
+        title: TripStrings.stay,
+        subtitle: TripStringsA4.notBooked,
+        state: TripTileState.disabled,
+      );
+    }
+    if (c.supplyPending) {
+      return _emptyTile(
+        icon: Iconsax.building_4,
+        accent: StayColors.accent,
+        surface: StayColors.surface,
+        title: TripStrings.stay,
+        subtitle: TripStrings.checking,
+        state: TripTileState.pending,
+      );
+    }
+    if (c.canFindStay) {
+      return _emptyTile(
+        icon: Iconsax.building_4,
+        accent: StayColors.accent,
+        surface: StayColors.surface,
+        title: TripStrings.stay,
+        subtitle: TripStringsA4.nightFindStay(day),
+        onTap: () => TripNavigation.openStay(day),
+      );
+    }
+    return _emptyTile(
       icon: Iconsax.building_4,
       accent: StayColors.accent,
       surface: StayColors.surface,
       title: TripStrings.stay,
-      subtitle: TripStrings.findAStay,
-      selected: false,
-      status: TripTileStatus.none,
-      onTap: () => TripNavigation.openStay(day),
+      subtitle: TripStrings.addOwnStay,
+      onTap: () => TripOwnBookingSheet.show(context, day: day),
     );
   }
 
@@ -396,7 +473,7 @@ class _ActionTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final TripTileState state;
   final TripTileStatus status;
@@ -410,7 +487,7 @@ class _ActionTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.selected,
-    required this.onTap,
+    this.onTap,
     this.onLongPress,
     this.state = TripTileState.active,
     this.status = TripTileStatus.none,
@@ -438,11 +515,11 @@ class _ActionTile extends StatelessWidget {
               };
     final tone = adv != null
         ? TripStatusVisuals.advanceText(adv)
-        : (coloured ? TripStatusVisuals.text(shown!) : TripStatusColors.booked);
+        : (coloured ? TripStatusVisuals.text(shown) : TripStatusColors.booked);
     final fill = adv != null
         ? TripStatusVisuals.advanceSurface(adv)
-        : (coloured ? TripStatusVisuals.surface(shown!) : TripStatusColors.bookedSurface);
-    final edge = adv != null ? barColor : (coloured ? TripStatusVisuals.bar(shown!) : TripStatusColors.booked);
+        : (coloured ? TripStatusVisuals.surface(shown) : TripStatusColors.bookedSurface);
+    final edge = adv != null ? barColor : (coloured ? TripStatusVisuals.bar(shown) : TripStatusColors.booked);
     final chevron = booked ? tone : (selected ? accent : AppColors.textHint);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -509,7 +586,7 @@ class _ActionTile extends StatelessWidget {
                             ],
                           ),
                         ),
-                        if (active) Icon(Icons.chevron_right_rounded, size: 18, color: chevron),
+                        if (active && onTap != null) Icon(Icons.chevron_right_rounded, size: 18, color: chevron),
                       ],
                     ),
                   ),

@@ -17,6 +17,7 @@ import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../widgets/trip_day_chips.dart';
 import '../widgets/trip_map_day_card.dart';
+import '../widgets/trip_not_found_view.dart';
 
 class TripMapScreen extends StatefulWidget {
   const TripMapScreen({super.key});
@@ -44,6 +45,14 @@ class _TripMapScreenState extends State<TripMapScreen> {
   bool _stayPinReady = false;
   bool _dayPicked = false;
   bool _awaitingDefaultDay = false;
+  String? _waitingTripId;
+
+  bool get _waitingForTrip {
+    final id = _waitingTripId;
+    if (id == null) return false;
+    if (_plan.openFailed.value || _plan.tripGone.value || _plan.plannerOff.value) return false;
+    return _plan.trip.value?.id != id || _plan.plan.value == null;
+  }
 
   static const String _stayPinImage = 'trip_stay_pin';
   static final String _white = AppColors.hexOf(AppColors.textWhite);
@@ -56,9 +65,17 @@ class _TripMapScreenState extends State<TripMapScreen> {
     _plan.openPages++;
     final args = Get.arguments;
     final day = args is Map ? args['day'] as int? : null;
+    final tripId = args is Map ? args['tripId'] as String? : null;
+    final needsOpen = tripId != null && (_plan.trip.value?.id != tripId || _plan.plan.value == null);
     _dayPicked = day != null;
-    _awaitingDefaultDay = day == null && _plan.plan.value == null;
-    _plan.selectedMapDay.value = day ?? (_plan.plan.value == null ? 1 : _plan.defaultMapDay);
+    _awaitingDefaultDay = day == null && (needsOpen || _plan.plan.value == null);
+    _plan.selectedMapDay.value = day ?? (needsOpen || _plan.plan.value == null ? 1 : _plan.defaultMapDay);
+    if (needsOpen) {
+      _waitingTripId = tripId;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _plan.open(tripId);
+      });
+    }
     _workers.add(ever(_plan.plan, (_) {
       _applyDefaultDay();
       _sync();
@@ -161,7 +178,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
   Future<void> _syncOnce() async {
     final map = _map;
     final p = _plan.plan.value;
-    if (!mounted || map == null || !_styleLoaded || p == null) return;
+    if (!mounted || map == null || !_styleLoaded || p == null || _waitingForTrip) return;
     if (_selected != TripDayChips.all && p.dayAt(_selected) == null) _plan.selectedMapDay.value = 1;
     if (_selected == TripDayChips.all && p.days.length <= 1) _plan.selectedMapDay.value = 1;
     final signature = _signature(p);
@@ -492,7 +509,8 @@ class _TripMapScreenState extends State<TripMapScreen> {
           ),
           Positioned.fill(
             child: Obx(() {
-              final opening = _plan.isOpening.value && _plan.plan.value == null;
+              _plan.trip.value;
+              final opening = (_plan.isOpening.value && _plan.plan.value == null) || _waitingForTrip;
               return !_styleLoaded || opening ? _buildMapShimmer() : const IgnorePointer(child: SizedBox.shrink());
             }),
           ),
@@ -624,9 +642,11 @@ class _TripMapScreenState extends State<TripMapScreen> {
   Widget _buildBottomCard(BuildContext context) {
     return Obx(() {
       final p = _plan.plan.value;
-      if (p == null || p.days.isEmpty || _plan.plannerOff.value || _plan.openFailed.value) {
+      _plan.trip.value;
+      if (p == null || p.days.isEmpty || _plan.plannerOff.value || _plan.openFailed.value || _plan.tripGone.value) {
         return const SizedBox.shrink();
       }
+      if (_waitingForTrip) return const SizedBox.shrink();
       return TripMapDayCard(
         dayCount: p.days.length,
         selected: _selected,
@@ -639,12 +659,15 @@ class _TripMapScreenState extends State<TripMapScreen> {
     return Obx(() {
       final off = _plan.plannerOff.value;
       final failed = _plan.openFailed.value;
-      if (!off && !failed) return const IgnorePointer(child: SizedBox.shrink());
+      final gone = _plan.tripGone.value;
+      if (!off && !failed && !gone) return const IgnorePointer(child: SizedBox.shrink());
       return Container(
         color: AppColors.scaffoldBg,
         alignment: Alignment.topCenter,
         padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top + 80),
-        child: off
+        child: gone
+            ? const TripNotFoundView()
+            : off
             ? const EmptyStateView(
                 icon: Iconsax.routing_2,
                 title: TripStrings.plannerOff,

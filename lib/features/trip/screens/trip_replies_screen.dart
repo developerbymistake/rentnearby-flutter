@@ -12,14 +12,18 @@ import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_supply_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_colors.dart';
+import '../trip_constants.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a5.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_report.dart';
 import '../widgets/trip_accept_sheet.dart';
 import '../widgets/trip_cancel_sheet.dart';
+import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_phone_booking_sheet.dart';
+import '../widgets/trip_shortlist_bar.dart';
 import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_status.dart';
 import '../widgets/trip_status_card.dart';
@@ -344,6 +348,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
 
   Widget _buildBody() {
     return Obx(() {
+      if (_c.tripGone.value) return const TripNotFoundView();
       if (_c.plannerOff.value) {
         return _scroll(const [
           EmptyStateView(
@@ -410,9 +415,41 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
           _card(x),
           const SizedBox(height: 12),
         ],
+        if (_canAskAnother(entries)) _askAnotherButton(),
       ]);
     });
   }
+
+  bool _canAskAnother(List<_Entry> entries) {
+    if (_c.isReadOnly || _c.isDayPast(_day)) return false;
+    if (entries.any((x) => x.enquiry?.isBooked ?? false)) return false;
+    return entries.where((x) => x.enquiry?.display.isOpen ?? false).length < TripConstants.maxShortlist;
+  }
+
+  Widget _askAnotherButton() => SizedBox(
+        height: 48,
+        child: OutlinedButton.icon(
+          onPressed: () => TripNavigation.openStay(_day),
+          icon: const Icon(Iconsax.add_circle, size: 18, color: TripColors.accentDark),
+          label: const Text(
+            TripStringsA5.askAnotherStay,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: TripColors.accentDark),
+          ),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 48),
+            side: BorderSide(color: TripColors.accent.withValues(alpha: 0.5)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      );
+
+  bool _canSendShortlisted(_Entry x) =>
+      x.enquiry == null &&
+      !_c.isReadOnly &&
+      !_c.isDayPast(_day) &&
+      _c.sendableShortlist(_day).any((s) => s.stayId == x.stayId);
 
   Widget _nothingToAsk() => Container(
         padding: const EdgeInsets.only(left: 12),
@@ -613,6 +650,11 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
         add(Iconsax.close_circle, TripStrings.cancelBooking,
             () => TripCancelSheet.show(context, enquiry: e!, ownerSide: false),
             color: AppColors.error);
+      case TripDisplayStatus.shortlisted:
+        if (!_c.isReadOnly) {
+          add(Iconsax.call_calling, TripStrings.iBookedByPhone, () => _phoneBooking(x));
+          add(Iconsax.trash, TripStringsA5.removeShortlist, () => _c.removeShortlist(_day, x.stayId), color: AppColors.error);
+        }
       case TripDisplayStatus.holdExpired:
         if (_canAskAgain(x)) add(Iconsax.refresh, TripStrings.askAgain, _c.askBusy.value ? null : _askAgain);
         add(Iconsax.building_4, TripStrings.askOtherStays, () => TripNavigation.openStay(_day));
@@ -640,6 +682,25 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
                   fit: BoxFit.scaleDown,
                   child: Text('${TripStrings.acceptOffer} · ${_inr(offer.total)}',
                       maxLines: 1, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (_canSendShortlisted(x)) ...[
+            SizedBox(
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: busy ? null : () => TripShortlistBar.send(context, _day),
+                icon: const Icon(Iconsax.send_2, size: 18),
+                label: const Text(TripStringsA5.sendEnquiry,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: TripColors.accent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),

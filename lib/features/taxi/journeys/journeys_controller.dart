@@ -73,9 +73,10 @@ class JourneysController extends GetxController {
     return null;
   }
 
-  SavedJourney? findByPlan(String planKey, DateTime date) {
+  SavedJourney? findByPlan(String planKey, DateTime date, {int? people}) {
     for (final j in journeys) {
       if (j.isCompleted || j.planKey != planKey) continue;
+      if (people != null && j.people != people) continue;
       if (j.date.year == date.year && j.date.month == date.month && j.date.day == date.day) return j;
     }
     return null;
@@ -244,8 +245,8 @@ class JourneysController extends GetxController {
     required double toLng,
   }) async {
     if (journeys.isEmpty) _assign(await JourneyLocalStore.read());
-    final existing = findByPlan(plan.planKey, date);
-    if (existing != null) return existing;
+    final existing = findByPlan(plan.planKey, date, people: people);
+    if (existing != null) return _syncDrivers(existing, plan, chosen);
     return save(
       plan: plan,
       chosen: chosen,
@@ -258,6 +259,24 @@ class JourneysController extends GetxController {
       toLat: toLat,
       toLng: toLng,
     );
+  }
+
+  Future<SavedJourney?> _syncDrivers(SavedJourney journey, WayPlan plan, Map<int, WayDriver> chosen) async {
+    var current = journey;
+    for (final leg in plan.legs) {
+      final want = chosen[leg.index] ?? leg.firstDriver;
+      final have = current.leg(leg.index);
+      if (want == null || have == null || want.taxiId == have.driver.taxiId) continue;
+      try {
+        await _commit(await _repo.replaceDriver(current.id, leg.index, want.taxiId));
+        isOffline.value = false;
+      } catch (e) {
+        _handleError(e, current.id);
+        return null;
+      }
+      current = byId(current.id) ?? current;
+    }
+    return current;
   }
 
   Future<void> refreshOne(String id, {bool silent = false}) async {
@@ -340,7 +359,7 @@ class JourneysController extends GetxController {
     final now = DateTime.now();
     final legs = j.legs.map((l) {
       for (final item in result.items) {
-        if (item.legIndex == l.legIndex && item.taxiId == l.driver.taxiId && item.enquiryId.isNotEmpty) {
+        if (item.legIndex == l.legIndex && item.enquiryId.isNotEmpty) {
           return l.copyWith(lastEnquiryId: item.enquiryId, lastKnownStatus: _legStatusOf(item.status), lastKnownAt: now);
         }
       }

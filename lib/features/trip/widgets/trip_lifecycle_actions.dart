@@ -8,6 +8,7 @@ import '../data/trip_today_cache.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a5.dart';
 
 class TripLifecycleActions {
   static const _repo = TripRepository();
@@ -17,15 +18,19 @@ class TripLifecycleActions {
     final c = TripPlanController.to;
     final id = c.trip.value?.id;
     if (id == null) return false;
+    final early = c.hasDates && !c.isLastDayOrAfter;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          TripStrings.markCompleteQ,
-          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17),
+        title: Text(
+          early ? TripStringsA5.completeNowQ : TripStrings.markCompleteQ,
+          style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17),
         ),
-        content: const Text(TripStrings.markCompleteBody, style: TextStyle(fontFamily: 'Poppins', fontSize: 13)),
+        content: Text(
+          early ? TripStringsA5.completeNowBody : TripStrings.markCompleteBody,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
+        ),
         actions: [
           TextButton(
             style: TextButton.styleFrom(minimumSize: const Size(64, 44)),

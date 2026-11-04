@@ -24,6 +24,7 @@ extension SavedJourneyWays on SavedJourney {
       partial: leg.partial,
       topDrivers: drivers,
       driverCount: drivers.length,
+      carsNeeded: WayCars.needed(people, leg.driver.seats),
     );
   }
 

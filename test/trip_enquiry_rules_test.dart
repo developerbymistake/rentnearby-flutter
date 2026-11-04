@@ -56,8 +56,8 @@ void main() {
 
   group('nights', () {
     test('nightDate is start plus day minus one', () {
-      expect(TripEnquiryRules.nightDate(start, 1), DateTime.utc(2026, 11, 1));
-      expect(TripEnquiryRules.nightDate(start, 3), DateTime.utc(2026, 11, 3));
+      expect(TripEnquiryRules.nightDate(start, 1), DateTime(2026, 11, 1));
+      expect(TripEnquiryRules.nightDate(start, 3), DateTime(2026, 11, 3));
     });
 
     test('overlap is half open', () {

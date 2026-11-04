@@ -1,4 +1,5 @@
 import '../../../services/api_service.dart';
+import '../../../services/storage_service.dart';
 import '../../../utils/network_retry.dart';
 import '../models/trip_city_model.dart';
 import '../models/trip_model.dart';
@@ -17,6 +18,42 @@ class TripErrorTypes {
   static const String citiesUnavailable = 'TripCitiesUnavailable';
   static const String concurrentUpdate = 'CONCURRENT_UPDATE';
   static const String tripNotEnded = 'TripNotEnded';
+  static const String tripNeedsUpdate = 'TripNeedsUpdate';
+  static const String tripCompleted = 'TripCompleted';
+}
+
+class TripCitySupply {
+  final String? districtId;
+  final int stays;
+  final int drivers;
+
+  const TripCitySupply({this.districtId, this.stays = 0, this.drivers = 0});
+
+  bool get isEmpty => districtId == null || (stays == 0 && drivers == 0);
+
+  factory TripCitySupply.fromJson(Map<String, dynamic> json) => TripCitySupply(
+        districtId: json['districtId'] as String?,
+        stays: (json['stays'] as num?)?.toInt() ?? 0,
+        drivers: (json['drivers'] as num?)?.toInt() ?? 0,
+      );
+}
+
+class TripProblemResult {
+  final String problemId;
+  final TripEnquiryModel? enquiry;
+  final TripEnquiryModel? keptEnquiry;
+  final bool marked;
+
+  const TripProblemResult({required this.problemId, this.enquiry, this.keptEnquiry, this.marked = false});
+
+  List<TripEnquiryModel> get rows => [?enquiry, ?keptEnquiry];
+}
+
+class TripCached<T> {
+  final T value;
+  final DateTime? savedAt;
+
+  const TripCached(this.value, this.savedAt);
 }
 
 class TripRepository {
@@ -46,15 +83,51 @@ class TripRepository {
   Future<TripPlanResult> plan(Map<String, dynamic> body) async =>
       TripPlanResult.fromJson(_data(await ApiService.post('/trips/plan', body)));
 
-  Future<TripListPage> list({int page = 1, int pageSize = 20, String state = 'upcoming'}) async =>
-      TripListPage.fromJson(_data(await withRetry(() => ApiService.get('/trips', params: {
-            'page': page,
-            'pageSize': pageSize,
-            'state': state,
-          }))));
+  static const String _savedAtKey = 'cachedAt';
 
-  Future<TripSummaryRecord> summary(String id) async =>
-      TripSummaryRecord.fromJson(_data(await withRetry(() => ApiService.get('/trips/$id/summary'))));
+  static Map<String, dynamic> _stamp(Map<String, dynamic> data) =>
+      {...data, _savedAtKey: DateTime.now().toIso8601String()};
+
+  static DateTime? _savedAt(Map<String, dynamic> json) => DateTime.tryParse(json[_savedAtKey] as String? ?? '');
+
+  Future<TripListPage> list({int page = 1, int pageSize = 20, String state = 'upcoming'}) async {
+    final data = _data(await withRetry(() => ApiService.get('/trips', params: {
+          'page': page,
+          'pageSize': pageSize,
+          'state': state,
+        })));
+    if (page == 1) StorageService.saveTripListCache(state, _stamp(data));
+    return TripListPage.fromJson(data);
+  }
+
+  TripCached<TripListPage>? cachedList(String state) {
+    final json = StorageService.getTripListCache(state);
+    if (json == null) return null;
+    try {
+      return TripCached(TripListPage.fromJson(json), _savedAt(json));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<TripSummaryRecord> summary(String id) async {
+    final data = _data(await withRetry(() => ApiService.get('/trips/$id/summary')));
+    StorageService.saveTripSummaryCache(id, _stamp(data));
+    return TripSummaryRecord.fromJson(data);
+  }
+
+  TripCached<TripSummaryRecord>? cachedSummary(String id) {
+    final json = StorageService.getTripSummaryCache(id);
+    if (json == null) return null;
+    try {
+      return TripCached(TripSummaryRecord.fromJson(json), _savedAt(json));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<TripCitySupply> citySupply(int cityKey) async =>
+      TripCitySupply.fromJson(_data(await withRetry(() => ApiService.get('/trips/cities/$cityKey/supply'))));
 
   Future<TripModel> complete(String id) async =>
       TripModel.fromJson(_data(await ApiService.post('/trips/$id/complete', {})));
@@ -62,7 +135,7 @@ class TripRepository {
   Future<TripModel> mute(String id, {required bool muted}) async =>
       TripModel.fromJson(_data(await ApiService.put('/trips/$id/mute', {'muted': muted})));
 
-  Future<({String problemId, TripEnquiryModel? enquiry, bool marked})> reportProblem(
+  Future<TripProblemResult> reportProblem(
     String tripId, {
     required int day,
     required String kind,
@@ -80,9 +153,11 @@ class TripRepository {
       'longitude': ?longitude,
     }));
     final enquiry = data['enquiry'];
-    return (
+    final kept = data['keptEnquiry'];
+    return TripProblemResult(
       problemId: data['problemId'] as String? ?? '',
       enquiry: enquiry is Map<String, dynamic> ? TripEnquiryModel.fromJson(enquiry) : null,
+      keptEnquiry: kept is Map<String, dynamic> ? TripEnquiryModel.fromJson(kept) : null,
       marked: data['marked'] == true,
     );
   }

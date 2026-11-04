@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../../models/place_result_model.dart';
-import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../journeys/journey_models.dart';
 import '../journeys/journeys_controller.dart';
@@ -9,7 +8,6 @@ import 'ask_drivers_sheet.dart';
 import 'models/taxi_ways_models.dart';
 import 'taxi_ways_navigation.dart';
 import 'taxi_ways_repository.dart';
-import 'taxi_ways_strings.dart';
 
 class TaxiWaysController extends GetxController {
   static const maxPeople = 12;
@@ -240,10 +238,7 @@ class TaxiWaysController extends GetxController {
     busyPlans.add(plan.planKey);
     try {
       final journey = await saveIfNeeded(plan);
-      if (journey == null) {
-        AppToast.warning(TaxiWaysStrings.offlineTitle);
-        return;
-      }
+      if (journey == null) return;
       if (!context.mounted) return;
       final res = await AskDriversSheet.show(
         context,

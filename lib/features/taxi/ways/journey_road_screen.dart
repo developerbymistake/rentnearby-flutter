@@ -10,6 +10,7 @@ import '../taxi_option_sets.dart';
 import 'journey_plan_screen.dart';
 import 'models/taxi_ways_models.dart';
 import 'taxi_ways_strings.dart';
+import 'trip_strings_a6.dart';
 import 'widgets/journey_driver_card.dart';
 import 'widgets/journey_rail.dart';
 import 'widgets/journey_total_bar.dart';
@@ -59,8 +60,10 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> {
   Widget _invalid() => ListView(children: [
         EmptyStateView(
           icon: Iconsax.routing_2,
-          title: TaxiWaysStrings.noWays,
-          subtitle: TaxiWaysStrings.entryEmptyBody,
+          title: TripStringsA6.journeyGoneTitle,
+          subtitle: TripStringsA6.journeyGoneBody,
+          onRetry: () => Get.back(),
+          retryLabel: TripStringsA6.goBack,
           palette: ModulePalette.taxi,
         ),
       ]);
@@ -207,6 +210,7 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> {
                           selected: _selected == leg.index,
                           onTap: () => _select(leg.index),
                           otherCount: leg.otherCount,
+                          seatsNote: TripStringsA6.legSeats(leg),
                           onChange: () => l.changeDriver(context, leg),
                         ),
                       ),

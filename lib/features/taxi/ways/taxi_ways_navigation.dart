@@ -9,6 +9,7 @@ class TaxiWaysNavigation {
     bool fromMyLocation = false,
     DateTime? date,
     int? people,
+    bool fromTrip = false,
   }) =>
       Get.toNamed(AppRoutes.taxiWays, arguments: {
         'from': from,
@@ -16,6 +17,7 @@ class TaxiWaysNavigation {
         'fromMyLocation': fromMyLocation,
         'date': ?date,
         'people': ?people,
+        'fromTrip': fromTrip,
       });
 
   static Future<void>? openPlan({required String planKey, required String controllerTag}) =>

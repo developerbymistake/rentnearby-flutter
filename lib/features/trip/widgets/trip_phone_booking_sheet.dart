@@ -13,6 +13,7 @@ import '../models/trip_enquiry_model.dart';
 import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a3.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
 import 'trip_payment_line.dart';
@@ -26,7 +27,6 @@ class _Copy {
   static const String errHostPhone = 'Enter a 10 digit phone';
   static const String errRoom = 'Pick or enter the room';
   static const String errPrice = 'Enter the agreed price';
-  static const String errPriceRange = 'Price must be between ₹1 and ₹20,00,000';
   static const String errAdvance = 'Advance must be more than ₹0 and at most the price';
   static const String linkTitle = 'Send the link to the host';
   static const String linkDescription = 'Opens WhatsApp with the message and link.';
@@ -148,7 +148,7 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
     return digits.length == 10 ? digits : '';
   }
 
-  bool get _canPickAllNights => _plan.dayCount - _day > 1;
+  bool get _canPickAllNights => TripEnquiryRules.nightsFor(_plan.dayCount, _day, true) > 1;
 
   int get _nights {
     final ex = _existing;
@@ -182,7 +182,7 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
     final priceText = _price.text.trim();
     if (priceText.isEmpty) return _warn(_Copy.errPrice);
     final price = int.tryParse(priceText);
-    if (price == null || price < 1 || price > TripConstants.maxAmount) return _warn(_Copy.errPriceRange);
+    if (price == null || price < 1 || price > TripConstants.maxAmount) return _warn(TripStringsA3.errPriceRange(TripConstants.maxAmount));
     int? advance;
     if (_advancePaid) {
       advance = int.tryParse(_advance.text.trim());

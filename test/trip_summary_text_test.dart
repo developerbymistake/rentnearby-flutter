@@ -1,6 +1,7 @@
 import 'package:bakhli/features/trip/models/trip_summary_model.dart';
 import 'package:bakhli/features/trip/trip_constants.dart';
 import 'package:bakhli/features/trip/trip_strings.dart';
+import 'package:bakhli/features/trip/trip_strings_a5.dart';
 import 'package:bakhli/features/trip/utils/trip_summary_text.dart';
 import 'package:bakhli/models/browse_item.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -98,5 +99,56 @@ void main() {
     final text = TripSummaryText.build(TripSummaryRecord.fromJson(record(nights: [], taxis: [])));
     expect(text, contains('Nainital'));
     expect(text.length, lessThan(TripConstants.summaryShareMax));
+  });
+
+  Map<String, dynamic> day(int n, List<String> spots, {int minutes = 370}) => {
+        'day': n,
+        'date': '2026-11-0$n',
+        'spots': spots,
+        'minutes': minutes,
+      };
+
+  test('plan-only record shares the itinerary and the plan-only footer', () {
+    final json = record(nights: [], taxis: [])
+      ..['days'] = [
+        day(1, ['Kempty Falls', 'Lal Tibba', 'Mall Road']),
+      ]
+      ..['adults'] = 1
+      ..['kids'] = 0;
+    final r = TripSummaryRecord.fromJson(json);
+    final text = TripSummaryText.build(r);
+    expect(TripSummaryText.canShare(r), isTrue);
+    expect(text, contains('Kempty Falls → Lal Tibba → Mall Road'));
+    expect(text, contains('1 person'));
+    expect(text, isNot(contains('1 people')));
+    expect(text, contains(TripStringsA5.planOnlyFooter));
+    expect(text, isNot(contains(TripStrings.summaryFooter)));
+  });
+
+  test('own-only record gets the own footer and no host or driver line', () {
+    final own = {
+      'night': 1,
+      'date': '2026-11-01',
+      'listingName': 'My cousin',
+      'isOwn': true,
+      'displayStatus': 'own',
+    };
+    final ownTaxi = {...taxi(), 'isOwn': true, 'displayStatus': 'own'};
+    final text = TripSummaryText.build(TripSummaryRecord.fromJson(record(nights: [own], taxis: [ownTaxi])));
+    expect(text, contains(TripStringsA5.ownFooter));
+    expect(text, isNot(contains(TripStrings.summaryFooter)));
+    expect(text, isNot(contains(TripStrings.taxiPayLine)));
+  });
+
+  test('skipped night reads as no stay and keeps the host line for other nights', () {
+    final skipped = {'night': 2, 'date': '2026-11-02', 'listingName': 'No stay tonight', 'displayStatus': 'skipped'};
+    final text = TripSummaryText.build(TripSummaryRecord.fromJson(record(nights: [night(1), skipped], taxis: [])));
+    expect(text, contains(TripStringsA5.noStayTravelling));
+    expect(text, contains(TripStrings.summaryFooter));
+  });
+
+  test('check-out is the morning after the night', () {
+    final r = TripSummaryRecord.fromJson(record(nights: [night(3)]));
+    expect(TripSummaryText.checkOutOf(r.nights.first.date), 'Wed 04 Nov');
   });
 }

@@ -162,6 +162,7 @@ class TripStatusPill extends StatelessWidget {
 
 enum TripBookingState {
   draft,
+  planOnly,
   confirming,
   ready,
   completed;
@@ -189,7 +190,7 @@ class TripBookingStateVisuals {
       };
 
   static Color text(TripBookingState s) => switch (s) {
-        TripBookingState.draft => AppColors.textMedium,
+        TripBookingState.draft || TripBookingState.planOnly => AppColors.textMedium,
         TripBookingState.confirming => AppColors.tripDark,
         TripBookingState.ready => AppColors.successText,
         TripBookingState.completed => AppColors.neutralChipText,
@@ -197,6 +198,7 @@ class TripBookingStateVisuals {
 
   static String label(TripBookingState s) => switch (s) {
         TripBookingState.draft => TripStrings.stateDraft,
+        TripBookingState.planOnly => TripStrings.planOnly,
         TripBookingState.confirming => TripStrings.stateConfirming,
         TripBookingState.ready => TripStrings.stateReady,
         TripBookingState.completed => TripStrings.stateCompleted,

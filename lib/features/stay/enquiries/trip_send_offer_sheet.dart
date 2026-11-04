@@ -20,6 +20,7 @@ import '../setup/stay_option_sets.dart';
 import 'stay_enquiries_controller.dart';
 import 'stay_enquiry_format.dart';
 import 'stay_enquiry_strings.dart';
+import 'trip_strings_ad.dart';
 
 class TripSendOfferSheet {
   static Future<bool> show(
@@ -76,7 +77,6 @@ class _OfferBody extends StatefulWidget {
 
 class _OfferBodyState extends State<_OfferBody> {
   static const int _maxLines = 5;
-  static const int _maxNights = 13;
 
   late DateTime _checkIn;
   late DateTime _checkOut;
@@ -177,6 +177,15 @@ class _OfferBodyState extends State<_OfferBody> {
 
   int get _nights => _checkOut.difference(_checkIn).inDays;
 
+  DateTime get _lastCheckOut {
+    final e = widget.enquiry;
+    var last = _checkIn.add(const Duration(days: 1));
+    for (final d in [e.checkOut, widget.changeRequest?.checkOut, e.acceptedOffer?.checkOut]) {
+      if (d != null && _dateOnly(d).isAfter(last)) last = _dateOnly(d);
+    }
+    return last;
+  }
+
   int get _perNight => _lines.fold(0, (sum, l) => sum + l.units * l.price);
 
   int get _total => _nights > 0 ? _nights * _perNight : 0;
@@ -184,11 +193,15 @@ class _OfferBodyState extends State<_OfferBody> {
   Future<void> _pickDate({required bool isCheckIn}) async {
     final today = _dateOnly(DateTime.now());
     final initial = isCheckIn ? _checkIn : _checkOut;
+    final lastOut = _lastCheckOut;
+    final firstIn = _checkIn.isBefore(today) ? _checkIn : today;
+    final lastDate = isCheckIn ? lastOut.subtract(const Duration(days: 1)) : lastOut;
+    final firstDate = isCheckIn ? firstIn : _checkIn.add(const Duration(days: 1));
     final picked = await showDatePicker(
       context: context,
-      initialDate: initial.isBefore(today) ? today : initial,
-      firstDate: isCheckIn ? today : _checkIn.add(const Duration(days: 1)),
-      lastDate: today.add(const Duration(days: 365)),
+      initialDate: initial.isBefore(firstDate) ? firstDate : (initial.isAfter(lastDate) ? lastDate : initial),
+      firstDate: firstDate,
+      lastDate: lastDate,
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: StayColors.accent)),
         child: child ?? const SizedBox.shrink(),
@@ -207,10 +220,12 @@ class _OfferBodyState extends State<_OfferBody> {
 
   String? _validate() {
     if (_nights < 1) return StayEnquiryStrings.datesInvalid;
-    if (_nights > _maxNights) return StayEnquiryStrings.datesInvalid;
+    if (_nights > TripConstants.maxDaysCap) return StayEnquiryStrings.datesInvalid;
     for (final l in _lines) {
-      if (l.price < 1 || l.price > 200000) return StayEnquiryStrings.enterPrice;
+      if (l.price < 1) return StayEnquiryStrings.enterPrice;
+      if (l.price > TripConstants.maxAmount) return TripStringsAD.priceTooHigh(TripConstants.maxAmount);
     }
+    if (_total > TripConstants.maxAmount) return TripStringsAD.totalTooHigh(TripConstants.maxAmount);
     final adv = int.tryParse(_advance.text.trim());
     if (adv != null && adv > _total) return StayEnquiryStrings.advanceTooHigh;
     if (widget.revised && _reason.text.trim().isEmpty) return StayEnquiryStrings.reasonRequired;
@@ -285,6 +300,10 @@ class _OfferBodyState extends State<_OfferBody> {
         TripPaymentLine(text: revised ? TripStrings.revisedFooter : TripStrings.sendOfferFooter),
       ]),
       children: [
+        if (counterLine != null) ...[
+          _counterSummary(counterLine),
+          const SizedBox(height: 12),
+        ],
         _twoUp(
           _dateField(TripStrings.checkIn, _checkIn, () => _pickDate(isCheckIn: true)),
           _dateField(TripStrings.checkOut, _checkOut, () => _pickDate(isCheckIn: false)),
@@ -341,6 +360,28 @@ class _OfferBodyState extends State<_OfferBody> {
         ],
         const SizedBox(height: 16),
       ],
+    );
+  }
+
+  Widget _counterSummary(TripOfferLine line) {
+    final counter = widget.counter!;
+    final nights = counter.nights > 0 ? counter.nights : _nights;
+    final total = counter.total > 0 ? counter.total : line.pricePerNight * line.units * nights;
+    final listed = counter.listedPerNight;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(TripStringsAD.perRoomPerNight(line.pricePerNight),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+        const SizedBox(height: 2),
+        Text(TripStringsAD.roomsNightsTotal(line.units, nights, total),
+            style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
+        if (listed != null) ...[
+          const SizedBox(height: 2),
+          Text(TripStringsAD.listedPerNight(listed), style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+        ],
+      ]),
     );
   }
 
@@ -462,7 +503,7 @@ class _OfferBodyState extends State<_OfferBody> {
           _stepper(TripStrings.guests, l.guests, 1, 40, (v) => setState(() => l.guests = v)),
         ]),
         const SizedBox(height: 10),
-        _field(l.priceCtrl, TripStrings.pricePerNight, digits: true, maxLength: 6, prefix: '₹ '),
+        _field(l.priceCtrl, TripStrings.pricePerNight, digits: true, maxLength: 7, prefix: '₹ '),
       ]),
     );
   }

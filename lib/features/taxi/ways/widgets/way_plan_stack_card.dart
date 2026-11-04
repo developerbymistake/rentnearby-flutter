@@ -6,6 +6,7 @@ import '../../../../models/browse_item.dart';
 import '../../taxi_option_sets.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
+import '../trip_strings_a6.dart';
 import 'best_way_mark.dart';
 
 class WayPlanCardFrame extends StatelessWidget {
@@ -173,22 +174,34 @@ class WayPlanStackCard extends StatelessWidget {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(children: [
-              const Icon(Iconsax.car, size: 15, color: TaxiColors.accentDark),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  driverLabel(leg),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Icon(Iconsax.car, size: 15, color: TaxiColors.accentDark),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    driverLabel(leg),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                BrowseItem.inr(leg.listedFare),
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: TaxiColors.accentDark),
-              ),
+                const SizedBox(width: 6),
+                Text(
+                  BrowseItem.inr(leg.listedFare),
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: TaxiColors.accentDark),
+                ),
+              ]),
+              if (TripStringsA6.legSeats(leg) != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 3, left: 21),
+                  child: Text(
+                    TripStringsA6.legSeats(leg)!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.warningText),
+                  ),
+                ),
             ]),
           ),
         ),

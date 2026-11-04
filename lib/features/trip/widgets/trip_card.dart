@@ -7,49 +7,59 @@ import '../models/trip_model.dart';
 import '../models/trip_spot_category.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a5.dart';
 import '../utils/trip_format.dart';
 import 'trip_status.dart';
 
 class TripCard extends StatelessWidget {
   final TripSummaryModel trip;
   final VoidCallback onOpen;
-  final VoidCallback onMap;
   final VoidCallback onSummary;
+  final VoidCallback? onShare;
   final VoidCallback onDelete;
 
   const TripCard({
     super.key,
     required this.trip,
     required this.onOpen,
-    required this.onMap,
     required this.onSummary,
+    required this.onShare,
     required this.onDelete,
   });
 
-  static String _count(int n, String one) => '$n ${n == 1 ? one : '${one}s'}';
+  static TripBookingState stateOf(TripSummaryModel t) {
+    final s = t.state;
+    if (s == TripBookingState.completed) return s;
+    if (s == TripBookingState.draft && t.isPlanned) return TripBookingState.planOnly;
+    final settled = t.staysTotal + t.taxisTotal + t.staysOwn + t.taxisOwn;
+    if (s == TripBookingState.ready && settled == 0) return TripBookingState.planOnly;
+    return s;
+  }
 
-  Widget _chip(String label, IconData icon) => Container(
+  Widget _chip(String label, IconData icon, {Color? color, Color? surface}) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(999)),
+        decoration: BoxDecoration(color: surface ?? TripColors.surface, borderRadius: BorderRadius.circular(999)),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: TripColors.accentDark),
+            Icon(icon, size: 14, color: color ?? TripColors.accentDark),
             const SizedBox(width: 4),
             Flexible(
               child: Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: TripColors.accentDark),
+                style: TextStyle(
+                    fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: color ?? TripColors.accentDark),
               ),
             ),
           ],
         ),
       );
 
-  Widget _action(IconData icon, String label, VoidCallback onTap) => Expanded(
+  Widget _action(IconData icon, String label, VoidCallback? onTap) {
+    final c = onTap == null ? AppColors.textHint : TripColors.accentDark;
+    return Expanded(
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(10),
@@ -58,15 +68,14 @@ class TripCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 15, color: TripColors.accentDark),
+                Icon(icon, size: 15, color: c),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: TripColors.accentDark),
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: c),
                   ),
                 ),
               ],
@@ -74,11 +83,19 @@ class TripCard extends StatelessWidget {
           ),
         ),
       );
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = trip;
-    final hasChips = t.staysTotal > 0 || t.taxisTotal > 0 || t.agreedTotal > 0;
+    final hasOwn = t.staysOwn + t.taxisOwn > 0;
+    final hasChips = t.staysTotal > 0 || t.taxisTotal > 0 || t.agreedTotal > 0 || hasOwn;
+    final dates = t.startDate == null
+        ? TripStringsA5.noDatesYet
+        : TripStrings.joinDots([
+            TripFormat.dayMonthRange(t.startDate!, t.endDate ?? t.startDate!),
+            TripStrings.peopleText((t.adults ?? 0) + (t.kids ?? 0)),
+          ]);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onOpen,
@@ -119,21 +136,20 @@ class TripCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Flexible(child: TripBookingStatePill(t.state)),
+                          Flexible(child: TripBookingStatePill(stateOf(t))),
                         ],
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${_count(t.dayCount, 'day')} · ${_count(t.spotCount, 'spot')}',
+                        TripStringsA5.cardMeta(t.dayCount, t.spotCount),
                         style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
                       ),
-                      if (t.startDate != null)
-                        Text(
-                          TripFormat.dateRange(t.startDate!, t.endDate ?? t.startDate!),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-                        ),
+                      Text(
+                        dates,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+                      ),
                     ],
                   ),
                 ),
@@ -160,6 +176,9 @@ class TripCard extends StatelessWidget {
                 children: [
                   if (t.staysTotal > 0) _chip(TripStrings.stayCount(t.staysConfirmed, t.staysTotal), Iconsax.building_4),
                   if (t.taxisTotal > 0) _chip(TripStrings.taxiCount(t.taxisConfirmed, t.taxisTotal), Iconsax.car),
+                  if (hasOwn)
+                    _chip(TripStringsA5.ownBooking, Iconsax.home_2,
+                        color: AppColors.tripBooked, surface: TripStatusColors.bookedSurface),
                   if (t.agreedTotal > 0) _chip(TripStrings.agreedChip(BrowseItem.inr(t.agreedTotal)), Iconsax.wallet_2),
                 ],
               ),
@@ -170,7 +189,7 @@ class TripCard extends StatelessWidget {
               children: [
                 _action(Iconsax.arrow_right_3, TripStrings.open, onOpen),
                 _action(Iconsax.document_text, TripStrings.summary, onSummary),
-                _action(Iconsax.map_1, TripStrings.map, onMap),
+                _action(Iconsax.share, TripStringsA5.share, onShare),
               ],
             ),
           ],

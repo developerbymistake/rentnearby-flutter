@@ -7,17 +7,21 @@ import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/contact_launcher.dart';
 import '../../../widgets/empty_state_view.dart';
-import '../../../widgets/nearby_item_row.dart';
 import '../../stay/models/stay_nearby_model.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_supply_controller.dart';
-import '../trip_colors.dart';
+import '../models/trip_enquiry_model.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a2.dart';
 import '../utils/trip_format.dart';
+import '../widgets/trip_filter_chips.dart';
+import '../widgets/trip_night_chooser.dart';
+import '../widgets/trip_page_header.dart';
 import '../widgets/trip_route_strip.dart';
-import '../widgets/trip_shimmers.dart';
+import '../widgets/trip_sheet_frame.dart';
 import '../widgets/trip_shortlist_bar.dart';
+import '../widgets/trip_stay_row.dart';
 import '../widgets/trip_taxi_stay_toggle.dart';
 import '../widgets/trip_withdraw_sheet.dart';
 
@@ -39,8 +43,16 @@ class _TripStayScreenState extends State<TripStayScreen> {
     _plan.openPages++;
     _supply = TripSupplyController.to;
     final args = Get.arguments;
-    final day = args is Map ? args['day'] as int? : null;
+    final map = args is Map ? args : const {};
+    final day = map['day'] as int?;
+    final lat = (map['nearLat'] as num?)?.toDouble();
+    final lng = (map['nearLng'] as num?)?.toDouble();
     if (day != null) _supply.setDay(day);
+    if (lat != null && lng != null) {
+      _supply.setSearchPoint(lat, lng);
+    } else {
+      _supply.clearSearchPoint();
+    }
     _supply.ensureStays();
   }
 
@@ -58,19 +70,36 @@ class _TripStayScreenState extends State<TripStayScreen> {
     super.dispose();
   }
 
+  bool _locked(int day) => _plan.isReadOnly || _plan.isDayPast(day);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: Column(
         children: [
-          _buildHeader(context),
+          Obx(() {
+            final d = _supply.day.value;
+            _plan.plan.value;
+            return TripPageHeader(
+              title: _title(d),
+              subtitle: _subtitle(d),
+              onBack: () => Get.back(),
+              gradient: StayColors.gradient,
+              bottom: TripTaxiStayToggle(
+                selected: TripSupplyKind.stay,
+                day: d,
+                onHeader: true,
+                activeColor: StayColors.accent,
+              ),
+            );
+          }),
           Expanded(
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(child: _buildTop()),
                 _buildBody(),
-                const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                const SliverToBoxAdapter(child: SizedBox(height: 16)),
               ],
             ),
           ),
@@ -83,8 +112,227 @@ class _TripStayScreenState extends State<TripStayScreen> {
     );
   }
 
+  String _title(int d) {
+    final date = _plan.dateOf(d);
+    final now = DateTime.now();
+    final today = date != null && date.year == now.year && date.month == now.month && date.day == now.day;
+    return TripStrings.nightTitle(d, today: today);
+  }
+
+  String _subtitle(int d) {
+    final date = _plan.dateOf(d);
+    return TripStrings.joinDots([
+      _plan.cityName,
+      date == null ? null : TripFormat.dayMonth(date),
+      TripStrings.peopleText(_plan.settings.peopleCount),
+    ]);
+  }
+
+  Future<void> _pickPrice() async {
+    final picked = await TripSheetFrame.show<int>(context, _PriceBody(current: _supply.maxPrice.value));
+    if (picked == null) return;
+    _supply.maxPrice.value = picked == 0 ? null : picked;
+  }
+
+  List<TripFilterChip> _chips() {
+    final max = _supply.maxPrice.value;
+    return [
+      TripFilterChip(
+        label: max == null ? TripStringsA2.maxPrice : TripStringsA2.underPrice(BrowseItem.inr(max)),
+        selected: max != null,
+        icon: Iconsax.wallet_2,
+        onTap: _pickPrice,
+      ),
+      TripFilterChip(
+        label: TripStringsA2.homestay,
+        selected: _supply.onlyHomestay.value,
+        onTap: () => _supply.onlyHomestay.toggle(),
+      ),
+      if (_supply.hostelAvailable.value)
+        TripFilterChip(
+          label: TripStringsA2.hostel,
+          selected: _supply.onlyHostel.value,
+          onTap: () => _supply.onlyHostel.toggle(),
+        ),
+      if (_supply.hasStayFilters)
+        TripFilterChip(
+          label: TripStringsA2.clearFilters,
+          selected: false,
+          icon: Iconsax.filter_remove,
+          onTap: _supply.clearStayFilters,
+        ),
+    ];
+  }
+
+  bool _noSupply() => _plan.stayTabOff.value || (!_plan.supplyAvailable && !_plan.supplyPending);
+
+  Widget _buildTop() {
+    return Obx(() {
+      final d = _supply.day.value;
+      _plan.plan.value;
+      _plan.enquiryList.length;
+      final listMode = TripNightChooser.modeOf(_plan, d) == TripNightMode.nightByNight;
+      final showChips = listMode && !_noSupply() && (_supply.stays.isNotEmpty || _supply.hasStayFilters);
+      final chooser = TripNightChooser.visible(_plan, d);
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TripRouteStrip(
+                  day: d,
+                  onDayChanged: _changeDay,
+                  showRoute: false,
+                  nights: true,
+                  accent: StayColors.accent,
+                ),
+                if (chooser) ...[
+                  const SizedBox(height: 8),
+                  TripNightChooser(day: d),
+                ],
+                if (showChips) ...[
+                  const SizedBox(height: 4),
+                  TripFilterChips(items: _chips(), accent: StayColors.accent),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _box(Widget child) => SliverToBoxAdapter(
+        child: Center(
+          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: child),
+        ),
+      );
+
+  Widget _noSupplyView() => const EmptyStateView(
+        icon: Iconsax.building_4,
+        title: TripStrings.noStaysHere,
+        subtitle: TripStrings.addOwnToKeep,
+        palette: StayColors.palette,
+      );
+
+  Widget _skeletons() => SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        sliver: SliverList.builder(
+          itemCount: 4,
+          itemBuilder: (_, _) => Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: const TripStayRowSkeleton(),
+            ),
+          ),
+        ),
+      );
+
+  Widget _modeCard(int d, TripNightMode mode) {
+    final skipped = mode == TripNightMode.none;
+    final name = _plan.plan.value?.dayAt(d)?.stay?.name ?? '';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: StayColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: StayColors.accent.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(skipped ? Iconsax.car : Iconsax.building_4, size: 20, color: StayColors.accentDark),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(skipped ? TripStrings.noStayTonight : TripStrings.sameAsLastNight,
+                      style: const TextStyle(
+                          fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  const SizedBox(height: 2),
+                  Text(skipped ? TripStringsA2.travellingBody : TripStringsA2.sameStayBody(name),
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.35)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    return Obx(() {
+      final d = _supply.day.value;
+      _plan.plan.value;
+      _plan.enquiryList.length;
+      if (_noSupply()) return _box(_noSupplyView());
+      final mode = TripNightChooser.modeOf(_plan, d);
+      if (mode != TripNightMode.nightByNight) return _box(_modeCard(d, mode));
+      if (_plan.supplyPending || _supply.stayLoading.value) return _skeletons();
+      final all = _supply.stays;
+      if (all.isEmpty) {
+        if (_supply.stayFailed.value) {
+          return _box(EmptyStateView(
+            icon: Iconsax.cloud_cross,
+            title: TripStrings.staysFailed,
+            subtitle: TripStrings.checkConnection,
+            onRetry: () => _supply.loadStays(),
+            palette: StayColors.palette,
+          ));
+        }
+        if (!_supply.canWidenRadius) return _box(_noSupplyView());
+        return _box(EmptyStateView(
+          icon: Iconsax.building_4,
+          title: TripStrings.noStays,
+          subtitle: 'Within ${TripFormat.km(_supply.stayRadiusKm.value)} of your Day $d spots',
+          onRetry: () => _supply.widenRadius(),
+          retryLabel: TripStrings.widerRadius,
+          palette: StayColors.palette,
+        ));
+      }
+      final items = _supply.filteredStays;
+      if (items.isEmpty) {
+        return _box(EmptyStateView(
+          icon: Iconsax.filter_remove,
+          title: TripStringsA2.noMatchTitle,
+          subtitle: TripStringsA2.noMatchBody,
+          onRetry: _supply.clearStayFilters,
+          retryLabel: TripStringsA2.clearFilters,
+          palette: StayColors.palette,
+        ));
+      }
+      final listed = {for (final s in _plan.plan.value?.dayAt(d)?.stayShortlist ?? const []) s.stayId};
+      final asked = <String, TripEnquiryModel>{
+        for (final e in _plan.enquiriesForNight(d).reversed)
+          if (e.isOpen) e.listingId: e,
+      };
+      final locked = _locked(d);
+      return SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        sliver: SliverList.builder(
+          itemCount: items.length,
+          itemBuilder: (_, i) => Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: _row(items[i], d, listed.contains(items[i].id), asked[items[i].id], locked),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
   void _toggle(int day, StayNearbyModel s) {
-    if (!_plan.toggleShortlist(day, s)) AppToast.warning(TripStrings.shortlistFull);
+    if (TripShortlistBar.isFull(_plan, day) || !_plan.toggleShortlist(day, s)) {
+      AppToast.warning(TripStrings.shortlistFull);
+    }
   }
 
   Future<void> _remove(int day, StayNearbyModel s) async {
@@ -93,200 +341,20 @@ class _TripStayScreenState extends State<TripStayScreen> {
     _plan.removeShortlist(day, s.id);
   }
 
-  Widget _noSupply() => EmptyStateView(
-        icon: Iconsax.building_4,
-        title: TripStrings.noStaysHere,
-        subtitle: TripStrings.addOwnToKeep,
-        retryLabel: TripStrings.haveStay,
-        onRetry: () => TripShortlistBar.openOwn(context, _supply.day.value),
-        palette: TripColors.palette,
-      );
-
-  Widget _buildHeader(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: TripColors.gradient,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(12, top + 8, 20, 18),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Get.back(),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 2),
-          Expanded(
-            child: Obx(() => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Stay for Day ${_supply.day.value}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _headerSubtitle(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
-                    ),
-                  ],
-                )),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _headerSubtitle() {
-    final d = _supply.day.value;
-    final date = _plan.dateOf(d);
-    if (date == null) return _plan.cityName;
-    return '${TripFormat.shortDate(date)} · ${TripStrings.night(d)}';
-  }
-
-  Widget _buildTop() {
-    return Obx(() {
-      final d = _supply.day.value;
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-        child: Column(
-          children: [
-            TripTaxiStayToggle(selected: TripSupplyKind.stay, day: d),
-            const SizedBox(height: 12),
-            TripRouteStrip(
-              day: d,
-              text: 'Near your Day $d spots · sorted by distance',
-              onDayChanged: _changeDay,
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
-  Widget _buildBody() {
-    return Obx(() {
-      final items = _supply.stays;
-      final d = _supply.day.value;
-      if (!_plan.supplyAvailable && !_plan.supplyPending) return SliverToBoxAdapter(child: _noSupply());
-      if (_supply.stayLoading.value) {
-        return SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          sliver: SliverList.separated(
-            itemCount: 5,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (_, _) => TripShimmers.rowBox(height: 76),
-          ),
-        );
-      }
-      if (items.isEmpty) {
-        if (_supply.stayFailed.value) {
-          return SliverToBoxAdapter(
-            child: EmptyStateView(
-              icon: Iconsax.cloud_cross,
-              title: TripStrings.staysFailed,
-              subtitle: TripStrings.checkConnection,
-              onRetry: () => _supply.loadStays(),
-              palette: TripColors.palette,
-            ),
-          );
-        }
-        if (!_supply.canWidenRadius) return SliverToBoxAdapter(child: _noSupply());
-        return SliverToBoxAdapter(
-          child: EmptyStateView(
-            icon: Iconsax.building_4,
-            title: TripStrings.noStays,
-            subtitle: 'Within ${TripFormat.km(_supply.stayRadiusKm.value)} of your Day $d spots',
-            onRetry: () => _supply.widenRadius(),
-            retryLabel: TripStrings.widerRadius,
-            palette: TripColors.palette,
-          ),
-        );
-      }
-      final day = _plan.plan.value?.dayAt(d);
-      final listed = {for (final s in day?.stayShortlist ?? const []) s.stayId};
-      return SliverPadding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-        sliver: SliverList.builder(
-          itemCount: items.length,
-          itemBuilder: (_, i) => Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: _row(items[i], d, listed.contains(items[i].id)),
-            ),
-          ),
-        ),
-      );
-    });
-  }
-
-  Widget _row(StayNearbyModel s, int day, bool selected) {
+  Widget _row(StayNearbyModel s, int day, bool shortlisted, TripEnquiryModel? asked, bool locked) {
     final rawPhone = s.ownerPhone;
     final phone = (rawPhone == null || ContactLauncher.tenDigits(rawPhone).isEmpty) ? null : rawPhone;
-    final off = !s.isActive;
-    return NearbyItemRow(
+    return TripStayRow(
       key: ValueKey(s.id),
-      thumbnailUrl: s.thumbnailUrl,
-      tag: off ? TripStrings.notAvailableNow.toUpperCase() : 'FOR STAY',
-      title: s.title,
-      subtitle: off
-          ? TripStrings.stayPaused
-          : [
-              if (s.stayTypeName != null && s.stayTypeName!.isNotEmpty) s.stayTypeName!,
-              '${s.distanceKm.toStringAsFixed(1)} km',
-            ].join(' · '),
-      caption: 'FROM',
-      value: s.minPricePerNight != null ? BrowseItem.inr(s.minPricePerNight!) : 'On request',
-      unit: s.minPricePerNight != null ? '/night' : '',
-      palette: StayColors.palette,
-      placeholderIcon: Iconsax.building_4,
-      isFeatured: s.isFeatured,
-      onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, 'distanceKm': s.distanceKm}),
-      actions: [
-        if (phone != null && !off)
-          NearbyRowAction(
-            icon: const Icon(Iconsax.call, size: 14, color: StayColors.accentDark),
-            label: TripStrings.call,
-            color: StayColors.accentDark,
-            onTap: () => ContactLauncher.call(phone),
-          ),
-        if (phone != null && !off)
-          NearbyRowAction(
-            icon: Image.asset('assets/images/whatsapp_icon.png',
-                width: 14,
-                height: 14,
-                errorBuilder: (_, _, _) => const Icon(Icons.chat, color: AppColors.whatsApp, size: 14)),
-            label: TripStrings.whatsApp,
-            color: AppColors.whatsApp,
-            onTap: () => ContactLauncher.whatsApp(phone, message: _whatsAppText()),
-          ),
-        if (off && selected)
-          NearbyRowAction(
-            icon: const Icon(Iconsax.close_circle, size: 14, color: AppColors.error),
-            label: TripStrings.remove,
-            color: AppColors.error,
-            onTap: () => _remove(day, s),
-          )
-        else if (!off)
-          NearbyRowAction(
-            icon: Icon(selected ? Iconsax.tick_circle : Iconsax.add_circle,
-                size: 14, color: selected ? AppColors.success : StayColors.accentDark),
-            label: selected ? TripStrings.shortlisted : TripStrings.shortlist,
-            color: selected ? AppColors.success : StayColors.accentDark,
-            onTap: () => selected ? _remove(day, s) : _toggle(day, s),
-          ),
-      ],
+      stay: s,
+      shortlisted: shortlisted,
+      status: asked?.display,
+      readOnly: locked,
+      onOpen: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, 'distanceKm': s.distanceKm}),
+      onCall: phone == null ? null : () => ContactLauncher.call(phone),
+      onWhatsApp: phone == null ? null : () => ContactLauncher.whatsApp(phone, message: _whatsAppText()),
+      onShortlist: () => _toggle(day, s),
+      onRemove: () => _remove(day, s),
     );
   }
 
@@ -299,6 +367,50 @@ class _TripStayScreenState extends State<TripStayScreen> {
       _plan.cityName,
       start == null ? null : (end == null ? TripFormat.shortDate(start) : TripFormat.dateRange(start, end)),
       settings.peopleSummary,
+    );
+  }
+}
+
+class _PriceBody extends StatelessWidget {
+  const _PriceBody({required this.current});
+
+  final int? current;
+
+  Widget _option(BuildContext context, int value, String label) {
+    final on = (current ?? 0) == value;
+    return InkWell(
+      onTap: () => Navigator.pop(context, value),
+      borderRadius: BorderRadius.circular(12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Row(
+          children: [
+            Icon(on ? Icons.radio_button_checked : Icons.radio_button_off,
+                size: 20, color: on ? StayColors.accent : AppColors.textHint),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(label,
+                  style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: on ? FontWeight.w700 : FontWeight.w500,
+                      color: AppColors.textDark)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TripSheetFrame(
+      title: TripStringsA2.priceSheetTitle,
+      children: [
+        _option(context, 0, TripStringsA2.anyPrice),
+        for (final p in TripSupplyController.pricePresets)
+          _option(context, p, TripStringsA2.underPrice(BrowseItem.inr(p))),
+      ],
     );
   }
 }

@@ -12,6 +12,7 @@ import 'models/ask_models.dart';
 import 'models/taxi_ways_models.dart';
 import 'taxi_ways_ask_repository.dart';
 import 'taxi_ways_strings.dart';
+import 'trip_strings_a6.dart';
 
 class AskDriversSheet {
   /// The caller saves the journey first and passes its id; the sheet never saves.
@@ -56,6 +57,7 @@ class _AskBody extends StatefulWidget {
 class _AskBodyState extends State<_AskBody> {
   static const _repo = TaxiWaysAskRepository();
   bool _sending = false;
+  String? _error;
 
   String get _buttonLabel {
     final legs = widget.request.legs;
@@ -75,23 +77,40 @@ class _AskBodyState extends State<_AskBody> {
     return null;
   }
 
+  int _carsPerLeg(List<WayLeg> legs) {
+    var most = 1;
+    for (final l in legs) {
+      final c = widget.chosen[l.index];
+      final n = c?.seats != null ? WayCars.needed(widget.request.people, c!.seats) : l.carsNeeded;
+      if (n > most) most = n;
+    }
+    return most;
+  }
+
   Future<void> _send() async {
     if (_sending) return;
-    setState(() => _sending = true);
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
     try {
       final result = await _repo.ask(widget.request);
       if (!mounted) return;
       if (result.items.isEmpty) {
-        AppToast.warning(TaxiWaysStrings.askFailed);
-        setState(() => _sending = false);
+        setState(() {
+          _sending = false;
+          _error = TaxiWaysStrings.askFailed;
+        });
         return;
       }
       AppToast.success(TaxiWaysStrings.asked(result.askedCount));
       Navigator.of(context).pop(result);
     } catch (e) {
       if (!mounted) return;
-      AppToast.error(TaxiWaysAskRepository.errorMessage(e));
-      setState(() => _sending = false);
+      setState(() {
+        _sending = false;
+        _error = TaxiWaysAskRepository.errorMessage(e);
+      });
     }
   }
 
@@ -99,6 +118,7 @@ class _AskBodyState extends State<_AskBody> {
   Widget build(BuildContext context) {
     final req = widget.request;
     final legs = widget.plan.legs;
+    final cars = _carsPerLeg(legs);
     return PopScope(
       canPop: !_sending,
       child: TripSheetFrame(
@@ -110,8 +130,17 @@ class _AskBodyState extends State<_AskBody> {
               leg: l,
               multi: req.legs.length > 1,
               driver: _driverFor(legs.firstWhere((x) => x.index == l.legIndex), l.taxiIds.first),
+              people: req.people,
+              carsNeeded: legs.firstWhere((x) => x.index == l.legIndex).carsNeeded,
             ),
             const SizedBox(height: 8),
+          ],
+          if (cars > 1) ...[
+            Text(
+              TripStringsA6.carsPerLeg(cars),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: TaxiColors.accentDark),
+            ),
+            const SizedBox(height: 4),
           ],
           const SizedBox(height: 4),
           Text(
@@ -120,6 +149,18 @@ class _AskBodyState extends State<_AskBody> {
           ),
           const SizedBox(height: 4),
           TripPaymentLine(text: TaxiWaysStrings.payLine),
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: AppColors.errorSurface, borderRadius: BorderRadius.circular(12)),
+              child: Text(
+                _error!,
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.errorText, height: 1.35),
+              ),
+            ),
+          ],
         ],
         footer: GradientButton(
           label: _buttonLabel,
@@ -137,13 +178,23 @@ class _LegTile extends StatelessWidget {
   final AskLegRequest leg;
   final bool multi;
   final WayDriver? driver;
+  final int people;
+  final int carsNeeded;
 
-  const _LegTile({required this.leg, required this.multi, required this.driver});
+  const _LegTile({
+    required this.leg,
+    required this.multi,
+    required this.driver,
+    required this.people,
+    required this.carsNeeded,
+  });
 
   @override
   Widget build(BuildContext context) {
     final backups = leg.taxiIds.length - 1;
     final fare = leg.listedFare;
+    final seats = driver?.seats;
+    final cars = seats != null ? WayCars.needed(people, seats) : carsNeeded;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -191,6 +242,14 @@ class _LegTile extends StatelessWidget {
                 ),
             ],
           ),
+          if (cars > 1)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                TripStringsA6.seatsNote(driver?.seats, cars, people),
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+              ),
+            ),
           if (backups > 0)
             Padding(
               padding: const EdgeInsets.only(top: 4),

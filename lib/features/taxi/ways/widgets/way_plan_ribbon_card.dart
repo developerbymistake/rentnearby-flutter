@@ -125,6 +125,14 @@ class WayPlanRibbonCard extends StatelessWidget {
         textAlign: TextAlign.center,
         style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, color: AppColors.textLight),
       ),
+      if (leg.carsNeeded > 1)
+        Text(
+          TaxiWaysStrings.carsCount(leg.carsNeeded),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.warningText),
+        ),
     ]);
   }
 }

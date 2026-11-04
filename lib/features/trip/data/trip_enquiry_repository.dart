@@ -35,6 +35,9 @@ class TripEnquiryErrorTypes {
   static const String tripNotEnded = 'TripNotEnded';
   static const String problemOutsideTrip = 'ProblemOutsideTrip';
   static const String offerLimit = 'OfferLimit';
+  static const String enquiryLimit = 'EnquiryLimitReached';
+  static const String enquiryEnded = 'EnquiryEnded';
+  static const String offerOutsideTrip = 'OfferOutsideTrip';
 }
 
 class TripEnquiryRepository {
@@ -47,23 +50,34 @@ class TripEnquiryRepository {
 
   TripEnquiryModel _one(Map<String, dynamic> res) => TripEnquiryModel.fromJson(_data(res));
 
-  Future<TripEnquiryBatch> create(String tripId, {required int day, required List<String> stayIds, required bool allNights}) async =>
-      TripEnquiryBatch.fromJson(_data(await ApiService.post('/trips/$tripId/enquiries', {
+  static const String asksLeftHeader = 'x-trip-asks-left';
+
+  static int? asksLeftOf(Response? res) => int.tryParse(res?.headers.value(asksLeftHeader) ?? '');
+
+  Future<TripEnquiryBatch> _batch(String path, Map<String, dynamic> body) async {
+    final res = await ApiService.postRaw(path, body);
+    final raw = res.data;
+    final map = raw is Map<String, dynamic> ? raw : const <String, dynamic>{};
+    return TripEnquiryBatch.fromJson(_data(map), asksLeft: asksLeftOf(res));
+  }
+
+  Future<TripEnquiryBatch> create(String tripId, {required int day, required List<String> stayIds, required bool allNights}) =>
+      _batch('/trips/$tripId/enquiries', {
         'kind': TripEnquiryKinds.stay,
         'day': day,
         'listingIds': stayIds,
         'allNights': allNights,
-      })));
+      });
 
   Future<TripEnquiryBatch> createLead(String tripId,
-          {required List<int> days, required List<String> taxiIds, String? pickupTime, String? pickupPlace}) async =>
-      TripEnquiryBatch.fromJson(_data(await ApiService.post('/trips/$tripId/enquiries', {
+          {required List<int> days, required List<String> taxiIds, String? pickupTime, String? pickupPlace}) =>
+      _batch('/trips/$tripId/enquiries', {
         'kind': TripEnquiryKinds.taxi,
         'days': days,
         'listingIds': taxiIds,
         'pickupTime': ?pickupTime,
         'pickupPlace': ?pickupPlace,
-      })));
+      });
 
   Future<TripEnquiryModel> taxiBooking(String tripId, Map<String, dynamic> body) async =>
       _one(await ApiService.post('/trips/$tripId/taxi-bookings', body));
@@ -164,9 +178,8 @@ class TripEnquiryRepository {
   Future<TripEnquiryModel> acceptChange(String enquiryId, String offerId) async =>
       _one(await ApiService.post('/trips/enquiries/$enquiryId/change-request/$offerId/accept', const {}));
 
-  Future<TripEnquiryBatch> askAgain(String tripId, {required String kind, required int day}) async =>
-      TripEnquiryBatch.fromJson(
-          _data(await ApiService.post('/trips/$tripId/enquiries/ask-again', {'kind': kind, 'day': day})));
+  Future<TripEnquiryBatch> askAgain(String tripId, {required String kind, required int day}) =>
+      _batch('/trips/$tripId/enquiries/ask-again', {'kind': kind, 'day': day});
 
   Future<String> reportTraveller(String enquiryId, {required String reasonId, String? details}) async {
     final data = _data(await ApiService.post('/trips/enquiries/$enquiryId/report-traveller', {

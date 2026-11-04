@@ -51,6 +51,7 @@ class TripSkipReasons {
   static const String notAvailable = 'NotAvailable';
   static const String blocked = 'Blocked';
   static const String limitReached = 'LimitReached';
+  static const String alreadyBooked = 'AlreadyBooked';
 }
 
 class TripContextDay {
@@ -442,6 +443,27 @@ class TripEnquiryModel {
 
   bool coversDay(int day) => days.contains(day);
 
+  List<DateTime> get taxiDates {
+    final ci = checkIn;
+    if (ci == null || days.isEmpty) return const [];
+    final first = days.reduce((a, b) => a < b ? a : b);
+    return [for (final d in days) DateTime(ci.year, ci.month, ci.day + d - first)];
+  }
+
+  DateTime? get lastDate {
+    if (isTaxi) {
+      final dates = taxiDates;
+      return dates.isEmpty ? null : dates.reduce((a, b) => a.isAfter(b) ? a : b);
+    }
+    final b = checkOut;
+    return b == null ? null : DateTime(b.year, b.month, b.day - 1);
+  }
+
+  bool coversTaxiDate(DateTime d) {
+    final x = DateTime(d.year, d.month, d.day);
+    return taxiDates.any((t) => t == x);
+  }
+
   String? get advanceLabel {
     if (isTaxi || !isConfirmedByBoth || !advance.hasRequest) return null;
     final label = TripStatusVisuals.advanceLabel(advance);
@@ -562,17 +584,29 @@ class TripEnquiryBatch {
   final List<TripEnquiryModel> items;
   final List<TripSkipped> skipped;
   final bool veryShortNotice;
+  final List<String> updated;
+  final int? asksLeft;
 
-  const TripEnquiryBatch({required this.items, required this.skipped, required this.veryShortNotice});
+  const TripEnquiryBatch({
+    required this.items,
+    required this.skipped,
+    required this.veryShortNotice,
+    this.updated = const [],
+    this.asksLeft,
+  });
 
-  factory TripEnquiryBatch.fromJson(Map<String, dynamic> json) => TripEnquiryBatch(
+  factory TripEnquiryBatch.fromJson(Map<String, dynamic> json, {int? asksLeft}) => TripEnquiryBatch(
         items: _enquiryList(json['items']),
         skipped: ((json['skipped'] as List?) ?? const [])
             .whereType<Map<String, dynamic>>()
             .map(TripSkipped.fromJson)
             .toList(),
         veryShortNotice: json['veryShortNotice'] == true,
+        updated: ((json['updated'] as List?) ?? const []).whereType<String>().toList(),
+        asksLeft: asksLeft,
       );
+
+  bool isUpdated(String enquiryId) => updated.contains(enquiryId);
 }
 
 class TripPhoneBookingResult {

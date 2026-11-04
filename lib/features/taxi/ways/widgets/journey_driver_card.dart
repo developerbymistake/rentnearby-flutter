@@ -16,6 +16,7 @@ class JourneyDriverCard extends StatelessWidget {
   final String? caption;
   final bool selected;
   final VoidCallback? onTap;
+  final String? seatsNote;
 
   const JourneyDriverCard({
     super.key,
@@ -26,6 +27,7 @@ class JourneyDriverCard extends StatelessWidget {
     this.caption,
     this.selected = false,
     this.onTap,
+    this.seatsNote,
   });
 
   static String vehicleLine(WayDriver d) {
@@ -89,6 +91,13 @@ class JourneyDriverCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
               ),
+              if (seatsNote != null)
+                Text(
+                  seatsNote!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.warningText),
+                ),
               if (d.repliesInApp)
                 const Text(
                   TaxiWaysStrings.repliesInApp,

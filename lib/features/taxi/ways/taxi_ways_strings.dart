@@ -140,7 +140,6 @@ class TaxiWaysStrings {
   static String asked(int n) => n == 1 ? 'Asked 1 driver' : 'Asked $n drivers';
   static String askBackups(int n) => n == 1 ? '+1 backup' : '+$n backups';
   static const String askFailed = "Couldn't ask drivers. Try again.";
-  static const String askLimit = 'Too many asks today. Try tomorrow.';
   static const String askPaused = 'Asking is paused right now';
   static const String taxisOff = 'Taxis are not available right now';
   static const String journeyLimit = 'Up to 20 saved journeys';

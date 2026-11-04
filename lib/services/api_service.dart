@@ -68,6 +68,8 @@ class ApiService {
     return res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
   }
 
+  static Future<Response> postRaw(String path, Map<String, dynamic> data) => _dio.post(path, data: data);
+
   static Future<Map<String, dynamic>> get(
     String path, {
     Map<String, dynamic>? params,

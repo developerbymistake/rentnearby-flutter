@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../features/trip/models/trip_enquiry_model.dart';
 import '../features/trip/trip_strings.dart';
+import '../features/trip/trip_strings_a5.dart';
 import '../features/trip/utils/trip_format.dart';
 import '../features/trip/widgets/trip_payment_line.dart';
 import '../features/trip/widgets/trip_status.dart';
@@ -42,12 +43,13 @@ class TripOfferCards {
     final price = _num(p, 'pricePerNight');
     final listed = _num(p, 'listedPerNight');
     final nights = _int(p, 'nights') ?? 1;
+    final units = _int(p, 'units') ?? 1;
+    final total = _num(p, 'total') ?? (price == null ? null : price * units * nights);
     final note = _str(p, 'note')?.trim();
-    final money = price == null ? '' : BrowseItem.inr(price);
     final name = _firstName(cb.guestName);
     final title = isOwner
-        ? (name == null ? TripStrings.priceProposed(money) : TripStrings.proposesPrice(name, money))
-        : TripStrings.yourPriceCard(money);
+        ? (name == null ? TripStringsA5.priceProposedTitle : '$name ${TripStringsA5.proposesPriceOwner}')
+        : TripStringsA5.yourPriceTitle;
     final pending = status == _pending;
     final canAct = isOwner && pending;
     final onAccept = cb.onAcceptPrice;
@@ -62,7 +64,20 @@ class TripOfferCards {
       subtitle: cb.listingTitle.isEmpty ? null : cb.listingTitle,
       pill: _counterPill(status),
       children: [
-        if (listed != null && listed > 0) Text(TripStrings.listedNights(BrowseItem.inr(listed), nights), style: _small),
+        if (price != null)
+          Text(TripStringsA5.priceRoomNight(BrowseItem.inr(price)),
+              style: const TextStyle(
+                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+        if (total != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(TripStringsA5.roomsNightsTotalLine(units, nights, BrowseItem.inr(total)), style: _body),
+          ),
+        if (listed != null && listed > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(TripStringsA5.listedAmount(BrowseItem.inr(listed)), style: _small),
+          ),
         if (note != null && note.isNotEmpty) ...[
           const SizedBox(height: 6),
           Text(note, maxLines: 4, overflow: TextOverflow.ellipsis, style: _body),
@@ -326,7 +341,7 @@ class TripOfferCards {
     final guests = (line['guests'] as num?)?.toInt();
     final price = line['pricePerNight'] as num?;
     final name = (room == null || room.isEmpty) ? TripStrings.room : room;
-    final priceText = price == null ? '' : ' · $units x ${BrowseItem.inr(price)}';
+    final priceText = price == null ? '' : ' · ${TripStringsA5.unitsAtPrice(units, BrowseItem.inr(price))}';
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(

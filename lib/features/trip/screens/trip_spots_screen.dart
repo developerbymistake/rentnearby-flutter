@@ -95,7 +95,12 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       Get.back();
       return;
     }
-    final settings = await TripDetailsSheet.collect(context, initial: const TripSettings(), dayCount: 1);
+    final settings = await TripDetailsSheet.collect(
+      context,
+      initial: const TripSettings(),
+      dayCount: 1,
+      spotCount: chosen.length,
+    );
     if (!mounted) {
       _starting = false;
       return;

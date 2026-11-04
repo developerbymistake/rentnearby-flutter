@@ -18,6 +18,7 @@ import '../../trip/widgets/trip_status.dart';
 import '../../trip/widgets/trip_status_card.dart';
 import '../setup/taxi_setup_controller.dart';
 import '../taxi_option_sets.dart';
+import 'journey_leg_tag.dart';
 import 'trip_fare_sheet.dart';
 import 'trip_lead_format.dart';
 import 'trip_leads_controller.dart';
@@ -335,6 +336,8 @@ class _LeadCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final e = lead;
     final spots = TripLeadFormat.spots(e);
+    final leg = JourneyLegTag.fromLead(e);
+    final legText = e.context.text.startsWith('Car ') ? e.context.text.trim() : '';
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       padding: EdgeInsets.all(highlighted ? 2 : 0),
@@ -358,7 +361,15 @@ class _LeadCard extends StatelessWidget {
           Wrap(spacing: 8, runSpacing: 6, children: [
             if (e.isUrgent && e.isUnconfirmed) const TripStatusPill(TripDisplayStatus.asked, label: TripStrings.urgent),
             TripStatusPill(e.display, ownerSide: true, taxi: true),
+            if (leg != null) JourneyLegTag(text: leg),
           ]),
+          if (legText.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(legText,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark, height: 1.4)),
+          ],
           const SizedBox(height: 8),
           Text(TripLeadFormat.summary(e),
               maxLines: 3,
@@ -498,7 +509,7 @@ class _LeadCard extends StatelessWidget {
           onTap: onTap,
         ));
     void call(_LeadButtonKind kind) {
-      if (canCall) buttons.add(btn(TripStrings.callTraveller, kind, () => ContactLauncher.call(phone!), icon: Iconsax.call));
+      if (canCall) buttons.add(btn(TripStrings.callTraveller, kind, () => ContactLauncher.call(phone), icon: Iconsax.call));
     }
 
     switch (e.display) {

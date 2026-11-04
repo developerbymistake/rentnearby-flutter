@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../config/app_colors.dart';
+import '../../../utils/app_toast.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/selectable_chip.dart';
 import '../controllers/my_trips_controller.dart';
@@ -9,6 +11,10 @@ import '../models/trip_model.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a5.dart';
+import '../utils/trip_format.dart';
+import '../utils/trip_summary_source.dart';
+import '../utils/trip_summary_text.dart';
 import '../widgets/trip_card.dart';
 import '../widgets/trip_shimmers.dart';
 
@@ -53,10 +59,19 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
     });
   }
 
-  void _openMap(TripSummaryModel t) {
-    _openPlan(t);
-    // Get.arguments is global; the plan screen must read its args before the map route is pushed.
-    WidgetsBinding.instance.addPostFrameCallback((_) => TripNavigation.openMap());
+  Future<void> _share(TripSummaryModel t) async {
+    try {
+      final snap = await TripSummarySource.load(t.id);
+      await SharePlus.instance
+          .share(ShareParams(text: TripSummaryText.build(snap.record), subject: TripStrings.shareSubject(t.cityName)));
+    } catch (e) {
+      if (TripSummarySource.isGone(e)) {
+        _ctrl.removeLocal(t.id);
+        AppToast.error(TripStringsA5.tripNotFoundShare);
+      } else {
+        AppToast.error(TripStringsA5.shareFailed);
+      }
+    }
   }
 
   Future<void> _delete(TripSummaryModel t) async {
@@ -103,6 +118,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
                 controller: _scroll,
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
+                  _buildOfflineStrip(context),
                   _buildBody(context),
                   SliverToBoxAdapter(child: _buildFooter()),
                 ],
@@ -238,11 +254,42 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
               key: ValueKey(t.id),
               trip: t,
               onOpen: () => _openPlan(t),
-              onMap: () => _openMap(t),
               onSummary: () => TripNavigation.openSummary(t.id),
+              onShare: t.spotCount > 0 ? () => _share(t) : null,
               onDelete: () => _delete(t),
             );
           },
+        ),
+      );
+    });
+  }
+
+  Widget _buildOfflineStrip(BuildContext context) {
+    return Obx(() {
+      final at = _ctrl.offlineCopyAt.value;
+      if (at == null || _ctrl.items.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(_sidePad(context), 12, _sidePad(context), 0),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(color: AppColors.neutralChip, borderRadius: BorderRadius.circular(12)),
+            child: Row(
+              children: [
+                const Icon(Iconsax.cloud_cross, size: 16, color: AppColors.textMedium),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    TripStringsA5.offlineCopy(TripFormat.time12Of(at)),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     });
