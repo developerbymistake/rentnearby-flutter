@@ -117,7 +117,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
 
   Future<void> _book(TripEnquiryModel e) async {
     if (!await _datesGate() || !mounted) return;
-    await TripTaxiBookingSheet.show(context, taxi: null, day: e.days.isNotEmpty ? e.days.first : _day, enquiry: e);
+    await TripTaxiBookingSheet.show(context, taxi: null, day: e.days.isNotEmpty ? e.days.first : _day, enquiry: e, initialFare: e.taxi?.driverFare);
   }
 
   Future<void> _report(TripEnquiryModel e) async {

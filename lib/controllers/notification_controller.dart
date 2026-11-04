@@ -15,12 +15,14 @@ class NotificationController extends GetxController {
   final isLoading = false.obs;
   final isLoadingMore = false.obs;
   final hasMoreNotifications = false.obs;
+  final loadFailed = false.obs;
   int _notificationsPage = 1;
   // Bumped on every loadNotifications() call — a pull-to-refresh racing an in-flight
   // loadMoreNotifications() (or vice versa) would otherwise let whichever response lands second
   // silently corrupt the list (e.g. a late page-N append landing after a fresh reset). Only the
   // response matching the latest request id is applied.
   int _requestId = 0;
+  bool _listLoaded = false;
 
   NotificationRepository get _repo => Get.find<NotificationRepository>();
 
@@ -53,12 +55,20 @@ class NotificationController extends GetxController {
       if (requestId != _requestId) return;
       if (reset) {
         notifications.value = result.items;
+        _listLoaded = true;
+        loadFailed.value = false;
       } else {
         notifications.addAll(result.items);
       }
       hasMoreNotifications.value = result.hasMore;
     } catch (_) {
-      // Silent — the screen's own empty/error state handles this via isLoading + an empty list.
+      if (requestId == _requestId) {
+        if (reset) {
+          loadFailed.value = true;
+        } else {
+          _notificationsPage--;
+        }
+      }
     } finally {
       if (requestId == _requestId) {
         isLoading.value = false;
@@ -110,7 +120,7 @@ class NotificationController extends GetxController {
   /// up the true value" rather than guessing at a local patch it can't fully reconcile.
   void applyLiveNotification(Map<String, dynamic> data) {
     unreadCount.value++;
-    if (notifications.isEmpty || hasMoreNotifications.value) return;
+    if (!_listLoaded || hasMoreNotifications.value) return;
     try {
       notifications.insert(
         0,
@@ -120,7 +130,7 @@ class NotificationController extends GetxController {
           title: data['title'] as String? ?? '',
           body: data['body'] as String? ?? '',
           actionRoute: data['actionRoute'] as String?,
-          actionArguments: (data['actionArguments'] as Map?)?.cast<String, dynamic>(),
+          actionArguments: NotificationModel.parseArguments(data['actionArguments']),
           isRead: false,
           createdAt: DateTime.now(),
         ),

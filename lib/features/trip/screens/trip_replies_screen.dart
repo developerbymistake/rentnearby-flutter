@@ -16,11 +16,13 @@ import '../trip_constants.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_f2.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_report.dart';
 import '../widgets/trip_accept_sheet.dart';
 import '../widgets/trip_cancel_sheet.dart';
+import '../widgets/trip_counter_sheet.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_phone_booking_sheet.dart';
 import '../widgets/trip_shortlist_bar.dart';
@@ -172,6 +174,10 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     final e = x.enquiry;
     if (e == null) return x.pricePerNight == null ? '' : '${_inr(x.pricePerNight)} / night';
     final now = DateTime.now();
+    final counter = e.pendingCounter;
+    if (counter != null && e.display.isOpen && !e.isBooked) {
+      return TripStringsF2.youProposed(_inr(counter.pricePerNight));
+    }
     return switch (e.display) {
       TripDisplayStatus.asked => TripStrings.askedAgo(_ago(e.createdAt)),
       TripDisplayStatus.offered => e.openOffer == null
@@ -630,12 +636,19 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     if (e?.conversationId != null && !chatPrimary) {
       add(Iconsax.messages_2, TripStrings.openChat, () => TripNavigation.openChatForEnquiry(e!));
     }
+    void counter() {
+      if (e == null || !e.canCounter || _c.isReadOnly) return;
+      add(Iconsax.money, e.counterCount > 0 ? TripStringsF2.proposeAgain : TripStrings.proposePrice,
+          () => TripCounterSheet.show(context, enquiry: e));
+    }
     switch (status) {
       case TripDisplayStatus.offered:
         if (offer != null) add(Iconsax.close_circle, TripStrings.decline, () => _decline(e!), color: AppColors.error);
+        counter();
         add(Iconsax.call_calling, TripStrings.iBookedByPhone, () => _phoneBooking(x));
         add(Iconsax.undo, TripStrings.withdraw, () => TripWithdrawSheet.show(context, enquiry: e!), color: AppColors.error);
       case TripDisplayStatus.asked:
+        counter();
         add(Iconsax.call_calling, TripStrings.iBookedByPhone, () => _phoneBooking(x));
         add(Iconsax.undo, TripStrings.withdraw, () => TripWithdrawSheet.show(context, enquiry: e!), color: AppColors.error);
       case TripDisplayStatus.confirmedByYou:

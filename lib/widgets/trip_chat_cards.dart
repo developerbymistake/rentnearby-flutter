@@ -1,10 +1,15 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import '../features/stay/enquiries/stay_enquiry_actions.dart';
+import '../features/trip/controllers/trip_enquiry_controller.dart';
 import '../features/trip/models/trip_enquiry_model.dart';
+import '../features/trip/trip_constants.dart';
 import '../features/trip/trip_strings.dart';
 import '../features/trip/trip_strings_a5.dart';
+import '../features/trip/trip_strings_f2.dart';
 import '../features/trip/utils/trip_format.dart';
+import '../utils/app_toast.dart';
 import '../features/trip/widgets/trip_payment_line.dart';
 import '../features/trip/widgets/trip_status.dart';
 import '../models/browse_item.dart';
@@ -36,6 +41,7 @@ class TripChatCallbacks {
   final void Function(String enquiryId, String offerId)? onKeepPrice;
   final void Function(String enquiryId)? onCancelStay;
   final void Function(String enquiryId, String offerId)? onAcceptChange;
+  final VoidCallback? onEnquiryChanged;
   final int? agreedTotal;
 
   const TripChatCallbacks({
@@ -62,8 +68,11 @@ class TripChatCallbacks {
     this.onKeepPrice,
     this.onCancelStay,
     this.onAcceptChange,
+    this.onEnquiryChanged,
     this.agreedTotal,
   });
+
+  bool get ownerActionsEnabled => onHostYes != null;
 }
 
 class TripChatCards {
@@ -92,7 +101,16 @@ class TripChatCards {
     final p = message.payload;
     switch (message.type) {
       case 'trip_enquiry':
-        return _bubble(message, _str(p, 'text') ?? '', accent);
+        final enquiryId = _str(p, 'enquiryId');
+        if (enquiryId == null || _range(p) == null) return _bubble(message, _str(p, 'text') ?? '', accent);
+        return _EnquiryCard(
+          key: ValueKey('trip-enquiry-${message.id}'),
+          message: message,
+          enquiryId: enquiryId,
+          isOwner: isOwner,
+          accent: accent,
+          callbacks: cb,
+        );
       case 'trip_offer':
         return _offer(context, message, p, isOwner, accent, cb);
       case 'trip_offer_response':
@@ -494,5 +512,134 @@ class TripChatCards {
     if (left.inMinutes < 1) return '1 min';
     if (left.inHours < 1) return '${left.inMinutes} min';
     return '${left.inHours} h';
+  }
+}
+
+class _EnquiryCard extends StatefulWidget {
+  const _EnquiryCard({
+    super.key,
+    required this.message,
+    required this.enquiryId,
+    required this.isOwner,
+    required this.accent,
+    required this.callbacks,
+  });
+
+  final MessageModel message;
+  final String enquiryId;
+  final bool isOwner;
+  final Color accent;
+  final TripChatCallbacks callbacks;
+
+  @override
+  State<_EnquiryCard> createState() => _EnquiryCardState();
+}
+
+class _EnquiryCardState extends State<_EnquiryCard> {
+  static const _fresh = Duration(seconds: 60);
+  static final _cache = <String, ({TripEnquiryModel enquiry, DateTime at})>{};
+
+  TripEnquiryModel? _enquiry;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final hit = _cache[widget.enquiryId];
+    _enquiry = hit?.enquiry;
+    if (hit == null || DateTime.now().difference(hit.at) > _fresh) _load();
+  }
+
+  Future<TripEnquiryModel?> _load() async {
+    final e = await TripEnquiryController.to.refreshOne(widget.enquiryId);
+    if (e != null) _cache[widget.enquiryId] = (enquiry: e, at: DateTime.now());
+    if (mounted && e != null) setState(() => _enquiry = e);
+    return e;
+  }
+
+  Future<void> _run(Future<bool> Function(TripEnquiryModel e) action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final e = await _load();
+      if (!mounted) return;
+      if (e == null) {
+        AppToast.warning(TripStrings.noNetwork);
+        return;
+      }
+      if (!e.isUnconfirmed) {
+        AppToast.warning(TripStrings.justChanged);
+        widget.callbacks.onEnquiryChanged?.call();
+        return;
+      }
+      if (await action(e)) {
+        await _load();
+        widget.callbacks.onEnquiryChanged?.call();
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.message.payload;
+    final cb = widget.callbacks;
+    final e = _enquiry;
+    final checkIn = DateTime.tryParse(TripChatCards._str(p, 'checkIn') ?? '');
+    final checkOut = DateTime.tryParse(TripChatCards._str(p, 'checkOut') ?? '');
+    final nights = TripChatCards._int(p, 'nights') ??
+        (checkIn != null && checkOut != null ? checkOut.difference(checkIn).inDays : null);
+    final adults = TripChatCards._int(p, 'adults');
+    final kids = TripChatCards._int(p, 'kids') ?? 0;
+    final rooms = TripChatCards._int(p, 'rooms');
+    final needs = TripChatCards._list(p, 'needs').whereType<String>().map(TripNeeds.label).toList();
+    final text = TripChatCards._str(p, 'text');
+    final title =
+        cb.listingTitle.isEmpty ? TripStringsF2.stayEnquiry : '${TripStringsF2.stayEnquiry} · ${cb.listingTitle}';
+    final display = e?.display ?? TripDisplayStatus.asked;
+    final canAct = widget.isOwner && cb.ownerActionsEnabled && e != null && !e.isTaxi && e.isUnconfirmed;
+    return TripChatCards._card(
+      context,
+      mine: widget.message.isMine,
+      readAt: widget.message.readAt,
+      accent: widget.accent,
+      icon: Icons.hotel_outlined,
+      title: title,
+      pill: TripStatusPill(display, ownerSide: widget.isOwner),
+      children: [
+        if (checkIn != null) TripChatCards._kv(TripStrings.checkIn, TripFormat.shortDate(checkIn)),
+        if (checkOut != null)
+          TripChatCards._kv(
+              TripStrings.checkOut,
+              nights != null && nights > 0
+                  ? '${TripFormat.shortDate(checkOut)} · ${TripStrings.nights(nights)}'
+                  : TripFormat.shortDate(checkOut)),
+        if (adults != null) TripChatCards._kv(TripStrings.people, TripStrings.peopleCount(adults + kids)),
+        if (rooms != null) TripChatCards._kv(TripStrings.rooms, TripStringsF2.roomsCount(rooms)),
+        if (needs.isNotEmpty) TripChatCards._kv(TripStrings.needs, needs.join(' · ')),
+        if (text != null && text.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(text, maxLines: 6, overflow: TextOverflow.ellipsis, style: TripChatCards._small),
+        ],
+        if (canAct) ...[
+          const SizedBox(height: 12),
+          TripChatCards._button(
+            display == TripDisplayStatus.offered ? TripStrings.sendNewOffer : TripStrings.sendOffer,
+            primary: true,
+            accent: widget.accent,
+            onTap: _busy ? null : () => _run((x) => StayEnquiryActions.sendOffer(context, x)),
+          ),
+          const SizedBox(height: 8),
+          TripChatCards._button(
+            TripStrings.notAvailableAction,
+            primary: false,
+            accent: widget.accent,
+            negative: true,
+            onTap: _busy ? null : () => _run((x) => StayEnquiryActions.notAvailable(context, x)),
+          ),
+        ],
+      ],
+    );
   }
 }

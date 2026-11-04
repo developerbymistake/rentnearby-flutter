@@ -44,8 +44,9 @@ class TripDetailsSheet {
     );
     if (result == null) return false;
     final newStart = result.startDate;
-    if (newStart != null && newStart != old.startDate) {
-      final impact = c.dateChangeImpact(newStart);
+    final daysCut = result.maxDays != old.maxDays && c.daysAfterLimit(result.maxDays) < c.dayCount;
+    if (newStart != null && (newStart != old.startDate || daysCut)) {
+      final impact = c.dateChangeImpact(newStart, days: c.daysAfterLimit(result.maxDays));
       if (!impact.isEmpty) {
         if (!context.mounted) return false;
         final change = await _confirmDates(context, impact.all);

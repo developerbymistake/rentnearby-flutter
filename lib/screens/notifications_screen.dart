@@ -5,12 +5,15 @@ import '../config/app_colors.dart';
 import '../config/app_insets.dart';
 import '../config/app_routes.dart';
 import '../config/app_shadows.dart';
+import '../config/notification_strings.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../models/notification_model.dart';
+import '../services/notification_service.dart';
 import '../utils/app_date_format.dart';
 import '../utils/notification_visuals.dart';
 import '../widgets/day_header.dart';
+import '../widgets/empty_state_view.dart';
 import '../widgets/new_pill.dart';
 
 /// Home bell inbox: infinite-scroll list with a footer loader row. Row tap is fully generic —
@@ -54,7 +57,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _ctrl.markRead(n.id);
     final route = n.actionRoute;
     if (route == null || route == AppRoutes.notifications || !Get.find<AuthController>().canOpenRoute(route)) return;
-    Get.toNamed(route, arguments: n.actionArguments);
+    NotificationService.to.openActionRoute(route, n.actionArguments);
   }
 
   @override
@@ -71,6 +74,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               final items = _ctrl.notifications;
               final hasMore = _ctrl.hasMoreNotifications.value;
               if (loading && items.isEmpty) return _buildShimmer();
+              if (items.isEmpty && _ctrl.loadFailed.value) {
+                return EmptyStateView(
+                  icon: Icons.cloud_off_rounded,
+                  title: NotificationStrings.loadFailedTitle,
+                  subtitle: NotificationStrings.loadFailedBody,
+                  retryLabel: NotificationStrings.retry,
+                  onRetry: _refresh,
+                );
+              }
               if (items.isEmpty) return _buildEmpty();
 
               // Flat, index-addressable list of day headers + rows — recomputed on every build,

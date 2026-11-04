@@ -9,7 +9,9 @@ import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
 import 'hub_connection_shared.dart';
 import 'hub_session_manager.dart';
+import 'notification_service.dart';
 import 'storage_service.dart';
+import 'trip_push_sync.dart';
 
 /// Session-lifetime, push-only connection (like ChatHubService) delivering the generic
 /// NotificationReceived envelope that drives the Home bell.
@@ -20,6 +22,13 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect {
 
   @override
   HubConnection? get currentConnection => _connection;
+
+  // Put only by MainScreen.initState, so onReady is the first frame with main mounted.
+  @override
+  void onReady() {
+    super.onReady();
+    NotificationService.to.markMainReady();
+  }
 
   @override
   Future<void> performConnect() async {
@@ -47,6 +56,7 @@ class NotificationHubService extends GetxService with SingleFlightHubConnect {
         final data = Map<String, dynamic>.from(args[0] as Map);
         Get.find<NotificationController>().applyLiveNotification(data);
         if (Get.isRegistered<PlanController>()) Get.find<PlanController>().onPushNotification(data['type'] as String?);
+        TripPushSync.onPush(data['type'] as String?, data['actionRoute'] as String?);
         if (data['type'] == NotificationTypeKeys.roleRequestApproved) {
           Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
         } else if (data['type'] == NotificationTypeKeys.roleRequestRejected) {

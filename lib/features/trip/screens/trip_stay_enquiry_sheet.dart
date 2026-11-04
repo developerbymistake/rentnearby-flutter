@@ -69,16 +69,6 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
 
   int get _day => widget.day;
 
-  bool _canAllNights(List<String> ids) {
-    final last = _c.dayCount;
-    if (_day >= last) return false;
-    for (var d = _day + 1; d <= last; d++) {
-      final have = {for (final s in _c.plan.value?.dayAt(d)?.stayShortlist ?? const []) s.stayId};
-      if (!ids.every(have.contains)) return false;
-    }
-    return true;
-  }
-
   Future<void> _send(List<String> ids, bool allNights) async {
     if (_sending || ids.isEmpty) return;
     setState(() {
@@ -165,9 +155,10 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
       if (p == null || checkIn == null) {
         return const TripSheetFrame(title: TripStrings.enquiryTitle, children: [SizedBox(height: 24)]);
       }
-      final canAll = _canAllNights(ids);
+      final run = _c.enquiryNightsRun(_day).length;
+      final canAll = run > 1;
       final allNights = canAll && (_allNights ?? true);
-      final nights = TripEnquiryRules.nightsFor(_c.dayCount, _day, allNights);
+      final nights = allNights ? run : 1;
       final checkOut = DateTime(checkIn.year, checkIn.month, checkIn.day + nights);
       final now = DateTime.now().toUtc();
       final start = s.startDate ?? checkIn;
@@ -229,7 +220,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                       fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-              subtitle: Text(TripStrings.nights(TripEnquiryRules.nightsFor(_c.dayCount, _day, true)),
+              subtitle: Text(TripStrings.nights(run),
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
             ),
           const SizedBox(height: 10),

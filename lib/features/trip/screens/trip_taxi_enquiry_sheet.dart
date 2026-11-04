@@ -55,6 +55,7 @@ class TripTaxiEnquirySheet {
     required int day,
   }) async {
     if (drivers.isEmpty) return null;
+    final known = {for (final e in TripPlanController.to.enquiryList) e.id};
     final batch = await TripSheetFrame.show<TripEnquiryBatch>(context, _EnquiryBody(drivers: drivers, day: day));
     if (batch == null) return null;
     _asksLeft = batch.asksLeft ?? _asksLeft;
@@ -69,10 +70,12 @@ class TripTaxiEnquirySheet {
     }
     final updated = batch.updated.toSet();
     final added = batch.items.where((e) => updated.contains(e.id)).toList();
-    final fresh = batch.items.length - added.length;
+    final fresh = batch.items.where((e) => !updated.contains(e.id) && !known.contains(e.id)).length;
+    final reused = batch.items.length - added.length - fresh;
     if (fresh > 0) {
-      AppToast.success(batch.items.length == 1 ? TripStrings.enquirySent : TripStringsA3.sentToDrivers(fresh));
+      AppToast.success(fresh == 1 ? TripStrings.enquirySent : TripStringsA3.sentToDrivers(fresh));
     }
+    if (reused > 0) skipped.add(TripStrings.alreadyAsked);
     if (added.isNotEmpty) {
       final e = added.first;
       AppToast.success(TripStringsA3.daysAdded(names[e.listingId] ?? e.listingName));

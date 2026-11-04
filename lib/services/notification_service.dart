@@ -19,9 +19,12 @@ import '../controllers/plan_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
+import '../features/trip/controllers/trip_plan_controller.dart';
 import '../models/conversation_model.dart';
+import '../models/notification_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
+import 'trip_push_sync.dart';
 
 const String _chatChannelId = 'chat_messages';
 const String _chatChannelName = 'Chat messages';
@@ -160,6 +163,8 @@ class NotificationService extends GetxService {
   StreamSubscription? _tokenRefreshSub;
   StreamSubscription? _foregroundMessageSub;
   final _localNotifications = FlutterLocalNotificationsPlugin();
+  bool _mainReady = false;
+  VoidCallback? _pendingTap;
 
   // Explore is a resident tab (see AppTabs); Chat, My Rooms/My Plots, etc. are all
   // pushed routes now, handled via _routesOnTopOfMain below.
@@ -175,13 +180,28 @@ class NotificationService extends GetxService {
     Get.find<PlanController>().onPushNotification(type);
   }
 
+  void markMainReady() {
+    _mainReady = true;
+    final tap = _pendingTap;
+    _pendingTap = null;
+    tap?.call();
+  }
+
+  void _runWhenMainReady(VoidCallback tap) {
+    if (_mainReady) {
+      tap();
+    } else {
+      _pendingTap = tap;
+    }
+  }
+
   Future<void> _initFirebase() async {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     // Notification tap handlers — always active regardless of login state
     _messageOpenedSub = FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
-    if (initialMessage != null) _handleNotificationTap(initialMessage);
+    if (initialMessage != null) _runWhenMainReady(() => _handleNotificationTap(initialMessage));
 
     // Chat pushes are data-only (see ChatFcmService.cs), so FCM routes them to onMessage
     // while the app is foregrounded, never auto-displaying anything — build the same
@@ -206,6 +226,8 @@ class NotificationService extends GetxService {
       if (notificationType is String && notificationType.startsWith('plan_')) {
         _onPlanPush(notificationType);
       }
+      final pushRoute = message.data['action_route'];
+      TripPushSync.onPush(notificationType is String ? notificationType : null, pushRoute is String ? pushRoute : null);
       if (notificationType == NotificationTypeKeys.roleRequestApprovedWire) {
         Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
         return;
@@ -291,11 +313,13 @@ class NotificationService extends GetxService {
         payload != null &&
         StorageService.isLoggedIn) {
       final decoded = _tryDecodeNotificationPayload(payload);
-      if (decoded != null) {
-        _dispatchNotificationRoute(decoded);
-      } else {
-        _navigateToChatConversation(payload);
-      }
+      _runWhenMainReady(() {
+        if (decoded != null) {
+          _dispatchNotificationRoute(decoded);
+        } else {
+          _navigateToChatConversation(payload);
+        }
+      });
     }
   }
 
@@ -381,6 +405,34 @@ class NotificationService extends GetxService {
     AppRoutes.taxiSubmit,
     AppRoutes.taxiSetup,
     AppRoutes.taxiList,
+    AppRoutes.taxiWays,
+    AppRoutes.journeyPlan,
+    AppRoutes.journeyRoad,
+    AppRoutes.myJourneys,
+    AppRoutes.savedJourney,
+    AppRoutes.tripSpots,
+    AppRoutes.tripPlan,
+    AppRoutes.tripTaxi,
+    AppRoutes.tripStay,
+    AppRoutes.tripMap,
+    AppRoutes.myTrips,
+    AppRoutes.tripReplies,
+    AppRoutes.tripTaxiReplies,
+    AppRoutes.tripSummary,
+    AppRoutes.stayEnquiries,
+    AppRoutes.tripLeads,
+    AppRoutes.stayAdvanceDetails,
+  };
+
+  static const _refreshInPlaceRoutes = {
+    AppRoutes.stayEnquiries,
+    AppRoutes.tripLeads,
+    AppRoutes.myTrips,
+    AppRoutes.myJourneys,
+    AppRoutes.savedJourney,
+    AppRoutes.tripPlan,
+    AppRoutes.tripReplies,
+    AppRoutes.tripTaxiReplies,
   };
 
   // A gated Stay Owner's stack is rooted at staySetup, so main is not underneath. MainScreen puts
@@ -396,6 +448,9 @@ class NotificationService extends GetxService {
     AppRoutes.taxiRoutes,
     AppRoutes.taxiSubmit,
     AppRoutes.roleChange,
+    AppRoutes.stayAdvanceDetails,
+    AppRoutes.stayEnquiries,
+    AppRoutes.tripLeads,
   };
 
   static const _reportTabKeys = {
@@ -429,6 +484,11 @@ class NotificationService extends GetxService {
   void _dispatchNotificationRoute(Map<String, dynamic> data) {
     if (data['notification_type'] == NotificationTypeKeys.roleRequestApprovedWire) {
       Get.find<AuthController>().forceLogout(reason: LogoutReason.roleChanged);
+      return;
+    }
+    final actionRoute = data['action_route'];
+    if (actionRoute is String && _isOpenScreen(actionRoute, NotificationModel.parseArguments(data['action_args_json']))) {
+      TripPushSync.refreshNow(actionRoute);
       return;
     }
     final currentRoute = Get.currentRoute;
@@ -481,15 +541,7 @@ class NotificationService extends GetxService {
         Get.toNamed(AppRoutes.notifications);
         return;
       }
-      Map<String, dynamic>? actionArguments;
-      final argsJson = data['action_args_json'];
-      if (argsJson != null) {
-        try {
-          actionArguments = jsonDecode(argsJson) as Map<String, dynamic>;
-        } catch (_) {}
-      }
-      if (actionRoute == AppRoutes.tripPlan) actionArguments = {...?actionArguments, 'fresh': true};
-      Get.toNamed(actionRoute, arguments: actionArguments);
+      openActionRoute(actionRoute, NotificationModel.parseArguments(data['action_args_json']));
       return;
     }
 
@@ -512,6 +564,38 @@ class NotificationService extends GetxService {
       final route = notificationType == 'plot' ? AppRoutes.myPlots : AppRoutes.myListings;
       Get.toNamed(auth.canOpenRoute(route) ? route : AppRoutes.notifications);
     }
+  }
+
+  // One rule for push tap and inbox tap.
+  void openActionRoute(String route, Map<String, dynamic>? args) {
+    if (route == AppRoutes.chatConversation && args?['listingType'] == null) {
+      final conversationId = args?['conversationId']?.toString();
+      if (conversationId == null || conversationId.isEmpty) {
+        Get.toNamed(AppRoutes.chatsList);
+      } else {
+        _openChatConversation(conversationId);
+      }
+      return;
+    }
+    if (route == AppRoutes.tripPlan) args = {...?args, 'fresh': true};
+    Get.toNamed(route, arguments: args);
+  }
+
+  bool _isOpenScreen(String route, Map<String, dynamic>? args) {
+    if (Get.currentRoute != route || !_refreshInPlaceRoutes.contains(route)) return false;
+    final current = Get.arguments;
+    final open = current is Map ? current : const <String, dynamic>{};
+    for (final key in const ['tripId', 'day', 'journeyId']) {
+      final want = args?[key];
+      if (want == null) continue;
+      var have = open[key];
+      if (key == 'journeyId') have ??= open['id'] ?? (current is String ? current : null);
+      if (key == 'tripId' && have == null && Get.isRegistered<TripPlanController>()) {
+        have = Get.find<TripPlanController>().trip.value?.id;
+      }
+      if (have?.toString() != want.toString()) return false;
+    }
+    return true;
   }
 
   // Shared route-state juggling for both trigger sources — FCM's own tap tracking
@@ -631,9 +715,6 @@ class NotificationService extends GetxService {
   }
 
   Future<void> _registerToken(String token) async {
-    final stored = StorageService.getFcmToken();
-    if (stored == token) return;
-
     try {
       await ApiService.post(AppConstants.registerTokenPath, {'token': token});
       await StorageService.saveFcmToken(token);
@@ -658,10 +739,15 @@ class NotificationService extends GetxService {
     if (token != null) await _registerToken(token);
   }
 
-  Future<void> clearToken() async {
+  // Only a still-valid session can unregister; a revoked one would 401 inside the logout itself.
+  Future<void> clearToken({bool unregister = false}) async {
+    var token = StorageService.getFcmToken();
     StorageService.clearFcmToken();
+    if (!unregister) return;
     try {
-      await ApiService.delete(AppConstants.registerTokenPath);
+      token ??= await FirebaseMessaging.instance.getToken().timeout(const Duration(seconds: 2));
+      if (token == null) return;
+      await ApiService.delete('${AppConstants.registerTokenPath}?token=${Uri.encodeQueryComponent(token)}');
     } catch (_) {}
   }
 

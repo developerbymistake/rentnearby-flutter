@@ -258,9 +258,12 @@ class TripPlanController extends GetxController {
     return ci.isBefore(start) || co.isAfter(checkOut);
   }
 
-  DateChangeImpact dateChangeImpact(DateTime newStart) {
+  int daysAfterLimit(int? maxDays) => maxDays != null && maxDays < dayCount ? maxDays : dayCount;
+
+  DateChangeImpact dateChangeImpact(DateTime newStart, {int? days}) {
     final start = DateTime(newStart.year, newStart.month, newStart.day);
-    final checkOut = DateTime(start.year, start.month, start.day + (dayCount < 1 ? 1 : dayCount));
+    final n = days ?? dayCount;
+    final checkOut = DateTime(start.year, start.month, start.day + (n < 1 ? 1 : n));
     final booked = <TripEnquiryModel>[];
     final open = <TripEnquiryModel>[];
     for (final e in enquiryList) {
@@ -1789,6 +1792,23 @@ class TripPlanController extends GetxController {
     for (final id in ids) {
       removeShortlist(day, id);
     }
+  }
+
+  List<int> enquiryNightsRun(int day) {
+    final p = plan.value;
+    if (p == null || p.dayAt(day) == null) return const [];
+    final run = [day];
+    for (var d = day + 1; d <= dayCount; d++) {
+      final stay = p.dayAt(d)?.stay;
+      if (!canEditDay(d) ||
+          ownStayOf(d) != null ||
+          (stay != null && stay.isSkipped) ||
+          enquiriesForNight(d).any((e) => e.isBooked)) {
+        break;
+      }
+      run.add(d);
+    }
+    return run;
   }
 
   List<int> ownStayNights(int day, {bool allNights = false}) {

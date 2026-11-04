@@ -161,6 +161,7 @@ class TripEnquiryController extends GetxController {
     required String pickupPlace,
     required bool closeOthers,
     String? replaceEnquiryId,
+    List<String>? replaceEnquiryIds,
   }) =>
       {
         'taxiId': taxiId,
@@ -171,6 +172,7 @@ class TripEnquiryController extends GetxController {
         'pickupPlace': pickupPlace,
         'closeOthers': closeOthers,
         'replaceEnquiryId': ?replaceEnquiryId,
+        'replaceEnquiryIds': ?replaceEnquiryIds,
       };
 
   Future<TripEnquiryModel?> bookTaxi({
@@ -182,6 +184,7 @@ class TripEnquiryController extends GetxController {
     required String pickupPlace,
     bool closeOthers = true,
     String? replaceEnquiryId,
+    List<String>? replaceEnquiryIds,
   }) async {
     final tripId = await _tripId();
     if (tripId == null) return null;
@@ -194,6 +197,7 @@ class TripEnquiryController extends GetxController {
       pickupPlace: pickupPlace,
       closeOthers: closeOthers,
       replaceEnquiryId: replaceEnquiryId,
+      replaceEnquiryIds: replaceEnquiryIds,
     );
     final e = await _guard(null, () => _repo.taxiBooking(tripId, body));
     if (e != null) _applyToPlan([e]);

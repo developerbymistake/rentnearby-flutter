@@ -274,6 +274,9 @@ class AuthController extends GetxController {
     // or a revoked session leaves the app permanently stuck on the current screen.
     try {
       await Future(() async {
+        try {
+          await NotificationService.to.clearToken(unregister: reason == LogoutReason.explicitLogout);
+        } catch (_) {}
         if (reason == LogoutReason.explicitLogout) {
           // Fire-and-forget, same pattern as _saveSession's FCM registration below — best-effort
           // server-side revoke that must never block or fail local cleanup. Not awaited: by the
@@ -285,9 +288,6 @@ class AuthController extends GetxController {
           // causality, not by any assumption about microtask/macrotask scheduling order.
           ApiService.post('/auth/logout', {}).catchError((_) => <String, dynamic>{});
         }
-        try {
-          await NotificationService.to.clearToken();
-        } catch (_) {}
         try {
           await NotificationService.to.clearDistrictTopic();
         } catch (_) {}

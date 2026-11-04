@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// A row from the consumer-facing notification inbox — GET /notifications. Mirrors
 /// RentNearBy.Core.DTOs.Responses.NotificationDto field-for-field. [actionRoute]/[actionArguments]
 /// together are the redirect target: actionRoute is a literal AppRoutes.* path, actionArguments is
@@ -38,13 +40,24 @@ class NotificationModel {
       );
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) => NotificationModel(
-        id: json['id'] as String,
+        id: json['id'].toString(),
         type: json['type'] as String? ?? '',
         title: json['title'] as String? ?? '',
         body: json['body'] as String? ?? '',
         actionRoute: json['actionRoute'] as String?,
-        actionArguments: (json['actionArguments'] as Map?)?.cast<String, dynamic>(),
+        actionArguments: parseArguments(json['actionArguments']),
         isRead: json['isRead'] as bool? ?? false,
-        createdAt: DateTime.parse(json['createdAt'] as String),
+        createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
       );
+
+  static Map<String, dynamic>? parseArguments(Object? raw) {
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    if (raw is String && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {}
+    }
+    return null;
+  }
 }

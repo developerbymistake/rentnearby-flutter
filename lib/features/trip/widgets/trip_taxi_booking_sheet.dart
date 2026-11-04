@@ -62,6 +62,7 @@ class _BookingBodyState extends State<_BookingBody> {
 
   late final TripPlanController _plan;
   late final Set<int> _days;
+  late final Set<int> _pastDays;
   late TimeOfDay _time;
   late final TextEditingController _place;
   late final TextEditingController _fare;
@@ -91,10 +92,12 @@ class _BookingBodyState extends State<_BookingBody> {
     final base = (enq != null && enq.days.isNotEmpty) ? enq.days.toSet() : existing?.days.toSet();
     _days = base == null ? ahead : base.where(ahead.contains).toSet();
     if (_days.isEmpty) _days.addAll(ahead);
+    final row = enq != null && enq.isBooked ? enq : _bookedRow();
+    _pastDays = row == null ? <int>{} : row.days.where(_plan.isDayPast).toSet();
     _time = _parseTime(server?.pickupTime ?? existing?.pickupTime ?? _plan.settings.pickupTime) ??
         _parseTime(TripConstants.defaultPickupTime)!;
     _place = TextEditingController(text: server?.pickupPlace ?? existing?.pickupPlace ?? _plan.settings.pickupPlace ?? '');
-    final fare = server?.agreedFare ?? existing?.agreedFare ?? widget.initialFare;
+    final fare = server?.agreedFare ?? existing?.agreedFare ?? widget.initialFare ?? server?.driverFare;
     _fare = TextEditingController(text: fare == null ? '' : '$fare');
     _note = TextEditingController(text: existing?.note ?? '');
     _toll = server?.tollExtra ?? existing?.tollExtra ?? false;
@@ -124,6 +127,13 @@ class _BookingBodyState extends State<_BookingBody> {
     _fare.dispose();
     _note.dispose();
     super.dispose();
+  }
+
+  TripEnquiryModel? _bookedRow() {
+    for (final e in _plan.enquiries) {
+      if (e.isTaxi && e.listingId == _taxiId && e.isBooked) return e;
+    }
+    return null;
   }
 
   TripTaxiBooking? _existingBooking(TripPlan plan) {
@@ -245,9 +255,9 @@ class _BookingBodyState extends State<_BookingBody> {
       return;
     }
     setState(() => _saving = true);
-    final days = _days.toList()..sort();
+    final days = {..._pastDays, ..._days}.toList()..sort();
     final plan = _tripPlan;
-    for (final d in days) {
+    for (final d in _days.toList()..sort()) {
       final other = plan.dayAt(d)?.taxi;
       if (other != null && other.isBooked && other.taxiId != _taxiId && !_serverBooked(d, other.taxiId)) {
         final replace = await _confirmReplace(d, other.name);
@@ -261,29 +271,34 @@ class _BookingBodyState extends State<_BookingBody> {
     }
     final ctrl = TripEnquiryController.to;
     final time = TripFormat.hhmm(_time);
-    Future<TripEnquiryModel?> submit([String? replaceId]) => ctrl.bookTaxi(
+    final replaceIds = <String>[];
+    Future<TripEnquiryModel?> submit() => ctrl.bookTaxi(
           taxiId: _taxiId,
           days: days,
           agreedFare: fare,
           tollExtra: _toll,
           pickupTime: time,
           pickupPlace: place,
-          replaceEnquiryId: replaceId,
+          replaceEnquiryId: replaceIds.isEmpty ? null : replaceIds.first,
+          replaceEnquiryIds: replaceIds.isEmpty ? null : List.of(replaceIds),
         );
     var saved = await submit();
     if (!mounted) return;
-    final conflict = saved == null ? ctrl.lastConflict : null;
-    if (conflict != null) {
+    while (saved == null) {
+      final conflict = ctrl.lastConflict;
+      if (conflict == null || replaceIds.contains(conflict.enquiryId)) break;
       final replace = await _confirmReplace(_conflictDay(conflict, days), conflict.listingName);
       if (!mounted) return;
       if (!replace) {
         setState(() => _saving = false);
         return;
       }
-      saved = await submit(conflict.enquiryId);
+      replaceIds.add(conflict.enquiryId);
+      saved = await submit();
       if (!mounted) return;
     }
     if (saved == null) {
+      if (ctrl.lastConflict != null) AppToast.error(ctrl.lastErrorMessage ?? TripStrings.couldNotLoad);
       setState(() => _saving = false);
       return;
     }
@@ -526,7 +541,7 @@ class _BookingBodyState extends State<_BookingBody> {
               constraints: const BoxConstraints(minHeight: 44),
               child: SelectableChip(
                 label: _dayLabel(d),
-                selected: _days.contains(d),
+                selected: _days.contains(d) || _pastDays.contains(d),
                 onTap: () => _toggleDay(d),
                 activeColor: TripColors.accent,
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),

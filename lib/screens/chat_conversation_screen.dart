@@ -62,6 +62,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   late final String? _area;
   late final bool _isOwner;
   late final String? _argListingId;
+  late final bool _invalidArgs;
   bool get _isStay => _listingType == 'Stay';
   final _enquiry = Rxn<TripEnquiryModel>();
   bool _enquiryBusy = false;
@@ -112,20 +113,44 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   @override
   void initState() {
     super.initState();
-    final args = Get.arguments as Map<String, dynamic>;
-    _conversationId = args['conversationId'] as String;
-    _listingType = args['listingType'] as String;
-    _roomTypeId = args['roomTypeId'] as String?;
-    _plotTypeId = args['plotTypeId'] as String?;
-    _stayTypeId = args['stayTypeId'] as String?;
-    _otherPartyId = args['otherPartyId'] as String? ?? '';
-    _otherPartyName = args['otherPartyName'] as String? ?? 'User';
-    _listingTitle = args['listingTitle'] as String? ?? '';
-    _area = args['area'] as String?;
-    _isOwner = args['isOwner'] as bool? ?? false;
-    _argListingId = args['listingId'] as String?;
-    _status.value = args['status'] as String? ?? 'Active';
-    _isBlockedByMe.value = args['isBlockedByMe'] as bool? ?? false;
+    final raw = Get.arguments;
+    final args = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+    String? text(String key) {
+      final v = args[key];
+      return v == null || v.toString().isEmpty ? null : v.toString();
+    }
+    bool? flag(String key) {
+      final v = args[key];
+      return v is bool ? v : (v is String ? v.toLowerCase() == 'true' : null);
+    }
+    final id = text('conversationId');
+    final known = id == null ? null : _chatCtrl.conversations.firstWhereOrNull((c) => c.id == id);
+    _conversationId = id ?? '';
+    _listingType = text('listingType') ?? known?.listingType ?? '';
+    _invalidArgs = id == null || _listingType.isEmpty;
+    _roomTypeId = text('roomTypeId') ?? known?.roomTypeId;
+    _plotTypeId = text('plotTypeId') ?? known?.plotTypeId;
+    _stayTypeId = text('stayTypeId') ?? known?.stayTypeId;
+    _otherPartyId = text('otherPartyId') ?? known?.otherPartyId ?? '';
+    _otherPartyName = text('otherPartyName') ?? known?.otherPartyName ?? 'User';
+    _listingTitle = text('listingTitle') ?? known?.listingTitle ?? '';
+    _area = text('area') ?? known?.area;
+    _isOwner = flag('isOwner') ?? known?.isOwner ?? false;
+    _argListingId = text('listingId') ?? known?.listingId;
+    _status.value = text('status') ?? known?.status ?? 'Active';
+    _isBlockedByMe.value = flag('isBlockedByMe') ?? known?.isBlockedByMe ?? false;
+    if (_invalidArgs) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Get.back();
+        if (id == null) {
+          Get.toNamed(AppRoutes.chatsList);
+        } else {
+          NotificationService.to.openActionRoute(AppRoutes.chatConversation, {'conversationId': id});
+        }
+      });
+      return;
+    }
 
     WidgetsBinding.instance.addObserver(this);
     _scrollCtrl.addListener(_onScroll);
@@ -601,7 +626,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && !_invalidArgs) {
       ChatHubService.to.joinConversation(_conversationId);
     }
   }
@@ -616,7 +641,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     _reconnectWorker?.dispose();
     _scrollCtrl.removeListener(_onScroll);
     _scrollCtrl.dispose();
-    ChatHubService.to.leaveConversation(_conversationId);
+    if (!_invalidArgs) ChatHubService.to.leaveConversation(_conversationId);
     super.dispose();
   }
 
@@ -872,6 +897,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     // gradient genuinely extends behind the status bar, so this screen no longer needs an
     // AnnotatedRegion override; it inherits the same app-wide light-icon default every other
     // gradient-headed screen already renders correctly against.
+    if (_invalidArgs) {
+      return const Scaffold(
+        backgroundColor: AppColors.surfaceWarm,
+        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
+    }
     return Scaffold(
       backgroundColor: AppColors.surfaceWarm,
       body: Column(

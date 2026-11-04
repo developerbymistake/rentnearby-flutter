@@ -13,7 +13,30 @@ class TripLeadFormat {
     return name.isEmpty ? e.listingName : name;
   }
 
+  static List<DateTime> _taxiDates(TripEnquiryModel e) {
+    var list = e.taxiDates;
+    if (list.isEmpty) list = [for (final d in e.context.days) if (d.date != null) d.date!];
+    final out = {for (final d in list) DateTime(d.year, d.month, d.day)}.toList()..sort();
+    return out;
+  }
+
   static String dates(TripEnquiryModel e) {
+    if (e.isTaxi) {
+      final list = _taxiDates(e);
+      if (list.isNotEmpty) {
+        final runs = <List<DateTime>>[];
+        for (final d in list) {
+          final last = runs.isEmpty ? null : runs.last.last;
+          if (last != null && DateTime(last.year, last.month, last.day + 1) == d) {
+            runs.last.add(d);
+          } else {
+            runs.add([d]);
+          }
+        }
+        if (runs.length == 1) return TripFormat.dateRange(list.first, list.last);
+        return runs.map((r) => TripFormat.dayMonthRange(r.first, r.last)).join(', ');
+      }
+    }
     final a = e.checkIn;
     final b = e.checkOut;
     if (a == null) return '';
@@ -51,6 +74,7 @@ class TripLeadFormat {
   static String summary(TripEnquiryModel e) => [
         TripStrings.tripMapSubtitle(e.context.city),
         dates(e),
+        if (e.isTaxi && dayCount(e) > 1) TripStrings.nDays(dayCount(e)),
         people(e) ?? '',
         pickup(e),
       ].where((s) => s.isNotEmpty).join(' · ');
