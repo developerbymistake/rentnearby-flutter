@@ -66,6 +66,7 @@ class TripOfferModel {
   final int? oldTotal;
   final String? reason;
   final int? listedPerNight;
+  final int? proposedPerNight;
 
   const TripOfferModel({
     required this.id,
@@ -93,6 +94,7 @@ class TripOfferModel {
     this.oldTotal,
     this.reason,
     this.listedPerNight,
+    this.proposedPerNight,
   });
 
   bool get isCounter => kind == TripOfferKinds.counter;
@@ -105,7 +107,16 @@ class TripOfferModel {
 
   int get guests => lines.fold(0, (s, l) => s + l.guests);
 
-  int? get pricePerNight => lines.isEmpty ? null : lines.first.pricePerNight;
+  // A counter's lines are rescaled per room type; its price is the guest's per-room price.
+  int? get pricePerNight {
+    if (isCounter) {
+      final p = proposedPerNight;
+      if (p != null && p > 0) return p;
+      final units = rooms;
+      if (total > 0 && units > 0 && nights > 0) return (total / (units * nights)).round();
+    }
+    return lines.isEmpty ? null : lines.first.pricePerNight;
+  }
 
   bool get isPending => status == TripOfferStatuses.pending;
 
@@ -146,5 +157,6 @@ class TripOfferModel {
         oldTotal: (json['oldTotal'] as num?)?.toInt(),
         reason: json['reason'] as String? ?? (json['kind'] == TripOfferKinds.revised ? json['note'] as String? : null),
         listedPerNight: (json['listedPerNight'] as num?)?.toInt(),
+        proposedPerNight: (json['proposedPerNight'] as num?)?.toInt(),
       );
 }

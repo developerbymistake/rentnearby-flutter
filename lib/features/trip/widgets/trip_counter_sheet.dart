@@ -8,10 +8,12 @@ import '../../../utils/input_formatters.dart';
 import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../models/trip_enquiry_model.dart';
+import '../models/trip_offer_model.dart';
 import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
+import '../utils/trip_format.dart';
 import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
 
@@ -45,12 +47,33 @@ class _CounterBodyState extends State<_CounterBody> {
     return e.openOffer?.pricePerNight ?? e.pendingCounter?.listedPerNight;
   }
 
+  // The server prices a counter on the host's open (or latest) offer: its rooms and its dates.
+  TripOfferModel? get _basis => widget.enquiry.openOffer ?? widget.enquiry.pendingCounter;
+
   String? _totalLine() {
     final price = int.tryParse(_price.text.trim());
     if (price == null || price <= 0) return null;
-    final rooms = widget.enquiry.context.rooms ?? 1;
-    final nights = widget.enquiry.nights;
-    return TripStringsA5.roomsNightsTotal(rooms, nights, BrowseItem.inr(price * rooms * nights));
+    final basis = _basis;
+    final lines = basis?.lines.where((l) => l.units > 0 && l.pricePerNight > 0).toList() ?? const <TripOfferLine>[];
+    final nights = basis != null && basis.nights > 0 ? basis.nights : widget.enquiry.nights;
+    if (lines.isEmpty) {
+      final rooms = widget.enquiry.context.rooms ?? 1;
+      final units = rooms < 1 ? 1 : rooms;
+      return TripStringsA5.roomsNightsTotal(units, nights, BrowseItem.inr(price * units * nights));
+    }
+    final units = lines.fold<int>(0, (s, l) => s + l.units);
+    final offered = lines.fold<int>(0, (s, l) => s + l.units * l.pricePerNight);
+    final perNight = lines.fold<int>(0, (s, l) {
+      final p = (l.pricePerNight * price * units / offered).round();
+      return s + l.units * (p < 1 ? 1 : p);
+    });
+    return TripStringsA5.roomsNightsTotal(units, nights, BrowseItem.inr(perNight * nights));
+  }
+
+  String? get _basisDates {
+    final a = _basis?.checkIn;
+    final b = _basis?.checkOut;
+    return a == null || b == null ? null : TripFormat.dateRange(a, b);
   }
 
   @override
@@ -120,6 +143,11 @@ class _CounterBodyState extends State<_CounterBody> {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                   fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: TripColors.accentDark)),
+          if (_basisDates != null)
+            Text(_basisDates!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
         ],
         const SizedBox(height: 14),
         _label(TripStrings.note),

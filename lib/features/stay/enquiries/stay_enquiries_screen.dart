@@ -10,6 +10,7 @@ import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/selectable_chip.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_strings.dart';
+import '../../trip/trip_strings_h4.dart';
 import '../../trip/utils/trip_format.dart';
 import '../../trip/widgets/trip_shimmers.dart';
 import '../../trip/widgets/trip_status.dart';
@@ -34,6 +35,7 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
   final _keys = <String, GlobalKey>{};
   final _highlight = RxnString();
   String? _targetId;
+  Worker? _focusWorker;
 
   @override
   void initState() {
@@ -42,11 +44,18 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
     _scroll.addListener(_onScroll);
     final args = Get.arguments;
     _targetId = args is Map ? args['enquiryId']?.toString() : null;
+    _ctrl.focusId.value = null;
+    _focusWorker = ever<String?>(_ctrl.focusId, (id) {
+      if (id == null || !mounted) return;
+      _ctrl.focusId.value = null;
+      _flash(id);
+    });
     _init();
   }
 
   @override
   void dispose() {
+    _focusWorker?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _scroll.dispose();
     super.dispose();
@@ -66,6 +75,10 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
     }
     await _ctrl.load();
     if (id == null || !mounted) return;
+    _flash(id);
+  }
+
+  void _flash(String id) {
     _highlight.value = id;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = _keys[id]?.currentContext;
@@ -366,9 +379,9 @@ class _EnquiryCard extends StatelessWidget {
         if (t != null) lines.add('${TripStrings.total} ${BrowseItem.inr(t)}');
       default:
     }
-    final counter = e.pendingCounter;
-    if (counter != null && counter.lines.isNotEmpty) {
-      lines.add(TripStrings.proposesPrice(StayEnquiryFormat.guest(e), BrowseItem.inr(counter.lines.first.pricePerNight)));
+    final counterPrice = e.pendingCounter?.pricePerNight;
+    if (counterPrice != null) {
+      lines.add(TripStringsH4.proposesPerRoom(StayEnquiryFormat.guest(e), BrowseItem.inr(counterPrice)));
     }
     final change = e.pendingChange;
     if (change != null) {

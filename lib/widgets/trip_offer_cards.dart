@@ -4,6 +4,7 @@ import '../config/app_colors.dart';
 import '../features/trip/models/trip_enquiry_model.dart';
 import '../features/trip/trip_strings.dart';
 import '../features/trip/trip_strings_a5.dart';
+import '../features/trip/trip_strings_h4.dart';
 import '../features/trip/utils/trip_format.dart';
 import '../features/trip/widgets/trip_payment_line.dart';
 import '../features/trip/widgets/trip_status.dart';
@@ -40,7 +41,7 @@ class TripOfferCards {
     final status = _str(p, 'status') ?? _pending;
     final enquiryId = _str(p, 'enquiryId');
     final offerId = _str(p, 'offerId');
-    final price = _num(p, 'pricePerNight');
+    final price = _num(p, 'proposedPerNight') ?? _num(p, 'pricePerNight');
     final listed = _num(p, 'listedPerNight');
     final nights = _int(p, 'nights') ?? 1;
     final units = _int(p, 'units') ?? 1;
@@ -62,7 +63,7 @@ class TripOfferCards {
       icon: Icons.currency_rupee_rounded,
       title: title,
       subtitle: cb.listingTitle.isEmpty ? null : cb.listingTitle,
-      pill: _counterPill(status),
+      pill: _counterPill(status, stayConfirmed: cb.agreedTotal != null),
       children: [
         if (price != null)
           Text(TripStringsA5.priceRoomNight(BrowseItem.inr(price)),
@@ -105,8 +106,11 @@ class TripOfferCards {
     );
   }
 
-  static Widget? _counterPill(String status) => switch (status) {
-        _accepted => const TripStatusPill(TripDisplayStatus.confirmedByBoth, label: TripStrings.priceAccepted),
+  // An accepted counter only means the host sent an offer at that price; green waits for the confirmed stay.
+  static Widget? _counterPill(String status, {required bool stayConfirmed}) => switch (status) {
+        _accepted when stayConfirmed =>
+          const TripStatusPill(TripDisplayStatus.confirmedByBoth, label: TripStrings.priceAccepted),
+        _accepted => const TripStatusPill(TripDisplayStatus.offered, label: TripStringsH4.hostSentAtYourPrice),
         _superseded => const TripStatusPill(TripDisplayStatus.closed, label: TripStrings.priceReplaced),
         _expired => const TripStatusPill(TripDisplayStatus.expired, label: TripStrings.expired),
         _ => null,

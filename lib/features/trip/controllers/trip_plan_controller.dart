@@ -1251,8 +1251,10 @@ class TripPlanController extends GetxController {
       for (final d in p.days)
         if (valid.contains(d.day))
           d.copyWith(taxi: choice)
-        else if (_booking(d, replacedBy: taxi.id, days: valid))
+        else if (d.taxi?.isBooked == true && d.taxi!.taxiId == taxi.id)
           d.copyWith(clearTaxi: true)
+        else if (_overlapsBooking(d, valid))
+          d.copyWith(taxi: _withoutDays(d.taxi!, valid))
         else
           d,
     ];
@@ -1263,11 +1265,12 @@ class TripPlanController extends GetxController {
     scheduleSave();
   }
 
-  bool _booking(TripDay d, {required String replacedBy, required List<int> days}) {
-    final t = d.taxi;
-    final b = t?.booking;
-    if (t == null || b == null) return false;
-    return t.taxiId == replacedBy || b.days.any(days.contains);
+  // A replaced driver keeps his other days; only the replaced days leave his booking.
+  bool _overlapsBooking(TripDay d, List<int> days) => d.taxi?.booking?.days.any(days.contains) ?? false;
+
+  TripTaxiChoice _withoutDays(TripTaxiChoice t, List<int> days) {
+    final b = t.booking!;
+    return t.copyWith(booking: b.copyWith(days: b.days.where((x) => !days.contains(x)).toList()));
   }
 
   void clearTaxiBooking(String taxiId) {
@@ -1794,7 +1797,7 @@ class TripPlanController extends GetxController {
     }
   }
 
-  List<int> enquiryNightsRun(int day) {
+  List<int> enquiryNightsRun(int day, {String? ignoreEnquiryId}) {
     final p = plan.value;
     if (p == null || p.dayAt(day) == null) return const [];
     final run = [day];
@@ -1803,7 +1806,7 @@ class TripPlanController extends GetxController {
       if (!canEditDay(d) ||
           ownStayOf(d) != null ||
           (stay != null && stay.isSkipped) ||
-          enquiriesForNight(d).any((e) => e.isBooked)) {
+          enquiriesForNight(d).any((e) => e.isBooked && e.id != ignoreEnquiryId)) {
         break;
       }
       run.add(d);

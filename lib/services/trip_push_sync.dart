@@ -58,6 +58,7 @@ class TripPushSync {
     } else {
       await c.refreshList();
     }
+    c.focusId.value = enquiryId;
   }
 
   static void _run() {

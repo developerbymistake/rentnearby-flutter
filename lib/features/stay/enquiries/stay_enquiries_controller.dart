@@ -33,6 +33,7 @@ class StayEnquiriesController extends GetxController {
 
   final _repo = const TripEnquiryRepository();
   final bucket = StayEnquiryBucket.newOnes.obs;
+  final focusId = RxnString();
   final items = <TripEnquiryModel>[].obs;
   final counts = const TripOwnerCounts().obs;
   final newCount = 0.obs;

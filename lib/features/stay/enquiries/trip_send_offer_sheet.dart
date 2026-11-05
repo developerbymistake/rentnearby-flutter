@@ -13,6 +13,7 @@ import '../../trip/models/trip_offer_model.dart';
 import '../../trip/trip_constants.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/trip_strings_g3.dart';
+import '../../trip/trip_strings_h4.dart';
 import '../../trip/utils/trip_format.dart';
 import '../../trip/widgets/trip_payment_line.dart';
 import '../../trip/widgets/trip_sheet_frame.dart';
@@ -97,8 +98,9 @@ class _OfferBodyState extends State<_OfferBody> {
     final e = widget.enquiry;
     final today = _dateOnly(DateTime.now());
     final src = widget.revised ? (widget.changeRequest ?? e.acceptedOffer) : null;
-    _checkIn = src?.checkIn ?? e.checkIn ?? today;
-    _checkOut = src?.checkOut ?? e.checkOut ?? _checkIn.add(const Duration(days: 1));
+    final dates = src ?? widget.counter;
+    _checkIn = dates?.checkIn ?? e.checkIn ?? today;
+    _checkOut = dates?.checkOut ?? e.checkOut ?? _checkIn.add(const Duration(days: 1));
     // A change request carries only dates, people and lines; terms come from the accepted offer.
     final terms = widget.revised ? (e.acceptedOffer ?? src) : null;
     _cancel.text = terms?.cancellationText ?? widget.stay.rules?.cancellationPolicy ?? '';
@@ -298,12 +300,13 @@ class _OfferBodyState extends State<_OfferBody> {
   Widget build(BuildContext context) {
     final e = widget.enquiry;
     final revised = widget.revised;
-    final counterLine = widget.counter?.lines.firstOrNull;
+    final counter = widget.counter;
+    final counterPrice = counter?.pricePerNight;
     final guest = StayEnquiryFormat.guest(e);
     final description = revised
         ? (e.listingName.isEmpty ? null : e.listingName)
-        : counterLine != null
-            ? TripStrings.proposesPrice(guest, BrowseItem.inr(counterLine.pricePerNight))
+        : counterPrice != null
+            ? TripStringsH4.proposesPerRoom(guest, BrowseItem.inr(counterPrice))
             : StayEnquiryStrings.offerTo(guest);
     return TripSheetFrame(
       title: revised ? TripStrings.revisedOffer : TripStrings.sendOffer,
@@ -320,8 +323,8 @@ class _OfferBodyState extends State<_OfferBody> {
         TripPaymentLine(text: revised ? TripStrings.revisedFooter : TripStrings.sendOfferFooter),
       ]),
       children: [
-        if (counterLine != null) ...[
-          _counterSummary(counterLine),
+        if (counter != null && counterPrice != null) ...[
+          _counterSummary(counter, counterPrice),
           const SizedBox(height: 12),
         ],
         _twoUp(
@@ -387,19 +390,19 @@ class _OfferBodyState extends State<_OfferBody> {
     );
   }
 
-  Widget _counterSummary(TripOfferLine line) {
-    final counter = widget.counter!;
+  Widget _counterSummary(TripOfferModel counter, int price) {
     final nights = counter.nights > 0 ? counter.nights : _nights;
-    final total = counter.total > 0 ? counter.total : line.pricePerNight * line.units * nights;
+    final rooms = counter.rooms > 0 ? counter.rooms : 1;
+    final total = counter.total > 0 ? counter.total : price * rooms * nights;
     final listed = counter.listedPerNight;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(TripStringsAD.perRoomPerNight(line.pricePerNight),
+        Text(TripStringsAD.perRoomPerNight(price),
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
         const SizedBox(height: 2),
-        Text(TripStringsAD.roomsNightsTotal(line.units, nights, total),
+        Text(TripStringsAD.roomsNightsTotal(rooms, nights, total),
             style: const TextStyle(fontSize: 12, color: AppColors.textMedium)),
         if (listed != null) ...[
           const SizedBox(height: 2),

@@ -14,7 +14,6 @@ import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a3.dart';
-import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
 import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
@@ -148,12 +147,15 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
     return digits.length == 10 ? digits : '';
   }
 
-  bool get _canPickAllNights => TripEnquiryRules.nightsFor(_plan.dayCount, _day, true) > 1;
+  int get _runNights => _plan.enquiryNightsRun(_day, ignoreEnquiryId: _existing?.id).length;
+
+  bool get _canPickAllNights => _runNights > 1;
 
   int get _nights {
     final ex = _existing;
     if (ex != null && _plan.dayCount < 1) return ex.nights;
-    return TripEnquiryRules.nightsFor(_plan.dayCount, _day, _allNights);
+    final run = _runNights;
+    return _allNights && run > 1 ? run : 1;
   }
 
   DateTime? get _checkIn => _existing?.checkIn ?? _plan.dateOf(_day);
@@ -243,9 +245,10 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
     TripPhoneBookingResult? result;
     final ex = _existing;
     if (ex != null) {
-      result = await ctrl.editPhoneBooking(ex.id, {'allNights': _allNights, ...fields});
+      result = await ctrl.editPhoneBooking(ex.id, {'allNights': _allNights, 'nights': _nights, ...fields});
     } else {
-      result = await ctrl.savePhoneBooking(stayId: widget.stayId, day: _day, allNights: _allNights, fields: fields);
+      result = await ctrl.savePhoneBooking(
+          stayId: widget.stayId, day: _day, allNights: _allNights, nights: _nights, fields: fields);
       final conflict = ctrl.lastConflict;
       if (result == null && conflict != null) {
         final replace = await _confirmReplace(conflict.listingName);
@@ -258,6 +261,7 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
           stayId: widget.stayId,
           day: _day,
           allNights: _allNights,
+          nights: _nights,
           fields: fields,
           replaceEnquiryId: conflict.enquiryId,
         );

@@ -37,6 +37,7 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
   final _keys = <String, GlobalKey>{};
   final _highlight = RxnString();
   String? _targetId;
+  Worker? _focusWorker;
 
   @override
   void initState() {
@@ -46,11 +47,18 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
     final args = Get.arguments;
     _targetId = args is Map ? args['enquiryId']?.toString() : null;
     if (!_taxi.hasLoaded.value) _taxi.load();
+    _ctrl.focusId.value = null;
+    _focusWorker = ever<String?>(_ctrl.focusId, (id) {
+      if (id == null || !mounted) return;
+      _ctrl.focusId.value = null;
+      _flash(id);
+    });
     _init();
   }
 
   @override
   void dispose() {
+    _focusWorker?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _scroll.dispose();
     super.dispose();
@@ -70,6 +78,10 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
     }
     await _ctrl.load();
     if (id == null || !mounted) return;
+    _flash(id);
+  }
+
+  void _flash(String id) {
     _highlight.value = id;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = _keys[id]?.currentContext;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import '../../../utils/app_toast.dart';
@@ -200,7 +201,11 @@ class TripEnquiryController extends GetxController {
       replaceEnquiryIds: replaceEnquiryIds,
     );
     final e = await _guard(null, () => _repo.taxiBooking(tripId, body));
-    if (e != null) _applyToPlan([e]);
+    if (e == null) return null;
+    _applyToPlan([e]);
+    // The server also shrinks a replaced booking and closes other leads; only the target row comes back.
+    final touchedOthers = closeOthers || replaceEnquiryId != null || (replaceEnquiryIds?.isNotEmpty ?? false);
+    if (touchedOthers) unawaited(_plan?.refreshEnquiries());
     return e;
   }
 
@@ -276,6 +281,7 @@ class TripEnquiryController extends GetxController {
     required String stayId,
     required int day,
     required bool allNights,
+    int? nights,
     required Map<String, dynamic> fields,
     String? replaceEnquiryId,
     bool closeOthers = true,
@@ -288,6 +294,7 @@ class TripEnquiryController extends GetxController {
         'stayId': stayId,
         'day': day,
         'allNights': allNights,
+        'nights': ?nights,
         ...fields,
         'closeOthers': closeOthers,
         'replaceEnquiryId': ?replaceEnquiryId,
