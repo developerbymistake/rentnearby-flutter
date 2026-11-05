@@ -4,8 +4,8 @@ import '../../../../models/browse_item.dart';
 import '../../../../utils/contact_launcher.dart';
 import '../../../trip/trip_colors.dart';
 import '../../../trip/trip_strings_fin_b1.dart';
+import '../../../trip/trip_strings_final_aa.dart';
 import '../../taxi_option_sets.dart';
-import '../../ways/models/taxi_ways_models.dart';
 import '../../ways/taxi_ways_strings.dart';
 import '../../ways/trip_strings_a6.dart';
 import '../../ways/trip_strings_mcb_a2.dart';
@@ -68,7 +68,8 @@ class JourneyLegCard extends StatelessWidget {
     final fare = leg.listedFare;
     final previous = leg.previousFare;
     final quoted = leg.lastQuotedFare;
-    final cars = people > 0 ? WayCars.needed(people, d.seats) : 1;
+    final cars = people > 0 ? leg.carsOf(people) : 1;
+    final coverNames = leg.coverDrivers.map((c) => c.driverName).where((n) => n.isNotEmpty).toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -120,7 +121,11 @@ class JourneyLegCard extends StatelessWidget {
                   ]),
                   if (cars > 1) ...[
                     const SizedBox(height: 6),
-                    Text(TripStringsA6.seatsNote(d.seats, cars, people),
+                    Text(
+                        [
+                          leg.seatsNote ?? TripStringsA6.seatsNote(d.seats, cars, people),
+                          if (coverNames.isNotEmpty) TripStringsFinalAa.withCars(coverNames),
+                        ].join(' · '),
                         style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.warningText)),
                   ],
                   if (previous != null && fare != null && previous != fare) ...[

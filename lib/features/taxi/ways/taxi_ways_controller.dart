@@ -288,7 +288,7 @@ class TaxiWaysController extends GetxController {
   int? roadMinutesOf(WayPlan plan) {
     var total = 0;
     for (final leg in plan.legs) {
-      final m = (chosenFor(plan.planKey, leg.index) ?? leg.firstDriver)?.minutes;
+      final m = leg.driverFor(chosenFor(plan.planKey, leg.index))?.minutes;
       if (m == null || m <= 0) return null;
       total += m;
     }

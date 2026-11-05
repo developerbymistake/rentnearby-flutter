@@ -286,7 +286,7 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(
-                    TaxiWaysStrings.carsAbout(legs.length, total),
+                    TaxiWaysStrings.carsAbout(legs.fold(0, (sum, l) => sum + l.carsOf(j.people)), total),
                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textDark),
                   ),
                   const SizedBox(height: 2),

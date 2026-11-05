@@ -68,20 +68,10 @@ class _AskBodyState extends State<_AskBody> {
     return legs.length == 2 ? TaxiWaysStrings.askBoth : TaxiWaysStrings.askAll(legs.length);
   }
 
-  WayDriver? _driverFor(WayLeg leg, String taxiId) {
-    final c = widget.chosen[leg.index];
-    if (c != null && c.taxiId == taxiId) return c;
-    for (final d in leg.topDrivers) {
-      if (d.taxiId == taxiId) return d;
-    }
-    return null;
-  }
-
   int _carsPerLeg(List<WayLeg> legs) {
     var most = 1;
     for (final l in legs) {
-      final c = widget.chosen[l.index];
-      final n = c?.seats != null ? WayCars.needed(widget.request.people, c!.seats) : l.carsNeeded;
+      final n = l.carsWith(widget.chosen[l.index], widget.request.people);
       if (n > most) most = n;
     }
     return most;
@@ -128,10 +118,10 @@ class _AskBodyState extends State<_AskBody> {
           for (final l in req.legs) ...[
             _LegTile(
               leg: l,
+              way: legs.firstWhere((x) => x.index == l.legIndex),
+              pick: widget.chosen[l.legIndex],
               multi: req.legs.length > 1,
-              driver: _driverFor(legs.firstWhere((x) => x.index == l.legIndex), l.taxiIds.first),
               people: req.people,
-              carsNeeded: legs.firstWhere((x) => x.index == l.legIndex).carsNeeded,
             ),
             const SizedBox(height: 8),
           ],
@@ -176,26 +166,34 @@ class _AskBodyState extends State<_AskBody> {
 
 class _LegTile extends StatelessWidget {
   final AskLegRequest leg;
+  final WayLeg way;
+  final WayDriver? pick;
   final bool multi;
-  final WayDriver? driver;
   final int people;
-  final int carsNeeded;
 
   const _LegTile({
     required this.leg,
+    required this.way,
+    required this.pick,
     required this.multi,
-    required this.driver,
     required this.people,
-    required this.carsNeeded,
   });
 
   @override
   Widget build(BuildContext context) {
-    final backups = leg.taxiIds.length - 1;
-    final seats = driver?.seats;
-    final cars = seats != null ? WayCars.needed(people, seats) : carsNeeded;
-    final perCar = driver != null && driver!.fare > 0 ? driver!.fare : leg.listedFare;
-    final fare = perCar == null ? null : perCar * cars;
+    final driver = way.driverFor(pick);
+    final cover = way.coverOthersFor(pick);
+    final asked = cover.where(leg.taxiIds.contains).length;
+    final backups = leg.taxiIds.length - 1 - asked;
+    final cars = way.carsWith(pick, people);
+    final total = way.fareWith(pick, people);
+    final fare = total > 0 ? total : null;
+    final names = [
+      if (driver != null) driver.driverName,
+      for (final id in cover)
+        if (way.driverById(id) != null) way.driverById(id)!.driverName,
+    ].join(' + ');
+    final note = pick == null ? TripStringsA6.legSeats(way) : TripStringsA6.seatsNote(pick!.seats, cars, people);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -227,7 +225,7 @@ class _LegTile extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  driver?.driverName ?? '',
+                  names,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 12.5, color: AppColors.textMedium),
@@ -243,11 +241,11 @@ class _LegTile extends StatelessWidget {
                 ),
             ],
           ),
-          if (cars > 1)
+          if (cars > 1 && note != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                TripStringsA6.seatsNote(driver?.seats, cars, people),
+                note,
                 style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium),
               ),
             ),

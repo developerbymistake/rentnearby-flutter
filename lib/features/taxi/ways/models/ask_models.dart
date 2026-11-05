@@ -79,7 +79,7 @@ class AskDriversRequest {
         'legs': legs.map((l) => l.toJson()).toList(),
       };
 
-  /// Chosen driver first, then backups from the leg's top drivers; null when a leg has no driver.
+  /// Chosen driver (or the seat cover's cars) first, then backups from the leg's top drivers; null when a leg has no driver.
   static AskDriversRequest? fromPlan({
     required WayPlan plan,
     required Map<int, WayDriver> chosen,
@@ -93,13 +93,10 @@ class AskDriversRequest {
     final cap = AskLimits.perLegFor(plan.legs.length);
     final legs = <AskLegRequest>[];
     for (final leg in plan.legs) {
-      final pick = chosen[leg.index] ?? (leg.topDrivers.isNotEmpty ? leg.topDrivers.first : null);
+      final manual = chosen[leg.index];
+      final pick = leg.driverFor(manual);
       if (pick == null) return null;
-      final ids = <String>[pick.taxiId];
-      for (final d in leg.topDrivers) {
-        if (ids.length >= cap) break;
-        if (!ids.contains(d.taxiId)) ids.add(d.taxiId);
-      }
+      final ids = WayCover.askIds(pick.taxiId, leg.coverOthersFor(manual), leg.topDrivers.map((d) => d.taxiId), cap);
       legs.add(AskLegRequest(
         legIndex: leg.index,
         legKey: leg.legKey,

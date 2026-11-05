@@ -3,6 +3,7 @@ import 'package:iconsax/iconsax.dart';
 import '../../../../config/app_colors.dart';
 import '../../../../config/app_shadows.dart';
 import '../../../../models/browse_item.dart';
+import '../../../trip/trip_strings_final_aa.dart';
 import '../../taxi_option_sets.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
@@ -52,7 +53,9 @@ class WayPlanCardFrame extends StatelessWidget {
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
               ),
               Text(
-                TaxiWaysStrings.carsAbout(plan.cars, plan.total),
+                plan.isDirectCover
+                    ? TripStringsFinalAa.coverCarsAbout(plan.carHires, plan.total)
+                    : TaxiWaysStrings.carsAbout(plan.carHires, plan.total),
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
               ),
             ]),

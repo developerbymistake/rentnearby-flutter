@@ -9,6 +9,7 @@ import '../../taxi/models/taxi_browse_item.dart';
 import '../trip_constants.dart';
 import '../trip_strings_a2.dart';
 import '../utils/trip_geo.dart';
+import '../utils/trip_stay_base.dart';
 import '../utils/trip_stay_rank.dart';
 import '../utils/trip_taxi_fit.dart';
 import 'trip_plan_controller.dart';
@@ -100,13 +101,15 @@ class TripSupplyController extends GetxController {
   TripTaxiFit? taxiFitOf(String id) => _taxiFits[id];
 
   TripTaxiNeed _taxiNeed(int d) {
-    final spots = _plan.plan.value?.dayAt(d)?.spots ?? const [];
+    final p = _plan.plan.value;
+    final spots = p?.dayAt(d)?.spots ?? const [];
     final first = spots.isEmpty ? null : spots.first;
+    final start = p == null ? null : TripStayBase.startOf(p, d);
     return TripTaxiNeed.of(
       people: _plan.settings.peopleCount,
       km: _plan.dayKm(d),
-      lat: first?.latitude,
-      lng: first?.longitude,
+      lat: start?.lat ?? first?.latitude,
+      lng: start?.lng ?? first?.longitude,
     );
   }
 

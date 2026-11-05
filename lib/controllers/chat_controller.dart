@@ -7,6 +7,7 @@ import '../models/question_template_model.dart';
 import '../services/api_service.dart';
 import '../utils/app_toast.dart';
 import '../utils/dio_error_mapper.dart';
+import '../utils/keyset_page.dart';
 
 class ChatController extends GetxController {
   final conversations = <ConversationModel>[].obs;
@@ -16,6 +17,8 @@ class ChatController extends GetxController {
   final loadingMoreConversations = false.obs;
   final hasMoreConversations = true.obs;
   static const _conversationsPageSize = 20;
+  String? _convCursor;
+  int _convGen = 0;
 
   // Server-authoritative total unread across ALL conversations (drives the Home header badge).
   // Never derived by summing the loaded `conversations` list — that list is paginated
@@ -97,14 +100,16 @@ class ChatController extends GetxController {
   Future<void> loadConversations({bool forceRefresh = false}) async {
     if (conversationsLoading.value) return;
     conversationsLoading.value = true;
+    final gen = ++_convGen;
     try {
       final res = await ApiService.get('/chat/conversations',
           params: {'offset': 0, 'limit': _conversationsPageSize});
-      final items = (res['data']['items'] as List)
-          .map((e) => ConversationModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final page = KeysetPage.parse(res['data'], ConversationModel.fromJson);
+      if (gen != _convGen) return;
+      final items = page.items;
       conversations.value = items;
-      hasMoreConversations.value = items.length >= _conversationsPageSize;
+      _convCursor = page.nextCursor;
+      hasMoreConversations.value = page.hasMoreAfter(_conversationsPageSize);
       // Deliberately does NOT touch unreadCount — this page-1 load sees at most 20
       // conversations, and summing a partial list is exactly the under-count
       // fetchUnreadCount() exists to prevent.
@@ -129,14 +134,16 @@ class ChatController extends GetxController {
         ? _conversationsPageSize
         : conversations.length.clamp(_conversationsPageSize, 100);
     conversationsLoading.value = true;
+    final gen = ++_convGen;
     try {
       final res = await ApiService.get('/chat/conversations',
           params: {'offset': 0, 'limit': targetCount});
-      final items = (res['data']['items'] as List)
-          .map((e) => ConversationModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final page = KeysetPage.parse(res['data'], ConversationModel.fromJson);
+      if (gen != _convGen) return;
+      final items = page.items;
       conversations.value = items;
-      hasMoreConversations.value = items.length >= targetCount;
+      _convCursor = page.nextCursor;
+      hasMoreConversations.value = page.hasMoreAfter(targetCount);
       // No unreadCount recompute here either — the reconnect path that calls this also
       // calls fetchUnreadCount(), which anchors the total properly.
     } catch (_) {
@@ -145,20 +152,19 @@ class ChatController extends GetxController {
     }
   }
 
-  // Appends the next page. Offset is simply the number of conversations already loaded —
-  // safe because this list is never sparse/filtered client-side (search filters the already
-  // -loaded items in the UI layer, it doesn't remove them from this source list).
+  // Appends the page after the last loaded row (keyset cursor), so a chat that moved to the top meanwhile is never repeated.
   Future<void> loadMoreConversations() async {
     if (conversationsLoading.value || loadingMoreConversations.value || !hasMoreConversations.value) return;
     loadingMoreConversations.value = true;
+    final gen = _convGen;
     try {
       final res = await ApiService.get('/chat/conversations',
-          params: {'offset': conversations.length, 'limit': _conversationsPageSize});
-      final items = (res['data']['items'] as List)
-          .map((e) => ConversationModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-      conversations.addAll(items);
-      hasMoreConversations.value = items.length >= _conversationsPageSize;
+          params: KeysetPage.nextParams(cursor: _convCursor, loaded: conversations.length, limit: _conversationsPageSize));
+      final page = KeysetPage.parse(res['data'], ConversationModel.fromJson);
+      if (gen != _convGen) return;
+      conversations.addAll(KeysetPage.appendNew(conversations, page.items, (c) => c.id));
+      _convCursor = page.nextCursor;
+      hasMoreConversations.value = page.hasMoreAfter(_conversationsPageSize);
     } catch (_) {
     } finally {
       loadingMoreConversations.value = false;

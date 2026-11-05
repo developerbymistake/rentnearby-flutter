@@ -9,6 +9,7 @@ import '../../../widgets/empty_state_view.dart';
 import '../../trip/controllers/trip_plan_controller.dart';
 import '../../trip/models/trip_plan_model.dart';
 import '../../trip/trip_colors.dart';
+import '../../trip/trip_strings_final_aa.dart';
 import '../../trip/trip_strings_steps_a3.dart';
 import '../../trip/widgets/trip_own_travel_sheet.dart';
 import '../../trip/widgets/trip_step_skip_sheet.dart';
@@ -613,6 +614,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
       return row.basedHere ? TaxiWaysStrings.bestBasedHereReason : TaxiWaysStrings.bestDriverReason;
     }
     if (row is WayPlan && b.isPlan && b.id == row.planKey) {
+      if (row.isDirectCover) return TripStringsFinalAa.coverReason(row.carHires, row.total);
       return TaxiWaysStrings.bestPlanReason(row.legs.length - 1, row.total);
     }
     return null;
@@ -659,7 +661,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
   Widget _groupHeader(TaxiWaysResult r, int cars, int people) {
     String? sub;
     if (cars == 2 && r.allTheWay.isNotEmpty) {
-      final twoCar = r.plans.where((p) => p.cars == 2).toList();
+      final twoCar = r.plans.where((p) => p.legs.length == 2 && p.carHires == 2).toList();
       final cheapestDriver = r.allTheWay.map((d) => d.groupFare(people)).reduce((a, b) => a < b ? a : b);
       if (twoCar.isNotEmpty && twoCar.map((p) => p.total).reduce((a, b) => a < b ? a : b) < cheapestDriver) {
         final names = <String>[];

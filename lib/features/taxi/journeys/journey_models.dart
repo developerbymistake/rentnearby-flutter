@@ -1,3 +1,4 @@
+import '../ways/models/taxi_ways_models.dart';
 import '../ways/taxi_ways_strings.dart';
 import 'journey_strings.dart';
 
@@ -154,6 +155,10 @@ class SavedJourneyLeg {
   final int? previousFare;
   final String? bookingStatus;
   final int? agreedFare;
+  final List<String> coverTaxiIds;
+  final List<JourneyContact> coverDrivers;
+  final int? carsNeeded;
+  final String? seatsNote;
 
   const SavedJourneyLeg({
     required this.legIndex,
@@ -178,7 +183,20 @@ class SavedJourneyLeg {
     this.previousFare,
     this.bookingStatus,
     this.agreedFare,
+    this.coverTaxiIds = const [],
+    this.coverDrivers = const [],
+    this.carsNeeded,
+    this.seatsNote,
   });
+
+  // Cars of this stretch: the server's count, else one per covered car, else the driver's own count (JourneyLegPricing.CarsOfLeg).
+  int carsOf(int people) {
+    final n = carsNeeded;
+    if (n != null && n >= 1) return n;
+    return WayCover.carsOfLeg(people, driver.seats, coverOthers);
+  }
+
+  List<String> get coverOthers => WayCover.distinct(coverTaxiIds.where((id) => id != driver.taxiId));
 
   bool get isBooked => bookingStatus != null && bookingStatus!.isNotEmpty;
 
@@ -187,6 +205,8 @@ class SavedJourneyLeg {
   factory SavedJourneyLeg.fromJson(Map<String, dynamic> j) {
     final driver = j['driver'];
     final backups = j['backups'];
+    final cover = j['coverTaxiIds'];
+    final coverDrivers = j['coverDrivers'];
     return SavedJourneyLeg(
       legIndex: _int(j['legIndex']) ?? 1,
       legKey: _str(j['legKey']),
@@ -212,6 +232,12 @@ class SavedJourneyLeg {
       previousFare: _int(j['previousFare']),
       bookingStatus: _strN(j['bookingStatus']),
       agreedFare: _int(j['agreedFare']),
+      coverTaxiIds: cover is List ? cover.whereType<String>().toList() : const [],
+      coverDrivers: coverDrivers is List
+          ? coverDrivers.whereType<Map<String, dynamic>>().map(JourneyContact.fromJson).toList()
+          : const [],
+      carsNeeded: _int(j['carsNeeded']),
+      seatsNote: _strN(j['seatsNote']),
     );
   }
 
@@ -238,6 +264,10 @@ class SavedJourneyLeg {
         'previousFare': ?previousFare,
         'bookingStatus': ?bookingStatus,
         'agreedFare': ?agreedFare,
+        if (coverTaxiIds.isNotEmpty) 'coverTaxiIds': coverTaxiIds,
+        if (coverDrivers.isNotEmpty) 'coverDrivers': coverDrivers.map((c) => c.toJson(includeContacts: includeContacts)).toList(),
+        'carsNeeded': ?carsNeeded,
+        'seatsNote': ?seatsNote,
       };
 
   SavedJourneyLeg copyWith({
@@ -273,6 +303,10 @@ class SavedJourneyLeg {
         previousFare: clearPreviousFare ? null : (previousFare ?? this.previousFare),
         bookingStatus: bookingStatus,
         agreedFare: agreedFare,
+        coverTaxiIds: coverTaxiIds,
+        coverDrivers: coverDrivers,
+        carsNeeded: carsNeeded,
+        seatsNote: seatsNote,
       );
 
   SavedJourneyLeg withContacts(JourneyPhones phones) {
@@ -304,6 +338,10 @@ class SavedJourneyLeg {
       previousFare: previousFare,
       bookingStatus: bookingStatus,
       agreedFare: agreedFare,
+      coverTaxiIds: coverTaxiIds,
+      coverDrivers: coverDrivers.map(fill).toList(),
+      carsNeeded: carsNeeded,
+      seatsNote: seatsNote,
     );
   }
 
@@ -316,7 +354,7 @@ class SavedJourneyLeg {
     return null;
   }
 
-  Iterable<JourneyContact> get contacts => [driver, ...backups];
+  Iterable<JourneyContact> get contacts => [driver, ...coverDrivers, ...backups];
 }
 
 class SavedJourney {

@@ -64,7 +64,8 @@ class JourneyPlanLoader {
 
   static String carsChip(WayPlan p, Map<int, WayDriver> chosen, int people) {
     final total = p.totalWith(chosen, people: people);
-    return p.cars <= 1 ? TaxiWaysStrings.oneCarTotal(total) : TaxiWaysStrings.carsAbout(p.cars, total);
+    final cars = p.legs.isEmpty ? p.cars : p.legs.fold(0, (sum, l) => sum + l.carsWith(chosen[l.index], people));
+    return cars <= 1 ? TaxiWaysStrings.oneCarTotal(total) : TaxiWaysStrings.carsAbout(cars, total);
   }
 
   Future<void> changeDriver(BuildContext context, WayLeg leg) async {

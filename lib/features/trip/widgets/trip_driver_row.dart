@@ -9,6 +9,7 @@ import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a3.dart';
 import '../trip_strings_algo_aa.dart';
+import '../trip_strings_final_aa.dart';
 import '../utils/trip_taxi_fit.dart';
 import 'trip_status.dart';
 
@@ -58,7 +59,12 @@ class TripDriverRow extends StatelessWidget {
       if (t.seats != null) '${TaxiOptionSets.seatsLabel(t.seats!)} seats',
       TaxiOptionSets.plateCheckedLabel,
     ].where((e) => e.isNotEmpty).join(' · ');
-    final meta = [t.plateDisplay, t.locality].where((e) => e.isNotEmpty).join(' · ');
+    final pickup = fit?.pickupKm;
+    final meta = [
+      t.plateDisplay,
+      t.locality,
+      if (pickup != null && pickup.isFinite && pickup >= 0) TripStringsFinalAa.kmAway(pickup),
+    ].where((e) => e.isNotEmpty).join(' · ');
     final border = _booked
         ? Border.all(color: TripStatusColors.booked, width: 1.5)
         : (selected || shortlisted)

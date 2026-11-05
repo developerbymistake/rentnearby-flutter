@@ -9,11 +9,22 @@ extension SavedJourneyWays on SavedJourney {
         legs: legs.map(wayLeg).toList(),
       );
 
-  Map<int, WayDriver> chosenDrivers() => {for (final l in legs) l.legIndex: wayDriver(l, l.driver)};
+  // Saved legs are the server's priced choice: no manual pick, so asks follow the saved seat cover.
+  Map<int, WayDriver> chosenDrivers() => const {};
 
   WayLeg wayLeg(SavedJourneyLeg leg) {
     final keys = leg.legKey.split('~');
-    final drivers = [wayDriver(leg, leg.driver), ...leg.backups.where((b) => b.available).map((b) => wayDriver(leg, b))];
+    final cover = leg.coverOthers;
+    final coverDrivers = [
+      for (final id in cover)
+        for (final c in leg.coverDrivers)
+          if (c.taxiId == id) c,
+    ];
+    final drivers = [
+      wayDriver(leg, leg.driver),
+      ...coverDrivers.map((c) => wayDriver(leg, c)),
+      ...leg.backups.where((b) => b.available && !cover.contains(b.taxiId)).map((b) => wayDriver(leg, b)),
+    ];
     return WayLeg(
       legKey: leg.legKey,
       index: leg.legIndex,
@@ -24,23 +35,32 @@ extension SavedJourneyWays on SavedJourney {
       partial: leg.partial,
       topDrivers: drivers,
       driverCount: drivers.length,
-      carsNeeded: WayCars.needed(people, leg.driver.seats),
+      carsNeeded: leg.carsOf(people),
+      seatsNote: leg.seatsNote,
+      coverTaxiIds: [leg.driver.taxiId, ...cover],
     );
   }
 
-  WayDriver wayDriver(SavedJourneyLeg leg, JourneyContact c) => WayDriver(
-        taxiId: c.taxiId,
-        driverName: c.driverName,
-        vehicleTypeName: c.vehicleTypeName,
-        seats: c.seats,
-        plateDisplay: c.plateDisplay,
-        cityName: c.cityName,
-        tripReplyLabel: c.tripReplyLabel,
-        fromName: leg.fromName,
-        toName: leg.toName,
-        listedFare: leg.listedFare ?? 0,
-        partial: leg.partial,
-        phone: c.phone,
-        whatsApp: c.whatsApp,
-      );
+  // Per car of this driver: exact only for the saved driver alone (the stretch fare over his own cars); else unknown (0).
+  WayDriver wayDriver(SavedJourneyLeg leg, JourneyContact c) {
+    final stretch = leg.listedFare ?? 0;
+    final cars = leg.carsOf(people);
+    final alone = c.taxiId == leg.driver.taxiId && leg.coverOthers.isEmpty;
+    final perCar = alone && cars >= 1 && stretch % cars == 0 ? stretch ~/ cars : 0;
+    return WayDriver(
+      taxiId: c.taxiId,
+      driverName: c.driverName,
+      vehicleTypeName: c.vehicleTypeName,
+      seats: c.seats,
+      plateDisplay: c.plateDisplay,
+      cityName: c.cityName,
+      tripReplyLabel: c.tripReplyLabel,
+      fromName: leg.fromName,
+      toName: leg.toName,
+      listedFare: perCar,
+      partial: leg.partial,
+      phone: c.phone,
+      whatsApp: c.whatsApp,
+    );
+  }
 }

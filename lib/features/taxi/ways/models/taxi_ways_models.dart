@@ -253,6 +253,40 @@ class WayLeg {
     final n = driverCount > 0 ? driverCount : allDrivers.length;
     return n > 1 ? n - 1 : 0;
   }
+
+  List<String> get coverIds => WayCover.distinct(coverTaxiIds);
+
+  bool get isMultiCarCover => coverIds.length >= 2;
+
+  WayDriver? driverById(String id) {
+    for (final d in allDrivers) {
+      if (d.taxiId == id) return d;
+    }
+    return null;
+  }
+
+  // A manual pick, else the first car of the server's seat cover, else the top driver.
+  WayDriver? driverFor(WayDriver? pick) {
+    if (pick != null) return pick;
+    for (final id in coverIds) {
+      final d = driverById(id);
+      if (d != null) return d;
+    }
+    return firstDriver;
+  }
+
+  // The other cars of the cover the saved driver rides with; a manual pick carries the group alone.
+  List<String> coverOthersFor(WayDriver? pick) {
+    if (pick != null) return const [];
+    final d = driverFor(null);
+    final ids = coverIds;
+    if (d == null || !ids.contains(d.taxiId)) return const [];
+    return [for (final id in ids) if (id != d.taxiId) id];
+  }
+
+  int carsWith(WayDriver? pick, int people) => pick == null ? carsNeeded : pick.carsFor(people);
+
+  int fareWith(WayDriver? pick, int people) => pick == null ? listedFare : pick.groupFare(people);
 }
 
 class WayCars {
@@ -261,6 +295,35 @@ class WayCars {
   static int needed(int people, int? seats) {
     if (seats == null || seats < 1 || people <= seats) return 1;
     return (people + seats - 1) ~/ seats;
+  }
+}
+
+// Mirrors the server's JourneyLegPricing: the seat cover is the only source of a stretch's cars.
+class WayCover {
+  const WayCover._();
+
+  static List<String> distinct(Iterable<String> ids) {
+    final out = <String>[];
+    for (final id in ids) {
+      if (id.isNotEmpty && !out.contains(id)) out.add(id);
+    }
+    return out;
+  }
+
+  static int carsOfLeg(int people, int? driverSeats, List<String> coverOthers) =>
+      coverOthers.isNotEmpty ? 1 + coverOthers.length : WayCars.needed(people, driverSeats);
+
+  static int carsFor(String taxiId, int? seats, int people, String driverTaxiId, List<String> coverOthers) =>
+      coverOthers.isNotEmpty && (taxiId == driverTaxiId || coverOthers.contains(taxiId)) ? 1 : WayCars.needed(people, seats);
+
+  // The asked cars of a stretch: the driver and his cover cars first, then backups, at most cap.
+  static List<String> askIds(String driverTaxiId, List<String> coverOthers, Iterable<String> backups, int cap) {
+    final ids = <String>[driverTaxiId];
+    for (final id in [...coverOthers, ...backups]) {
+      if (ids.length >= cap) break;
+      if (id.isNotEmpty && !ids.contains(id)) ids.add(id);
+    }
+    return ids;
   }
 }
 
@@ -312,12 +375,17 @@ class WayPlan {
 
   int get maxCarsNeeded => legs.fold(1, (m, l) => l.carsNeeded > m ? l.carsNeeded : m);
 
+  // Cars hired over the whole way: each stretch's seat cover.
+  int get carHires => legs.isEmpty ? cars : legs.fold(0, (sum, l) => sum + l.carsNeeded);
+
+  // All the way with several drivers' cars and no change (server DirectCoverPlan).
+  bool get isDirectCover => legs.length == 1 && legs.first.isMultiCarCover;
+
   // The server's seat cover for a leg left as is; a chosen driver carries the whole group in his own cars.
   int totalWith(Map<int, WayDriver> chosen, {int people = 1}) {
     var sum = 0;
     for (final leg in legs) {
-      final d = chosen[leg.index];
-      sum += d == null ? leg.listedFare : d.groupFare(people);
+      sum += leg.fareWith(chosen[leg.index], people);
     }
     return sum;
   }
@@ -372,7 +440,7 @@ class TaxiWaysResult {
   bool get hasWays => allTheWay.isNotEmpty || plans.isNotEmpty;
 }
 
-int rowCars(Object o, int people) => o is WayDriver ? o.carsFor(people) : (o as WayPlan).cars;
+int rowCars(Object o, int people) => o is WayDriver ? o.carsFor(people) : (o as WayPlan).carHires;
 
 // The whole group's price for a row: a driver's fare x his cars, a plan's total.
 int rowPrice(Object o, int people) => o is WayDriver ? o.groupFare(people) : (o as WayPlan).total;

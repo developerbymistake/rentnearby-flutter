@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../models/notification_model.dart';
 import '../repositories/notification_repository.dart';
+import '../utils/keyset_page.dart';
 
 /// Owns the Home-screen bell's unread badge and the notification inbox list. [unreadCount] is
 /// fetched once per session at onInit() and again on app resume (see main_screen.dart) — that REST
@@ -17,6 +18,7 @@ class NotificationController extends GetxController {
   final hasMoreNotifications = false.obs;
   final loadFailed = false.obs;
   int _notificationsPage = 1;
+  String? _cursor;
   // Bumped on every loadNotifications() call — a pull-to-refresh racing an in-flight
   // loadMoreNotifications() (or vice versa) would otherwise let whichever response lands second
   // silently corrupt the list (e.g. a late page-N append landing after a fresh reset). Only the
@@ -49,7 +51,7 @@ class NotificationController extends GetxController {
       isLoadingMore.value = true;
     }
     try {
-      final result = await _repo.getNotifications(page: _notificationsPage);
+      final result = await _repo.getNotifications(cursor: reset ? null : _cursor, page: _notificationsPage);
       // A newer loadNotifications() call (refresh or load-more) superseded this one — discard
       // this response rather than letting it corrupt whatever the newer call already applied.
       if (requestId != _requestId) return;
@@ -58,8 +60,9 @@ class NotificationController extends GetxController {
         _listLoaded = true;
         loadFailed.value = false;
       } else {
-        notifications.addAll(result.items);
+        notifications.addAll(KeysetPage.appendNew(notifications, result.items, (n) => n.id));
       }
+      _cursor = result.nextCursor;
       hasMoreNotifications.value = result.hasMore;
     } catch (_) {
       if (requestId == _requestId) {
@@ -113,7 +116,7 @@ class NotificationController extends GetxController {
   /// every event regardless of [Map] `type`.
   /// unreadCount is incremented unconditionally — the badge should always reflect a genuinely
   /// new push — but the row is only prepended into [notifications] when the list is both already
-  /// loaded AND fully paginated (`!hasMoreNotifications`). This list is page-cursor-based (`_notificationsPage`), so inserting locally while further pages
+  /// loaded AND fully paginated (`!hasMoreNotifications`). This list is keyset-paged (`_cursor`), so inserting locally while further pages
   /// are still unfetched would desync the in-memory list from the next loadMoreNotifications()
   /// page fetch (a duplicate or skipped row) — safe only once every page is already in memory,
   /// same as this codebase's other server-anchored counts falling back to "next real fetch picks

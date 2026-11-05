@@ -215,9 +215,11 @@ class JourneysController extends GetxController {
     if (plan.legs.isEmpty) return null;
     final legs = <Map<String, dynamic>>[];
     for (final leg in plan.legs) {
-      final d = chosen[leg.index] ?? leg.firstDriver;
+      final manual = chosen[leg.index];
+      final d = leg.driverFor(manual);
       if (d == null) return null;
-      final backups = leg.allDrivers.where((x) => x.taxiId != d.taxiId).take(2).toList();
+      final cover = leg.coverOthersFor(manual);
+      final backups = leg.allDrivers.where((x) => x.taxiId != d.taxiId && !cover.contains(x.taxiId)).take(2).toList();
       legs.add({
         'legIndex': leg.index,
         'legKey': leg.legKey,
@@ -234,6 +236,7 @@ class JourneysController extends GetxController {
         'partial': d.partial,
         'backup1TaxiId': ?(backups.isNotEmpty ? backups[0].taxiId : null),
         'backup2TaxiId': ?(backups.length > 1 ? backups[1].taxiId : null),
+        if (cover.isNotEmpty) 'coverTaxiIds': cover,
       });
     }
     return {

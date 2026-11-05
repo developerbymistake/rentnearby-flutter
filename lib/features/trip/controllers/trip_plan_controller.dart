@@ -47,6 +47,7 @@ import '../utils/trip_day_load.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_map_rules.dart';
 import '../utils/trip_money.dart';
+import '../utils/trip_stay_base.dart';
 import '../utils/trip_step_rules.dart';
 import '../utils/trip_travel_rules.dart';
 import '../utils/trip_whatsapp_text.dart';
@@ -1871,6 +1872,7 @@ class TripPlanController extends GetxController {
         'dayLimitMinutes': p.settings.dayLimitMinutes,
         'startDate': ?p.settings.startDateIso,
         if (mode == 'auto') 'maxDays': ?(maxDays ?? p.settings.maxDays),
+        ...TripStayBase.bodyOf(p, 1),
       };
     }
     final leg = p.legAt(legIndex) ?? p.legs.first;
@@ -1893,6 +1895,7 @@ class TripPlanController extends GetxController {
       if (startDate != null) 'startDate': _isoDate(startDate),
       if (mode == 'auto') 'maxDays': maxDays ?? _legMaxDays(p, legIndex),
       if (used > 0) 'firstDayUsedMinutes': used,
+      ...TripStayBase.bodyOf(p, leg.index),
       'legIndex': legIndex,
     };
   }
@@ -3489,8 +3492,17 @@ class TripPlanController extends GetxController {
   void _applyChoice(List<TripDay> days) {
     final p = plan.value;
     if (p == null) return;
-    plan.value = p.copyWith(days: days);
+    final next = p.copyWith(days: days);
+    plan.value = next;
     scheduleSave();
+    if (_stayBaseChanged(p, next)) recalculate();
+  }
+
+  static bool _stayBaseChanged(TripPlan a, TripPlan b) {
+    for (var k = 1; k <= b.legCount; k++) {
+      if (b.legSpotCount(k) > 0 && TripStayBase.of(a, k) != TripStayBase.of(b, k)) return true;
+    }
+    return false;
   }
 
   void selectTaxi(int day, TaxiBrowseItem t) {

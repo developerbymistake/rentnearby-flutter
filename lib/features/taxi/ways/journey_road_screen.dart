@@ -73,7 +73,7 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> {
     final sub = plan == null
         ? null
         : '${TaxiWaysStrings.subtitle(plan.from.name, plan.to.name)} · '
-            '${TaxiWaysStrings.carsCount(plan.cars)}';
+            '${TaxiWaysStrings.carsCount(plan.carHires)}';
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
