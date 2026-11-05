@@ -1517,6 +1517,7 @@ class TripPlanController extends GetxController {
   void applyEnquiries(Iterable<TripEnquiryModel> items) {
     final tripId = trip.value?.id;
     var changed = false;
+    final freshLeads = <TripEnquiryModel>[];
     for (final e in items) {
       if (e.id.isEmpty || (tripId != null && e.tripId != null && e.tripId != tripId)) continue;
       final i = enquiryList.indexWhere((x) => x.id == e.id);
@@ -1524,24 +1525,56 @@ class TripPlanController extends GetxController {
         enquiryList[i] = e;
       } else {
         enquiryList.insert(0, e);
+        if (e.isTaxi) freshLeads.add(e);
       }
       changed = true;
     }
     if (!changed) return;
     final t = trip.value;
     if (t != null) trip.value = t.copyWith(enquiries: enquiryList.toList());
-    reconcilePlan();
+    reconcilePlan(freshLeads: freshLeads);
   }
 
-  void reconcilePlan() {
+  void reconcilePlan({List<TripEnquiryModel> freshLeads = const []}) {
     final p = plan.value;
     if (p == null || p.days.isEmpty) return;
     final days = [...p.days];
+    final spread = _spreadTaxiShortlist(days, freshLeads);
     final taxiChanged = _reconcileTaxis(days);
     final stayChanged = p.settings.hasDates && _reconcileStays(days);
-    if (!taxiChanged && !stayChanged) return;
+    if (!spread && !taxiChanged && !stayChanged) return;
     plan.value = p.copyWith(days: days);
     scheduleSave();
+  }
+
+  bool _spreadTaxiShortlist(List<TripDay> days, List<TripEnquiryModel> leads) {
+    if (leads.isEmpty || isReadOnly) return false;
+    var changed = false;
+    for (final e in leads) {
+      final covered = planDaysOf(e, days).toSet();
+      if (covered.length < 2) continue;
+      TripTaxiShortlistItem? item;
+      for (final d in days) {
+        if (!covered.contains(d.day)) continue;
+        for (final s in d.taxiShortlist) {
+          if (s.taxiId == e.listingId) {
+            item = s;
+            break;
+          }
+        }
+        if (item != null) break;
+      }
+      if (item == null) continue;
+      for (var i = 0; i < days.length; i++) {
+        final d = days[i];
+        if (!covered.contains(d.day) || isDayPast(d.day)) continue;
+        if (d.taxiShortlist.any((s) => s.taxiId == e.listingId)) continue;
+        if (d.taxiShortlist.length >= TripConstants.maxShortlist) continue;
+        days[i] = d.copyWith(taxiShortlist: [...d.taxiShortlist, item]);
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   bool _reconcileTaxis(List<TripDay> days) {

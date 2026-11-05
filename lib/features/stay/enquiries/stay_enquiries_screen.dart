@@ -507,6 +507,7 @@ class _EnquiryCard extends StatelessWidget {
   void _openChat(TripEnquiryModel e) {
     Get.toNamed(AppRoutes.chatConversation, arguments: {
       'conversationId': e.conversationId,
+      'enquiryId': e.id,
       'listingType': 'Stay',
       'roomTypeId': null,
       'plotTypeId': null,

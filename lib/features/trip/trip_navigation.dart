@@ -57,6 +57,7 @@ class TripNavigation {
     if (id == null || id.isEmpty) return null;
     return Get.toNamed(AppRoutes.chatConversation, arguments: {
       'conversationId': id,
+      'enquiryId': e.id,
       'listingType': 'Stay',
       'listingId': e.listingId,
       'roomTypeId': null,

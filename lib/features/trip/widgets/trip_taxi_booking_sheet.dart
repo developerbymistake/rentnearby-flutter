@@ -91,8 +91,10 @@ class _BookingBodyState extends State<_BookingBody> {
     final ahead = plan.days.map((d) => d.day).where((d) => !_plan.isDayPast(d)).toSet();
     final enqDays = enq == null ? const <int>[] : _plan.planDaysOf(enq);
     final base = enqDays.isNotEmpty ? enqDays.toSet() : existing?.days.toSet();
-    _days = base == null ? ahead : base.where(ahead.contains).toSet();
-    if (_days.isEmpty) _days.addAll(ahead);
+    _days = base == null ? <int>{} : base.where(ahead.contains).toSet();
+    if (_days.isEmpty && ahead.isNotEmpty) {
+      _days.add(ahead.contains(widget.day) ? widget.day : (ahead.toList()..sort()).first);
+    }
     final row = enq != null && enq.isBooked ? enq : _bookedRow();
     _pastDays = row == null ? <int>{} : _plan.planDaysOf(row).where(_plan.isDayPast).toSet();
     _time = _parseTime(server?.pickupTime ?? existing?.pickupTime ?? _plan.settings.pickupTime) ??

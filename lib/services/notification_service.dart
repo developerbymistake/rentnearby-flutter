@@ -20,6 +20,7 @@ import '../controllers/tab_config_controller.dart';
 import '../features/stay/stay_status_sync.dart';
 import '../features/taxi/taxi_status_sync.dart';
 import '../features/trip/controllers/trip_plan_controller.dart';
+import '../features/trip/models/trip_enquiry_model.dart';
 import '../models/conversation_model.dart';
 import '../models/notification_model.dart';
 import '../services/api_service.dart';
@@ -586,7 +587,9 @@ class NotificationService extends GetxService {
     if (Get.currentRoute != route || !_refreshInPlaceRoutes.contains(route)) return false;
     final current = Get.arguments;
     final open = current is Map ? current : const <String, dynamic>{};
+    final taxiReplies = route == AppRoutes.tripTaxiReplies;
     for (final key in const ['tripId', 'day', 'journeyId']) {
+      if (taxiReplies && key == 'day') continue;
       final want = args?[key];
       if (want == null) continue;
       var have = open[key];
@@ -596,7 +599,35 @@ class NotificationService extends GetxService {
       }
       if (have?.toString() != want.toString()) return false;
     }
-    return true;
+    return !taxiReplies || _leadCoversOpenDay(args, open['day']);
+  }
+
+  bool _leadCoversOpenDay(Map<String, dynamic>? args, Object? openDay) {
+    final want = args?['day'];
+    final day = openDay is int ? openDay : int.tryParse(openDay?.toString() ?? '');
+    if (day == null || !Get.isRegistered<TripPlanController>()) {
+      return want == null || want.toString() == openDay?.toString();
+    }
+    final plan = Get.find<TripPlanController>();
+    final date = plan.dateOf(day);
+    final id = args?['enquiryId']?.toString();
+    TripEnquiryModel? lead;
+    if (id != null) {
+      for (final e in plan.enquiryList) {
+        if (e.id == id) {
+          lead = e;
+          break;
+        }
+      }
+    }
+    if (lead != null) {
+      return date != null && lead.checkIn != null ? lead.coversTaxiDate(date) : lead.days.contains(day);
+    }
+    final pushed = DateTime.tryParse(args?['date']?.toString() ?? '');
+    if (pushed != null && date != null) {
+      return pushed.year == date.year && pushed.month == date.month && pushed.day == date.day;
+    }
+    return want == null || want.toString() == '$day';
   }
 
   // Shared route-state juggling for both trigger sources — FCM's own tap tracking
