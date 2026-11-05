@@ -6,12 +6,6 @@ import '../screens/onboarding_screen.dart';
 import '../screens/app_intro_screen.dart';
 import '../screens/phone_verify_screen.dart';
 import '../screens/main_screen.dart';
-import '../screens/listing_detail_screen.dart';
-import '../screens/add_listing_screen.dart';
-import '../screens/add_plot_screen.dart';
-import '../screens/my_listings_screen.dart';
-import '../screens/my_plots_screen.dart';
-import '../screens/plot_detail_screen.dart';
 import '../screens/chat_conversation_screen.dart';
 import '../screens/chats_list_screen.dart';
 import '../screens/listing_reports_screen.dart';
@@ -37,12 +31,6 @@ class AppRoutes {
   // keep /otp as alias for phone-verify (backward compat for any deep links)
   static const String otp = '/otp';
   static const String main = '/main';
-  static const String listingDetail = '/listing-detail';
-  static const String plotDetail = '/plot-detail';
-  static const String addListing = '/add-listing';
-  static const String addPlot = '/add-plot';
-  static const String myListings = '/my-listings';
-  static const String myPlots = '/my-plots';
   static const String chatConversation = '/chat-conversation';
   static const String chatsList = '/chats-list';
   static const String listingReports = '/listing-reports';
@@ -96,18 +84,10 @@ class AppRoutes {
   static const String stayAdvanceDetails = '/stay-advance-details';
 
   static const Set<String> ownerOnly = {plansBilling, planHistory};
-  static const Set<String> roomOwnerOnly = {myListings, addListing};
-  static const Set<String> plotOwnerOnly = {myPlots, addPlot};
   static const Set<String> stayOwnerOnly = {staySetup, stayBasicDetails, stayRooms, stayRules, staySubmit, myStays, myJobs, postJob, stayEnquiries, stayAdvanceDetails};
   static const Set<String> taxiDriverOnly = {taxiSetup, taxiVehicle, taxiRoutes, taxiSubmit, myTaxi, tripLeads};
 
   static const Map<String, String> _routeTabKeys = {
-    listingDetail: AppTabKeys.rooms,
-    myListings: AppTabKeys.rooms,
-    addListing: AppTabKeys.rooms,
-    plotDetail: AppTabKeys.plots,
-    myPlots: AppTabKeys.plots,
-    addPlot: AppTabKeys.plots,
     staySetup: AppTabKeys.stays,
     stayBasicDetails: AppTabKeys.stays,
     stayRooms: AppTabKeys.stays,
@@ -134,6 +114,10 @@ class AppRoutes {
   };
 
   static String? tabKeyForRoute(String route) => _routeTabKeys[route];
+
+  static final Set<String> _registeredNames = {for (final p in routes) p.name};
+
+  static bool isRegistered(String name) => _registeredNames.contains(name);
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashScreen()),
@@ -172,42 +156,6 @@ class AppRoutes {
       page: () => const MainScreen(),
       transition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 400),
-    ),
-    GetPage(
-      name: listingDetail,
-      page: () => const ListingDetailScreen(),
-      transition: Transition.downToUp,
-      transitionDuration: const Duration(milliseconds: 350),
-    ),
-    GetPage(
-      name: plotDetail,
-      page: () => const PlotDetailScreen(),
-      transition: Transition.downToUp,
-      transitionDuration: const Duration(milliseconds: 350),
-    ),
-    GetPage(
-      name: addListing,
-      page: () => const AddListingScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
-    GetPage(
-      name: addPlot,
-      page: () => const AddPlotScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
-    GetPage(
-      name: myListings,
-      page: () => const MyListingsScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
-    ),
-    GetPage(
-      name: myPlots,
-      page: () => const MyPlotsScreen(),
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
       name: plansBilling,

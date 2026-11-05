@@ -17,9 +17,7 @@ class AnswerOption {
 class QuestionTemplateModel {
   final String id;
   final String key;
-  final String listingType; // "Room" | "Plot" | "Stay" | "Both" (Both = Room and Plot)
-  final String? roomTypeId; // further scoping within "Room" — null means all room types
-  final String? plotTypeId; // further scoping within "Plot" — null means all plot types
+  final String listingType; // "Stay"
   final String? stayTypeId;
   final String questionText;
   final List<AnswerOption> answerOptions;
@@ -30,8 +28,6 @@ class QuestionTemplateModel {
     required this.id,
     required this.key,
     required this.listingType,
-    this.roomTypeId,
-    this.plotTypeId,
     this.stayTypeId,
     required this.questionText,
     required this.answerOptions,
@@ -39,12 +35,8 @@ class QuestionTemplateModel {
     required this.isActive,
   });
 
-  bool appliesTo(String targetListingType,
-      {String? targetRoomTypeId, String? targetPlotTypeId, String? targetStayTypeId}) {
-    if (listingType == 'Both') return targetListingType == 'Room' || targetListingType == 'Plot';
+  bool appliesTo(String targetListingType, {String? targetStayTypeId}) {
     if (listingType != targetListingType) return false;
-    if (listingType == 'Room' && roomTypeId != null) return roomTypeId == targetRoomTypeId;
-    if (listingType == 'Plot' && plotTypeId != null) return plotTypeId == targetPlotTypeId;
     if (listingType == 'Stay' && stayTypeId != null) return stayTypeId == targetStayTypeId;
     return true;
   }
@@ -61,9 +53,7 @@ class QuestionTemplateModel {
     return QuestionTemplateModel(
       id: json['id'] as String,
       key: json['key'] as String,
-      listingType: json['listingType'] as String? ?? 'Both',
-      roomTypeId: json['roomTypeId'] as String?,
-      plotTypeId: json['plotTypeId'] as String?,
+      listingType: json['listingType'] as String? ?? 'Stay',
       stayTypeId: json['stayTypeId'] as String?,
       questionText: json['questionText'] as String? ?? '',
       answerOptions: options,

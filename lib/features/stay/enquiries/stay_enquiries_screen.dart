@@ -526,8 +526,6 @@ class _EnquiryCard extends StatelessWidget {
       'conversationId': e.conversationId,
       'enquiryId': e.id,
       'listingType': 'Stay',
-      'roomTypeId': null,
-      'plotTypeId': null,
       'stayTypeId': ctrl.stay.value?.stayTypeId,
       'otherPartyId': e.traveller.id ?? '',
       'otherPartyName': StayEnquiryFormat.guest(e),

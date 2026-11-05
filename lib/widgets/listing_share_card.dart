@@ -6,10 +6,10 @@ import '../config/app_colors.dart';
 import '../config/module_palette.dart';
 
 /// Which listing type the card is branded for — drives gradient, ribbon text, and tagline.
-enum ShareCardType { room, plot, stay, taxi }
+enum ShareCardType { stay, taxi }
 
 /// The image captured and shared by [shareListing] (`lib/services/listing_share_service.dart`)
-/// — a Room/Plot equivalent of `rentnearby_Admin`'s `AppShareScreen._buildPosterCard`, but
+/// — a per-listing equivalent of `rentnearby_Admin`'s `AppShareScreen._buildPosterCard`, but
 /// parameterized by real listing data instead of static app-download copy, and carrying a
 /// per-listing QR (the `/go/{type}/{slug}` smart link) instead of the one fixed `/app` link.
 ///
@@ -26,7 +26,6 @@ class ListingShareCard extends StatelessWidget {
   final String locality;
   final String qrData;
   final ShareCardType type;
-  final String? furnishedStatus;
 
   const ListingShareCard({
     super.key,
@@ -35,32 +34,21 @@ class ListingShareCard extends StatelessWidget {
     required this.typeLabel,
     required this.locality,
     required this.qrData,
-    this.type = ShareCardType.room,
-    this.furnishedStatus,
+    this.type = ShareCardType.stay,
   });
 
-  bool get _isPlot => type == ShareCardType.plot;
-  bool get _isStay => type == ShareCardType.stay;
   bool get _isTaxi => type == ShareCardType.taxi;
   ModulePalette get _palette => switch (type) {
-        ShareCardType.room => ModulePalette.rooms,
-        ShareCardType.plot => ModulePalette.plots,
         ShareCardType.stay => ModulePalette.stays,
         ShareCardType.taxi => ModulePalette.taxi,
       };
   LinearGradient get _gradient => _palette.gradient;
   Color get _typeColor => _palette.accent;
-  String get _tagline => _isTaxi
-      ? 'Find local taxis near you.'
-      : _isStay
-          ? 'Find stays near you.'
-          : (_isPlot ? 'Find plots for sale near you.' : 'Find rooms for rent near you.');
-  String get _ribbonText => _isTaxi ? 'TAXI' : _isStay ? 'FOR STAY' : (_isPlot ? 'FOR SALE' : 'FOR RENT');
+  String get _tagline => _isTaxi ? 'Find local taxis near you.' : 'Find stays near you.';
+  String get _ribbonText => _isTaxi ? 'TAXI' : 'FOR STAY';
 
   @override
   Widget build(BuildContext context) {
-    final showFurnished = !_isPlot && furnishedStatus != null && furnishedStatus != 'None';
-
     return Container(
       width: 320,
       decoration: BoxDecoration(
@@ -126,9 +114,7 @@ class ListingShareCard extends StatelessWidget {
                             decoration: BoxDecoration(gradient: _gradient),
                             child: Center(
                               child: Icon(
-                                _isTaxi
-                                    ? Icons.local_taxi_rounded
-                                    : (_isPlot ? Icons.landscape_rounded : Icons.home_rounded),
+                                _isTaxi ? Icons.local_taxi_rounded : Icons.home_rounded,
                                 size: 48,
                                 color: Colors.white38,
                               ),
@@ -207,10 +193,6 @@ class ListingShareCard extends StatelessWidget {
                         style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
                       ),
                     ),
-                    if (showFurnished) ...[
-                      const SizedBox(width: 8),
-                      const _FurnishedBadge(),
-                    ],
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -263,29 +245,6 @@ class ListingShareCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Room-only "Furnished" badge — a standalone element (own background pill, own layout slot)
-/// pinned to the far right of the locality row, never string-concatenated into the locality
-/// text, so a long address truncates independently instead of pushing this off-card. Color
-/// matches the real furnished-pill purple already used on `listing_detail_screen.dart`.
-class _FurnishedBadge extends StatelessWidget {
-  const _FurnishedBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: AppColors.furnished.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Text(
-        'Furnished',
-        style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.furnished),
       ),
     );
   }

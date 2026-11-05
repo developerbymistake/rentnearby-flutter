@@ -2,15 +2,11 @@ import '../controllers/tab_config_controller.dart' show AppTabKeys;
 
 class UserRoleKeys {
   static const String seeker = 'SEEKER';
-  static const String rentOwner = 'RENT_OWNER';
-  static const String propertyOwner = 'PROPERTY_OWNER';
   static const String stayOwner = 'STAY_OWNER';
   static const String taxiDriver = 'TAXI_DRIVER';
   static const String claim = 'role';
 
   static String? tabKeyOf(String? roleKey) => switch (roleKey) {
-        rentOwner => AppTabKeys.rooms,
-        propertyOwner => AppTabKeys.plots,
         stayOwner => AppTabKeys.stays,
         taxiDriver => AppTabKeys.taxi,
         _ => null,
@@ -18,41 +14,31 @@ class UserRoleKeys {
 }
 
 class RoleCapabilities {
-  final bool canListRooms;
-  final bool canListPlots;
   final bool canListStays;
   final bool canListTaxis;
 
   const RoleCapabilities({
-    required this.canListRooms,
-    required this.canListPlots,
     this.canListStays = false,
     this.canListTaxis = false,
   });
 
-  static const none = RoleCapabilities(canListRooms: false, canListPlots: false);
+  static const none = RoleCapabilities();
 
   static const Map<String, RoleCapabilities> byRole = {
     UserRoleKeys.seeker: none,
-    UserRoleKeys.rentOwner: RoleCapabilities(canListRooms: true, canListPlots: false),
-    UserRoleKeys.propertyOwner: RoleCapabilities(canListRooms: false, canListPlots: true),
-    UserRoleKeys.stayOwner: RoleCapabilities(canListRooms: false, canListPlots: false, canListStays: true),
-    UserRoleKeys.taxiDriver: RoleCapabilities(canListRooms: false, canListPlots: false, canListTaxis: true),
+    UserRoleKeys.stayOwner: RoleCapabilities(canListStays: true),
+    UserRoleKeys.taxiDriver: RoleCapabilities(canListTaxis: true),
   };
 
   static RoleCapabilities of(String? roleKey) => byRole[roleKey] ?? none;
 
-  bool get isOwner => canListRooms || canListPlots || canListStays || canListTaxis;
+  bool get isOwner => canListStays || canListTaxis;
 
-  String? get deletionLine => canListRooms
-      ? 'Your rooms will be deleted.'
-      : canListPlots
-          ? 'Your plots will be deleted.'
-          : canListStays
-              ? 'Your stay and jobs will be deleted.'
-              : canListTaxis
-                  ? 'Your taxi will be deleted.'
-                  : null;
+  String? get deletionLine => canListStays
+      ? 'Your stay and jobs will be deleted.'
+      : canListTaxis
+          ? 'Your taxi will be deleted.'
+          : null;
 }
 
 class RoleRequestErrorTypes {

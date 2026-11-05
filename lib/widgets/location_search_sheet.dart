@@ -12,8 +12,8 @@ import '../utils/input_formatters.dart';
 /// Deliberately standalone — no LocationController, no Get.find, no shared
 /// state of any kind. Pure input (a query) -> output (a picked [PlaceResult]
 /// popped back to the caller). This isolation is what makes it safe to reuse
-/// identically from both Explore Rooms and Explore Plots without coupling
-/// either screen's location state to the other.
+/// identically from Stay, Taxi and Trip screens without coupling
+/// any screen's location state to another.
 class LocationSearchSheet extends StatefulWidget {
   final LatLng? bias;
   final ModulePalette palette;

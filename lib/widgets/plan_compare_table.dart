@@ -5,14 +5,12 @@ class PlanAccent {
   const PlanAccent._();
 
   static Color of(String? featureKey) => switch (featureKey) {
-        'Plot' => AppColors.plot,
         'Stay' => AppColors.stay,
         'Taxi' => AppColors.taxi,
         _ => AppColors.primary,
       };
 
   static LinearGradient gradientOf(String? featureKey) => switch (featureKey) {
-        'Plot' => AppColors.plotGradient,
         'Stay' => AppColors.stayGradient,
         'Taxi' => AppColors.taxiGradient,
         _ => AppColors.primaryGradient,

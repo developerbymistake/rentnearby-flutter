@@ -129,7 +129,7 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
             title: const Text('Location Access Required',
                 style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, fontSize: 16)),
             content: const Text(
-                'Bakhli is a location-based app that helps you discover rental rooms and plots near you. '
+                'Bakhli is a location-based app that helps you discover stays, taxis and trips near you. '
                 'Location access is essential for the app to function. '
                 'Please enable it to continue.',
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 13, height: 1.5)),

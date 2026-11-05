@@ -101,8 +101,6 @@ class TripNavigation {
       'enquiryId': e.id,
       'listingType': 'Stay',
       'listingId': e.listingId,
-      'roomTypeId': null,
-      'plotTypeId': null,
       'stayTypeId': null,
       'otherPartyId': e.owner.id ?? '',
       'otherPartyName': e.owner.name ?? e.listingName,

@@ -19,32 +19,24 @@ class RoleVisuals {
   static const LinearGradient taxiGradient = AppColors.taxiGradient;
 
   static IconData icon(String key) => switch (key) {
-        UserRoleKeys.rentOwner => Iconsax.home_2,
-        UserRoleKeys.propertyOwner => Icons.landscape_rounded,
         UserRoleKeys.stayOwner => Iconsax.building_4,
         UserRoleKeys.taxiDriver => Iconsax.car,
         _ => Iconsax.search_normal,
       };
 
   static LinearGradient gradient(String key) => switch (key) {
-        UserRoleKeys.rentOwner => AppColors.primaryGradient,
-        UserRoleKeys.propertyOwner => AppColors.plotGradient,
         UserRoleKeys.stayOwner => stayGradient,
         UserRoleKeys.taxiDriver => taxiGradient,
         _ => seekerGradient,
       };
 
   static Color accent(String key) => switch (key) {
-        UserRoleKeys.rentOwner => AppColors.primary,
-        UserRoleKeys.propertyOwner => AppColors.plot,
         UserRoleKeys.stayOwner => AppColors.stay,
         UserRoleKeys.taxiDriver => AppColors.taxi,
         _ => AppColors.accent,
       };
 
   static String displayName(String key) => switch (key) {
-        UserRoleKeys.rentOwner => 'Rent Owner',
-        UserRoleKeys.propertyOwner => 'Property Owner',
         UserRoleKeys.stayOwner => 'Stay Owner',
         UserRoleKeys.taxiDriver => 'Taxi Driver',
         _ => 'Seeker',

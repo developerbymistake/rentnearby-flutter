@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Flutter app for the "Bakhli" rental/plot marketplace (north-India launch states: Uttarakhand, Himachal Pradesh; the Flutter project name
+Flutter app for the "Bakhli" travel planner (north-India launch states: Uttarakhand, Himachal Pradesh; the Flutter project name
 `bakhli` and internal branding are current — the repo directory name, Android `applicationId`
 (`com.rentnearby.rentnearby`), and iOS bundle id are legacy `rentnearby` naming that was never
-renamed). No brokers/commission — lists rental rooms and plots, in-app chat between owner/seeker,
+renamed). Plan trips, find stays and taxis, stay jobs, in-app chat between guest and host,
 and owner plans (free by default, paid via Google Play subscriptions).
 
 ## Commands
@@ -57,35 +57,21 @@ explicitly:
 
 **Navigation**: `GetMaterialApp` + named routes declared in `lib/config/app_routes.dart`
 (`AppRoutes.routes`, a flat `List<GetPage>` with per-route transitions). The bottom-nav tabs
-(`lib/config/app_tabs.dart`: `home(0) / rooms(1) / plots(2) / stays(3) / jobs(4) / taxi(5) / profile(6)`, `count = 7`; Chat is not a
+(`lib/config/app_tabs.dart`: `home(0) / stays(1) / jobs(2) / taxi(3) / profile(4)`, `count = 5`; Chat is not a
 bottom-nav tab, reached instead via a header icon on Home) are NOT part of this
 route table: `MainScreen` renders them as an `IndexedStack` of `TabNavigator` widgets
 (`lib/navigation/tab_router.dart`), each wrapping its tab root screen in its own nested `Navigator`
 keyed via `lib/navigation/tab_keys.dart`. This isolates keyboard/layout/MediaQuery changes per tab.
 The root sits in an `Obx` and is a `SizedBox.shrink()` while `TabConfigController.isActiveForIndex` is false, so an
 admin-disabled tab is never built and makes no API call.
-The bottom-nav **row order** is Home, Rooms, Plots, Stays, Taxi, Jobs, Profile (`_buildBottomNav` in `main_screen.dart`); it differs from the index order and only the row was reordered, indexes, deep links and tab-off logic read indexes.
-Deep/detail screens (listing detail, add listing, payment, chat conversation, etc.) still go through
-the global `Get.toNamed` navigator on top of everything, unaffected by which tab is active. "My
-Rooms"/"My Plots" are pushed named routes, not tabs (reached via a tile on the Rooms/Plots landing).
+The bottom-nav **row order** is Home, Stays, Taxi, Jobs, Profile (`_buildBottomNav` in `main_screen.dart`); it differs from the index order and only the row was reordered, indexes, deep links and tab-off logic read indexes. `_screens` must list the TabNavigators in index order [home, stays, jobs, taxi, profile].
+Deep/detail screens (payment, chat conversation, etc.) still go through
+the global `Get.toNamed` navigator on top of everything, unaffected by which tab is active.
 
-**Rooms/Plots/Home tab roots**: the Rooms and Plots tab roots are `ExploreLandingScreen(kind: ExploreKind)`
-(`lib/screens/explore_landing_screen.dart`), a list-first landing: gradient header with `LocationPill` + a
-search bar (opens `LocationSearchSheet` via `ExploreLocationSearchMixin`), a row of three tiles (Add / My / Map
-view) shown only to the role that lists that kind (Rent Owner on Rooms, Property Owner on Plots; hidden for everyone
-else, there is no Nearest tile), type chips, Filter & Sort (`FilterSortSheet`) and a 2-column infinite-scroll grid of `ListingGridCard`.
-Each kind has one persistent `ExploreLandingController` (`Get.put` with `tag: kind.name` by the screen, deleted in
-its `dispose`): keyset pagination via `nextCursor` from `GET /home/{rooms|plots}/browse` (page-based for price/area
-sorts), page size 20, first page kept in memory and refetched only when older than ~2 min, on
-`listingPostedTrigger`/`plotPostedTrigger`/`listingStatusChangedTrigger`, on a real district/city change, or on
-pull-to-refresh — never on `exploreRefreshTrigger` (bumped on every nav tap). It loads lazily, only once its tab is
-active. The map (`ExploreScreen`/`ExplorePlotsScreen`) is a second view pushed on that tab's nested navigator via
-`ExploreNavigation.openMap`. There is no View All screen or route any more: Home's "View all" calls
-`switchToTab(rooms|plots)`. Home has no Rooms|Plots toggle; its banner is an auto-sliding room/plot carousel (`home_owner_carousel.dart`) whose
-slides and copy follow the role (see "Roles").
+**Home tab root**: Rooms and Plots were removed on 2026-11-06 (no Rooms/Plots tabs, explore screens, listing screens or Go Live). Home shows the Trip card, the Stays and Taxis rails and recently added stays; its banner is an auto-sliding Stay/Taxi owner carousel (`home_owner_carousel.dart`) whose slides and copy follow the role (see "Roles").
 
 Because `IndexedStack` never disposes inactive tabs, a `showModalBottomSheet` opened from a tab-root
-screen's own `context` (e.g. `LocationSwitchSheet`, `LocationSearchSheet`, the listing/plot detail
+screen's own `context` (e.g. `LocationSwitchSheet`, `LocationSearchSheet`, the stay/taxi detail
 sheets) resolves to that tab's *local* Navigator and stays pushed on its stack in the background if
 the user switches tabs without dismissing it — reappearing exactly as left when they switch back
 (`showDialog` is unaffected; it defaults to the root navigator). `MainScreen` guards against this with
@@ -134,31 +120,22 @@ the user's manually browsed district is *never* persisted, only the reference li
 live GPS (`userLocation`), the user's real GPS-resolved district/city (`selectedDistrict`/
 `autoCity`), a *temporary* manually-browsed district/city (`browsingDistrict`/`browsingCity`, never
 persisted, reset on cold start and after a real (>2 min) background resume), and a precise map-search pin override shared between
-the Rooms and Plots explore screens. `effectiveDistrict`/`effectiveCity`/`effectiveSearchCenter` are
+the Stay and Taxi screens. `effectiveDistrict`/`effectiveCity`/`effectiveSearchCenter` are
 the derived getters screens should read rather than picking through the raw fields. `MainScreen`
 gates the whole app behind full-screen states driven by this controller: offline, GPS-disabled, and
 "district not supported yet" — see `_buildOfflineGate`/`_buildGpsGate`/`_buildDistrictGate`. This gate
 wraps the whole app above the `IndexedStack`, regardless of tab count/order.
-Business onboarding (Stay/Taxi only): `DistrictModel.businessOnboardingEnabled` (null = unknown) comes from the context call; `stay_basic_details_screen.dart`/`taxi_vehicle_screen.dart` opt in via `initLocationTracking(onOnboardingClosed:, onboardingGrandfathered:)` and show `OnboardingClosedDialog` (`lib/widgets/onboarding_closed_dialog.dart`, title "Not open here yet", with a Change role action when the one-time correction is available) at the pin step on `false` (skipped for the saved pin of an `everApproved` row in the same district) and on a server 400 `OnboardingClosed` at basic save/Submit; Rooms/Plots pass neither. Spec `F:\Dhasu\District_resume\ONBOARDING_CONTRACT.md`.
+Business onboarding (Stay/Taxi only): `DistrictModel.businessOnboardingEnabled` (null = unknown) comes from the context call; `stay_basic_details_screen.dart`/`taxi_vehicle_screen.dart` opt in via `initLocationTracking(onOnboardingClosed:, onboardingGrandfathered:)` and show `OnboardingClosedDialog` (`lib/widgets/onboarding_closed_dialog.dart`, title "Not open here yet", with a Change role action when the one-time correction is available) at the pin step on `false` (skipped for the saved pin of an `everApproved` row in the same district) and on a server 400 `OnboardingClosed` at basic save/Submit. Spec `F:\Dhasu\District_resume\ONBOARDING_CONTRACT.md`.
 
-**Pin/radius mechanics** (client-side only — the backend does not currently re-validate either of these,
-see the Backend repo's CLAUDE.md "Known gap" note): new-listing pin placement is capped to 500m from the
-user's live GPS fix, enforced in `add_listing_screen.dart`/`add_plot_screen.dart` against a client-computed
-distance. Explore radius is a fixed 3-value chip selector, `AppConstants.radiusOptions = [1.0, 6.0, 12.0]`
-(km) — not a slider — used identically by `explore_screen.dart`/`explore_plots_screen.dart`.
-
-**Room fields (AC / Non-AC, Security Deposit, Floor)**: `AcStatus` and `FloorLevel` live in `lib/config/app_constants.dart`
-(Floor 0 = Ground, 3 = "3+"). `add_listing_screen.dart` Details step order is Room Type, AC / Non-AC `*`, Furnished `*`, Monthly Rent `*`,
-Security Deposit `*` (0 allowed), Floor (optional, tap again to clear), Description. `isAc` is parsed null-tolerantly into
-`ListingModel`, `HomeRoomModel`, `NearbyListingModel` and `BrowseItem.room`; it shows next to Furnished on `ListingGridCard` (cyan/slate
-`CardFact` chip), in the Explore nearby row subtitle and as a chip in `listing_bottom_sheet.dart`, and null (old listings) shows
-nothing. Security Deposit (`BrowseItem.depositLabel`, "None" for 0) and Floor appear only on `listing_detail_screen.dart`. Spec:
-`F:\Dhasu\ROOM_FIELDS_FEATURE.md`.
+**Pin/radius mechanics** (client-side only; shared by Stay/Taxi/Jobs setup): pin placement is capped to 500m from the
+user's live GPS fix (`add_listing_location_mixin.dart`, kept as the shared pin mixin) against a client-computed
+distance. Radius is a fixed 3-value chip selector, `AppConstants.radiusOptions = [1.0, 6.0, 12.0]`
+(km), not a slider. `explore_location_search_mixin.dart` and `LocationSearchSheet` are shared by Stay, Taxi and Jobs search.
 
 **Maps**: `maplibre_gl` (not Google Maps) using a custom style at `assets/map_style.json`. Map-related
 tuning constants (clustering radius, max markers, last-resort fallback centre) live in
 `AppConstants`. `lib/config/app_map_state.dart` exposes a single global `mapShouldPause` `RxBool` that
-full-screen map routes (add listing/plot) flip so the explore screens can swap their live map for a
+full-screen map routes (stay/taxi setup, trip map) flip so the list screens can swap their live map for a
 shimmer placeholder instead of running two maps at once; `MapPauseObserver`
 (`lib/services/map_pause_observer.dart`) is registered as a `navigatorObservers` entry in
 `GetMaterialApp` to drive this automatically off route push/pop.
@@ -176,9 +153,9 @@ comments in `NotificationService._handleNotificationTap`/`_navigateToChatConvers
 navigation-on-tap behavior. A push with an `action_route` goes through `AuthController.canOpenRoute`; a route the
 role cannot open lands on the notifications screen instead (same guard in `notifications_screen.dart`).
 
-**Roles (Seeker / Rent Owner / Property Owner)**: one account, one role; spec in `F:\Dhasu\ROLE_FEATURE.md`.
-- **Stay Owner (4th role, uncompiled)**: `UserRoleKeys.stayOwner`/`canListStays`; `AppTabs.stays = 3` (Stays is the third module tab); gated owner goes to `/stay-setup` until submit (`postLoginRoute`). Code in `lib/features/stay/`. Rooms have a fixed room name (no bathroom). Jobs (`lib/features/jobs/`, Jobs tab `AppTabs.jobs`): all fields required, own phone + WhatsApp on the job, detail bar is the shared `DetailActionBar` with `showDirections: false`, `whatsAppPhone`, `callLabel`, `reportLabel`, `safetyText` (defaults keep Rooms/Plots/Stay unchanged), no Chat; experience is years with Fresher / N+ yrs tags and filter buckets. Seeker push opens `/job-detail` through the generic `action_route` path. Spec: `F:\Dhasu\STAY_FEATURE.md`, `F:\Dhasu\STAY_JOBS_FEATURE.md`.
-- **Taxi Driver (5th role, uncompiled)**: `UserRoleKeys.taxiDriver`/`canListTaxis` (counts as owner everywhere); Taxi tab `AppTabs.taxi` (root `TaxiListScreen(root: true)`, tag `taxi`; pushed copy tag `taxi-push`), no Taxi tile on the Stays landing. The stay detail "Getting there" row searches From = traveller's current GPS city (`travellerCity`, never the browsing city) to To = stay city centroid; See all pushes the Taxi list prefilled. Gated driver goes to `/taxi-setup` until submit (`postLoginRoute`). Code in `lib/features/taxi/`. Taxi list From/To use `LocationSwitchSheet.pick`; driver route From/To use `LocationSearchSheet` (Photon, no bbox; results ranked by place type and the user's state). Share link type `t` opens `/taxi-detail` directly. Spec: `F:\Dhasu\TAXI_FEATURE.md`.
+**Roles (Seeker / Stay Owner / Taxi Driver)**: one account, one role; spec in `F:\Dhasu\ROLE_FEATURE.md` (Rent Owner and Property Owner were removed on 2026-11-06; an old `RENT_OWNER`/`PROPERTY_OWNER` claim falls back to `RoleCapabilities.none` and the Seeker look, and the DB reset forces a re-login).
+- **Stay Owner**: `UserRoleKeys.stayOwner`/`canListStays`; `AppTabs.stays = 1`; gated owner goes to `/stay-setup` until submit (`postLoginRoute`). Code in `lib/features/stay/`. Rooms have a fixed room name (no bathroom). Jobs (`lib/features/jobs/`, Jobs tab `AppTabs.jobs`): all fields required, own phone + WhatsApp on the job, detail bar is the shared `DetailActionBar` with `showDirections: false`, `whatsAppPhone`, `callLabel`, `reportLabel`, `safetyText` (defaults keep Stay unchanged), no Chat; experience is years with Fresher / N+ yrs tags and filter buckets. Seeker push opens `/job-detail` through the generic `action_route` path. Spec: `F:\Dhasu\STAY_FEATURE.md`, `F:\Dhasu\STAY_JOBS_FEATURE.md`.
+- **Taxi Driver**: `UserRoleKeys.taxiDriver`/`canListTaxis` (counts as owner everywhere); Taxi tab `AppTabs.taxi` (root `TaxiListScreen(root: true)`, tag `taxi`; pushed copy tag `taxi-push`), no Taxi tile on the Stays landing. The stay detail "Getting there" row searches From = traveller's current GPS city (`travellerCity`, never the browsing city) to To = stay city centroid; See all pushes the Taxi list prefilled. Gated driver goes to `/taxi-setup` until submit (`postLoginRoute`). Code in `lib/features/taxi/`. Taxi list From/To use `LocationSwitchSheet.pick`; driver route From/To use `LocationSearchSheet` (Photon, no bbox; results ranked by place type and the user's state). Share link type `t` opens `/taxi-detail` directly. Spec: `F:\Dhasu\TAXI_FEATURE.md`.
 - **Trip Planner (any role, not a tab; shipped in build 56, backend deployed 2026-11-02)**: code in `lib/features/trip/`; entry = Home `TripHomeCard` (above the Instagram card, opens `TripCitySheet.pick`) and the Profile `My Trips` tile; routes `/trip-spots`, `/trip-plan`, `/trip-taxi`, `/trip-stay`, `/trip-map`, `/my-trips` are pushed on the global navigator (all in `MapPauseObserver._pauseRoutes`).
   `TripPlanController` (lazy `to`, deleted by `releaseIfIdle()` when `openPages == 0`) holds the working `TripPlan`; the trip row is created at Plan my days and autosaved (debounced); a failed save keeps the plan and shows `Not saved yet` + Retry. `/trips/plan` splits days (`auto`) or recomputes times (`recalculate`, never reorders).
   City pick = `TripCitySheet` (Atlas cities via `GET /trips/cities`, NotReady rows "Coming soon") over its own cache `TripCityCatalog` (keys `trip_cities_cache*`, 24 h, revalidated by `GET /trips/cities/version` every 10 min, local search); it never touches the city-switch caches. Spots come from `GET /trips/cities/{cityKey}/spots` (`NotReady` or 404 `CityNotFound` = "Not ready yet"); category chips filter client-side after loading every page.
@@ -191,16 +168,15 @@ role cannot open lands on the notifications screen instead (same guard in `notif
   Trip Execution Phase 1b (stay advance + taxi leads, contract `F:\Dhasu\TripExec_resume\CONTRACT_PHASE1B.md`, uncompiled): no payment in the app; the host's UPI ID and WhatsApp (optional, `/stay-advance-details`, stay setup) are prefilled in `TripAskAdvanceSheet` and travel only inside the `trip_advance_request` chat card (`widgets/trip_advance_cards.dart`: pay card with copy icon and 3 steps, waiting card, received, hold expired, host proof card); `advance.status` (None/Pending/ProofSent/Received/HoldExpired) drives tiles and bars through `TripStatusVisuals.advanceBar/advanceLabel`. Taxi is a one-way lead: `TripTaxiEnquirySheet` -> driver `/trip-leads` (`features/taxi/leads/`: Call traveller, Confirm fare sheet, Not available, Yes confirm / Not me) -> traveller `/trip-taxi-replies` -> I booked (`POST /trips/{id}/taxi-bookings`) -> driver confirm = green. New `TripDisplayStatus` values `fareSent`, `bookedByYou`, `holdExpired`; `TripStatusPill(taxi: true)` for driver wording. All copy in `TripStrings`; limits in `TripConstants`; `TripFormat.time12Of/dayTime` (local time). Tests `test/trip_advance_rules_test.dart` + the status/model tests.
   Trip Execution Phase 2 (contract `F:\Dhasu\TripExec_resume\CONTRACT_PHASE2.md`, uncompiled): Counter (`TripCounterSheet`, chat cards `trip_counter` / `trip_revised_offer` / `trip_change_request` in `widgets/trip_offer_cards.dart`, max 3 counters, host Accept price = Send offer prefilled with `counterOfferId`), Revised offer and Change request (price lock: every surface shows `agreedTotal`, only Accept new price / Accept change move it), Ask again (red tile, banner, replies screens), Today card + Problem sheet (works offline from `TripTodayCache`, queued problems flushed on the next online open), Mark trip complete + Mute reminders (`TripLifecycleActions`), My Trips Upcoming / Completed with `TripBookingStatePill`, Summary (`/trip-summary`, share as text, no UPI) and report context (`tripEnquiryId`, owner `TripReportTravellerSheet`). Shared roots: `TripBookingState` + `TripBookingStateVisuals` in `trip_status.dart`, new `TripStrings` / `TripConstants` keys, `TripFormat.dayMonth/dayMonthRange`, `StorageService.saveTripCache/getTripCache/saveTripResultCache/getTripResultCache/getTripProblemQueue` (cleared by `clearAll`). Tests `trip_summary_text_test.dart` + the status/model tests.
   Search text is matched through `SearchFold` (`lib/utils/search_fold.dart`, same rule as Atlas `SearchKeys.Fold`: accents stripped, ASCII a-z/0-9 only). Photon rows read `Type · District, State` and are ranked by `preferState` then place type. Atlas `isPopularDestination` drives the Trip picker "Popular" section and the Home `TripPopularRail` (user state first).
-- `lib/config/user_roles.dart` is the single capability map: `UserRoleKeys` (`SEEKER`/`RENT_OWNER`/
-  `PROPERTY_OWNER`, `claim = 'role'`; names via `RoleVisuals.displayName` in `role_option_card.dart`), `RoleCapabilities.byRole` (role key -> `canListRooms`,
-  `canListPlots`; Seeker has neither, an unknown key falls back to none), `RoleRequestErrorTypes` and
-  `RoleRequestStatus`. Add a role there, never as scattered `== 'RENT_OWNER'` checks.
+- `lib/config/user_roles.dart` is the single capability map: `UserRoleKeys` (`SEEKER`/`STAY_OWNER`/
+  `TAXI_DRIVER`, `claim = 'role'`; names via `RoleVisuals.displayName` in `role_option_card.dart`), `RoleCapabilities.byRole` (role key -> `canListStays`,
+  `canListTaxis`; Seeker has neither, an unknown key falls back to none), `RoleRequestErrorTypes` and
+  `RoleRequestStatus`. Add a role there, never as scattered `== 'STAY_OWNER'` checks.
 - `AuthController` reads the `role` claim from the stored JWT (`_syncRoleFromToken`, via `JwtClaims.role`) and
-  exposes reactive `roleKey`, `canListRooms`, `canListPlots`, plus `isOwner` (derived convenience only) and
-  `canOpenRoute(route)` (checks `AppRoutes.roomOwnerOnly` = `myListings`/`addListing`, `plotOwnerOnly` =
-  `myPlots`/`addPlot`). `chooseRole` calls `PUT /users/me/role-choice` and stores the returned token;
+  exposes reactive `roleKey`, `canListStays`, `canListTaxis`, plus `isOwner` (derived convenience only) and
+  `canOpenRoute(route)` (returns false for a route with no `GetPage` in `AppRoutes.routes`, via `AppRoutes.isRegistered`, so a stale `/my-listings` push falls back to the inbox; also checks the tab key). `chooseRole` calls `PUT /users/me/role-choice` and stores the returned token;
   `requestRoleChange` posts `/users/me/role-request` and shows the server's cooldown/live-listing message.
-  `roleChangeLocked` = `user.roleLocked` (server: Stay/Taxi Approved, under review or ever approved, and a Rent/Property Owner with any admin-approved listing) OR the status check. A 409 `RoleLocked` from `/users/me/role-request` shows the server message (`RoleRequestErrorTypes.locked`).
+  `roleChangeLocked` = `user.roleLocked` (server: Stay/Taxi Approved, under review or ever approved) OR the status check.
   `correctRole(key)` (one-time Draft correction) calls `PUT /users/me/role-correction`, `_applySession`, clears `StaySetupController`/`TaxiSetupController` (`clear()`), then `Get.offAllNamed(postLoginRoute)`; 409s show the server message and run `_recoverChosenRole()`; never goes through `LogoutReason.roleChanged`.
   `UserModel` carries `roleCorrectionUsed`, `canCorrectRole`, `roleLocked` (all default false).
 - Correction link: the Stay/Taxi setup hub shows a small "Wrong role? Change it" link (accent dark) only while the stay/taxi is a Draft and `user.canCorrectRole`, and hides the menu "Change role" while it shows. `StayOwnerModel.setupPercent` (40/30/20/10, also used by the hub) and `TaxiOwnerModel.percent` feed the dialog text.
@@ -213,20 +189,17 @@ role cannot open lands on the notifications screen instead (same guard in `notif
   `RoleChangeScreen` (from the Profile Account row 'Change role'; the row reads 'Current role' + role name, no arrow and no tap when `roleChangeLocked`; sends an admin-approval request); cards and per-role colors/icons
   live in `widgets/role_option_card.dart` (`RoleVisuals`, `RoleOptionCard`). Approval revokes the session: the
   `role_request_approved` push or hub event calls `forceLogout(reason: LogoutReason.roleChanged)`.
-- Gating (hide the entry point AND guard the choke point): Home banner shows both slides to a Seeker and only the
-  own-kind slide to an owner (opens My Rooms/My Plots); Home quick tiles (Add / My Listings) render only for an
-  owner and only for the kind they list; the Rooms/Plots landing tile row (see above); `tour_registry.dart` skips
-  owner steps; `AddListingFlow.start` returns early without the capability; `ListingController`/`PlotController`
-  load "my" lists only with the capability. All of these use the effective (role AND tab) getters, see "Tab gating".
+- Gating (hide the entry point AND guard the choke point): Home banner shows both slides (Stay, Taxi) to a Seeker and only the
+  own-kind slide to an owner; the Home leads tile (stays: My Stays, taxis: My Taxi) renders only for an
+  owner and only for the kind they list; `tour_registry.dart` skips
+  owner steps. All of these use the effective (role AND tab) getters, see "Tab gating".
 
-**Plans (replace the coin/credit economy, 2026-10-30)**: coins, the wallet and credit packs are gone. Owners (Rent, Property, Stay, Taxi) have a free default plan per feature and may buy a paid plan (auto-renewing Google Play subscription, 1 / 3 / 12 month base plans); Seeker has no plans. Spec: `F:\Dhasu\PLAN_PAYMENT_MODEL.md` sections 19 and 22, contract `F:\Dhasu\PLAY_BILLING_CONTRACT.md`.
+**Plans (replace the coin/credit economy, 2026-10-30)**: coins, the wallet and credit packs are gone. Owners (Stay, Taxi) have a free default plan per feature and may buy a paid plan (auto-renewing Google Play subscription, 1 / 3 / 12 month base plans); Seeker has no plans. Spec: `F:\Dhasu\PLAN_PAYMENT_MODEL.md` sections 19 and 22, contract `F:\Dhasu\PLAY_BILLING_CONTRACT.md`.
 
-- **`PlanController` / `PlanRepository`** (`lib/controllers/plan_controller.dart`, `lib/repositories/plan_repository.dart`) are the single owner of plan state. `GET /plans/catalog` (5 min TTL) and `GET /plans/me` (30 s TTL, the single source for limits `{listingLimit, used, live, priority, featured, jobsPosts}`, plan, `endsAt`, `trialAvailable`, `openPurchaseId`, `pausedByPlanCount`, `paymentEnabled`, `paymentProvider`, `carryOverDays`, `manageUrl`, `play`). Invalidate `/plans/me` after purchase, trial, go-live, create, delete, swap, resume and on a `plan_*` push. Screens and cards read it via `Obx`; never fetch plan data per card or per screen. Also quote, create purchase, verify-play, restore, poll `GET /plans/purchases/{id}`, `GET /plans/purchases/open` (killed-app recovery on start/resume), history, trial and `swap-live`.
-- **`PlansBillingScreen`** (route `/plans`, from the Profile 'Plans & Billing' tile, owners only): current-plan card (usage bar for rooms/plots, included list), Free-vs-paid compare table built from `PlanModel.features` (`ListingLimit`, `Priority`, `Featured`, `JobsPosts`), duration radio rows (`PlanCycleOption`) with per-month price and Save % from Play store prices, a sticky bottom bar with the price and one CTA (Continue / Switch / Renew / Resubscribe / Current plan / Retry) plus the trial button, a 'Have a coupon?' link that reveals the coupon field, Restore purchases, and a History button in the header opening `PlanHistoryScreen` (`/plans/history`, same list as before, 'No payments yet' empty state, `historyLoadFailed` flag). The purchase status sheet polls until Granted. Prices shown are the store `formattedPrice` from Play, never the backend mirror. The current-subscription block (`PlanSubscriptionCard`) renders from `myPlan.play`: renews on / ends on + Resubscribe / payment issue / on hold / paused / ended / scheduled change / carry-over days, plus a Manage in Google Play link. With `paymentEnabled` OFF the screen shows the Free card plus 'Paid plans are coming'. Short English copy, heading first, module accent tokens only.
+- **`PlanController` / `PlanRepository`** (`lib/controllers/plan_controller.dart`, `lib/repositories/plan_repository.dart`) are the single owner of plan state. `GET /plans/catalog` (5 min TTL) and `GET /plans/me` (30 s TTL, the single source for limits `{listingLimit, used, live, priority, featured, jobsPosts}`, plan, `endsAt`, `trialAvailable`, `openPurchaseId`, `pausedByPlanCount`, `paymentEnabled`, `paymentProvider`, `carryOverDays`, `manageUrl`, `play`). Invalidate `/plans/me` after purchase, trial, create, delete and on a `plan_*` push. Screens and cards read it via `Obx`; never fetch plan data per card or per screen. Also quote, create purchase, verify-play, restore, poll `GET /plans/purchases/{id}`, `GET /plans/purchases/open` (killed-app recovery on start/resume), history and trial.
+- **`PlansBillingScreen`** (route `/plans`, from the Profile 'Plans & Billing' tile, owners only): current-plan card (included list), Free-vs-paid compare table built from `PlanModel.features` (`ListingLimit`, `Priority`, `Featured`, `JobsPosts`), duration radio rows (`PlanCycleOption`) with per-month price and Save % from Play store prices, a sticky bottom bar with the price and one CTA (Continue / Switch / Renew / Resubscribe / Current plan / Retry) plus the trial button, a 'Have a coupon?' link that reveals the coupon field, Restore purchases, and a History button in the header opening `PlanHistoryScreen` (`/plans/history`, same list as before, 'No payments yet' empty state, `historyLoadFailed` flag). The purchase status sheet polls until Granted. Prices shown are the store `formattedPrice` from Play, never the backend mirror. The current-subscription block (`PlanSubscriptionCard`) renders from `myPlan.play`: renews on / ends on + Resubscribe / payment issue / on hold / paused / ended / scheduled change / carry-over days, plus a Manage in Google Play link. With `paymentEnabled` OFF the screen shows the Free card plus 'Paid plans are coming'. Short English copy, heading first, module accent tokens only.
 - **Profile**: header (name, phone), then the Plans & Billing tile (plan name only; Upgrade/Manage, chevron when payment is off), then Account (phone, contact visibility, role row). The old role card and header chip are gone.
-- **Going live**: `ListingController.goLive` / `PlotController.goLivePlot` send NO body (`POST /{listings|plots}/{id}/go-live`) and return a `GoLiveResult` (`lib/models/go_live_result.dart`): validUntil, status (Pending for the first-ever Go Live, admin approval), `limits`, or the failures `PlanLimitReached {limit, live}` (offer Swap or Upgrade), `ListingPausedByAdmin`, `CONCURRENT_UPDATE`. Deactivating is free; activation is checked against the plan limit.
-- **Card state from `pauseReason`**: listing/plot cards show a paused-by-plan state (Plan: "Paused by plan", Swap and Renew actions; Owner: normal Go Live; Admin: "Paused by admin", no Go Live; Suspended). `swap-live` picks which listing is live. `isFeatured` shows a badge; `priorityRank` only orders lists on the server.
-- **Permission services**: `ListingPermissionService` / `PlotPermissionService` (`lib/services/`) read `PlanController` limits (`listingLimit` vs `used`) to return `Allowed`, `NeedsDistrict` or `LimitReached(limit)`; create can still return 409 `ListingLimitReached`. `ConfigRepository` no longer has `getListingLimits`; it keeps `payment-feature` (now with `freeModeListingLimit`).
+- `ConfigRepository` has no `getListingLimits`; it keeps `payment-feature` (with `freeModeListingLimit`, inert). Go Live, Swap and the Room/Plot permission services were removed on 2026-11-06.
 - Stay Jobs cap (`maxActive`/`canPost`) now comes from the plan; the over-limit message carries an Upgrade hint.
 - `ConfigRepository` is put permanently in `main()`; `ConfigController`, `PlanRepository`/`PlanController` are registered in `MainScreen.initState()`.
 
@@ -253,7 +226,7 @@ next resume/pull-to-refresh.
 - **Restore**: `restorePurchases({force, userInitiated})` posts owned tokens to `POST /plans/purchases/restore` (max 10, results matched by `index`). The automatic call (init, app resume) is throttled to once per 2 min and silent: it refreshes `me` and records `otherAccountProducts` / `detachedProducts`, but never sets `activePurchase`. Only `userInitiated` calls (Restore button, `launch()==false`, `error` after launch, e.g. ITEM_ALREADY_OWNED) may open the `OtherAccount` / `Detached` / pending sheet. A `purchased`/`restored` event that does not match the in-flight order's `productId` goes to restore (one item), not verify-play.
 - **Switch** (cycle/plan change on a Play-owned plan): quote returns `playReplacementMode` (`chargeFullPrice` | `withoutProration` | `deferred`); the order carries `playOldPurchaseToken`; the app finds the owned purchase by that token (one `restore()` if missing) and passes `ChangeSubscriptionParam`. Deferred changes keep the current plan until renewal (`play.scheduledPlanName`).
 - **Controller API** used by UI: `storeState`, `storeProducts`, `ownedPurchases`, `otherAccountProducts`, `detachedProducts`, `isRestoring`, `paymentProvider`/`isPlay`, `storePriceFor(plan, cycle)`, `trialOfferFor(plan)`, `loadStore`/`reloadStore`, `quote`, `purchase(..., useTrial)`, `restorePurchases`, `openManageSubscription()` (`myPlan.manageUrl`, external `url_launcher`). UI never imports `in_app_purchase`. The trial button needs `myPlan.trialAvailable && trialOfferFor(plan) != null`.
-- **States** from `myPlan.play` (`PlaySubInfo`): active (auto-renew) shows "Renews on X" and no Home nudge; cancelled shows "Ends on X" + Resubscribe; grace shows "Payment issue" + Fix; on hold / paused show a strip even while the user is on the free plan; ended shows "Subscription ended - Resubscribe". Non-Play rows keep "N days left" + "Renew". Pushes `plan_renewed`, `plan_on_hold`, `plan_paused`, `plan_carry_over_activated` invalidate `/plans/me` and reload the my-lists; `plan_payment_issue` only invalidates `/plans/me`.
+- **States** from `myPlan.play` (`PlaySubInfo`): active (auto-renew) shows "Renews on X" and no Home nudge; cancelled shows "Ends on X" + Resubscribe; grace shows "Payment issue" + Fix; on hold / paused show a strip even while the user is on the free plan; ended shows "Subscription ended - Resubscribe". Non-Play rows keep "N days left" + "Renew". Pushes `plan_renewed`, `plan_on_hold`, `plan_paused`, `plan_carry_over_activated` invalidate `/plans/me`; `plan_payment_issue` only invalidates `/plans/me`.
 - **Android platform**: no `BILLING` permission in the manifest (the Billing Library merges it), `minSdk = flutter.minSdkVersion` (24, the plugin needs 23), `queries` unchanged (the manage link is `https`, already declared). ProGuard has `-keep class com.android.vending.billing.** { *; }` and `-dontwarn com.android.billingclient.**` (need unverified, harmless). Purchases only work from a Play-published build (Internal testing track) with a license-tester account; a sideloaded APK cannot buy.
 - `paymentEnabled` is OFF by default and is flipped last in the admin app, after the Console setup.
 
@@ -265,7 +238,7 @@ next resume/pull-to-refresh.
   plumbing, SignalR hubs, FCM/local notifications, billing gateways (`services/billing/`), permission-gating logic
 - `models/` — plain Dart classes with hand-written `fromJson`/`toJson` (no code generation/freezed)
 - `screens/` — one file per full-screen route; mixins (e.g.
-  `explore_location_search_mixin.dart`) factor out logic shared between the Rooms and Plots explore
+  `explore_location_search_mixin.dart`) factor out logic shared by Stay, Taxi and Jobs
   screens rather than a common base class
 - `widgets/` — reusable presentational components (cards, sheets, pins, bottom-sheet action bars)
 - `navigation/` — the per-tab nested-Navigator machinery described above
@@ -276,15 +249,14 @@ next resume/pull-to-refresh.
   phone/OTP) use their own digit-only formatters instead and don't need it)
 
 **Tab gating (admin turns a tab off)**: spec `F:\Dhasu\TAB_GATING_FEATURE.md`; the backend is the real gate
-(403 `TabInactive` on `/listings`, `/plots`, `/stays`, `/taxis`, `/stay-jobs`). `TabConfigController` is the one
+(403 `TabInactive` on `/stays`, `/taxis`, `/stay-jobs`). `TabConfigController` is the one
 client snapshot: seeded from storage, fetched once in `onInit`, `ready` (splash waits on it with the version check),
 `version` (bumped only on a real change; its getters read it, so any `Obx` using them rebuilds), single-flight `load`,
 `isActiveForIndex` (Jobs needs JOBS and STAYS), `activeSectionKeys` for `/home/feed`. `AuthController` exposes
-effective capabilities `roomsEnabled`/`plotsEnabled`/`staysEnabled`/`taxisEnabled`/`jobsEnabled`/`effectiveIsOwner`
+effective capabilities `staysEnabled`/`taxisEnabled`/`jobsEnabled`/`effectiveIsOwner`
 (role AND tab) and `roleTabActive`; `postLoginRoute`, `canOpenRoute` (also checks `AppRoutes.tabKeyForRoute`), add
 flows, tiles, tours and my-list loads use them, raw `canListX` stay for role change and contact visibility.
-`ListingController`/`PlotController` fetch types only through `ensureTypesLoaded()` (first open of the tab or an add
-flow) and my-lists only when enabled; `StayTypesController` loads from `StayLandingController.refreshIfNeeded`.
+`StayTypesController` loads from `StayLandingController.refreshIfNeeded`.
 `MainScreen` has one `ever(version)` worker that leaves an inactive current tab for Home. The `ApiService` error
 interceptor calls `TabConfigController.load(forceRefresh: true)` on a 403 `TabInactive`. Deep links check the tab
 before the by-slug call. Role screens trust the server-filtered `GET /roles`; `chooseRole`/`requestRoleChange`
@@ -293,7 +265,7 @@ the ungated `/locations/context`, `/locations/districts`, `/locations/districts/
 
 **Theming**: single fixed light theme (`lib/config/app_theme.dart` + `app_colors.dart`), Material 3,
 Poppins font family declared in `pubspec.yaml`. No dark mode, no localization/i18n setup — all UI
-strings are hard-coded English inline in widgets. Module palettes (rooms / plots / stays / jobs / taxi) live in
+strings are hard-coded English inline in widgets. Module palettes (`ModulePalette.rooms` is a kept legacy name still used by Home and the location sheets; stays / jobs / taxi) live in
 `config/app_colors.dart` + `config/module_palette.dart`; `LocationSwitchSheet`, `LocationSearchSheet` and `LocationPill`
 take a `ModulePalette` (the tab they open from), and `LocationSwitchSheet.pick` returns a `PickedPlace` without
 touching the browsing city. No raw hex outside `app_colors.dart`.

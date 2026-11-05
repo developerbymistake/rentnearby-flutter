@@ -3,8 +3,6 @@ import 'package:get/get.dart';
 import '../config/app_tabs.dart';
 import '../controllers/tab_config_controller.dart';
 import '../screens/home_screen.dart';
-import '../models/explore_kind.dart';
-import '../screens/explore_landing_screen.dart';
 import '../screens/profile_screen.dart';
 import '../features/stay/guest/stay_landing_screen.dart';
 import '../features/jobs/screens/jobs_landing_screen.dart';
@@ -14,8 +12,6 @@ import 'tab_keys.dart';
 Widget _rootScreen(int tabId) {
   switch (tabId) {
     case AppTabs.home: return const HomeScreen();
-    case AppTabs.rooms: return const ExploreLandingScreen(kind: ExploreKind.rooms);
-    case AppTabs.plots: return const ExploreLandingScreen(kind: ExploreKind.plots);
     case AppTabs.stays: return const StayLandingScreen();
     case AppTabs.jobs: return const JobsLandingScreen();
     case AppTabs.taxi: return const TaxiListScreen(root: true);

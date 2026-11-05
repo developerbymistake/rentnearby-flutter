@@ -27,8 +27,8 @@ class PickedPlace {
   });
 }
 
-/// Shared bottom sheet for the district-switch feature — used identically by
-/// Explore Rooms and Explore Plots. A 3-level drill-down: City (home) →
+/// Shared bottom sheet for the district-switch feature — shared by Stay, Taxi
+/// and Jobs. A 3-level drill-down: City (home) →
 /// District (scoped to the current state) → State. Reads/writes browsing
 /// state directly on [LocationController]; callers don't need any callbacks.
 /// [pick] reuses the same UI but only returns the tapped city.

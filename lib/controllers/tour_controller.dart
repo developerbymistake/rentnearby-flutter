@@ -294,7 +294,7 @@ class TourController extends GetxController {
       _teardown(markSeen: false);
       return;
     }
-    // The Rooms/Plots map is pushed on the tab's own Navigator, which the
+    // The Stays map is pushed on the tab's own Navigator, which the
     // route check above can't see — the landing targets stay mounted (stale)
     // underneath it.
     if (tabKeys[tour.tabIndex].currentState?.canPop() ?? false) {

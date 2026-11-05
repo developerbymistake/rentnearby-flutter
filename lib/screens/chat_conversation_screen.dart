@@ -53,8 +53,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   late final String _conversationId;
   late final String _listingType;
   Color get _accent => ListingKindVisuals.accentOf(_listingType);
-  late final String? _roomTypeId;
-  late final String? _plotTypeId;
   late final String? _stayTypeId;
   late final String _otherPartyId;
   late final String _otherPartyName;
@@ -129,8 +127,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     _conversationId = id ?? '';
     _listingType = text('listingType') ?? known?.listingType ?? '';
     _invalidArgs = id == null || _listingType.isEmpty;
-    _roomTypeId = text('roomTypeId') ?? known?.roomTypeId;
-    _plotTypeId = text('plotTypeId') ?? known?.plotTypeId;
     _stayTypeId = text('stayTypeId') ?? known?.stayTypeId;
     _otherPartyId = text('otherPartyId') ?? known?.otherPartyId ?? '';
     _otherPartyName = text('otherPartyName') ?? known?.otherPartyName ?? 'User';
@@ -777,8 +773,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                 .where(
                   (t) => t.appliesTo(
                     _listingType,
-                    targetRoomTypeId: _roomTypeId,
-                    targetPlotTypeId: _plotTypeId,
                     targetStayTypeId: _stayTypeId,
                   ),
                 )
@@ -1179,7 +1173,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
                       ),
                     ),
                     Text(
-                      '${_listingType == 'Plot' ? '📍' : _listingType == 'Stay' ? '🏡' : '🏠'} $_listingTitle'
+                      '${_listingType == 'Stay' ? '🏡' : '🏠'} $_listingTitle'
                       '${_area != null && _area.isNotEmpty ? ' · $_area' : ''}',
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

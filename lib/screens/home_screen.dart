@@ -16,7 +16,6 @@ import '../controllers/chat_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/notification_controller.dart';
 import '../controllers/tab_config_controller.dart';
-import '../models/browse_item.dart';
 import '../config/app_tabs.dart';
 import '../navigation/tour_keys.dart';
 import '../features/jobs/controllers/my_jobs_controller.dart';
@@ -28,9 +27,7 @@ import '../features/taxi/setup/taxi_flow.dart';
 import '../features/taxi/taxi_option_sets.dart';
 import '../features/trip/widgets/trip_home_card.dart';
 import '../features/trip/widgets/trip_popular_rail.dart';
-import '../services/add_listing_flow.dart';
 import '../utils/app_toast.dart';
-import '../utils/area_format.dart';
 import '../widgets/home_owner_carousel.dart';
 import '../widgets/home_stay_rail_card.dart';
 import '../widgets/home_taxi_rail_card.dart';
@@ -185,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 2),
                   const Text(
-                    "Let's find your perfect space",
+                    'Where to next?',
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 12,
@@ -288,31 +285,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Near-you rails: Rooms, Plots, Stays, Taxis ─────────────────────────────
+  // ── Near-you rails: Stays, Taxis ───────────────────────────────────────────
 
   Widget _buildListingsSections() {
     return Obx(() {
       final rails = <Widget>[
-        if (_tabs.isRoomsActive)
-          _buildRail(
-            title: 'Rooms for Rent near you',
-            tab: AppTabs.rooms,
-            section: HomeSectionKeys.rooms,
-            palette: ModulePalette.rooms,
-            loading: _home.roomsLoading.value,
-            isEmpty: _home.recentRooms.isEmpty,
-            rail: () => _buildRoomsRail(_home.recentRooms),
-          ),
-        if (_tabs.isPlotsActive)
-          _buildRail(
-            title: 'Plots for Sale near you',
-            tab: AppTabs.plots,
-            section: HomeSectionKeys.plots,
-            palette: ModulePalette.plots,
-            loading: _home.plotsLoading.value,
-            isEmpty: _home.recentPlots.isEmpty,
-            rail: () => _buildPlotsRail(_home.recentPlots),
-          ),
         if (_tabs.isStaysActive)
           _buildRail(
             title: 'Stays near you',
@@ -422,97 +399,6 @@ class _HomeScreenState extends State<HomeScreen> {
         else
           SizedBox(height: ListingGridCard.height, child: rail()),
       ],
-    );
-  }
-
-  Widget _buildRoomsRail(List<HomeRoomModel> items) {
-    if (items.isEmpty) {
-      return _emptyRailMessage('No rooms listed here yet.');
-    }
-    return ListView.separated(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(width: 12),
-      itemBuilder: (_, i) {
-        final r = items[i];
-        final item = BrowseItem.room(
-          id: r.id,
-          userId: r.userId,
-          thumbnailUrl: r.thumbnailUrl,
-          type: r.roomTypeName,
-          furnishedStatus: r.furnishedStatus,
-          isAc: r.isAc,
-          priceMonthly: r.priceMonthly,
-          city: r.cityName,
-          district: r.districtName,
-          isFeatured: r.isFeatured,
-        );
-        return SizedBox(
-          width: 160,
-          child: ListingGridCard(
-            thumbnailUrl: item.thumbnailUrl,
-            tagLabel: item.tagLabel,
-            title: item.title,
-            locationLabel: item.locationLabel,
-            facts: item.facts,
-            priceCaption: item.priceCaption,
-            priceValue: item.priceValue,
-            priceUnit: item.priceUnit,
-            isPlot: false,
-            isFeatured: item.isFeatured,
-            onViewDetails: () =>
-                Get.toNamed(AppRoutes.listingDetail, arguments: {'id': r.id}),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildPlotsRail(List<HomePlotModel> items) {
-    if (items.isEmpty) {
-      return _emptyRailMessage(
-        'No plots listed here yet.',
-        palette: ModulePalette.plots,
-        icon: Icons.landscape_rounded,
-      );
-    }
-    return ListView.separated(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(width: 12),
-      itemBuilder: (_, i) {
-        final p = items[i];
-        final item = BrowseItem.plot(
-          id: p.id,
-          userId: p.userId,
-          thumbnailUrl: p.thumbnailUrl,
-          type: p.plotTypeName,
-          areaValue: p.areaValue,
-          areaUnit: p.areaUnit,
-          city: p.cityName,
-          district: p.districtName,
-          isFeatured: p.isFeatured,
-        );
-        return SizedBox(
-          width: 160,
-          child: ListingGridCard(
-            thumbnailUrl: item.thumbnailUrl,
-            tagLabel: item.tagLabel,
-            title: item.title,
-            locationLabel: item.locationLabel,
-            facts: item.facts,
-            priceCaption: item.priceCaption,
-            priceValue: item.priceValue,
-            priceUnit: item.priceUnit,
-            isPlot: true,
-            isFeatured: item.isFeatured,
-            onViewDetails: () =>
-                Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id}),
-          ),
-        );
-      },
     );
   }
 
@@ -715,37 +601,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildOwnerQuickActions() {
     return Obx(() {
-      final rooms = _auth.roomsEnabled;
-      final plots = _auth.plotsEnabled;
       final stays = _auth.staysEnabled;
       final taxis = _auth.taxisEnabled;
       final jobs = _auth.jobsEnabled;
-      final checking = AddListingFlow.checking.value;
       final tiles = <Widget>[
-        if (rooms)
-          KeyedSubtree(
-            key: TourKeys.homeQuickActionAddRoom,
-            child: _ownerQuickActionTile(
-              icon: Icons.add_rounded,
-              gradient: AppColors.primaryGradient,
-              label: 'Add Room',
-              motion: IconMotionStyle.pulse,
-              isLoading: checking == true,
-              onTap: checking != null ? null : () => AddListingFlow.start(true),
-            ),
-          ),
-        if (plots)
-          KeyedSubtree(
-            key: TourKeys.homeQuickActionAddPlot,
-            child: _ownerQuickActionTile(
-              icon: Icons.add_rounded,
-              gradient: AppColors.plotGradient,
-              label: 'Add Plot',
-              motion: IconMotionStyle.pulse,
-              isLoading: checking == false,
-              onTap: checking != null ? null : () => AddListingFlow.start(false),
-            ),
-          ),
         if (stays)
           KeyedSubtree(
             key: TourKeys.homeQuickActionAddStay,
@@ -769,7 +628,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () => TaxiFlow.start(),
             ),
           ),
-        if (rooms || plots || stays || taxis)
+        if (stays || taxis)
           KeyedSubtree(
             key: TourKeys.homeQuickActionLeads,
             child: _ownerQuickActionTile(
@@ -778,15 +637,7 @@ class _HomeScreenState extends State<HomeScreen> {
               label: stays ? 'My Stays' : 'My Listings',
               motion: IconMotionStyle.grow,
               compact: stays,
-              onTap: () => Get.toNamed(
-                rooms
-                    ? AppRoutes.myListings
-                    : plots
-                        ? AppRoutes.myPlots
-                        : stays
-                            ? AppRoutes.myStays
-                            : AppRoutes.myTaxi,
-              ),
+              onTap: () => Get.toNamed(stays ? AppRoutes.myStays : AppRoutes.myTaxi),
             ),
           ),
         if (jobs) ...[
@@ -925,26 +776,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── "Recently added across India" — rooms and plots merged, newest first ──
+  // ── "Recently added across India" — newest first ──
 
   Widget _buildRecentlyAddedSection() {
     return Obx(() {
-      final rooms = _tabs.isRoomsActive;
-      final plots = _tabs.isPlotsActive;
-      final stays = _tabs.isStaysActive;
-      if (!rooms && !plots && !stays) return const SizedBox.shrink();
-      final loading =
-          (rooms && _home.recentlyAddedRoomsLoading.value) ||
-          (plots && _home.recentlyAddedPlotsLoading.value) ||
-          (stays && _home.recentlyAddedStaysLoading.value);
-      final items = loading
-          ? const <HomeRecentItem>[]
-          : _home.recentMixed(rooms: rooms, plots: plots, stays: stays);
-      final failed = {
-        if (rooms) HomeSectionKeys.recentRooms,
-        if (plots) HomeSectionKeys.recentPlots,
-        if (stays) HomeSectionKeys.recentStays,
-      }.where(_home.failedSections.contains).toSet();
+      if (!_tabs.isStaysActive) return const SizedBox.shrink();
+      final loading = _home.recentlyAddedStaysLoading.value;
+      final items = loading ? const <HomeRecentItem>[] : _home.recentMixed();
+      final failed = {HomeSectionKeys.recentStays}.where(_home.failedSections.contains).toSet();
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -986,46 +825,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _recentRow(HomeRecentItem item) {
-    final r = item.room;
-    if (r != null) {
-      return NearbyItemRow(
-        thumbnailUrl: r.thumbnailUrl,
-        tag: 'FOR RENT',
-        title: '${r.roomTypeName ?? 'Room'} Room',
-        subtitle: r.districtName,
-        caption: 'MONTHLY RENT',
-        value: BrowseItem.inr(r.priceMonthly),
-        unit: '/mo',
-        placeholderIcon: Icons.home_rounded,
-        onTap: () => Get.toNamed(AppRoutes.listingDetail, arguments: {'id': r.id}),
-      );
-    }
     final s = item.stay;
-    if (s != null) {
-      return NearbyItemRow(
-        thumbnailUrl: s.item.thumbnailUrl,
-        tag: s.item.tagLabel,
-        title: s.item.title,
-        subtitle: s.districtName.isNotEmpty ? s.districtName : s.item.locationLabel,
-        caption: s.item.priceCaption,
-        value: s.item.priceValue,
-        unit: s.item.priceUnit,
-        palette: ModulePalette.stays,
-        placeholderIcon: Icons.home_rounded,
-        onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.item.id}),
-      );
-    }
-    final p = item.plot!;
+    if (s == null) return const SizedBox.shrink();
     return NearbyItemRow(
-      thumbnailUrl: p.thumbnailUrl,
-      tag: 'FOR SALE',
-      title: '${p.plotTypeName ?? 'Plot'} Plot',
-      subtitle: p.districtName,
-      caption: 'PLOT AREA',
-      value: AreaFormat.label(p.areaValue, p.areaUnit),
-      palette: ModulePalette.plots,
-      placeholderIcon: Icons.landscape_rounded,
-      onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id}),
+      thumbnailUrl: s.item.thumbnailUrl,
+      tag: s.item.tagLabel,
+      title: s.item.title,
+      subtitle: s.districtName.isNotEmpty ? s.districtName : s.item.locationLabel,
+      caption: s.item.priceCaption,
+      value: s.item.priceValue,
+      unit: s.item.priceUnit,
+      palette: ModulePalette.stays,
+      placeholderIcon: Icons.home_rounded,
+      onTap: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.item.id}),
     );
   }
 

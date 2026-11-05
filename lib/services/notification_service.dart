@@ -167,8 +167,7 @@ class NotificationService extends GetxService {
   bool _mainReady = false;
   VoidCallback? _pendingTap;
 
-  // Explore is a resident tab (see AppTabs); Chat, My Rooms/My Plots, etc. are all
-  // pushed routes now, handled via _routesOnTopOfMain below.
+  // Chat, My Stays, My Taxi, etc. are pushed routes, handled via _routesOnTopOfMain below.
 
   @override
   Future<void> onInit() async {
@@ -373,10 +372,6 @@ class NotificationService extends GetxService {
 
   // Screens pushed ON TOP of main screen — main is underneath in the stack
   static const _routesOnTopOfMain = {
-    AppRoutes.listingDetail,
-    AppRoutes.plotDetail,
-    AppRoutes.addListing,
-    AppRoutes.addPlot,
     AppRoutes.plansBilling,
     AppRoutes.listingReports,
     AppRoutes.reportDetail,
@@ -456,8 +451,6 @@ class NotificationService extends GetxService {
   };
 
   static const _reportTabKeys = {
-    'Room': AppTabKeys.rooms,
-    'Plot': AppTabKeys.plots,
     'Stay': AppTabKeys.stays,
     'Taxi': AppTabKeys.taxi,
   };
@@ -520,16 +513,12 @@ class NotificationService extends GetxService {
     }
   }
 
-  // Broadcast still lands on the Rooms tab (AppTabs.rooms, backed by the class
-  // ExploreScreen/explore_screen.dart). Room/Plot
-  // membership notifications push the My Rooms/My Plots route (no longer tabs).
+  // Broadcast lands on the Home tab.
   void _routeForNotificationData(Map<String, dynamic> data) {
     final isChatMessage = data['conversation_id'] != null;
     final notificationType = data['notification_type'];
     final reportListingId = data['listing_id'];
     final reportListingType = data['listing_type'];
-    // Only report pushes carry listing_id — room/plot membership pushes never did,
-    // so this can't collide with the notificationType 'room'/'plot' branch below.
     final isReportMessage = reportListingId != null;
 
     // Generic redirect for any push produced via the backend's NotificationEvent system (see
@@ -537,7 +526,7 @@ class NotificationService extends GetxService {
     // and what Get.arguments to pass, so no per-type branch is needed here or ever again for a
     // future notification category built on that system. Checked first; falls through to the
     // legacy per-type branches below only for pushes that predate this system (chat, reports,
-    // broadcast, room/plot membership).
+    // broadcast).
     final auth = Get.find<AuthController>();
     final actionRoute = data['action_route'];
     if (actionRoute != null) {
@@ -552,21 +541,18 @@ class NotificationService extends GetxService {
     if (isChatMessage) {
       _navigateToChatConversation(data['conversation_id'] as String);
     } else if (isReportMessage) {
-      final tabKey = _reportTabKeys[reportListingType ?? 'Room'];
-      if (tabKey != null && !TabConfigController.to.isActive(tabKey)) {
+      final tabKey = _reportTabKeys[reportListingType];
+      if (tabKey == null || !TabConfigController.to.isActive(tabKey)) {
         Get.toNamed(AppRoutes.notifications);
         return;
       }
       Get.toNamed(AppRoutes.listingReports, arguments: {
         'listingId': reportListingId,
-        'listingType': reportListingType ?? 'Room',
+        'listingType': reportListingType,
         'title': data['listing_title'] ?? 'your listing',
       });
     } else if (notificationType == 'broadcast') {
-      Get.find<AuthController>().switchToTab(AppTabs.rooms);
-    } else if (notificationType == 'room' || notificationType == 'plot') {
-      final route = notificationType == 'plot' ? AppRoutes.myPlots : AppRoutes.myListings;
-      Get.toNamed(auth.canOpenRoute(route) ? route : AppRoutes.notifications);
+      Get.find<AuthController>().switchToTab(AppTabs.home);
     }
   }
 
@@ -729,8 +715,6 @@ class NotificationService extends GetxService {
       'conversationId': conv.id,
       'listingType': conv.listingType,
       'listingId': conv.listingId,
-      'roomTypeId': conv.roomTypeId,
-      'plotTypeId': conv.plotTypeId,
       'stayTypeId': conv.stayTypeId,
       'otherPartyId': conv.otherPartyId,
       'otherPartyName': conv.otherPartyName,

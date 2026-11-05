@@ -17,7 +17,7 @@ import 'pulse_once.dart';
 import 'role_option_card.dart';
 import 'sweep_highlight.dart';
 
-enum _Slide { rooms, plots, stay, taxi }
+enum _Slide { stay, taxi }
 
 class HomeOwnerCarousel extends StatefulWidget {
   const HomeOwnerCarousel({super.key});
@@ -115,8 +115,6 @@ class _HomeOwnerCarouselState extends State<HomeOwnerCarousel>
     return Obx(() {
       final owner = _auth.effectiveIsOwner;
       final slides = <_Slide>[
-        if (_tabs.isRoomsActive && (!owner || _auth.roomsEnabled)) _Slide.rooms,
-        if (_tabs.isPlotsActive && (!owner || _auth.plotsEnabled)) _Slide.plots,
         if (_tabs.isStaysActive && (!owner || _auth.staysEnabled)) _Slide.stay,
         if (_tabs.isTaxiActive && (!owner || _auth.taxisEnabled)) _Slide.taxi,
       ];
@@ -182,43 +180,31 @@ class _OwnerBanner extends StatelessWidget {
   const _OwnerBanner({required this.slide, required this.isOwner});
 
   static Color accentOf(_Slide slide) => switch (slide) {
-        _Slide.rooms => AppColors.primary,
-        _Slide.plots => AppColors.plot,
         _Slide.stay => RoleVisuals.accent(UserRoleKeys.stayOwner),
         _Slide.taxi => RoleVisuals.accent(UserRoleKeys.taxiDriver),
       };
 
   static String roleKeyOf(_Slide slide) => switch (slide) {
-        _Slide.rooms => UserRoleKeys.rentOwner,
-        _Slide.plots => UserRoleKeys.propertyOwner,
         _Slide.stay => UserRoleKeys.stayOwner,
         _Slide.taxi => UserRoleKeys.taxiDriver,
       };
 
   static (String, String, String, String) seekerCopyOf(_Slide slide) => switch (slide) {
-        _Slide.rooms => ('Looking for a room?', 'Find your room', 'Browse rooms near you', 'Browse Rooms'),
-        _Slide.plots => ('Looking for a plot?', 'Find your plot', 'Browse plots near you', 'Browse Plots'),
         _Slide.stay => ('Looking for a stay?', 'Find your stay', 'Browse stays near you', 'Browse Stays'),
         _Slide.taxi => ('Need a taxi?', 'Find a taxi', 'Local taxis near you', 'Browse Taxis'),
       };
 
   static String ownerTitleOf(_Slide slide) => switch (slide) {
-        _Slide.rooms => 'List your room',
-        _Slide.plots => 'List your plot',
         _Slide.stay => 'List your stay',
         _Slide.taxi => 'List your taxi',
       };
 
   static String ownerRouteOf(_Slide slide) => switch (slide) {
-        _Slide.rooms => AppRoutes.myListings,
-        _Slide.plots => AppRoutes.myPlots,
         _Slide.stay => AppRoutes.myStays,
         _Slide.taxi => AppRoutes.myTaxi,
       };
 
   static int tabOf(_Slide slide) => switch (slide) {
-        _Slide.rooms => AppTabs.rooms,
-        _Slide.plots => AppTabs.plots,
         _Slide.stay => AppTabs.stays,
         _Slide.taxi => AppTabs.taxi,
       };
@@ -228,7 +214,6 @@ class _OwnerBanner extends StatelessWidget {
     final isTaxi = slide == _Slide.taxi;
     final (seekerBadge, seekerTitle, seekerSubtitle, seekerCta) = seekerCopyOf(slide);
     final accent = accentOf(slide);
-    final imageGlowColor = slide == _Slide.plots ? AppColors.success : accent;
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -269,7 +254,7 @@ class _OwnerBanner extends StatelessWidget {
                         width: 84,
                         height: 16,
                         decoration: BoxDecoration(
-                          color: imageGlowColor.withValues(alpha: 0.22),
+                          color: accent.withValues(alpha: 0.22),
                           borderRadius: BorderRadius.circular(50),
                         ),
                       ),
@@ -292,9 +277,7 @@ class _OwnerBanner extends StatelessWidget {
                             ),
                           )
                         : Image.asset(
-                            slide == _Slide.plots
-                                ? 'assets/images/owner_cta/plot.png'
-                                : 'assets/images/owner_cta/house.png',
+                            'assets/images/owner_cta/house.png',
                             fit: BoxFit.contain,
                             alignment: Alignment.centerRight,
                           ),

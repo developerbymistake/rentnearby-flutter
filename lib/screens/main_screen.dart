@@ -8,10 +8,8 @@ import '../config/app_tabs.dart';
 import '../controllers/app_version_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
-import '../controllers/listing_controller.dart';
 import '../controllers/location_controller.dart';
 import '../controllers/notification_controller.dart';
-import '../controllers/plot_controller.dart';
 import '../controllers/report_controller.dart';
 import '../repositories/notification_repository.dart';
 import '../repositories/user_repository.dart';
@@ -58,8 +56,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   final _screens = const [
     TabNavigator(tabId: AppTabs.home),
-    TabNavigator(tabId: AppTabs.rooms),
-    TabNavigator(tabId: AppTabs.plots),
     TabNavigator(tabId: AppTabs.stays),
     TabNavigator(tabId: AppTabs.jobs),
     TabNavigator(tabId: AppTabs.taxi),
@@ -78,10 +74,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // only re-evaluates Get.isRegistered<LocationController>() when nudged —
     // see its doc comment.
     GlobalLocationGates.notifyReady();
-    Get.put(ListingController());
-    Get.put(PlotController());
-    // HomeController.onInit() looks up LocationController, PlotController, and
-    // ListingController — must be put after all three.
+    // HomeController.onInit() looks up LocationController — must be put after it.
     Get.put(HomeController());
     Get.put(NotificationRepository());
     // Fetches the Home bell's unread count once per session in its own onInit() — refreshed on
@@ -311,9 +304,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         // while a logout is in flight so the user can't tab-switch away
         // from (and lose sight of) the non-dismissible logout overlay.
         if (_auth.isLoggingOut.value) return;
-        if (Get.find<ListingController>().isLoadingNearest.value ||
-            Get.find<PlotController>().isLoadingNearest.value ||
-            (Get.isRegistered<StayGuestController>() && Get.find<StayGuestController>().isLoadingNearest.value)) {
+        if (Get.isRegistered<StayGuestController>() && Get.find<StayGuestController>().isLoadingNearest.value) {
           return;
         }
         final tabNav = tabKeys[_auth.tabIndex.value].currentState;
@@ -367,16 +358,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           // covers the Scaffold's body AND bottomNavigationBar since both are
           // siblings in this Stack, so the user can't switch tabs mid-search.
           Obx(() {
-            final roomLoading = Get.find<ListingController>().isLoadingNearest.value;
-            final plotLoading = Get.find<PlotController>().isLoadingNearest.value;
             // StayGuestController is lazy and makes no call on put; .to registers it so this Obx subscribes.
             final stayLoading = StayGuestController.to.isLoadingNearest.value;
-            if (!roomLoading && !plotLoading && !stayLoading) return const SizedBox.shrink();
-            return AppLoadingOverlay.stackChild(
-              message: roomLoading
-                  ? 'Finding nearest rooms...'
-                  : (plotLoading ? 'Finding nearest plots...' : 'Finding nearest stays...'),
-            );
+            if (!stayLoading) return const SizedBox.shrink();
+            return AppLoadingOverlay.stackChild(message: 'Finding nearest stays...');
           }),
         ],
       ),
@@ -454,18 +439,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           children: [
             _navItem(AppTabs.home, Iconsax.home, Iconsax.home5,
                 _tabConfigCtrl.displayNameForIndex(AppTabs.home, 'Home')),
-            if (_tabConfigCtrl.isRoomsActive)
-              KeyedSubtree(
-                key: TourKeys.homeRoomsNavIcon,
-                child: _navItem(AppTabs.rooms, Iconsax.house, Iconsax.house5,
-                    _tabConfigCtrl.displayNameForIndex(AppTabs.rooms, 'Rooms')),
-              ),
-            if (_tabConfigCtrl.isPlotsActive)
-              KeyedSubtree(
-                key: TourKeys.homePlotsNavIcon,
-                child: _navItem(AppTabs.plots, Iconsax.location, Iconsax.location5,
-                    _tabConfigCtrl.displayNameForIndex(AppTabs.plots, 'Plots')),
-              ),
             if (_tabConfigCtrl.isActive(AppTabKeys.stays))
               KeyedSubtree(
                 key: TourKeys.homeStaysNavIcon,
@@ -497,12 +470,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          if (index == AppTabs.rooms && _auth.tabIndex.value != AppTabs.rooms) {
-            Get.find<ListingController>().exploreRefreshTrigger.value++;
-          }
-          if (index == AppTabs.plots && _auth.tabIndex.value != AppTabs.plots) {
-            Get.find<PlotController>().exploreRefreshTrigger.value++;
-          }
           final stays = Get.isRegistered<StayLandingController>(tag: 'stays')
               ? Get.find<StayLandingController>(tag: 'stays')
               : null;
@@ -519,8 +486,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             Get.find<TaxiListController>(tag: TaxiListController.tag).refreshIfStale();
           }
           if (index == AppTabs.profile && _auth.tabIndex.value != AppTabs.profile) _auth.profileTabTrigger.value++;
-          Get.find<ListingController>().filterResetTrigger.value++;
-          Get.find<PlotController>().filterResetTrigger.value++;
           stays?.filterResetTrigger.value++;
           jobs?.filterResetTrigger.value++;
           _auth.switchToTab(index);

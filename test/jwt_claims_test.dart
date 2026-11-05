@@ -11,14 +11,22 @@ String _token(Map<String, dynamic> payload) {
 
 void main() {
   group('JwtClaims.role', () {
-    test('returns RENT_OWNER from a rent-owner token', () {
-      final token = _token({'sub': 'u1', 'session_id': 's1', UserRoleKeys.claim: UserRoleKeys.rentOwner});
-      expect(JwtClaims.role(token), UserRoleKeys.rentOwner);
+    test('returns STAY_OWNER from a stay-owner token', () {
+      final token = _token({'sub': 'u1', 'session_id': 's1', UserRoleKeys.claim: UserRoleKeys.stayOwner});
+      expect(JwtClaims.role(token), UserRoleKeys.stayOwner);
     });
 
-    test('returns PROPERTY_OWNER from a property-owner token', () {
-      final token = _token({'sub': 'u1', 'session_id': 's1', UserRoleKeys.claim: UserRoleKeys.propertyOwner});
-      expect(JwtClaims.role(token), UserRoleKeys.propertyOwner);
+    test('returns TAXI_DRIVER from a taxi-driver token', () {
+      final token = _token({'sub': 'u1', 'session_id': 's1', UserRoleKeys.claim: UserRoleKeys.taxiDriver});
+      expect(JwtClaims.role(token), UserRoleKeys.taxiDriver);
+    });
+
+    test('a removed RENT_OWNER claim parses as a string and has no capabilities', () {
+      final token = _token({'sub': 'u1', 'session_id': 's1', UserRoleKeys.claim: 'RENT_OWNER'});
+      final role = JwtClaims.role(token);
+      expect(role, 'RENT_OWNER');
+      expect(identical(RoleCapabilities.of(role), RoleCapabilities.none), isTrue);
+      expect(RoleCapabilities.of(role).isOwner, isFalse);
     });
 
     test('returns SEEKER from a seeker token', () {

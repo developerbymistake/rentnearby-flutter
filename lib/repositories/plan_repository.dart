@@ -150,8 +150,4 @@ class PlanRepository {
     _meGen++;
     return _storeMe(MyPlanModel.fromJson(res['data'] as Map<String, dynamic>));
   }
-
-  Future<void> swapLive({required bool isPlot, required String targetId, required String pauseListingId}) async {
-    await ApiService.post('/${isPlot ? 'plots' : 'listings'}/$targetId/swap-live', {'pauseListingId': pauseListingId});
-  }
 }

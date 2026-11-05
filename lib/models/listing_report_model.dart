@@ -1,7 +1,7 @@
 class ListingReportModel {
   final String id;
   final String listingId;
-  final String listingType; // 'Room' | 'Plot'
+  final String listingType; // 'Stay' | 'Taxi' | 'TripEnquiry'
   final String reasonName;
   final String details;
   final String status; // 'Pending' | 'Resolved'

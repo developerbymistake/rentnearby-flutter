@@ -35,10 +35,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _shareApp() async {
     await SharePlus.instance.share(
       ShareParams(
-        text: 'Find nearby rooms, PG, flats & plots for rent near you. '
-            'Browse on a live map, and connect straight with owners.\n'
+        text: 'Plan trips, find stays and taxis near you.\n'
             'https://play.google.com/store/apps/details?id=com.rentnearby.rentnearby',
-        subject: 'Discover your next address.',
+        subject: 'Plan your next trip.',
       ),
     );
   }

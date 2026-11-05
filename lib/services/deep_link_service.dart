@@ -11,11 +11,10 @@ import '../controllers/location_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../features/stay/guest/stay_navigation.dart';
 import 'api_service.dart';
-import 'explore_navigation.dart';
 import 'storage_service.dart';
 
 /// `type` -> where to resolve a `/go/{type}/{...slugSegments}` payload. `slugSegments` is how
-/// many path segments after `type` make up the slug (1 for Room/Plot, a flat slug).
+/// many path segments after `type` make up the slug (1, a flat slug).
 class _DeepLinkTypeConfig {
   final String bySlugPath;
   final int slugSegments;
@@ -25,8 +24,6 @@ class _DeepLinkTypeConfig {
 }
 
 const Map<String, _DeepLinkTypeConfig> _deepLinkTypes = {
-  'r': _DeepLinkTypeConfig('/listings/by-slug', 1, AppTabs.rooms),
-  'p': _DeepLinkTypeConfig('/plots/by-slug', 1, AppTabs.plots),
   's': _DeepLinkTypeConfig('/stays/by-slug', 1, AppTabs.stays),
   't': _DeepLinkTypeConfig('/taxis/by-slug', 1, AppTabs.taxi),
 };
@@ -202,19 +199,16 @@ class DeepLinkService extends GetxService {
         unawaited(Get.toNamed(AppRoutes.taxiDetail, arguments: {'id': id}));
         return;
       }
+      if (type != 's') return;
 
-      // Switch to the Rooms/Plots tab, then push its map so the shared pin is visible.
+      // Switch to the Stays tab, then push its map so the shared pin is visible.
       Get.find<AuthController>().switchToTab(tabIndex);
       final lat = (data['latitude'] as num?)?.toDouble();
       final lng = (data['longitude'] as num?)?.toDouble();
       if (lat != null && lng != null) {
         unawaited(_applySearchPin(lat, lng, data['address'] as String?));
       }
-      if (type == 's') {
-        unawaited(StayNavigation.openMap());
-      } else {
-        unawaited(ExploreNavigation.openMap(tabIndex));
-      }
+      unawaited(StayNavigation.openMap());
     } catch (_) {
       // Unknown/soft-deleted slug (404) or a network failure — nothing to show for a route
       // the user didn't explicitly navigate to inside the app, so fail silently rather than

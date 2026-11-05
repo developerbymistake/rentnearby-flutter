@@ -90,8 +90,6 @@ class _ChatsListScreenState extends State<ChatsListScreen>
         'conversationId': c.id,
         'listingType': c.listingType,
         'listingId': c.listingId,
-        'roomTypeId': c.roomTypeId,
-        'plotTypeId': c.plotTypeId,
         'stayTypeId': c.stayTypeId,
         'otherPartyId': c.otherPartyId,
         'otherPartyName': c.otherPartyName,
@@ -470,7 +468,7 @@ class _ChatsListScreenState extends State<ChatsListScreen>
           ),
           const SizedBox(height: 6),
           const Text(
-            'Start a chat from any room or plot listing',
+            'Start a chat from any stay.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Poppins',

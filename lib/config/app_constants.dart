@@ -26,8 +26,6 @@ class AppConstants {
   static const String introCarouselSeenKey = 'intro_carousel_seen';
 
   static const String tourHomeSeenKey = 'tour_home_seen_v2';
-  static const String tourRoomsSeenKey = 'tour_rooms_seen_v2';
-  static const String tourPlotsSeenKey = 'tour_plots_seen_v2';
   static const String tourStaysSeenKey = 'tour_stays_seen_v1';
 
   // District-switch feature — cached reference data for the location picker.
@@ -97,21 +95,4 @@ class AppConstants {
   static const List<double> radiusOptions = [1.0, 6.0, 12.0];
   static const int nearestFallbackCount = 5;
   static const double nearestFocusRadiusKm = 1.0;
-}
-
-class FurnishedStatus {
-  static const String none = 'None';
-  static const String semi = 'Semi';
-  static const String full = 'Full';
-  static const List<String> values = [none, semi, full];
-}
-
-class AcStatus {
-  static const List<bool> values = [true, false];
-  static String label(bool v) => v ? 'AC' : 'Non-AC';
-}
-
-class FloorLevel {
-  static const List<int> values = [0, 1, 2, 3];
-  static String label(int v) => switch (v) { 0 => 'Ground', 1 => '1', 2 => '2', _ => '3+' };
 }

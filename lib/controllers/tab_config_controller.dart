@@ -4,7 +4,7 @@ import '../config/app_tabs.dart';
 import '../models/app_tab_config_model.dart';
 import '../repositories/config_repository.dart';
 
-/// Single source of truth for the 7 bottom-nav tabs' admin-managed active/rename state
+/// Single source of truth for the 5 bottom-nav tabs' admin-managed active/rename state
 /// (master table — RentNearBy.Core.Entities.AppTab). Put permanently in main() before
 /// AuthController, so every routing decision (splash, postLoginRoute, deep links, pushes)
 /// already sees the tab state.
@@ -104,19 +104,13 @@ class TabConfigController extends GetxController {
   String displayNameForIndex(int tabIndex, String fallback) =>
       displayName(AppTabs.tabKeys[tabIndex] ?? '', fallback);
 
-  bool get isRoomsActive => isActive(AppTabKeys.rooms);
-  bool get isPlotsActive => isActive(AppTabKeys.plots);
   bool get isStaysActive => isActive(AppTabKeys.stays);
   bool get isTaxiActive => isActive(AppTabKeys.taxi);
   bool get isJobsActive => isActive(AppTabKeys.jobs);
 
   List<String> get activeSectionKeys => [
-        if (isRoomsActive) HomeSectionKeys.rooms,
-        if (isPlotsActive) HomeSectionKeys.plots,
         if (isStaysActive) HomeSectionKeys.stays,
         if (isTaxiActive) HomeSectionKeys.taxis,
-        if (isRoomsActive) HomeSectionKeys.recentRooms,
-        if (isPlotsActive) HomeSectionKeys.recentPlots,
         if (isStaysActive) HomeSectionKeys.recentStays,
       ];
 }
@@ -126,8 +120,6 @@ class TabConfigController extends GetxController {
 // don't need to thread through AppTabs' int constants at all.
 class AppTabKeys {
   static const home = 'HOME';
-  static const rooms = 'ROOMS';
-  static const plots = 'PLOTS';
   static const stays = 'STAYS';
   static const jobs = 'JOBS';
   static const taxi = 'TAXI';
@@ -136,11 +128,7 @@ class AppTabKeys {
 
 // `sections` values of GET /home/feed.
 class HomeSectionKeys {
-  static const rooms = 'rooms';
-  static const plots = 'plots';
   static const stays = 'stays';
   static const taxis = 'taxis';
-  static const recentRooms = 'recentRooms';
-  static const recentPlots = 'recentPlots';
   static const recentStays = 'recentStays';
 }

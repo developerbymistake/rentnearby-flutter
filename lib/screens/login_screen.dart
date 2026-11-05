@@ -243,7 +243,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       SizedBox(height: 10),
                       Text('Bakhli', style: TextStyle(fontFamily: 'Poppins', fontSize: 34, fontWeight: FontWeight.w700, color: Colors.white)),
                       SizedBox(height: 4),
-                      Text('Discover your new address', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
+                      Text('Plan your next trip', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
                     ],
                   ),
                   SizedBox(height: screenH * 0.08),

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary palette (Rooms)
+  // Primary palette (brand)
   static const Color primary = Color(0xFF1E3A8A);       // Deep navy
   static const Color primaryLight = Color(0xFF3B82F6);  // Royal blue
   static const Color accent = Color(0xFF0EA5E9);        // Cyan highlight
   static const Color accentLight = Color(0xFF38BDF8);
 
-  // Plot palette — the Plots tab's own theme, distinct from Rooms' blue above.
+  // Green palette (used by Trip).
   static const Color plot = Color(0xFF15803D);      // Forest
   static const Color plotDark = Color(0xFF166534);  // Deep forest
   static const Color plotSurface = Color(0xFFF0FDF4);
@@ -59,9 +59,6 @@ class AppColors {
     end: Alignment.bottomRight,
     colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
   );
-
-  static Color accentFor(bool isPlot) => isPlot ? plot : primary;
-  static LinearGradient gradientFor(bool isPlot) => isPlot ? plotGradient : primaryGradient;
 
   static const LinearGradient plotGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -145,7 +142,6 @@ class AppColors {
   static const Color neutralChipText = Color(0xFF475569);
   static const Color whatsApp = Color(0xFF25D366);
   static const Color userDot = Color(0xFF1E88E5);
-  static const Color furnished = Color(0xFF8B5CF6);
 
   // Misc
   static const Color divider = Color(0xFFE2E8F0);

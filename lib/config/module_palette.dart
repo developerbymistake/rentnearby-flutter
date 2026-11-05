@@ -26,14 +26,6 @@ class ModulePalette {
     gradient: AppColors.primaryGradient,
   );
 
-  static const plots = ModulePalette(
-    accent: AppColors.plot,
-    accentDark: AppColors.plotDark,
-    accentLight: AppColors.plot,
-    surface: AppColors.plotSurface,
-    gradient: AppColors.plotGradient,
-  );
-
   static const stays = ModulePalette(
     accent: AppColors.stay,
     accentDark: AppColors.stayDark,
@@ -69,7 +61,6 @@ class ModulePalette {
   static ModulePalette forListingKind(String kind) => switch (kind) {
         'Stay' => stays,
         'Taxi' => taxi,
-        'Plot' => plots,
         'Job' => jobs,
         _ => rooms,
       };

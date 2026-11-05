@@ -1,6 +1,5 @@
 import 'package:bakhli/features/jobs/models/job_summary_model.dart';
 import 'package:bakhli/models/browse_item.dart';
-import 'package:bakhli/models/listing_model.dart';
 import 'package:bakhli/utils/money_format.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -43,14 +42,6 @@ void main() {
   });
 
   test('every screen shows the same exact rent', () {
-    final nearby = NearbyListingModel.fromJson({
-      'id': 'a',
-      'priceMonthly': 9999,
-      'latitude': 29.2,
-      'longitude': 79.5,
-      'distanceKm': 1.2,
-    });
-    expect(nearby.shortPrice, '₹9,999');
     expect(BrowseItem.inr(4950), '₹4,950');
     expect(BrowseItem.inr(150000), '₹1,50,000');
   });

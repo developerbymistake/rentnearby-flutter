@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 
-/// Floating pill shortcut ("Find Nearest", "Map view") — shared by the Rooms and Plots
-/// Explore screens so the CTA's color/border/shape stays byte-identical between both tabs (only
-/// label/icon/destination/gradient differ per caller). A standalone full pill, icon-then-label
-/// always — the caller's Positioned decides where it sits (both explore screens inset it to the
-/// same left/right bounds as the filter panel directly below it).
+/// Floating pill shortcut ("Find Nearest", "Map view") — shared by Stay and Taxi screens so
+/// the CTA's color/border/shape stays identical (only label/icon/destination/gradient differ
+/// per caller). A standalone full pill, icon-then-label always — the caller's Positioned
+/// decides where it sits.
 class AddListingShortcutButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final VoidCallback onTap;
-  // Defaults to the Room-tab blue gradient so the existing Rooms call site is unaffected — the
-  // Plots call site passes AppColors.plotGradient (the same plot gradient pair used everywhere
-  // else on the Plots tab) instead of inheriting Room's color.
+  // Defaults to the primary gradient; callers pass their module gradient.
   final Gradient gradient;
 
   const AddListingShortcutButton({

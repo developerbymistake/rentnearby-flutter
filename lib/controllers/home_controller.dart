@@ -2,44 +2,28 @@ import 'package:get/get.dart';
 import '../features/taxi/models/taxi_browse_item.dart';
 import '../models/home_feed_model.dart';
 import '../repositories/home_repository.dart';
-import 'listing_controller.dart';
 import 'location_controller.dart';
-import 'plot_controller.dart';
 import 'tab_config_controller.dart';
 
 export '../models/home_feed_model.dart';
 
 /// Home tab's data source: one GET /home/feed per load, limited to the sections of active tabs.
 class HomeController extends GetxController {
-  final recentRooms = <HomeRoomModel>[].obs;
-  final recentPlots = <HomePlotModel>[].obs;
   final stays = <HomeStayModel>[].obs;
   final taxis = <TaxiBrowseItem>[].obs;
 
-  final recentlyAddedRooms = <HomeRoomModel>[].obs;
-  final recentlyAddedPlots = <HomePlotModel>[].obs;
   final recentlyAddedStays = <HomeStayModel>[].obs;
 
-  final roomsLoading = true.obs;
-  final plotsLoading = true.obs;
   final staysLoading = true.obs;
   final taxisLoading = true.obs;
-  final recentlyAddedRoomsLoading = true.obs;
-  final recentlyAddedPlotsLoading = true.obs;
   final recentlyAddedStaysLoading = true.obs;
   final failedSections = <String>{}.obs;
 
   static const _allSections = {
-    HomeSectionKeys.rooms,
-    HomeSectionKeys.plots,
     HomeSectionKeys.stays,
     HomeSectionKeys.taxis,
-    HomeSectionKeys.recentRooms,
-    HomeSectionKeys.recentPlots,
     HomeSectionKeys.recentStays,
   };
-  static const _roomSections = {HomeSectionKeys.rooms, HomeSectionKeys.recentRooms};
-  static const _plotSections = {HomeSectionKeys.plots, HomeSectionKeys.recentPlots};
 
   final _repo = const HomeRepository();
   final _gen = <String, int>{};
@@ -61,17 +45,6 @@ class HomeController extends GetxController {
       if (district != null) loadHomeData(district.id);
     }));
 
-    // Not exploreRefreshTrigger: it fires on every Rooms/Plots tab tap.
-    final plotCtrl = Get.find<PlotController>();
-    final listingCtrl = Get.find<ListingController>();
-    _workers.add(everAll(
-      [plotCtrl.listingStatusChangedTrigger, plotCtrl.plotPostedTrigger],
-      (_) => reloadSections(_plotSections),
-    ));
-    _workers.add(everAll(
-      [listingCtrl.listingStatusChangedTrigger, listingCtrl.listingPostedTrigger],
-      (_) => reloadSections(_roomSections),
-    ));
     _workers.add(ever(_tabs.version, (_) => _onTabsChanged()));
 
     final current = _loc.effectiveDistrict;
@@ -98,14 +71,10 @@ class HomeController extends GetxController {
   }
 
   List<HomeRecentItem> recentMixed({
-    bool rooms = true,
-    bool plots = true,
     bool stays = true,
     int count = 6,
   }) {
     final all = <HomeRecentItem>[
-      if (rooms) ...recentlyAddedRooms.map(HomeRecentItem.room),
-      if (plots) ...recentlyAddedPlots.map(HomeRecentItem.plot),
       if (stays) ...recentlyAddedStays.map(HomeRecentItem.stay),
     ];
     all.sort((a, b) {
@@ -139,18 +108,10 @@ class HomeController extends GetxController {
     for (final k in keys) {
       _gen[k] = (_gen[k] ?? 0) + 1;
       switch (k) {
-        case HomeSectionKeys.rooms:
-          recentRooms.clear();
-        case HomeSectionKeys.plots:
-          recentPlots.clear();
         case HomeSectionKeys.stays:
           stays.clear();
         case HomeSectionKeys.taxis:
           taxis.clear();
-        case HomeSectionKeys.recentRooms:
-          recentlyAddedRooms.clear();
-        case HomeSectionKeys.recentPlots:
-          recentlyAddedPlots.clear();
         case HomeSectionKeys.recentStays:
           recentlyAddedStays.clear();
       }
@@ -195,30 +156,18 @@ class HomeController extends GetxController {
   void _apply(String key, HomeFeedModel feed) {
     failedSections.remove(key);
     switch (key) {
-      case HomeSectionKeys.rooms:
-        recentRooms.assignAll(feed.rooms ?? const []);
-      case HomeSectionKeys.plots:
-        recentPlots.assignAll(feed.plots ?? const []);
       case HomeSectionKeys.stays:
         stays.assignAll(feed.stays ?? const []);
       case HomeSectionKeys.taxis:
         taxis.assignAll(feed.taxis ?? const []);
-      case HomeSectionKeys.recentRooms:
-        recentlyAddedRooms.assignAll(feed.recentRooms ?? const []);
-      case HomeSectionKeys.recentPlots:
-        recentlyAddedPlots.assignAll(feed.recentPlots ?? const []);
       case HomeSectionKeys.recentStays:
         recentlyAddedStays.assignAll(feed.recentStays ?? const []);
     }
   }
 
   RxBool? _loadingOf(String key) => switch (key) {
-        HomeSectionKeys.rooms => roomsLoading,
-        HomeSectionKeys.plots => plotsLoading,
         HomeSectionKeys.stays => staysLoading,
         HomeSectionKeys.taxis => taxisLoading,
-        HomeSectionKeys.recentRooms => recentlyAddedRoomsLoading,
-        HomeSectionKeys.recentPlots => recentlyAddedPlotsLoading,
         HomeSectionKeys.recentStays => recentlyAddedStaysLoading,
         _ => null,
       };

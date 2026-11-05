@@ -1,7 +1,7 @@
 import '../services/api_service.dart';
 
 /// Fetches the real district polygon (GeoJSON `FeatureCollection`) used to
-/// render and validate pin placement in Add Room/Add Plot's Location step.
+/// render and validate pin placement in Stay/Taxi setup's Location step.
 /// In-memory only, keyed by district id — this is per-session boundary data,
 /// not the districts/cities reference list `LocationsRepository` already
 /// caches to disk.

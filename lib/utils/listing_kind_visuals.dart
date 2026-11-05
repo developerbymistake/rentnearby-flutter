@@ -9,8 +9,7 @@ abstract final class ListingKindVisuals {
   static String labelOf(String listingType) => switch (listingType) {
         'Stay' => 'STAY',
         'Taxi' => 'TAXI',
-        'Plot' => 'PLOT',
         'Job' => 'JOB',
-        _ => 'ROOM',
+        _ => listingType.toUpperCase(),
       };
 }

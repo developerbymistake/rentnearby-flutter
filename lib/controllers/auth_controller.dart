@@ -36,8 +36,6 @@ class AuthController extends GetxController {
   final isLoggingOut = false.obs;
   final user = Rxn<UserModel>();
   final roleKey = UserRoleKeys.seeker.obs;
-  final canListRooms = false.obs;
-  final canListPlots = false.obs;
   final canListStays = false.obs;
   final canListTaxis = false.obs;
   final tabIndex = AppTabs.home.obs;
@@ -69,17 +67,15 @@ class AuthController extends GetxController {
     profilePhoneChangeLocked.value = u?.hasUsedPhoneChange ?? false;
   }
 
-  bool get isOwner => canListRooms.value || canListPlots.value || canListStays.value || canListTaxis.value;
+  bool get isOwner => canListStays.value || canListTaxis.value;
 
   TabConfigController get _tabs => TabConfigController.to;
 
   // Effective capabilities = role AND tab; raw canListX stay for role change/profile/contact visibility.
-  bool get roomsEnabled => canListRooms.value && _tabs.isRoomsActive;
-  bool get plotsEnabled => canListPlots.value && _tabs.isPlotsActive;
   bool get staysEnabled => canListStays.value && _tabs.isStaysActive;
   bool get taxisEnabled => canListTaxis.value && _tabs.isTaxiActive;
   bool get jobsEnabled => staysEnabled && _tabs.isJobsActive;
-  bool get effectiveIsOwner => roomsEnabled || plotsEnabled || staysEnabled || taxisEnabled;
+  bool get effectiveIsOwner => staysEnabled || taxisEnabled;
 
   bool get roleTabActive {
     final key = UserRoleKeys.tabKeyOf(roleKey.value);
@@ -92,9 +88,8 @@ class AuthController extends GetxController {
       (user.value?.taxiStatus == 'Approved' || user.value?.taxiStatus == 'PendingReview');
 
   bool canOpenRoute(String route) {
+    if (!AppRoutes.isRegistered(route)) return false;
     if (AppRoutes.ownerOnly.contains(route) && !isOwner) return false;
-    if (AppRoutes.roomOwnerOnly.contains(route) && !canListRooms.value) return false;
-    if (AppRoutes.plotOwnerOnly.contains(route) && !canListPlots.value) return false;
     if (AppRoutes.stayOwnerOnly.contains(route) && !canListStays.value) return false;
     if (AppRoutes.taxiDriverOnly.contains(route) && !canListTaxis.value) return false;
     final tabKey = AppRoutes.tabKeyForRoute(route);
@@ -107,8 +102,6 @@ class AuthController extends GetxController {
     final key = JwtClaims.role(token) ?? UserRoleKeys.seeker;
     roleKey.value = key;
     final c = RoleCapabilities.of(key);
-    canListRooms.value = c.canListRooms;
-    canListPlots.value = c.canListPlots;
     canListStays.value = c.canListStays;
     canListTaxis.value = c.canListTaxis;
   }
@@ -298,8 +291,6 @@ class AuthController extends GetxController {
     } catch (_) {}
     user.value = null;
     roleKey.value = UserRoleKeys.seeker;
-    canListRooms.value = false;
-    canListPlots.value = false;
     canListStays.value = false;
     canListTaxis.value = false;
     _syncProfileFields(null);

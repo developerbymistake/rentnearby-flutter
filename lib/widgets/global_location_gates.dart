@@ -222,8 +222,8 @@ class GlobalLocationGates extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   permissionIssue
-                      ? 'Bakhli needs permission to access your location to show rooms near you. Please allow location access in Settings.'
-                      : 'Bakhli uses your location to show rooms near you. Please enable GPS to continue.',
+                      ? 'Bakhli needs permission to access your location to show stays and taxis near you. Please allow location access in Settings.'
+                      : 'Bakhli uses your location to show stays and taxis near you. Please enable GPS to continue.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontFamily: 'Poppins',

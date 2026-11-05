@@ -410,10 +410,10 @@ class _DiscoverPageState extends State<_DiscoverPage> with TickerProviderStateMi
   static const _radarSize = 202.0; // ~20% bigger than the original 168
 
   static const _pins = [
-    _RadarPin(0.30, 0.20, 0.26, '₹6.5k', [Color(0xFFA5B4FC), Color(0xFF4338CA)]),
-    _RadarPin(0.48, 0.80, 0.30, '₹4.2k', [Color(0xFF7DD3FC), Color(0xFF0EA5E9)]),
-    _RadarPin(0.63, 0.24, 0.78, 'Plot', [Color(0xFFFDE68A), Color(0xFFF59E0B)]),
-    _RadarPin(0.82, 0.78, 0.76, '₹12k', [Color(0xFFC4B5FD), Color(0xFF4338CA)]),
+    _RadarPin(0.30, 0.20, 0.26, '₹2.5k', [Color(0xFFA5B4FC), Color(0xFF4338CA)]),
+    _RadarPin(0.48, 0.80, 0.30, '₹1.8k', [Color(0xFF7DD3FC), Color(0xFF0EA5E9)]),
+    _RadarPin(0.63, 0.24, 0.78, 'Taxi', [Color(0xFFFDE68A), Color(0xFFF59E0B)]),
+    _RadarPin(0.82, 0.78, 0.76, '₹4k', [Color(0xFFC4B5FD), Color(0xFF4338CA)]),
   ];
 
   @override
@@ -475,8 +475,8 @@ class _DiscoverPageState extends State<_DiscoverPage> with TickerProviderStateMi
         colors: [Color(0xFF4338CA), Color(0xFF0EA5E9)],
       ),
       eyebrow: 'Welcome to Bakhli',
-      headline: 'Your Next Address Is\nCloser Than You Think',
-      sub: 'Drag the radius — nearby rooms & plots appear as pins.',
+      headline: 'Your next trip',
+      sub: 'Nearby stays and taxis appear as pins.',
       graphic: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1087,9 +1087,9 @@ class _GoLivePageState extends State<_GoLivePage> {
   Timer? _cardTimer;
 
   static const _listings = [
-    (photo: [Color(0xFF5EEAD4), Color(0xFF0891B2)], title: '2BHK near Ghantaghar', meta: 'Dehradun · Posted just now'),
-    (photo: [Color(0xFFFDE68A), Color(0xFFF59E0B)], title: '1BHK near Paltan Bazaar', meta: 'Dehradun · 2 mins ago'),
-    (photo: [Color(0xFFC4B5FD), Color(0xFF4338CA)], title: 'Plot · 3200 sqft', meta: 'Rishikesh · Just now'),
+    (photo: [Color(0xFF5EEAD4), Color(0xFF0891B2)], title: 'Homestay near Ghantaghar', meta: 'Dehradun · Posted just now'),
+    (photo: [Color(0xFFFDE68A), Color(0xFFF59E0B)], title: 'Taxi · Dehradun', meta: 'Dehradun · 2 mins ago'),
+    (photo: [Color(0xFFC4B5FD), Color(0xFF4338CA)], title: 'Cottage near Laxman Jhula', meta: 'Rishikesh · Just now'),
   ];
 
   @override

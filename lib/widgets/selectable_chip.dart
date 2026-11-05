@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 
-/// Same visual/animation as the type-filter chips in explore_screen.dart /
-/// explore_plots_screen.dart (AnimatedContainer, 200ms, rounded-10, solid
-/// [activeColor] + white text when selected). Shared so the Rooms/Plots
-/// toggle and the filter sheet's type chips stay pixel-identical.
+/// Selectable chip (AnimatedContainer, 200ms, rounded-10, solid
+/// [activeColor] + white text when selected), shared by Stay, Taxi, Jobs and
+/// Trip so filter and type chips stay pixel-identical.
 ///
 /// [icon] and [gradient] are optional, backward-compatible additions for
 /// contexts that want a richer/more elevated selected state (e.g. Home's
@@ -12,8 +11,7 @@ import '../config/app_colors.dart';
 /// fill and adds a matching shadow on selection; existing callers that don't
 /// pass either keep the original flat look untouched.
 ///
-/// [padding] is also optional/backward-compatible — dense grids (room/plot
-/// type chips) keep the default compact padding, while a single-row context
+/// [padding] is also optional/backward-compatible — dense grids (type chips) keep the default compact padding, while a single-row context
 /// like a sort-option button can pass a taller value so it reads as a real
 /// button instead of a cramped label.
 class SelectableChip extends StatelessWidget {

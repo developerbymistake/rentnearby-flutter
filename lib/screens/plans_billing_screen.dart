@@ -203,17 +203,15 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
   }
 
   static String _subtitleFor(String? featureKey) => switch (featureKey) {
-        'Plot' => 'Plots plan',
         'Stay' => 'Stay plan',
         'Taxi' => 'Taxi plan',
-        _ => 'Rooms plan',
+        _ => '',
       };
 
   static String _comingLine(String? featureKey) => switch (featureKey) {
-        'Plot' => 'Shown first and more plots. Not open yet.',
         'Stay' => 'Featured, shown first and more job posts. Not open yet.',
         'Taxi' => 'Featured and shown first. Not open yet.',
-        _ => 'Shown first and more rooms. Not open yet.',
+        _ => '',
       };
 
   static String _cycleTitle(int m) => m == 1 ? '1 month' : '$m months';
@@ -229,11 +227,8 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
 
   static String _plural(int n, String word) => '$n $word${n == 1 ? '' : 's'}';
 
-  List<String> _includedLines(PlanLimitsModel l, String? featureKey, bool paymentEnabled) {
-    final prefix = paymentEnabled ? '' : 'Up to ';
+  List<String> _includedLines(PlanLimitsModel l, String? featureKey) {
     return [
-      if (featureKey == 'Room') '$prefix${_plural(l.listingLimit, 'live room')}',
-      if (featureKey == 'Plot') '$prefix${_plural(l.listingLimit, 'live plot')}',
       if (l.priority > 0) 'Shown first in search',
       if (l.featured) 'Featured badge',
       if (featureKey == 'Stay') _plural(l.jobsPosts, 'job post'),
@@ -264,8 +259,6 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
     }
 
     return [
-      if (featureKey == 'Room' || featureKey == 'Plot')
-        row(PlanFeatureKeys.listingLimit, featureKey == 'Room' ? 'Live rooms' : 'Live plots', number: true),
       row(PlanFeatureKeys.priority, 'Shown first', number: false),
       row(PlanFeatureKeys.featured, 'Featured badge', number: false),
       if (featureKey == 'Stay') row(PlanFeatureKeys.jobsPosts, 'Job posts', number: true),
@@ -799,12 +792,7 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         : me.hasPaidPlan && me.endsAt != null
             ? 'Ends ${_date(me.endsAt!)}${me.daysLeft != null ? ' · ${me.daysLeft} days left' : ''}'
             : (me.paymentEnabled ? 'No end date' : 'Free for now');
-    final lines = _includedLines(l, me.featureKey, me.paymentEnabled);
-    final usageLabel = switch (me.featureKey) {
-      'Room' => 'Live rooms',
-      'Plot' => 'Live plots',
-      _ => null,
-    };
+    final lines = _includedLines(l, me.featureKey);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -830,10 +818,6 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         ]),
         const SizedBox(height: 2),
         Text(subtitle, style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-        if (usageLabel != null) ...[
-          const SizedBox(height: 12),
-          _usageBar(usageLabel, l.live, l.listingLimit, accent),
-        ],
         if (lines.isNotEmpty) ...[
           const SizedBox(height: 10),
           for (final line in lines)
@@ -855,27 +839,6 @@ class _PlansBillingScreenState extends State<PlansBillingScreen> {
         ],
       ]),
     );
-  }
-
-  Widget _usageBar(String label, int live, int limit, Color accent) {
-    const style = TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMedium);
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: style)),
-        const SizedBox(width: 8),
-        Text('$live of $limit used', style: style),
-      ]),
-      const SizedBox(height: 6),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: LinearProgressIndicator(
-          minHeight: 7,
-          value: limit <= 0 ? 0 : (live / limit).clamp(0.0, 1.0),
-          backgroundColor: AppColors.divider,
-          color: accent,
-        ),
-      ),
-    ]);
   }
 
   Widget _pill(String text, Color color) => Container(

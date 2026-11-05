@@ -30,10 +30,8 @@ abstract final class NotificationVisuals {
         NotificationKind.other => Iconsax.info_circle,
       };
 
-  /// 'ROOM' / 'PLOT' from the route the notification opens; null when it points elsewhere.
+  /// 'STAY' / 'TAXI' from the route the notification opens; null when it points elsewhere.
   static String? listingKind(String? actionRoute) => switch (actionRoute) {
-        AppRoutes.myPlots => 'PLOT',
-        AppRoutes.myListings => 'ROOM',
         AppRoutes.myStays => 'STAY',
         AppRoutes.myTaxi => 'TAXI',
         _ => null,

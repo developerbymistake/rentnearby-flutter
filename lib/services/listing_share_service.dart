@@ -15,7 +15,7 @@ import '../widgets/listing_share_card.dart';
 /// both channels (image + text) in one native share call — see the plan's "two channels
 /// bundled together whenever Share is tapped" decision.
 ///
-/// [type] is the short URL code ('r' for Room, 'p' for Plot, 's' for Stay, 't' for Taxi) used by both the QR's `/go/`
+/// [type] is the short URL code ('s' for Stay, 't' for Taxi) used by both the QR's `/go/`
 /// smart link and the shared `/l/` website link.
 Future<void> shareListing({
   required BuildContext context,
@@ -25,7 +25,6 @@ Future<void> shareListing({
   required String priceOrArea,
   required String typeLabel,
   required String locality,
-  String? furnishedStatus,
 }) async {
   // Captured before any `await` below — using `context` after an async gap risks it having
   // been unmounted in between, and everything past this point only needs the Overlay itself.
@@ -52,12 +51,9 @@ Future<void> shareListing({
             locality: locality,
             qrData: goLink,
             type: switch (type) {
-              'p' => ShareCardType.plot,
-              's' => ShareCardType.stay,
               't' => ShareCardType.taxi,
-              _ => ShareCardType.room,
+              _ => ShareCardType.stay,
             },
-            furnishedStatus: furnishedStatus,
           ),
         ),
       ),

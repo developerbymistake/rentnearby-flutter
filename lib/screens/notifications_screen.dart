@@ -204,8 +204,7 @@ class _NotificationRow extends StatelessWidget {
     final isRead = notification.isRead;
     final tint = NotificationVisuals.color(notification.type, notification.title);
     final kind = NotificationVisuals.listingKind(notification.actionRoute);
-    final isPlot = notification.actionRoute == AppRoutes.myPlots;
-    final accent = isPlot ? AppColors.plot : AppColors.primary;
+    const accent = AppColors.primary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -213,7 +212,7 @@ class _NotificationRow extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
-          color: isRead ? AppColors.cardBg : (isPlot ? AppColors.plotSurface : AppColors.surface),
+          color: isRead ? AppColors.cardBg : AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.divider.withValues(alpha: 0.8)),
           boxShadow: AppShadows.premium(AppColors.primary, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),

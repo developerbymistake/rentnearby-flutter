@@ -1,7 +1,7 @@
 import 'city_model.dart';
 
 /// Result of resolving a coordinate to the district/city that contains it,
-/// via the backend's point-in-polygon lookup (`GET /listings/context`).
+/// via the backend's point-in-polygon lookup (`GET /locations/context`).
 class LocationContext {
   final DistrictModel district;
   final CityModel? nearestCity;

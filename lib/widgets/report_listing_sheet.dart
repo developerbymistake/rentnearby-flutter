@@ -9,7 +9,7 @@ import 'gradient_button.dart';
 
 class ReportListingSheet extends StatefulWidget {
   final String listingId;
-  final String listingType; // 'Room' | 'Plot' | 'Stay' | 'Taxi'
+  final String listingType; // 'Stay' | 'Taxi'
   final ModulePalette palette;
   final String? tripEnquiryId;
 

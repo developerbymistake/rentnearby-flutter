@@ -8,12 +8,12 @@ import '../models/place_result_model.dart';
 import '../utils/app_toast.dart';
 import '../widgets/location_search_sheet.dart';
 
-/// Shared location-search behavior for the Explore Room and Plot screens.
+/// Shared location-search behavior, shared by Stay and Taxi screens.
 ///
 /// Thin per-screen forwarder — all session state (the precise pin, its
 /// label, the resolving flag, the pre-search snapshot, the generation
 /// counter) lives on [LocationController] itself, fully shared between
-/// Rooms and Plots, exactly like manual city-switch already is. This is
+/// screens, exactly like manual city-switch already is. This is
 /// what makes searching a precise spot on one screen move the *other*
 /// screen's camera/radius to that exact same spot too, not just the same
 /// district. See `LocationController`'s "Location-search session API"

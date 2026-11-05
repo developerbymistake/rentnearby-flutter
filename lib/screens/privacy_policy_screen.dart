@@ -25,7 +25,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
           _section('Information We Collect', [
             'Mobile number — collected during sign-up for account creation and verification.',
             'Your name — provided by you and displayed alongside your listings.',
-            'Your role — the role you choose in the app (Seeker, Rent Owner, Property Owner, Stay Owner or Taxi Driver).',
+            'Your role — the role you choose in the app (Seeker, Stay Owner or Taxi Driver).',
             'Location (GPS) — your phone\'s location is accessed in real time to show nearby listings. We do not keep a history of your live location. The map location you set for a listing, stay or taxi route is stored and shown to other users.',
             'Photos — images you upload for listings, stays and vehicle number plates, stored with our image hosting provider.',
             'Listing, stay, job and taxi details — information you enter, including prices, addresses, vehicle details, number plate, routes and fares, and the phone or WhatsApp numbers you add to a post.',

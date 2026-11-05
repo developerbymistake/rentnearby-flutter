@@ -474,8 +474,6 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
       'conversationId': conv.id,
       'listingType': conv.listingType,
       'listingId': conv.listingId,
-      'roomTypeId': conv.roomTypeId,
-      'plotTypeId': conv.plotTypeId,
       'stayTypeId': conv.stayTypeId,
       'otherPartyId': conv.otherPartyId,
       'otherPartyName': conv.otherPartyName,

@@ -18,7 +18,7 @@ class DistrictModel {
         id: json['id'],
         name: json['name'],
         stateName: json['stateName'] as String?,
-        // Absent on /listings/context (that endpoint only ever returns an
+        // Absent on /locations/context (that endpoint only ever returns an
         // already-active district), present on /admin/districts.
         isActive: json['isActive'] as bool? ?? true,
         businessOnboardingEnabled: json['businessOnboardingEnabled'] as bool?,
@@ -57,36 +57,6 @@ class CityModel {
         'latitude': latitude,
         'longitude': longitude,
       };
-}
-
-class RoomTypeModel {
-  final String id;
-  final String name;
-  final String? description;
-
-  RoomTypeModel({required this.id, required this.name, this.description});
-
-  factory RoomTypeModel.fromJson(Map<String, dynamic> json) => RoomTypeModel(
-        id: json['id'],
-        name: json['name'],
-        description: json['description'],
-      );
-}
-
-class PlotTypeModel {
-  final String id;
-  final String name;
-  final String? description;
-  final int sortOrder;
-
-  PlotTypeModel({required this.id, required this.name, this.description, required this.sortOrder});
-
-  factory PlotTypeModel.fromJson(Map<String, dynamic> json) => PlotTypeModel(
-        id: json['id'],
-        name: json['name'],
-        description: json['description'],
-        sortOrder: json['sortOrder'] ?? 0,
-      );
 }
 
 class ReportReasonModel {

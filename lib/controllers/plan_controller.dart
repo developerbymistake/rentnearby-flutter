@@ -13,8 +13,6 @@ import '../services/billing/play_billing_gateway.dart';
 import '../services/billing/razorpay_gateway.dart';
 import '../utils/app_toast.dart';
 import '../utils/dio_error_mapper.dart';
-import 'listing_controller.dart';
-import 'plot_controller.dart';
 
 class _PlayInflight {
   final PlanOrder order;
@@ -57,7 +55,6 @@ class PlanController extends GetxController {
   int _planSeq = 0;
   int _pollSeq = 0;
   bool _disposed = false;
-  Timer? _reloadTimer;
   final _skipOpenIds = <String>{};
 
   BillingGateway? _gateway;
@@ -74,21 +71,12 @@ class PlanController extends GetxController {
   static const _restoreThrottle = Duration(minutes: 2);
   static const _restoreChunk = 10;
   static const _playLaunchTimeout = Duration(minutes: 10);
-  static const _reloadListTypes = {
-    'planactivated',
-    'planexpired',
-    'planonhold',
-    'planpaused',
-    'planrenewed',
-    'plancarryoveractivated',
-  };
 
   PlanRepository get _repo => Get.find<PlanRepository>();
 
   PlanLimitsModel get limits => myPlan.value.limits;
   bool get paymentEnabled => myPlan.value.paymentEnabled;
   bool get hasPlanFeature => myPlan.value.featureKey != null;
-  bool get hasRoomForLive => limits.live < limits.listingLimit;
   bool get isLoaded => _loaded;
 
   String get paymentProvider => _providerKey(myPlan.value.paymentProvider);
@@ -151,21 +139,6 @@ class PlanController extends GetxController {
     if (type == null) return;
     final t = type.toLowerCase().replaceAll('_', '');
     if (t.startsWith('plan')) invalidate();
-    if (_reloadListTypes.contains(t)) _reloadMyLists();
-  }
-
-  void _reloadMyLists() {
-    _reloadTimer?.cancel();
-    _reloadTimer = Timer(const Duration(seconds: 2), _doReloadMyLists);
-  }
-
-  void _doReloadMyLists() {
-    if (Get.isRegistered<ListingController>() && Get.find<ListingController>().hasLoadedMyListings) {
-      Get.find<ListingController>().loadMyListings();
-    }
-    if (Get.isRegistered<PlotController>() && Get.find<PlotController>().hasLoadedMyPlots) {
-      Get.find<PlotController>().loadMyPlots(reset: true);
-    }
   }
 
   void _applyMe(MyPlanModel me) {
@@ -199,7 +172,6 @@ class PlanController extends GetxController {
   @override
   void onClose() {
     _disposed = true;
-    _reloadTimer?.cancel();
     _pollSeq++;
     _cancelInflight();
     _disposeGateway();
@@ -454,9 +426,6 @@ class PlanController extends GetxController {
       isPurchasing.value = false;
     }
   }
-
-  Future<void> swapLive({required bool isPlot, required String targetId, required String pauseListingId}) =>
-      _repo.swapLive(isPlot: isPlot, targetId: targetId, pauseListingId: pauseListingId);
 
   Future<void> openManageSubscription() async {
     final url = myPlan.value.manageUrl;
@@ -838,7 +807,6 @@ class PlanController extends GetxController {
           for (final x in items)
             if (x.$2.outcome == 'Detached') x.$1.productId: x.$2.endsAt,
         });
-      if (items.any((x) => x.$2.outcome == 'Granted')) _reloadMyLists();
       isRestoring.value = false;
       if (userInitiated) await _showRestoreOutcome(g, items, order);
     } finally {
@@ -945,7 +913,6 @@ class PlanController extends GetxController {
         } else {
           detachedProducts.remove(p.productId);
         }
-        if (r.outcome == 'Granted') _reloadMyLists();
       }
     } catch (_) {
     } finally {
@@ -1019,7 +986,6 @@ class PlanController extends GetxController {
   void _afterSettled() {
     final s = activePurchase.value;
     if (s == null || s.isOpen) return;
-    if (s.isGranted) _reloadMyLists();
     invalidate();
   }
 

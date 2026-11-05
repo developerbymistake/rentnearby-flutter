@@ -38,7 +38,7 @@ class LocationController extends GetxController {
   final locationRefreshedTrigger = 0.obs;
   // Incremented only when refreshOnResume() actually re-fetches GPS (i.e. the
   // app was genuinely backgrounded long enough, or a manual "Check Again") —
-  // Add Room/Plot watch this specifically to know when it's safe to override
+  // Stay/Taxi setup watch this specifically to know when it's safe to override
   // a manually-placed pin, as opposed to any userLocation change in general
   // (cold-start's second high-accuracy fix, a GPS on/off toggle) which should
   // never move a pin the user already placed.
@@ -56,7 +56,7 @@ class LocationController extends GetxController {
   final browsingCity     = Rxn<CityModel>();
 
   // ── Location-search feature — precise pin, fully shared (like browsing
-  // above) so Room and Plot always show the exact same searched spot, not
+  // above) so every screen always shows the exact same searched spot, not
   // just the same district. See setBrowsing()/resetBrowsing() for why the
   // pin's lifecycle is tied to theirs, and beginSearchOverride()/
   // endSearchOverride() for the session API the search UI actually uses.
@@ -99,8 +99,8 @@ class LocationController extends GetxController {
 
   /// Map/radius center for the explore screens: precise search pin (if any)
   /// > browsed city's stored coordinate > live GPS > GPS-nearest city >
-  /// hardcoded last-resort fallback. Shared across Rooms and Plots — moved
-  /// here (from being duplicated per-screen) so both screens always agree on
+  /// hardcoded last-resort fallback. Shared by Stay and Taxi — moved
+  /// here (from being duplicated per-screen) so all screens always agree on
   /// exactly the same point, not just the same district.
   LatLng get effectiveSearchCenter {
     final pin = searchPinOverride.value;
@@ -170,7 +170,7 @@ class LocationController extends GetxController {
   }
 
   // ── Location-search session API ─────────────────────────────────────────
-  // Used by ExploreLocationSearchMixin (Rooms + Plots) — kept here so both
+  // Used by ExploreLocationSearchMixin (Stay and Taxi) — kept here so all
   // screens share one session, one snapshot, and one generation counter,
   // rather than each screen tracking its own (which would let cancelling
   // from one screen fail to restore a manual browse made from the other).
@@ -536,8 +536,8 @@ class LocationController extends GetxController {
   // Applies a freshly-resolved district/city, then bumps
   // resumeLocationRefreshedTrigger — kept as one function, not two loose
   // statements at the refreshOnResume() call site, specifically so the
-  // district/city can never end up set AFTER the trigger fires: Add
-  // Room/Plot's resume-worker reads selectedDistrict/autoCity straight off
+  // district/city can never end up set AFTER the trigger fires: Stay/Taxi
+  // setup's resume-worker reads selectedDistrict/autoCity straight off
   // this controller instead of re-resolving the same coordinates itself
   // (avoiding a duplicate /locations/context hit), which only stays correct
   // if those fields are already current by the time the trigger fires.
@@ -562,7 +562,7 @@ class LocationController extends GetxController {
 
   // Stamps when the app actually left the foreground, so refreshOnResume()
   // can tell a genuine background trip (possible travel) apart from a quick
-  // round trip (e.g. the camera/gallery picker during Add Room/Plot) that
+  // round trip (e.g. the camera/gallery picker during Stay/Taxi setup) that
   // shouldn't cost a GPS fix + network call every time.
   void appPaused() {
     _pausedAt = DateTime.now();

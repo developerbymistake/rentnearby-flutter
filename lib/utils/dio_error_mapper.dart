@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
 /// Shared DioException-to-user-message translation, previously hand-copied as
-/// `_errorMessage`/`_dioMessage` across listing/plot/chat controllers. Callers pass which
+/// `_errorMessage`/`_dioMessage` across controllers. Callers pass which
 /// status codes (beyond the always-shown 400) are safe to show verbatim for their endpoint —
 /// this varies per feature (e.g. chat's block/report flow treats 403 as clear,
 /// user-facing messages).

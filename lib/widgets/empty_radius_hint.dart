@@ -5,8 +5,8 @@ import '../config/module_palette.dart';
 // Shown attached to the TOP edge of the radius circle when the current radius+filter
 // combination has zero matching listings — a small tagged chip with a tail pointing
 // down onto the circle's boundary, keeping the circle's own center (where the user's
-// location pin sits) completely uncluttered. Positioning is the caller's job (see
-// explore_screen.dart/explore_plots_screen.dart): this widget renders anchored at its
+// location pin sits) completely uncluttered. Positioning is the caller's job (shared
+// by Stay and Taxi map screens): this widget renders anchored at its
 // own bottom-center, i.e. the tail tip, so the caller can place that tip exactly on the
 // circle's edge. Purely informational — the radius circle itself keeps its normal color
 // in every state; this is the only thing that changes.

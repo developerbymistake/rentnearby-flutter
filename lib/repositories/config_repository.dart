@@ -17,8 +17,7 @@ class ConfigRepository {
   /// the backend still enforces payment, and the app-resume refresh recovers
   /// the real value. Kept on its own, much shorter TTL
   /// since an admin flipping this switch is expected to take effect quickly,
-  /// not the "almost never changes" assumption behind the 1h listing-limits
-  /// cache above.
+  /// not an "almost never changes" assumption.
   Future<({bool enabled, int freeGoLiveDurationDays})> getPaymentFeature({bool forceRefresh = false}) async {
     if (!forceRefresh && _isPaymentCacheValid) return _paymentCache!;
     try {

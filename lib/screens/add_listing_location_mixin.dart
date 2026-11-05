@@ -17,8 +17,8 @@ import '../utils/app_toast.dart';
 import '../utils/geo_point_in_polygon.dart';
 import '../utils/input_formatters.dart';
 
-/// Room/Plot-specific styling for the shared location/address subsystem —
-/// everything that differs between Add Room and Add Plot's otherwise
+/// Per-flow styling for the shared location/address subsystem, shared by
+/// Stay and Taxi setup — everything that differs between their otherwise
 /// identical map/pin/district/address mechanism, taken as one bundle instead
 /// of scattering individual color/text parameters across every call site.
 class LocationStepStyle {
@@ -41,13 +41,12 @@ class LocationStepStyle {
   });
 }
 
-/// Shared map/GPS/district/address subsystem for Add Room's and Add Plot's
+/// Shared map/GPS/district/address subsystem, shared by Stay and Taxi setup's
 /// Location + Address steps — identical mechanism in both flows (pin
 /// placement, the live-position safety check, resume-only pin
-/// unstick, district/address reverse-geocode), previously duplicated
-/// byte-for-byte across both screens. Room-type/plot-type, price/area,
-/// furnished-status, photos, step navigation, and `_submit()`'s payload
-/// assembly stay in each host screen — this mixin owns only what's inside
+/// unstick, district/address reverse-geocode). Type, price, photos, step
+/// navigation, and the save payload assembly stay in each host screen —
+/// this mixin owns only what's inside
 /// the map/location/address steps themselves.
 mixin AddListingLocationMixin<T extends StatefulWidget> on State<T> {
   MapLibreMapController? _mapController;
