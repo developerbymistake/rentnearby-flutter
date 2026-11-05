@@ -175,6 +175,40 @@ class TripModel {
       );
 }
 
+class TripSummaryLegState {
+  final int index;
+  final String cityName;
+  final int startDay;
+  final int endDay;
+  final String state;
+
+  const TripSummaryLegState({
+    required this.index,
+    this.cityName = '',
+    this.startDay = 0,
+    this.endDay = 0,
+    this.state = 'draft',
+  });
+
+  factory TripSummaryLegState.fromJson(Map<String, dynamic> json) => TripSummaryLegState(
+        index: (json['index'] as num?)?.toInt() ?? 1,
+        cityName: json['cityName'] as String? ?? '',
+        startDay: (json['startDay'] as num?)?.toInt() ?? 0,
+        endDay: (json['endDay'] as num?)?.toInt() ?? 0,
+        state: json['state'] as String? ?? 'draft',
+      );
+
+  TripBookingState get bookingState => TripBookingState.parse(state);
+}
+
+List<TripSummaryLegState> _legStatesOf(Object? raw) =>
+    ((raw as List?) ?? const []).whereType<Map<String, dynamic>>().map(TripSummaryLegState.fromJson).toList();
+
+int _count(Object? raw) {
+  final n = raw is num ? raw.toInt() : 0;
+  return n < 0 ? 0 : n;
+}
+
 class TripSummaryModel {
   final String id;
   final String title;
@@ -205,6 +239,9 @@ class TripSummaryModel {
   final TripStepDisplay? comingBack;
   final int legCount;
   final List<String>? _legCities;
+  final int travelSegments;
+  final int travelSettled;
+  final List<TripSummaryLegState> legs;
 
   const TripSummaryModel({
     required this.id,
@@ -236,10 +273,17 @@ class TripSummaryModel {
     this.comingBack,
     this.legCount = 1,
     List<String>? legCities,
+    this.travelSegments = 0,
+    this.travelSettled = 0,
+    this.legs = const [],
   }) : _legCities = legCities;
 
   List<String> get legCities => _legCities ?? [cityName];
   String get routeLine => legCount > 1 ? TripStringsMcaA4.routeOf(legCities) : cityName;
+
+  bool get showsTravel => legCount > 1 && travelSegments > 0;
+  bool get travelAllSettled => travelSegments > 0 && travelSettled >= travelSegments;
+  int get travelSettledShown => travelSettled > travelSegments ? travelSegments : travelSettled;
 
   bool get hasOwnBooking => staysOwn + taxisOwn > 0;
 
@@ -293,6 +337,9 @@ class TripSummaryModel {
         comingBack: comingBack,
         legCount: legCount,
         legCities: _legCities,
+        travelSegments: travelSegments,
+        travelSettled: travelSettled,
+        legs: legs,
       );
 
   TripSummaryModel withMuted(DateTime? at) => _with(mutedAt: at, completedAt: completedAt);
@@ -330,6 +377,9 @@ class TripSummaryModel {
         comingBack: TripStepDisplay.parse(json['comingBack']),
         legCount: _legCountOf(json['legCount'], _legCitiesOf(json['legCities'])),
         legCities: _legCitiesOf(json['legCities']),
+        travelSegments: _count(json['travelSegments']),
+        travelSettled: _count(json['travelSettled']),
+        legs: _legStatesOf(json['legs']),
       );
 }
 

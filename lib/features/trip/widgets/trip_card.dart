@@ -10,6 +10,7 @@ import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
 import '../trip_strings_mca_a4.dart';
+import '../trip_strings_mcd_a1.dart';
 import '../trip_strings_steps_a1.dart';
 import '../trip_strings_steps_a3.dart';
 import '../utils/trip_format.dart';
@@ -123,7 +124,9 @@ class TripCard extends StatelessWidget {
     final hasOwn = t.staysOwn + t.taxisOwn > 0;
     final gt = showGettingThere(t.gettingThere) ? t.gettingThere : null;
     final cb = showComingBack(t.comingBack) ? t.comingBack : null;
-    final hasChips = t.staysTotal > 0 || t.taxisTotal > 0 || t.agreedTotal > 0 || hasOwn || gt != null || cb != null;
+    final travel = t.showsTravel;
+    final hasChips =
+        t.staysTotal > 0 || t.taxisTotal > 0 || t.agreedTotal > 0 || hasOwn || gt != null || cb != null || travel;
     final dates = t.startDate == null
         ? TripStringsA5.noDatesYet
         : TripStrings.joinDots([
@@ -215,6 +218,11 @@ class TripCard extends StatelessWidget {
                 children: [
                   if (t.staysTotal > 0) _chip(TripStrings.stayCount(t.staysConfirmed, t.staysTotal), Iconsax.building_4),
                   if (t.taxisTotal > 0) _chip(TripStrings.taxiCount(t.taxisConfirmed, t.taxisTotal), Iconsax.car),
+                  if (travel)
+                    t.travelAllSettled
+                        ? _chip(TripStringsMcdA1.travelCount(t.travelSettledShown, t.travelSegments), Iconsax.routing_2,
+                            color: AppColors.tripBooked, surface: TripStatusColors.bookedSurface)
+                        : _chip(TripStringsMcdA1.travelCount(t.travelSettledShown, t.travelSegments), Iconsax.routing_2),
                   if (hasOwn)
                     _chip(TripStringsA5.ownBooking, Iconsax.home_2,
                         color: AppColors.tripBooked, surface: TripStatusColors.bookedSurface),

@@ -8,6 +8,7 @@ import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import '../../../config/app_tabs.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
+import '../../../models/browse_item.dart';
 import '../../../models/place_result_model.dart';
 import '../../../services/api_service.dart';
 import '../../../services/storage_service.dart';
@@ -20,8 +21,10 @@ import '../../taxi/journeys/journey_models.dart';
 import '../../taxi/journeys/journeys_controller.dart';
 import '../../taxi/models/taxi_browse_item.dart';
 import '../../taxi/taxi_option_sets.dart';
+import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../data/trip_enquiry_repository.dart';
 import '../data/trip_repository.dart';
+import '../data/trip_segment_geometry_cache.dart';
 import '../data/trip_today_cache.dart';
 import '../models/trip_city_model.dart';
 import '../models/trip_enquiry_model.dart';
@@ -33,10 +36,13 @@ import '../models/trip_spot_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_mca_a1.dart';
+import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mcb_a1.dart';
 import '../trip_strings_mcb_k1.dart';
+import '../trip_strings_steps_a3.dart';
 import '../trip_strings_steps_k3.dart';
 import '../utils/trip_enquiry_rules.dart';
+import '../utils/trip_map_rules.dart';
 import '../utils/trip_step_rules.dart';
 import '../utils/trip_travel_rules.dart';
 import '../utils/trip_whatsapp_text.dart';
@@ -72,7 +78,9 @@ class TripPlanController extends GetxController {
   final taxiSupply = Rxn<bool>();
   final tripGone = false.obs;
   final needsUpdate = false.obs;
+  static const int mapAll = 0;
   final selectedMapDay = 1.obs;
+  final selectedMapLeg = 0.obs;
   final enquiryList = <TripEnquiryModel>[].obs;
   final enquiriesLoading = false.obs;
   final enquiriesFailed = false.obs;
@@ -536,11 +544,172 @@ class TripPlanController extends GetxController {
   int get defaultMapDay {
     final start = settings.startDate;
     final n = dayCount;
-    if (start == null || n < 1) return 1;
+    final fallback = isMultiCity ? mapAll : 1;
+    if (start == null || n < 1) return fallback;
     final now = DateTime.now();
     final offset = DateTime.utc(now.year, now.month, now.day).difference(DateTime.utc(start.year, start.month, start.day)).inDays;
-    return offset >= 0 && offset < n ? offset + 1 : 1;
+    return offset >= 0 && offset < n ? offset + 1 : fallback;
   }
+
+  TripMapFocus get mapFocus {
+    if (selectedMapDay.value > 0) return TripMapFocus.day;
+    return selectedMapLeg.value > 0 ? TripMapFocus.city : TripMapFocus.all;
+  }
+
+  void selectMapAll() {
+    selectedMapLeg.value = 0;
+    selectedMapDay.value = mapAll;
+  }
+
+  void selectMapDay(int day) {
+    selectedMapLeg.value = 0;
+    selectedMapDay.value = day;
+  }
+
+  void selectMapLeg(int legIndex) {
+    selectedMapDay.value = mapAll;
+    selectedMapLeg.value = legAt(legIndex) == null ? 0 : legIndex;
+  }
+
+  void resetMap() {
+    selectedMapLeg.value = 0;
+    selectedMapDay.value = 1;
+  }
+
+  bool mapShowsDay(int day) => switch (mapFocus) {
+        TripMapFocus.all => true,
+        TripMapFocus.city => legIndexOf(day) == selectedMapLeg.value,
+        TripMapFocus.day => day == selectedMapDay.value,
+      };
+
+  bool mapShowsSegment(int legIndex) {
+    if (legIndex < 2 || legAt(legIndex) == null) return false;
+    return switch (mapFocus) {
+      TripMapFocus.all => true,
+      TripMapFocus.city => legIndex == selectedMapLeg.value || legIndex == selectedMapLeg.value + 1,
+      TripMapFocus.day => travelDayOf(legIndex) == selectedMapDay.value,
+    };
+  }
+
+  TripCityLeg? legAt(int legIndex) => plan.value?.legAt(legIndex);
+
+  TripJourneyLeg? carLeg(int legIndex, int car) {
+    for (final l in segmentJourney(legIndex)?.legs ?? const <TripJourneyLeg>[]) {
+      if (l.legIndex == car) return l;
+    }
+    return null;
+  }
+
+  List<LatLng>? segmentLine(int legIndex) {
+    if (legIndex < 2) return null;
+    final leg = legAt(legIndex);
+    final prev = legAt(legIndex - 1);
+    if (leg == null || prev == null) return null;
+    final a = leg.arrival;
+    if (a != null && a.isJourney) {
+      final cached = TripSegmentGeometryCache.get(a.planKey);
+      if (cached != null && cached.length >= 2) return cached;
+    }
+    if (!leg.hasPoint || !prev.hasPoint) return null;
+    return [LatLng(prev.latitude, prev.longitude), LatLng(leg.latitude, leg.longitude)];
+  }
+
+  static TripStayChoice? _pinnedStayOf(TripDay day) {
+    final s = day.stay;
+    if (s == null || s.isSameStay || !s.hasCoordinates) return null;
+    return s;
+  }
+
+  List<LatLng> mapFocusPoints() {
+    final p = plan.value;
+    if (p == null) return const [];
+    final multi = p.isMultiCity;
+    final focus = mapFocus;
+    final points = <LatLng>[];
+    void addSegmentEnds(int k) {
+      final line = segmentLine(k);
+      if (line == null) return;
+      points
+        ..add(line.first)
+        ..add(line.last);
+    }
+
+    if (focus == TripMapFocus.all) {
+      for (final s in p.allSpots) {
+        points.add(LatLng(s.latitude, s.longitude));
+      }
+      for (final day in p.days) {
+        final s = _pinnedStayOf(day);
+        if (s != null) points.add(LatLng(s.latitude!, s.longitude!));
+      }
+      if (multi) {
+        for (final l in p.legs) {
+          if (l.hasPoint) points.add(LatLng(l.latitude, l.longitude));
+        }
+        for (var k = 2; k <= p.legs.length; k++) {
+          addSegmentEnds(k);
+        }
+      }
+    } else if (focus == TripMapFocus.city) {
+      final k = selectedMapLeg.value;
+      final days = p.daysOf(k);
+      for (final d in days) {
+        for (final s in d.spots) {
+          points.add(LatLng(s.latitude, s.longitude));
+        }
+      }
+      final hasSpot = points.isNotEmpty;
+      for (final d in days) {
+        final s = _pinnedStayOf(d);
+        if (s != null) points.add(LatLng(s.latitude!, s.longitude!));
+      }
+      final leg = p.legAt(k);
+      if (!hasSpot && leg != null && leg.hasPoint) points.add(LatLng(leg.latitude, leg.longitude));
+    } else {
+      final d = selectedMapDay.value;
+      for (final s in p.dayAt(d)?.spots ?? const <TripSpotRef>[]) {
+        points.add(LatLng(s.latitude, s.longitude));
+      }
+      final stay = p.dayAt(d)?.stay;
+      final pinDay = stay == null ? null : (stay.sameAsDay ?? d);
+      for (final day in p.days) {
+        if (day.day != pinDay) continue;
+        final s = _pinnedStayOf(day);
+        if (s != null) points.add(LatLng(s.latitude!, s.longitude!));
+      }
+      if (multi && p.isTravelDay(d)) addSegmentEnds(p.legIndexOf(d));
+    }
+    return points;
+  }
+
+  static String? _howLabel(TripTravelHow? how) => switch (how) {
+        TripTravelHow.car => TripStringsMcaA3.car,
+        TripTravelHow.bus => TripStringsMcaA3.bus,
+        TripTravelHow.train => TripStringsMcaA3.train,
+        TripTravelHow.other => TripStringsMcaA3.other,
+        null => null,
+      };
+
+  String? travelHeadline(int legIndex) {
+    final a = legIndex >= 2 ? legAt(legIndex)?.arrival : null;
+    if (a == null) return null;
+    if (a.isOwn) return TripStringsMcaA3.ownTravelLine(_howLabel(a.how), a.leavesAt);
+    final j = segmentJourney(legIndex);
+    final cars = a.cars ?? (j == null || j.legs.isEmpty ? (j?.cars ?? 1) : j.legs.length);
+    final shown = cars < 1 ? 1 : cars;
+    final total = a.listedTotal ?? j?.listedTotal ?? 0;
+    return total > 0
+        ? TripStringsMcbA2.carsAbout(shown, BrowseItem.inr(total))
+        : TripStringsStepsA3.carsLine(shown);
+  }
+
+  double cityKm(int legIndex) => legDays(legIndex).fold(0.0, (sum, d) => sum + dayKm(d));
+
+  int cityMinutes(int legIndex) => legDays(legIndex).fold(0, (sum, d) => sum + dayTotalMinutes(d));
+
+  int get travelDays => legCount > 1 ? legCount - 1 : 0;
+
+  int? roadMinutesOf(int legIndex) => legIndex >= 2 ? legAt(legIndex)?.arrival?.roadMinutes : null;
 
   bool get isPlanned => trip.value?.status == TripStatuses.planned;
 
@@ -1251,7 +1420,7 @@ class TripPlanController extends GetxController {
     taxiSupply.value = null;
     tripGone.value = false;
     needsUpdate.value = false;
-    selectedMapDay.value = 1;
+    resetMap();
     _enquirySeq++;
     enquiryList.clear();
     enquiriesLoading.value = false;

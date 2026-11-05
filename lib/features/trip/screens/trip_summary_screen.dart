@@ -24,6 +24,8 @@ import '../widgets/trip_payment_line.dart';
 import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_status.dart';
 import '../widgets/trip_status_card.dart';
+import '../widgets/trip_summary_leg_header.dart';
+import '../widgets/trip_summary_travel_card.dart';
 
 class TripSummaryScreen extends StatefulWidget {
   const TripSummaryScreen({super.key});
@@ -203,13 +205,17 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                       for (final d in days) ...[_dayCard(d), const SizedBox(height: 12)],
                     ],
                     ..._stepSection(r, TripStepRole.gettingThere),
-                    if (r.nights.isNotEmpty) ...[
-                      _section(TripStringsA5.staysSection),
-                      for (final n in r.nights) ...[_nightCard(n), const SizedBox(height: 12)],
-                    ],
-                    if (r.taxis.isNotEmpty) ...[
-                      _section(TripStringsA5.taxisSection),
-                      for (final t in r.taxis) ...[_taxiCard(t), const SizedBox(height: 12)],
+                    if (r.isMultiCity)
+                      for (final leg in r.legs) ..._legSection(leg)
+                    else ...[
+                      if (r.nights.isNotEmpty) ...[
+                        _section(TripStringsA5.staysSection),
+                        for (final n in r.nights) ...[_nightCard(n), const SizedBox(height: 12)],
+                      ],
+                      if (r.taxis.isNotEmpty) ...[
+                        _section(TripStringsA5.taxisSection),
+                        for (final t in r.taxis) ...[_taxiCard(t), const SizedBox(height: 12)],
+                      ],
                     ],
                     ..._stepSection(r, TripStepRole.comingBack),
                     if (r.agreedTotal > 0) _totalStrip(r.agreedTotal),
@@ -226,6 +232,16 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _legSection(TripSummaryLeg leg) {
+    final travel = leg.travel;
+    return [
+      if (travel != null) ...[TripSummaryTravelCard(travel), const SizedBox(height: 12)],
+      TripSummaryLegHeader(leg),
+      for (final n in leg.nights) ...[_nightCard(n), const SizedBox(height: 12)],
+      for (final t in leg.taxis) ...[_taxiCard(t), const SizedBox(height: 12)],
+    ];
   }
 
   List<Widget> _stepSection(TripSummaryRecord r, TripStepRole role) {

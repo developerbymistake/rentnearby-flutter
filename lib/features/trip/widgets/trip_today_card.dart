@@ -15,8 +15,14 @@ import '../models/trip_journey_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_mca_a3.dart';
+import '../trip_strings_mcb_a1.dart';
+import '../trip_strings_mcd_a3.dart';
 import '../trip_strings_steps_a3.dart';
+import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_travel_rules.dart';
+import 'trip_own_travel_sheet.dart';
 import 'trip_problem_sheet.dart';
 
 class TripTodayCard extends StatelessWidget {
@@ -39,11 +45,14 @@ class TripTodayCard extends StatelessWidget {
       if ((today == null && journey == null) || c.isCompleted) return const SizedBox.shrink();
       final n = today ?? _nearestDay(c);
       final offline = c.offline.value;
+      final travelDay = today != null && c.isMultiCity && c.isTravelDay(n);
       final rows = <Widget>[
         if (journey != null) ..._travelRows(journey),
-        if (today != null) ..._stayRow(c, n),
+        if (travelDay) ..._travelDayRows(c, n),
+        if (travelDay) ..._checkOutRow(c, n),
+        if (today != null) ..._stayRow(c, n, travelDay: travelDay),
         if (today != null) ..._taxiRow(c, n),
-        if (today != null) ..._routeRow(c, n, offline),
+        if (today != null) ..._routeRow(c, n, offline, travelDay: travelDay),
       ];
       return Padding(
         padding: const EdgeInsets.only(bottom: 14),
@@ -63,7 +72,13 @@ class TripTodayCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    today == null ? TripStringsStepsA3.travelDay(_todayDate) : TripStrings.todayDay(n, c.dayCount),
+                    today == null
+                        ? TripStringsStepsA3.travelDay(_todayDate)
+                        : !c.isMultiCity
+                            ? TripStrings.todayDay(n, c.dayCount)
+                            : travelDay
+                                ? TripStringsMcdA3.todayTravelDay(n, c.dayCount)
+                                : TripStringsMcdA3.todayDayCity(n, c.dayCount, c.cityNameOf(n)),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -196,7 +211,149 @@ class TripTodayCard extends StatelessWidget {
     return (k: chain.indexOf(day) + 1, total: chain.length, last: chain.last);
   }
 
-  List<Widget> _stayRow(TripPlanController c, int n) {
+  static Widget _caps(String text) => Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+            fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight),
+      );
+
+  static Widget _amberLine(String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(10)),
+        child: Row(children: [
+          const Icon(Iconsax.warning_2, size: 15, color: AppColors.warningText),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
+            ),
+          ),
+        ]),
+      );
+
+  static String _carState(TripJourneyLeg leg) {
+    if (leg.lastKnownStatus == TripTravelRules.freeStatus) return TripStringsMcbA2.free;
+    return leg.lastEnquiryId != null ? TripStringsMcbA2.asked : TripStringsMcbA2.notAsked;
+  }
+
+  static Widget _carRow(TripJourneyLeg cl, int i, TripEnquiryModel? booking) {
+    final pickup = booking?.taxi?.pickupTime;
+    final fare = booking?.taxi?.agreedFare ?? cl.lastQuotedFare ?? cl.listedFare;
+    final phone = _validPhone(booking?.owner.phone) ?? _validPhone(cl.phone) ?? _validPhone(cl.whatsApp);
+    return _Row(
+      icon: Iconsax.car,
+      accent: TaxiColors.accent,
+      surface: TaxiColors.surface,
+      title: TripStringsMcdA3.carRow(cl.driverName.isEmpty ? TripStrings.driver : cl.driverName, i),
+      subtitle: TripStrings.joinDots([
+        i == 1 ? TripStringsMcdA3.toPlace(cl.toName) : TripStringsMcaA3.fromTo(cl.fromName, cl.toName),
+        if (pickup != null && pickup.isNotEmpty) TripStrings.pickupAt(TripFormat.time12(pickup)),
+        if (fare != null && fare > 0) BrowseItem.inr(fare),
+        if (booking == null) _carState(cl),
+      ]),
+      actionLabel: phone == null ? null : TripStrings.call,
+      onAction: phone == null ? null : () => ContactLauncher.call(phone!),
+    );
+  }
+
+  List<Widget> _travelDayRows(TripPlanController c, int n) {
+    final k = c.legIndexOf(n);
+    final plan = c.plan.value;
+    final leg = plan?.legAt(k);
+    if (leg == null) return const [];
+    final prev = plan?.legAt(k - 1);
+    final to = c.cityNameOf(n);
+    final a = leg.arrival;
+    final from = (prev?.cityName ?? '').isNotEmpty ? prev!.cityName : (a?.fromName ?? '');
+    final state = c.travelStateOf(k);
+    final warn = state == TripTravelState.dateChanged ||
+        state == TripTravelState.carMissing ||
+        state == TripTravelState.driverUnavailable;
+    final out = <Widget>[
+      _caps(TripStringsMcdA3.travelDayCaps),
+      if (from.isNotEmpty)
+        Text(
+          TripStringsMcaA3.fromTo(from, to),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+        ),
+    ];
+    final j = a != null && a.isJourney ? c.segmentJourney(k) : null;
+    if (a == null) {
+      out.add(_Row(
+        icon: Iconsax.routing_2,
+        accent: TaxiColors.accent,
+        surface: TaxiColors.surface,
+        title: TripStringsMcaA3.travelTo(to),
+        subtitle: TripStringsMcaA3.notPlannedYet,
+      ));
+    } else if (a.isOwn) {
+      final how = a.how == null ? null : TripOwnTravelSheet.howLabel(a.how!);
+      final phone = _validPhone(a.ownPhone);
+      final hub = a.hubName;
+      out.add(_Row(
+        icon: Iconsax.routing_2,
+        accent: TaxiColors.accent,
+        surface: TaxiColors.surface,
+        title: TripStringsMcaA3.ownTravelLine(how, a.leavesAt),
+        subtitle: a.ownName ?? (hub != null && hub.isNotEmpty ? TripStringsMcbA2.reachHub(hub) : ''),
+        actionLabel: phone == null ? null : TripStrings.call,
+        onAction: phone == null ? null : () => ContactLauncher.call(phone!),
+      ));
+    } else if (j == null) {
+      out.add(_Row(
+        icon: Iconsax.routing_2,
+        accent: TaxiColors.accent,
+        surface: TaxiColors.surface,
+        title: TripStringsMcaA3.travelTo(to),
+        subtitle: TripStringsMcbA1.stateLabel(state),
+      ));
+    } else {
+      for (var i = 0; i < j.legs.length; i++) {
+        out.add(_carRow(j.legs[i], i + 1, c.carBooking(k, i + 1)));
+      }
+      final paused = j.legs.where((l) => !l.driverAvailable).firstOrNull;
+      if (paused != null) out.add(_amberLine(TripStringsStepsA3.pausedBackup(paused.driverName, paused.backupName)));
+    }
+    if (warn) out.add(_amberLine(TripStringsMcbA1.stateLabel(state)));
+    return out;
+  }
+
+  List<Widget> _checkOutRow(TripPlanController c, int n) {
+    if (n < 2) return const [];
+    final e = c.todayStay(n - 1);
+    final String name;
+    final String? phone;
+    if (e != null) {
+      name = e.listingName.isEmpty ? TripStrings.stay : e.listingName;
+      phone = stayPhone(e);
+    } else {
+      final own = c.ownStayOf(n - 1);
+      if (own == null) return const [];
+      name = own.name;
+      phone = _validPhone(own.ownPhone);
+    }
+    return [
+      _Row(
+        icon: Iconsax.logout,
+        accent: StayColors.accent,
+        surface: StayColors.surface,
+        title: TripStringsMcdA3.checkOut(name),
+        subtitle: TripStringsMcdA3.thisMorning,
+        actionLabel: phone == null ? null : TripStrings.call,
+        onAction: phone == null ? null : () => ContactLauncher.call(phone!),
+      ),
+    ];
+  }
+
+  List<Widget> _stayRow(TripPlanController c, int n, {bool travelDay = false}) {
+    final city = c.isMultiCity ? c.cityNameOf(n) : '';
     final e = c.todayStay(n);
     if (e != null) {
       final room = e.phoneBooking?.roomName.isNotEmpty == true
@@ -204,16 +361,18 @@ class TripTodayCard extends StatelessWidget {
           : (e.acceptedOffer?.lines.firstOrNull?.roomName ?? '');
       final night = _nightOf(e);
       final sub = [
+        if (city.isNotEmpty) city,
         if (room.isNotEmpty) room,
         TripStringsA5.nightOf(night.k, night.total, e.agreedTotal == null ? null : BrowseItem.inr(e.agreedTotal!)),
         e.isConfirmedByBoth ? TripStrings.bothConfirmedShort : TripStrings.confirmedByYou,
       ].join(' · ');
+      final stayName = e.listingName.isEmpty ? TripStrings.stay : e.listingName;
       return [
         _Row(
           icon: Iconsax.building_4,
           accent: StayColors.accent,
           surface: StayColors.surface,
-          title: e.listingName.isEmpty ? TripStrings.stay : e.listingName,
+          title: travelDay ? TripStringsMcdA3.tonightTitle(stayName) : stayName,
           subtitle: '$sub\n${_checkOutLine(night.checkOut)}',
           actionLabel: stayPhone(e) == null ? null : TripStrings.call,
           onAction: () => ContactLauncher.call(stayPhone(e)!),
@@ -234,8 +393,9 @@ class TripTodayCard extends StatelessWidget {
         icon: Iconsax.building_4,
         accent: StayColors.accent,
         surface: StayColors.surface,
-        title: own.name,
-        subtitle: [TripStrings.ownBookingShort, ownSub].join(' · ') + (checkOut == null ? '' : '\n$checkOut'),
+        title: travelDay ? TripStringsMcdA3.tonightTitle(own.name) : own.name,
+        subtitle: [if (city.isNotEmpty) city, TripStrings.ownBookingShort, ownSub].join(' · ') +
+            (checkOut == null ? '' : '\n$checkOut'),
         actionLabel: phone == null ? null : TripStrings.call,
         onAction: () => ContactLauncher.call(phone!),
       ),
@@ -284,8 +444,22 @@ class TripTodayCard extends StatelessWidget {
     ];
   }
 
-  List<Widget> _routeRow(TripPlanController c, int n, bool offline) {
+  List<Widget> _routeRow(TripPlanController c, int n, bool offline, {bool travelDay = false}) {
     final names = c.todaySpotNames(n);
+    if (names.isEmpty && travelDay) {
+      final minutes = c.plan.value?.legAt(c.legIndexOf(n))?.arrival?.roadMinutes;
+      return [
+        _Row(
+          icon: Iconsax.location,
+          accent: TripColors.accent,
+          surface: TripColors.surface,
+          title: TripStringsMcdA3.todaysRoad,
+          subtitle: minutes == null ? TripStringsMcdA3.longRoad : TripStringsMcdA3.roadLine(minutes),
+          actionLabel: TripStrings.map,
+          onAction: () => TripNavigation.openMap(day: n),
+        ),
+      ];
+    }
     if (names.isEmpty) return const [];
     return [
       _Row(

@@ -1,5 +1,6 @@
 import 'package:bakhli/features/taxi/journeys/journey_models.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
+import 'package:bakhli/features/trip/data/trip_segment_geometry_cache.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_journey_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
@@ -7,7 +8,10 @@ import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_result_model.dart';
 import 'package:bakhli/features/trip/trip_strings.dart';
 import 'package:bakhli/features/trip/trip_strings_mca_a1.dart';
+import 'package:bakhli/features/trip/utils/trip_map_rules.dart';
 import 'package:bakhli/features/trip/utils/trip_travel_rules.dart';
+import 'package:bakhli/models/browse_item.dart';
+import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import 'package:get/get.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -1266,6 +1270,232 @@ void main() {
       expect(w.firstWrongDay, 3);
       expect(w.dayCity, 'Badrinath');
       expect(c.isOutsideTrip(e), isTrue);
+    });
+  });
+
+  group('map per leg (MC-D)', () {
+    String iso(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    Map<String, dynamic> spot(String id, double lat, double lon) =>
+        TripSpotRef(id: id, name: id, latitude: lat, longitude: lon, category: 'attraction', visitMinutes: 60).toJson();
+
+    TripPlan legsPlan({DateTime? start, Map<String, dynamic>? arrival, bool points = true}) => TripPlan.fromJson({
+          'version': 4,
+          'cityKey': 1,
+          'cityName': 'Haridwar',
+          'legs': [
+            {'index': 1, 'cityKey': 1, 'cityName': 'Haridwar', 'latitude': points ? 29.95 : 0, 'longitude': points ? 78.16 : 0},
+            {
+              'index': 2,
+              'cityKey': 2,
+              'cityName': 'Badrinath',
+              'latitude': 30.74,
+              'longitude': 79.49,
+              'arrival': ?arrival,
+            },
+          ],
+          'settings': {'startDate': ?(start == null ? null : iso(start))},
+          'days': [
+            {
+              'day': 1,
+              'leg': 1,
+              'spots': [spot('a', 29.96, 78.17)],
+              'stay': {'stayId': 's1', 'name': 'Ganga View', 'latitude': 29.94, 'longitude': 78.15},
+            },
+            {'day': 2, 'leg': 2, 'spots': []},
+            {
+              'day': 3,
+              'leg': 2,
+              'spots': [spot('b', 30.75, 79.50)],
+              'stay': {'stayId': 's2', 'name': 'Alaknanda View', 'latitude': 30.73, 'longitude': 79.48},
+            },
+          ],
+        });
+
+    TripPlan oneLeg({DateTime? start}) => TripPlan.singleCity(
+          cityKey: 1,
+          cityName: 'Nainital',
+          settings: TripSettings(startDate: start),
+          days: [
+            TripDay(
+              day: 1,
+              spots: [TripSpotRef.fromJson(spot('a', 29.38, 79.45)), TripSpotRef.fromJson(spot('b', 29.39, 79.46))],
+              stay: const TripStayChoice(stayId: 's1', name: 'Lake Inn', latitude: 29.37, longitude: 79.44),
+            ),
+            TripDay(
+              day: 2,
+              spots: [TripSpotRef.fromJson(spot('c', 29.40, 79.47))],
+              stay: const TripStayChoice(stayId: 's1', name: 'Lake Inn', sameAsDay: 1),
+            ),
+            TripDay(day: 3, spots: [TripSpotRef.fromJson(spot('d', 29.41, 79.48))]),
+          ],
+        );
+
+    TripPlanController ctl(TripPlan p) {
+      final c = TripPlanController();
+      addTearDown(c.onClose);
+      c.plan.value = p;
+      c.trip.value = _trip(p);
+      return c;
+    }
+
+    List<String> keys(List<LatLng> points) => [for (final p in points) '${p.latitude},${p.longitude}']..sort();
+
+    List<LatLng> todaysSet(TripPlan p, int selected) {
+      final all = selected == TripPlanController.mapAll;
+      final points = <LatLng>[
+        for (final s in all ? p.allSpots : (p.dayAt(selected)?.spots ?? const <TripSpotRef>[]))
+          LatLng(s.latitude, s.longitude),
+      ];
+      final stay = all ? null : p.dayAt(selected)?.stay;
+      final pinDay = all ? null : (stay == null ? null : (stay.sameAsDay ?? selected));
+      for (final day in p.days) {
+        if (!all && day.day != pinDay) continue;
+        final s = day.stay;
+        if (s == null || s.isSameStay || !s.hasCoordinates) continue;
+        points.add(LatLng(s.latitude!, s.longitude!));
+      }
+      return points;
+    }
+
+    setUp(TripSegmentGeometryCache.clear);
+
+    test('defaultMapDay: All on a not-running two-city trip, Day 1 on one city, today while running', () {
+      expect(ctl(legsPlan(start: DateTime(2030, 11, 1))).defaultMapDay, TripPlanController.mapAll);
+      expect(ctl(legsPlan()).defaultMapDay, TripPlanController.mapAll);
+      expect(ctl(oneLeg(start: DateTime(2030, 11, 1))).defaultMapDay, 1);
+      expect(ctl(oneLeg()).defaultMapDay, 1);
+      final now = DateTime.now();
+      final yesterday = DateTime(now.year, now.month, now.day - 1);
+      expect(ctl(legsPlan(start: yesterday)).defaultMapDay, 2);
+      expect(ctl(oneLeg(start: yesterday)).defaultMapDay, 2);
+    });
+
+    test('selectMapLeg clears the day and selectMapDay clears the leg', () {
+      final c = ctl(legsPlan());
+      c.selectMapLeg(2);
+      expect(c.selectedMapLeg.value, 2);
+      expect(c.selectedMapDay.value, TripPlanController.mapAll);
+      expect(c.mapFocus, TripMapFocus.city);
+      c.selectMapDay(3);
+      expect(c.selectedMapLeg.value, 0);
+      expect(c.selectedMapDay.value, 3);
+      expect(c.mapFocus, TripMapFocus.day);
+      c.selectMapAll();
+      expect(c.mapFocus, TripMapFocus.all);
+      c.selectMapLeg(9);
+      expect(c.selectedMapLeg.value, 0);
+      expect(c.mapFocus, TripMapFocus.all);
+      c.selectMapLeg(1);
+      c.resetMap();
+      expect(c.selectedMapLeg.value, 0);
+      expect(c.selectedMapDay.value, 1);
+    });
+
+    test('a day written straight to selectedMapDay wins over a stale leg', () {
+      final c = ctl(legsPlan());
+      c.selectMapLeg(2);
+      c.selectedMapDay.value = 1;
+      expect(c.mapFocus, TripMapFocus.day);
+    });
+
+    test('mapShowsDay and mapShowsSegment matrix', () {
+      final c = ctl(legsPlan());
+      c.selectMapAll();
+      expect([1, 2, 3].map(c.mapShowsDay), [true, true, true]);
+      expect(c.mapShowsSegment(2), isTrue);
+      c.selectMapLeg(1);
+      expect([1, 2, 3].map(c.mapShowsDay), [true, false, false]);
+      expect(c.mapShowsSegment(2), isTrue);
+      c.selectMapLeg(2);
+      expect([1, 2, 3].map(c.mapShowsDay), [false, true, true]);
+      expect(c.mapShowsSegment(2), isTrue);
+      expect(c.mapShowsSegment(3), isFalse);
+      c.selectMapDay(2);
+      expect([1, 2, 3].map(c.mapShowsDay), [false, true, false]);
+      expect(c.mapShowsSegment(2), isTrue);
+      c.selectMapDay(3);
+      expect(c.mapShowsSegment(2), isFalse);
+      c.selectMapDay(1);
+      expect(c.mapShowsSegment(2), isFalse);
+      expect(c.mapShowsSegment(1), isFalse);
+    });
+
+    test('segmentLine: straight line without a cached plan, cached points after put, null without coordinates', () {
+      const arrival = {'mode': 'journey', 'fromName': 'Haridwar', 'journeyId': 'j2', 'planKey': 'pk', 'cars': 2};
+      final c = ctl(legsPlan(arrival: arrival));
+      final straight = c.segmentLine(2)!;
+      expect(straight.length, 2);
+      expect(straight.first.latitude, 29.95);
+      expect(straight.last.latitude, 30.74);
+      TripSegmentGeometryCache.put('pk', [(lat: 29.9, lng: 78.1), (lat: 30.2, lng: 78.6), (lat: 30.7, lng: 79.4)]);
+      expect(c.segmentLine(2)!.length, 3);
+      expect(c.segmentLine(1), isNull);
+      expect(ctl(legsPlan(points: false)).segmentLine(2), isNull);
+      expect(ctl(oneLeg()).segmentLine(2), isNull);
+    });
+
+    test('mapFocusPoints on one city equals the map screen set for All and every day', () {
+      final p = oneLeg();
+      final c = ctl(p);
+      c.selectedMapDay.value = TripPlanController.mapAll;
+      expect(keys(c.mapFocusPoints()), keys(todaysSet(p, TripPlanController.mapAll)));
+      for (final d in [1, 2, 3]) {
+        c.selectMapDay(d);
+        expect(keys(c.mapFocusPoints()), keys(todaysSet(p, d)), reason: 'day $d');
+      }
+    });
+
+    test('mapFocusPoints per leg: All adds centres, a city keeps its own, a travel day adds the road ends', () {
+      final c = ctl(legsPlan());
+      c.selectMapAll();
+      final all = keys(c.mapFocusPoints());
+      expect(all.map((s) => s.split(',').map((x) => double.parse(x).toStringAsFixed(2)).join(',')), containsAll(['29.95,78.16', '30.74,79.49', '29.96,78.17', '30.75,79.50', '29.94,78.15', '30.73,79.48']));
+      c.selectMapLeg(1);
+      expect(keys(c.mapFocusPoints()), keys([const LatLng(29.96, 78.17), const LatLng(29.94, 78.15)]));
+      c.selectMapLeg(2);
+      expect(keys(c.mapFocusPoints()), keys([const LatLng(30.75, 79.50), const LatLng(30.73, 79.48)]));
+      c.selectMapDay(2);
+      expect(keys(c.mapFocusPoints()), keys([const LatLng(29.95, 78.16), const LatLng(30.74, 79.49)]));
+    });
+
+    test('travel headline, km, minutes, travel days and road minutes', () {
+      const journey = {'mode': 'journey', 'fromName': 'Haridwar', 'journeyId': 'j2', 'cars': 2, 'listedTotal': 14000, 'roadMinutes': 600};
+      final c = ctl(legsPlan(arrival: journey));
+      expect(c.travelHeadline(2), '2 cars · about ${BrowseItem.inr(14000)}');
+      expect(c.travelHeadline(1), isNull);
+      expect(c.roadMinutesOf(2), 600);
+      expect(c.travelDays, 1);
+      expect(c.cityKm(2), 0);
+      expect(c.cityMinutes(2), c.dayTotalMinutes(2) + c.dayTotalMinutes(3));
+      const noTotal = {'mode': 'journey', 'fromName': 'Haridwar', 'journeyId': 'j2', 'cars': 1};
+      expect(ctl(legsPlan(arrival: noTotal)).travelHeadline(2), '1 car');
+      const own = {'mode': 'own', 'fromName': 'Haridwar', 'how': 'bus', 'leavesAt': '06:00'};
+      expect(ctl(legsPlan(arrival: own)).travelHeadline(2), 'Own travel · Bus · 6:00 am');
+      expect(ctl(legsPlan()).travelHeadline(2), isNull);
+      expect(ctl(oneLeg()).travelDays, 0);
+    });
+
+    test('carLeg finds the journey car by index', () {
+      const arrival = {'mode': 'journey', 'fromName': 'Haridwar', 'journeyId': 'j2', 'cars': 2};
+      final p = legsPlan(start: DateTime(2030, 11, 1), arrival: arrival);
+      final c = ctl(p);
+      c.trip.value = _trip(p).copyWith(journeysKnown: true, journeys: [
+        TripJourney(
+          id: 'j2',
+          fromName: 'Haridwar',
+          toName: 'Badrinath',
+          date: DateTime(2030, 11, 2),
+          legs: const [
+            TripJourneyLeg(legIndex: 1, fromName: 'Haridwar', toName: 'Rishikesh', driverName: 'Sunil Kumar'),
+            TripJourneyLeg(legIndex: 2, fromName: 'Rishikesh', toName: 'Badrinath', driverName: 'Mohan Bisht'),
+          ],
+        ),
+      ]);
+      expect(c.carLeg(2, 2)?.driverName, 'Mohan Bisht');
+      expect(c.carLeg(2, 3), isNull);
+      expect(c.legAt(2)?.cityName, 'Badrinath');
     });
   });
 }

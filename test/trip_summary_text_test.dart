@@ -262,4 +262,157 @@ void main() {
     });
     expect(TripSummaryText.footer(r), contains(TripStrings.taxiPayLine));
   });
+
+  group('multi-city (MC-D)', () {
+    Map<String, dynamic> car(int i, String driver, String from, String to,
+            {int? agreed, int? listed, String status = 'none', String? confirmedBy, String? enquiryId}) =>
+        {
+          'car': i,
+          'driverName': driver,
+          'fromName': from,
+          'toName': to,
+          'agreedFare': ?agreed,
+          'listedFare': ?listed,
+          'displayStatus': status,
+          'confirmedBy': ?confirmedBy,
+          'enquiryId': ?enquiryId,
+          'taxiId': 'x$i',
+        };
+
+    Map<String, dynamic> journeyTravel() => {
+          'mode': 'journey',
+          'fromName': 'Haridwar',
+          'toName': 'Badrinath',
+          'day': 2,
+          'date': '2026-11-02',
+          'state': 'partlyBooked',
+          'carCount': 2,
+          'listedTotal': 14000,
+          'cars': [
+            car(1, 'Sunil Kumar', 'Haridwar', 'Rishikesh',
+                agreed: 4200, listed: 4000, status: 'confirmedByBoth', confirmedBy: 'both', enquiryId: 'q1'),
+            car(2, 'Mohan Bisht', 'Rishikesh', 'Badrinath', listed: 9800),
+          ],
+        };
+
+    Map<String, dynamic> twoLegs({Map<String, dynamic>? travel, List<Map<String, dynamic>>? nights}) {
+      final n = nights ?? [night(1, name: 'Ganga View Inn'), night(2, name: 'Alaknanda View'), night(3, name: 'Alaknanda View')];
+      return {
+        ...record(nights: n, taxis: []),
+        'title': 'Haridwar, Badrinath trip',
+        'city': 'Haridwar',
+        'legCities': ['Haridwar', 'Badrinath'],
+        'legs': [
+          {
+            'index': 1,
+            'cityName': 'Haridwar',
+            'startDay': 1,
+            'endDay': 1,
+            'startDate': '2026-11-01',
+            'endDate': '2026-11-01',
+            'nights': n.take(1).toList(),
+          },
+          {
+            'index': 2,
+            'cityName': 'Badrinath',
+            'startDay': 2,
+            'endDay': 3,
+            'startDate': '2026-11-02',
+            'endDate': '2026-11-03',
+            'nights': n.skip(1).toList(),
+            'travel': travel ?? journeyTravel(),
+          },
+        ],
+      };
+    }
+
+    test('a one-leg record with legs[] reads exactly as before', () {
+      final flat = record();
+      final withLeg = {
+        ...record(),
+        'legs': [
+          {'index': 1, 'cityName': 'Nainital', 'startDay': 1, 'endDay': 3, 'nights': flat['nights'], 'taxis': flat['taxis']},
+        ],
+      };
+      final a = TripSummaryText.build(TripSummaryRecord.fromJson(flat));
+      final b = TripSummaryText.build(TripSummaryRecord.fromJson(withLeg));
+      expect(b, a);
+      expect(b, contains(TripStringsA5.staysSection));
+    });
+
+    test('groups by leg with the headers in order and the travel block before leg 2', () {
+      final text = TripSummaryText.build(TripSummaryRecord.fromJson(twoLegs()));
+      final h1 = text.indexOf('HARIDWAR · Sun 01 Nov');
+      final travel = text.indexOf('→ Badrinath · 2 cars · Mon 02 Nov');
+      final h2 = text.indexOf('BADRINATH · Mon 02 – Tue 03 Nov');
+      expect(h1, greaterThanOrEqualTo(0));
+      expect(travel, greaterThan(h1));
+      expect(h2, greaterThan(travel));
+      expect(text.indexOf('Ganga View Inn'), inInclusiveRange(h1, travel));
+      expect(text.indexOf('Alaknanda View'), greaterThan(h2));
+      expect(text, isNot(contains(TripStringsA5.staysSection)));
+      expect(text, contains('Haridwar → Badrinath'));
+    });
+
+    test('car lines at level 0 carry fare and status', () {
+      final text = TripSummaryText.build(TripSummaryRecord.fromJson(twoLegs()));
+      expect(text, contains('  Car 1 Sunil Kumar · ${BrowseItem.inr(4200)} · ${TripStrings.confirmedBothPill}'));
+      expect(text, contains('  Car 2 Mohan Bisht · ${BrowseItem.inr(9800)} · Not asked'));
+    });
+
+    test('at level 2 the cars fold into one state line', () {
+      final r = TripSummaryRecord.fromJson(twoLegs());
+      final t = r.legs[1].travel!;
+      final lines = TripSummaryText.travelLines(t, 2);
+      expect(lines, contains('  2 cars · Partly booked'));
+      expect(lines.any((l) => l.contains('Sunil Kumar')), isFalse);
+    });
+
+    test('own travel is one line and adds no driver line', () {
+      final own = {
+        'mode': 'own',
+        'fromName': 'Haridwar',
+        'toName': 'Badrinath',
+        'day': 2,
+        'date': '2026-11-02',
+        'state': 'own',
+        'how': 'bus',
+        'leavesAt': '06:00',
+        'ownName': 'Shatabdi',
+      };
+      final text = TripSummaryText.build(TripSummaryRecord.fromJson(twoLegs(travel: own)));
+      expect(text, contains('→ Badrinath · Own travel · Mon 02 Nov'));
+      expect(text, contains('  Own travel · Bus · 6:00 am · Shatabdi'));
+      expect(text, isNot(contains(TripStrings.taxiPayLine)));
+    });
+
+    test('a journey car alone brings the driver pay line', () {
+      final r = TripSummaryRecord.fromJson(twoLegs(nights: [
+        {'night': 1, 'date': '2026-11-01', 'listingName': 'My cousin', 'isOwn': true, 'displayStatus': 'own'},
+        {'night': 2, 'date': '2026-11-02', 'listingName': 'Friend', 'isOwn': true, 'displayStatus': 'own'},
+      ]));
+      expect(r.taxis, isEmpty);
+      expect(TripSummaryText.footer(r), contains(TripStrings.taxiPayLine));
+      expect(TripSummaryText.footer(r), isNot(contains(TripStrings.summaryFooter)));
+    });
+
+    test('a long multi-city record stays under the share limit and ends with the footer', () {
+      final nights = [
+        for (var i = 1; i <= 9; i++)
+          night(i, name: 'A very long homestay name number $i in the hills', cancellation: 'Free cancellation till ${'x' * 160}'),
+      ];
+      final json = twoLegs(nights: nights);
+      final r = TripSummaryRecord.fromJson(json);
+      final text = TripSummaryText.build(r);
+      expect(text.length, lessThanOrEqualTo(TripConstants.summaryShareMax));
+      expect(text.endsWith(TripSummaryText.footer(r)), isTrue);
+    });
+
+    test('travel alone makes the record shareable', () {
+      final json = twoLegs(nights: [])..['days'] = <Map<String, dynamic>>[];
+      final r = TripSummaryRecord.fromJson(json);
+      expect(TripSummaryText.canShare(r), isTrue);
+      expect(TripSummaryText.hasContent(r), isTrue);
+    });
+  });
 }

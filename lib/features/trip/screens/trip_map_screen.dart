@@ -10,12 +10,19 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_constants.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../stay/setup/stay_option_sets.dart';
+import '../../taxi/taxi_option_sets.dart';
+import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
+import '../trip_strings_mca_a4.dart';
+import '../trip_strings_mcd_a2.dart';
+import '../trip_strings_steps_a3.dart';
+import '../utils/trip_map_rules.dart';
 import '../widgets/trip_day_chips.dart';
+import '../widgets/trip_map_chips.dart';
 import '../widgets/trip_map_day_card.dart';
 import '../widgets/trip_not_found_view.dart';
 
@@ -39,10 +46,15 @@ class _TripMapScreenState extends State<TripMapScreen> {
   final _symbols = <int, List<Symbol>>{};
   final _hasRoute = <int, bool>{};
   final _stayPins = <int, Symbol>{};
+  final _drawnSegs = <int>[];
+  final _cityDots = <int, Circle>{};
+  final _cityLabels = <int, Symbol>{};
+  final _badges = <int, Symbol>{};
   final _topKey = GlobalKey();
   final _cardKey = GlobalKey();
   String? _drawnStaySignature;
   bool _stayPinReady = false;
+  bool _carPinReady = false;
   bool _dayPicked = false;
   bool _awaitingDefaultDay = false;
   String? _waitingTripId;
@@ -55,8 +67,11 @@ class _TripMapScreenState extends State<TripMapScreen> {
   }
 
   static const String _stayPinImage = 'trip_stay_pin';
+  static const String _carPinImage = 'trip_car_badge';
   static final String _white = AppColors.hexOf(AppColors.textWhite);
   static final String _stayText = AppColors.hexOf(StayColors.accentDark);
+  static final String _cityText = AppColors.hexOf(AppColors.textDark);
+  static final String _travelText = AppColors.hexOf(TaxiColors.accentDark);
 
   @override
   void initState() {
@@ -69,6 +84,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
     final needsOpen = tripId != null && (_plan.trip.value?.id != tripId || _plan.plan.value == null);
     _dayPicked = day != null;
     _awaitingDefaultDay = day == null && (needsOpen || _plan.plan.value == null);
+    _plan.selectedMapLeg.value = 0;
     _plan.selectedMapDay.value = day ?? (needsOpen || _plan.plan.value == null ? 1 : _plan.defaultMapDay);
     if (needsOpen) {
       _waitingTripId = tripId;
@@ -90,7 +106,10 @@ class _TripMapScreenState extends State<TripMapScreen> {
   void _applyDefaultDay() {
     if (!_awaitingDefaultDay || _plan.plan.value == null) return;
     _awaitingDefaultDay = false;
-    if (!_dayPicked) _plan.selectedMapDay.value = _plan.defaultMapDay;
+    if (!_dayPicked) {
+      _plan.selectedMapLeg.value = 0;
+      _plan.selectedMapDay.value = _plan.defaultMapDay;
+    }
   }
 
   @override
@@ -108,7 +127,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
   int get _selected => _plan.selectedMapDay.value;
 
-  bool _isSelected(int day) => _selected == TripDayChips.all || _selected == day;
+  bool _isSelected(int day) => _plan.mapShowsDay(day);
+
+  bool get _citiesOn => _plan.mapFocus != TripMapFocus.day;
 
   List<TripSpotRef> _spotsOf(int day) => _plan.plan.value?.dayAt(day)?.spots ?? const [];
 
@@ -122,7 +143,16 @@ class _TripMapScreenState extends State<TripMapScreen> {
     return r != null && r.routeGeoJson == null;
   }
 
-  String _signature(TripPlan p) => p.days.map((d) => '${d.day}:${d.spots.map((s) => s.id).join(',')}').join('|');
+  String _signature(TripPlan p) {
+    final days = p.days.map((d) => '${d.day}:${d.spots.map((s) => s.id).join(',')}').join('|');
+    if (!p.isMultiCity) return days;
+    final legs = [
+      for (final l in p.legs)
+        '${l.cityKey}:${l.latitude}:${l.longitude}:${l.arrival?.journeyId}:${l.arrival?.mode}:${l.arrival?.cars}:'
+            '${l.arrival?.planKey}:${l.index >= 2 ? _plan.segmentLine(l.index)?.length : null}',
+    ].join('|');
+    return '$days#$legs';
+  }
 
   LatLng _initialTarget() {
     final p = _plan.plan.value;
@@ -146,6 +176,12 @@ class _TripMapScreenState extends State<TripMapScreen> {
       _stayPinReady = true;
     } catch (_) {
       _stayPinReady = false;
+    }
+    try {
+      await map.addImage(_carPinImage, await _buildCarPinImage());
+      _carPinReady = true;
+    } catch (_) {
+      _carPinReady = false;
     }
     if (!mounted) return;
     setState(() => _styleLoaded = true);
@@ -179,8 +215,12 @@ class _TripMapScreenState extends State<TripMapScreen> {
     final map = _map;
     final p = _plan.plan.value;
     if (!mounted || map == null || !_styleLoaded || p == null || _waitingForTrip) return;
+    final leg = _plan.selectedMapLeg.value;
+    if (leg > 0 && (!p.isMultiCity || p.legAt(leg) == null || p.legStart(leg) < 1)) _plan.selectedMapLeg.value = 0;
     if (_selected != TripDayChips.all && p.dayAt(_selected) == null) _plan.selectedMapDay.value = 1;
-    if (_selected == TripDayChips.all && p.days.length <= 1) _plan.selectedMapDay.value = 1;
+    if (_selected == TripDayChips.all && _plan.selectedMapLeg.value == 0 && p.days.length <= 1) {
+      _plan.selectedMapDay.value = 1;
+    }
     final signature = _signature(p);
     final staySignature = _staySignature(p);
     if (signature != _drawnSignature) {
@@ -224,7 +264,11 @@ class _TripMapScreenState extends State<TripMapScreen> {
     return s.sameAsDay ?? day;
   }
 
-  bool _isStayPinSelected(int pinDay) => _selected == TripDayChips.all || _pinDayFor(_selected) == pinDay;
+  bool _isStayPinSelected(int pinDay) => switch (_plan.mapFocus) {
+        TripMapFocus.all => true,
+        TripMapFocus.city => _plan.legIndexOf(pinDay) == _plan.selectedMapLeg.value,
+        TripMapFocus.day => _pinDayFor(_selected) == pinDay,
+      };
 
   Future<void> _drawStayPins(MapLibreMapController map, TripPlan p) async {
     if (_stayPins.isNotEmpty) {
@@ -256,43 +300,69 @@ class _TripMapScreenState extends State<TripMapScreen> {
     }
   }
 
+  bool _same(Symbol a, Symbol b) => a == b || a.id == b.id;
+
   void _onSymbolTapped(Symbol symbol) {
     for (final e in _stayPins.entries) {
-      if (e.value == symbol || e.value.id == symbol.id) {
+      if (_same(e.value, symbol)) {
         _select(e.key);
+        return;
+      }
+    }
+    for (final e in _badges.entries) {
+      if (_same(e.value, symbol)) {
+        final day = _plan.plan.value?.legStart(e.key) ?? 0;
+        if (day >= 1) _select(day);
+        return;
+      }
+    }
+    for (final e in _cityLabels.entries) {
+      if (_same(e.value, symbol)) {
+        _selectLeg(e.key);
         return;
       }
     }
   }
 
-  static Future<Uint8List> _buildStayPinImage() async {
-    const double size = 48, c = size / 2, r = 19;
+  static Future<Uint8List> _buildStayPinImage() =>
+      _buildPinImage(StayColors.accent, Iconsax.building_4, size: 48, radius: 19, glyphSize: 20);
+
+  static Future<Uint8List> _buildCarPinImage() =>
+      _buildPinImage(TaxiColors.accent, Iconsax.car, size: 40, radius: 16, glyphSize: 17);
+
+  static Future<Uint8List> _buildPinImage(
+    Color fill,
+    IconData icon, {
+    required double size,
+    required double radius,
+    required double glyphSize,
+  }) async {
+    final c = size / 2, r = radius;
     final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, size, size));
+    final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size, size));
     canvas.drawCircle(
-      const Offset(c, c + 1.5),
+      Offset(c, c + 1.5),
       r + 1,
       Paint()
         ..color = Colors.black.withValues(alpha: 0.25)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
     );
-    canvas.drawCircle(const Offset(c, c), r, Paint()..color = StayColors.accent);
+    canvas.drawCircle(Offset(c, c), r, Paint()..color = fill);
     canvas.drawCircle(
-      const Offset(c, c),
+      Offset(c, c),
       r,
       Paint()
         ..color = Colors.white
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3,
     );
-    const icon = Iconsax.building_4;
     final glyph = TextPainter(
       text: TextSpan(
         text: String.fromCharCode(icon.codePoint),
         style: TextStyle(
           fontFamily: icon.fontFamily,
           package: icon.fontPackage,
-          fontSize: 20,
+          fontSize: glyphSize,
           color: Colors.white,
         ),
       ),
@@ -338,13 +408,120 @@ class _TripMapScreenState extends State<TripMapScreen> {
     );
   }
 
+  String _segId(int legIndex) => 'trip-seg-$legIndex';
+
+  Map<String, dynamic> _segSource(List<LatLng>? line) => {
+        'type': 'FeatureCollection',
+        'features': [
+          if (line != null && line.length >= 2)
+            {
+              'type': 'Feature',
+              'properties': <String, dynamic>{},
+              'geometry': {
+                'type': 'LineString',
+                'coordinates': [
+                  for (final pt in line) [pt.longitude, pt.latitude],
+                ],
+              },
+            },
+        ],
+      };
+
+  LineLayerProperties _segProps(bool on, {required bool glow}) {
+    final color = AppColors.hexOf(TaxiColors.accent);
+    if (glow) {
+      return LineLayerProperties(lineColor: color, lineWidth: 8, lineOpacity: on ? 0.18 : 0.05, lineBlur: 3);
+    }
+    return LineLayerProperties(lineColor: color, lineWidth: 4, lineOpacity: on ? 0.9 : 0.25, lineDasharray: [2, 2]);
+  }
+
+  static LatLng _midpoint(List<LatLng> line) {
+    if (line.length == 2) {
+      return LatLng((line[0].latitude + line[1].latitude) / 2, (line[0].longitude + line[1].longitude) / 2);
+    }
+    return line[line.length ~/ 2];
+  }
+
+  String _badgeText(TripCityLeg leg) {
+    final a = leg.arrival!;
+    if (a.isOwn) return TripStringsMcbA2.ownTag;
+    final cars = a.cars ?? _plan.segmentJourney(leg.index)?.legs.length ?? 1;
+    return TripStringsStepsA3.carsLine(cars < 1 ? 1 : cars);
+  }
+
+  Future<void> _drawLegs(MapLibreMapController map, TripPlan p, String? below) async {
+    final citiesOn = _citiesOn;
+    for (final leg in p.legs) {
+      final k = leg.index;
+      if (k >= 2) {
+        final line = _plan.segmentLine(k);
+        final on = _plan.mapShowsSegment(k);
+        final id = _segId(k);
+        await map.addGeoJsonSource(id, _segSource(line));
+        await map.addLineLayer(id, '$id-glow', _segProps(on, glow: true), belowLayerId: below);
+        await map.addLineLayer(id, '$id-line', _segProps(on, glow: false), belowLayerId: below);
+        _drawnSegs.add(k);
+        if (leg.arrival != null && line != null && line.length >= 2 && _carPinReady) {
+          _badges[k] = await map.addSymbol(SymbolOptions(
+            geometry: _midpoint(line),
+            iconImage: _carPinImage,
+            iconSize: 1,
+            iconOpacity: on ? 1 : 0.35,
+            textField: _badgeText(leg),
+            fontNames: const ['Noto Sans Medium'],
+            textSize: 11,
+            textAnchor: 'top',
+            textOffset: const Offset(0, 1.6),
+            textColor: _travelText,
+            textHaloColor: _white,
+            textHaloWidth: 1,
+            textOpacity: on ? 1 : 0.35,
+            zIndex: 9,
+          ));
+        }
+      }
+      if (!leg.hasPoint || leg.cityName.isEmpty) continue;
+      final at = LatLng(leg.latitude, leg.longitude);
+      _cityDots[k] = await map.addCircle(CircleOptions(
+        geometry: at,
+        circleRadius: 7,
+        circleColor: AppColors.hexOf(TripColors.accent),
+        circleOpacity: citiesOn ? 1 : 0.35,
+        circleStrokeColor: _white,
+        circleStrokeWidth: 2,
+      ));
+      _cityLabels[k] = await map.addSymbol(SymbolOptions(
+        geometry: at,
+        textField: leg.cityName,
+        fontNames: const ['Noto Sans Medium'],
+        textSize: 11,
+        textAnchor: 'top',
+        textOffset: const Offset(0, 0.9),
+        textColor: _cityText,
+        textHaloColor: _white,
+        textHaloWidth: 1,
+        textOpacity: citiesOn ? 1 : 0.35,
+        zIndex: 8,
+      ));
+    }
+  }
+
   Future<void> _redraw(MapLibreMapController map, TripPlan p) async {
     for (final d in _drawnDays) {
       await map.removeLayer('${_sourceId(d)}-line');
       await map.removeLayer('${_sourceId(d)}-glow');
       await map.removeSource(_sourceId(d));
     }
+    for (final k in _drawnSegs) {
+      await map.removeLayer('${_segId(k)}-line');
+      await map.removeLayer('${_segId(k)}-glow');
+      await map.removeSource(_segId(k));
+    }
     _drawnDays.clear();
+    _drawnSegs.clear();
+    _cityDots.clear();
+    _cityLabels.clear();
+    _badges.clear();
     _circles.clear();
     _symbols.clear();
     _hasRoute.clear();
@@ -388,6 +565,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
       _symbols[d] = symbols;
       _drawnDays.add(d);
     }
+    if (p.isMultiCity) await _drawLegs(map, p, below);
     await _drawStayPins(map, p);
   }
 
@@ -409,6 +587,23 @@ class _TripMapScreenState extends State<TripMapScreen> {
       final on = _isStayPinSelected(e.key);
       await map.updateSymbol(e.value, SymbolOptions(iconOpacity: on ? 1 : 0.35, textOpacity: on ? 1 : 0.35));
     }
+    if (_drawnSegs.isEmpty && _cityDots.isEmpty) return;
+    for (final k in _drawnSegs) {
+      final on = _plan.mapShowsSegment(k);
+      await map.setLayerProperties('${_segId(k)}-glow', _segProps(on, glow: true));
+      await map.setLayerProperties('${_segId(k)}-line', _segProps(on, glow: false));
+      final badge = _badges[k];
+      if (badge != null) {
+        await map.updateSymbol(badge, SymbolOptions(iconOpacity: on ? 1 : 0.35, textOpacity: on ? 1 : 0.35));
+      }
+    }
+    final citiesOn = _citiesOn;
+    for (final c in _cityDots.values) {
+      await map.updateCircle(c, CircleOptions(circleOpacity: citiesOn ? 1 : 0.35));
+    }
+    for (final s in _cityLabels.values) {
+      await map.updateSymbol(s, SymbolOptions(textOpacity: citiesOn ? 1 : 0.35));
+    }
   }
 
   double _overlayHeight(GlobalKey key, double fallback) {
@@ -417,25 +612,11 @@ class _TripMapScreenState extends State<TripMapScreen> {
     return fallback;
   }
 
-  List<LatLng> _focusPoints(TripPlan p) {
-    final all = _selected == TripDayChips.all;
-    final points = <LatLng>[
-      for (final s in all ? p.allSpots : _spotsOf(_selected)) LatLng(s.latitude, s.longitude),
-    ];
-    final pinDay = all ? null : _pinDayFor(_selected);
-    for (final day in p.days) {
-      if (!all && day.day != pinDay) continue;
-      final s = _pinnedStay(day);
-      if (s != null) points.add(LatLng(s.latitude!, s.longitude!));
-    }
-    return points;
-  }
-
   Future<void> _fitCamera() async {
     final map = _map;
     final p = _plan.plan.value;
     if (map == null || p == null || !mounted) return;
-    final points = _focusPoints(p);
+    final points = _plan.mapFocusPoints();
     if (points.isEmpty) return;
     var minLat = points.first.latitude, maxLat = minLat;
     var minLng = points.first.longitude, maxLng = minLng;
@@ -469,9 +650,24 @@ class _TripMapScreenState extends State<TripMapScreen> {
   }
 
   Future<void> _select(int day) async {
-    if (day == _selected) return;
+    if (day == _selected && _plan.selectedMapLeg.value == 0) return;
     _dayPicked = true;
-    _plan.selectedMapDay.value = day;
+    if (day == TripDayChips.all) {
+      _plan.selectMapAll();
+    } else {
+      _plan.selectMapDay(day);
+    }
+    await _refocus();
+  }
+
+  Future<void> _selectLeg(int legIndex) async {
+    if (legIndex == _plan.selectedMapLeg.value) return;
+    _dayPicked = true;
+    _plan.selectMapLeg(legIndex);
+    await _refocus();
+  }
+
+  Future<void> _refocus() async {
     if (_busy) {
       _again = true;
     } else {
@@ -559,7 +755,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
                     ),
                     const SizedBox(height: 2),
                     Obx(() => Text(
-                          TripStrings.tripMapSubtitle(_plan.cityName),
+                          _plan.isMultiCity
+                              ? TripStringsMcdA2.mapSubtitle(TripStringsMcaA4.routeOf(_plan.plan.value!.legCities))
+                              : TripStrings.tripMapSubtitle(_plan.cityName),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -580,17 +778,26 @@ class _TripMapScreenState extends State<TripMapScreen> {
           final p = _plan.plan.value;
           final count = _plan.dayCount;
           final selected = _selected;
+          final leg = _plan.selectedMapLeg.value;
+          final multi = p != null && p.isMultiCity;
           final missing = p != null &&
               !_plan.plannerOff.value &&
               (selected != TripDayChips.all
                   ? _dayRouteMissing(selected)
-                  : p.days.any((d) => _dayRouteMissing(d.day)));
+                  : p.days.any((d) => (leg == 0 || p.legIndexOf(d.day) == leg) && _dayRouteMissing(d.day)));
           return Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (count > 1)
+                if (multi)
+                  TripMapChips(
+                    onAll: () => _select(TripDayChips.all),
+                    onLeg: _selectLeg,
+                    onDay: _select,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  )
+                else if (count > 1)
                   TripDayChips(
                     dayCount: count,
                     selected: selected,
@@ -651,6 +858,8 @@ class _TripMapScreenState extends State<TripMapScreen> {
         dayCount: p.days.length,
         selected: _selected,
         onDaySelected: _select,
+        selectedLeg: _plan.selectedMapLeg.value,
+        onLegSelected: _selectLeg,
       );
     });
   }

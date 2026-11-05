@@ -13,22 +13,46 @@ import '../controllers/trip_plan_controller.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
+import '../trip_strings_mca_a3.dart';
+import '../trip_strings_mcd_a2.dart';
 import '../utils/trip_format.dart';
 import 'trip_day_actions.dart';
 import 'trip_day_chips.dart';
+import 'trip_map_travel_block.dart';
 import 'trip_route_strip.dart';
 import 'trip_today_card.dart';
+
+enum _PageKind { all, city, day }
+
+class _MapPage {
+  final _PageKind kind;
+  final int value;
+
+  const _MapPage.all()
+      : kind = _PageKind.all,
+        value = TripDayChips.all;
+
+  const _MapPage.city(this.value) : kind = _PageKind.city;
+
+  const _MapPage.day(this.value) : kind = _PageKind.day;
+
+  String get key => '${kind.index}:$value';
+}
 
 class TripMapDayCard extends StatefulWidget {
   final int dayCount;
   final int selected;
   final ValueChanged<int> onDaySelected;
+  final int selectedLeg;
+  final ValueChanged<int>? onLegSelected;
 
   const TripMapDayCard({
     super.key,
     required this.dayCount,
     required this.selected,
     required this.onDaySelected,
+    this.selectedLeg = 0,
+    this.onLegSelected,
   });
 
   @override
@@ -44,31 +68,71 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
   final _heights = <int, double>{};
   int _programmatic = 0;
   bool _measured = false;
+  List<_MapPage> _list = const [];
+  String _listKey = '';
 
-  bool get _hasAll => widget.dayCount > 1;
-
-  int get _pageCount => max(1, widget.dayCount + (_hasAll ? 1 : 0));
-
-  int _pageOf(int day) {
-    final page = day == TripDayChips.all ? 0 : (_hasAll ? day : day - 1);
-    return page.clamp(0, _pageCount - 1);
+  List<_MapPage> _buildPages() {
+    final p = TripPlanController.to.plan.value;
+    if (p != null && p.isMultiCity) {
+      return [
+        const _MapPage.all(),
+        for (final l in p.legs)
+          if (p.legStart(l.index) >= 1) ...[
+            _MapPage.city(l.index),
+            for (final d in p.daysOf(l.index)) _MapPage.day(d.day),
+          ],
+      ];
+    }
+    final hasAll = widget.dayCount > 1;
+    return [
+      if (hasAll) const _MapPage.all(),
+      for (var d = 1; d <= max(1, widget.dayCount); d++) _MapPage.day(d),
+    ];
   }
 
-  int _dayOf(int page) => _hasAll ? (page == 0 ? TripDayChips.all : page) : page + 1;
+  bool _refreshPages() {
+    final next = _buildPages();
+    final key = next.map((e) => e.key).join('|');
+    if (key == _listKey) return false;
+    _list = next;
+    _listKey = key;
+    return true;
+  }
+
+  int get _pageCount => max(1, _list.length);
+
+  int _indexWhere(bool Function(_MapPage) test) {
+    final i = _list.indexWhere(test);
+    return i < 0 ? 0 : i;
+  }
+
+  int _pageOf(int day, int leg) {
+    if (leg > 0) {
+      final i = _list.indexWhere((e) => e.kind == _PageKind.city && e.value == leg);
+      if (i >= 0) return i;
+    }
+    if (day == TripDayChips.all) return _indexWhere((e) => e.kind == _PageKind.all);
+    final i = _list.indexWhere((e) => e.kind == _PageKind.day && e.value == day);
+    return i >= 0 ? i : _pageCount - 1;
+  }
+
+  _MapPage _at(int page) => page >= 0 && page < _list.length ? _list[page] : const _MapPage.day(1);
 
   @override
   void initState() {
     super.initState();
-    _current = _pageOf(widget.selected);
+    _refreshPages();
+    _current = _pageOf(widget.selected, widget.selectedLeg);
     _pages = PageController(initialPage: _current);
   }
 
   @override
   void didUpdateWidget(TripMapDayCard old) {
     super.didUpdateWidget(old);
-    if (old.dayCount != widget.dayCount) _heights.clear();
-    final target = _pageOf(widget.selected);
-    if (target == _current && old.dayCount == widget.dayCount) return;
+    final changed = _refreshPages() || old.dayCount != widget.dayCount;
+    if (changed) _heights.clear();
+    final target = _pageOf(widget.selected, widget.selectedLeg);
+    if (target == _current && !changed) return;
     _current = target;
     WidgetsBinding.instance.addPostFrameCallback((_) => _moveTo(target));
   }
@@ -98,8 +162,12 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
   void _onPageChanged(int page) {
     if (_programmatic > 0) return;
     setState(() => _current = page);
-    final day = _dayOf(page);
-    if (day != widget.selected) widget.onDaySelected(day);
+    final target = _at(page);
+    if (target.kind == _PageKind.city) {
+      if (target.value != widget.selectedLeg) widget.onLegSelected?.call(target.value);
+      return;
+    }
+    if (target.value != widget.selected || widget.selectedLeg > 0) widget.onDaySelected(target.value);
   }
 
   void _onMeasured(int page, double height) {
@@ -148,7 +216,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: _MeasureSize(
                           onChange: (s) => _onMeasured(page, s.height),
-                          child: _dayOf(page) == TripDayChips.all ? _allPage(c) : _dayPage(c, _dayOf(page)),
+                          child: _pageBody(c, _at(page)),
                         ),
                       ),
                     ),
@@ -218,20 +286,106 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
     );
   }
 
-  Widget _dayPage(TripPlanController c, int day) {
+  Widget _pageBody(TripPlanController c, _MapPage page) => switch (page.kind) {
+        _PageKind.all => _allPage(c),
+        _PageKind.city => _cityPage(c, page.value),
+        _PageKind.day => _dayPage(c, page.value),
+      };
+
+  Widget _cityPage(TripPlanController c, int k) {
     return Obx(() {
       c.result.value;
-      c.enquiryList.length;
-      final d = c.plan.value?.dayAt(day);
-      if (d == null) return const SizedBox.shrink();
-      final date = c.dateOf(day);
-      final city = c.isMultiCity ? c.cityNameOf(day) : null;
-      final line = [?city, if (date != null) TripFormat.shortDate(date)].join(' · ');
+      c.trip.value;
+      final p = c.plan.value;
+      final leg = p?.legAt(k);
+      if (p == null || leg == null) return const SizedBox.shrink();
+      final range = TripStringsMcaA3.dayRange(p.legStart(k), p.legEnd(k));
+      final headline = leg.arrival == null ? null : c.travelHeadline(k);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _titleRow('Day $day', TripColors.dayColor(day), _dayLine(c, day, d.spots.length)),
+          Row(
+            children: [
+              const Icon(Iconsax.location, size: 15, color: TripColors.accentDark),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  leg.cityName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                range,
+                maxLines: 1,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${TripFormat.km(c.cityKm(k))} · ${TripFormat.duration(c.cityMinutes(k))}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+          ),
+          if (headline != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Iconsax.car, size: 13, color: TaxiColors.accentDark),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    headline,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 10),
+          const Text(
+            TripStringsMcdA2.tapCityHint,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _dayPage(TripPlanController c, int day) {
+    return Obx(() {
+      c.result.value;
+      c.enquiryList.length;
+      c.trip.value;
+      final d = c.plan.value?.dayAt(day);
+      if (d == null) return const SizedBox.shrink();
+      final date = c.dateOf(day);
+      final travel = c.isMultiCity && c.isTravelDay(day);
+      final city = c.isMultiCity && !travel ? c.cityNameOf(day) : null;
+      final freeTravel = travel && d.spots.isEmpty;
+      final line = [
+        if (travel && !freeTravel) TripStringsMcaA3.travelDay,
+        ?city,
+        if (date != null) TripFormat.shortDate(date),
+      ].join(' · ');
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _titleRow(
+            'Day $day',
+            TripColors.dayColor(day),
+            freeTravel ? TripStringsMcaA3.travelDay : _dayLine(c, day, d.spots.length),
+          ),
           if (line.isNotEmpty) ...[
             const SizedBox(height: 4),
             Row(
@@ -249,6 +403,10 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
                 ),
               ],
             ),
+          ],
+          if (travel) ...[
+            const SizedBox(height: 10),
+            TripMapTravelBlock(legIndex: c.legIndexOf(day)),
           ],
           const SizedBox(height: 12),
           TripDayActions(day),
@@ -371,6 +529,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         final s = d.stay;
         return s != null && !s.isSameStay && s.hasCoordinates;
       });
+      if (p.isMultiCity) return _allCitiesPage(c, hasStayPin);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -395,6 +554,94 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         ],
       );
     });
+  }
+
+  Widget _allCitiesPage(TripPlanController c, bool hasStayPin) {
+    final p = c.plan.value!;
+    final legs = [for (final l in p.legs) if (p.legStart(l.index) >= 1) l];
+    var km = 0.0;
+    for (final l in legs) {
+      km += c.cityKm(l.index);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          TripStringsMcdA2.daysCities(p.days.length, legs.length),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          TripStringsMcdA2.inCitiesLine(TripFormat.km(km), c.travelDays),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 12,
+          runSpacing: 6,
+          children: [
+            for (final l in legs) _legendDot(TripColors.dayColor(p.legStart(l.index)), l.cityName),
+            _legendTravel(),
+            if (hasStayPin) _legendStay(),
+          ],
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          TripStringsMcdA2.tapCityHint,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+        ),
+      ],
+    );
+  }
+
+  Widget _legendDot(Color color, String label) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 160),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendTravel() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < 3; i++) ...[
+          if (i > 0) const SizedBox(width: 2),
+          Container(
+            width: 4,
+            height: 3,
+            decoration: BoxDecoration(color: TaxiColors.accent, borderRadius: BorderRadius.circular(1)),
+          ),
+        ],
+        const SizedBox(width: 5),
+        const Text(
+          TripStringsMcdA2.travelLegend,
+          maxLines: 1,
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+        ),
+      ],
+    );
   }
 
   Widget _legendDay(int day) {

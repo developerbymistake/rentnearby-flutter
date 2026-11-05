@@ -6,6 +6,7 @@ import '../../../models/place_result_model.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../trip/controllers/trip_plan_controller.dart';
+import '../../trip/data/trip_segment_geometry_cache.dart';
 import '../../trip/models/trip_plan_model.dart';
 import '../../trip/trip_strings_steps_a1.dart';
 import '../../trip/trip_strings_steps_k3.dart';
@@ -130,6 +131,9 @@ class TaxiWaysController extends GetxController {
       _synthetic.clear();
       chosen.clear();
       result.value = r;
+      for (final p in r.plans) {
+        TripSegmentGeometryCache.putPlan(p);
+      }
       _syncGap(r);
     } catch (e) {
       if (myGen != _gen) return;
@@ -228,6 +232,7 @@ class TaxiWaysController extends GetxController {
       final d = await _repo.plan(planKey, people: people.value, date: date.value);
       if (d.legs.isEmpty) throw StateError('empty plan');
       _details[planKey] = d;
+      TripSegmentGeometryCache.putPlan(d);
       _fillChosen(d);
       return d;
     } catch (e) {

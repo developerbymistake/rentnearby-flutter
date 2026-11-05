@@ -15,6 +15,7 @@ import '../trip_constants.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_mcd_a3.dart';
 import 'trip_sheet_frame.dart';
 import 'trip_today_card.dart';
 
@@ -75,13 +76,25 @@ class _ProblemBodyState extends State<_ProblemBody> {
       final own = c.ownTaxiOf(day);
       if (own != null) add(own.name, own.ownPhone);
     }
+    for (final e in _carRows(c)) {
+      add(_carLabel(e), e.owner.phone);
+    }
     return out;
+  }
+
+  List<TripEnquiryModel> _carRows(TripPlanController c) {
+    final day = widget.day;
+    if (!c.isMultiCity || !c.isTravelDay(day)) return const [];
+    return c.segmentRows(c.legIndexOf(day)).where((e) => e.isBooked).toList();
   }
 
   List<TripEnquiryModel> _booked(String kind) {
     final c = TripPlanController.to;
     final rows = switch (kind) {
-      TripProblemKinds.driverNoShow => c.taxiEnquiriesForDay(widget.day),
+      TripProblemKinds.driverNoShow => [
+          ...c.taxiEnquiriesForDay(widget.day),
+          ..._carRows(c).where((e) => !c.taxiEnquiriesForDay(widget.day).any((x) => x.id == e.id)),
+        ],
       TripProblemKinds.hostNoRoom => c.enquiriesForNight(widget.day),
       _ => const <TripEnquiryModel>[],
     };
@@ -253,8 +266,13 @@ class _ProblemBodyState extends State<_ProblemBody> {
         ),
       );
 
+  String _carLabel(TripEnquiryModel e) {
+    final name = (e.owner.name ?? '').isNotEmpty ? e.owner.name! : e.listingName;
+    return TripStringsMcdA3.carCandidate(e.context.journeyLegIndex ?? 1, name.isEmpty ? TripStrings.driver : name);
+  }
+
   Widget _candidate(TripEnquiryModel e, bool taxi) {
-    final earlier = _spansEarlier(e);
+    final earlier = !e.isSegment && _spansEarlier(e);
     final kind = taxi ? TripProblemKinds.driverNoShow : TripProblemKinds.hostNoRoom;
     return Material(
       color: Colors.white,
@@ -275,7 +293,11 @@ class _ProblemBodyState extends State<_ProblemBody> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                e.listingName.isEmpty ? (taxi ? TripStrings.driver : TripStrings.stay) : e.listingName,
+                e.isSegment
+                    ? _carLabel(e)
+                    : e.listingName.isEmpty
+                        ? (taxi ? TripStrings.driver : TripStrings.stay)
+                        : e.listingName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
