@@ -50,6 +50,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
   final _cityDots = <int, Circle>{};
   final _cityLabels = <int, Symbol>{};
   final _badges = <int, Symbol>{};
+  final _changeDots = <int, List<Circle>>{};
+  final _changeLabels = <int, List<Symbol>>{};
+  bool _wideZoom = false;
   final _topKey = GlobalKey();
   final _cardKey = GlobalKey();
   String? _drawnStaySignature;
@@ -72,12 +75,17 @@ class _TripMapScreenState extends State<TripMapScreen> {
   static final String _stayText = AppColors.hexOf(StayColors.accentDark);
   static final String _cityText = AppColors.hexOf(AppColors.textDark);
   static final String _travelText = AppColors.hexOf(TaxiColors.accentDark);
+  static final String _changeStroke = AppColors.hexOf(AppColors.warning);
+  static final String _changeText = AppColors.hexOf(AppColors.warningText);
+  static const _oneCityZoom = MinMaxZoomPreference(8, 18);
+  static const _multiCityZoom = MinMaxZoomPreference(4, 18);
 
   @override
   void initState() {
     super.initState();
     _plan = TripPlanController.to;
     _plan.openPages++;
+    _wideZoom = _plan.isMultiCity;
     final args = Get.arguments;
     final day = args is Map ? args['day'] as int? : null;
     final tripId = args is Map ? args['tripId'] as String? : null;
@@ -115,6 +123,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
   @override
   void dispose() {
     _map?.onSymbolTapped.remove(_onSymbolTapped);
+    _map?.onCircleTapped.remove(_onCircleTapped);
     for (final w in _workers) {
       w.dispose();
     }
@@ -215,6 +224,8 @@ class _TripMapScreenState extends State<TripMapScreen> {
     final map = _map;
     final p = _plan.plan.value;
     if (!mounted || map == null || !_styleLoaded || p == null || _waitingForTrip) return;
+    await _applyZoomFloor(p);
+    if (!mounted) return;
     final leg = _plan.selectedMapLeg.value;
     if (leg > 0 && (!p.isMultiCity || p.legAt(leg) == null || p.legStart(leg) < 1)) _plan.selectedMapLeg.value = 0;
     if (_selected != TripDayChips.all && p.dayAt(_selected) == null) _plan.selectedMapDay.value = 1;
@@ -246,6 +257,12 @@ class _TripMapScreenState extends State<TripMapScreen> {
     }
   }
 
+  Future<void> _applyZoomFloor(TripPlan p) async {
+    if (p.isMultiCity == _wideZoom) return;
+    setState(() => _wideZoom = p.isMultiCity);
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
   String _staySignature(TripPlan p) => [
         p.days.length,
         for (final d in p.days)
@@ -270,6 +287,20 @@ class _TripMapScreenState extends State<TripMapScreen> {
         TripMapFocus.day => _pinDayFor(_selected) == pinDay,
       };
 
+  bool get _hidesOtherLegs => _plan.isMultiCity && _plan.mapFocus == TripMapFocus.city;
+
+  bool get _lighterDays => _plan.isMultiCity && _plan.mapFocus == TripMapFocus.all;
+
+  double _dimOrHide(bool on) => on ? 1 : (_hidesOtherLegs ? 0 : 0.35);
+
+  double _stayPinOpacity(int pinDay) => _dimOrHide(_isStayPinSelected(pinDay));
+
+  double _dayOpacity(int day) => _dimOrHide(_isSelected(day));
+
+  double _segOpacity(int legIndex) => _dimOrHide(_plan.mapShowsSegment(legIndex));
+
+  double? _ringOpacity(double opacity) => _plan.isMultiCity ? (opacity == 0 ? 0 : 1) : null;
+
   Future<void> _drawStayPins(MapLibreMapController map, TripPlan p) async {
     if (_stayPins.isNotEmpty) {
       final old = _stayPins.values.toList();
@@ -280,12 +311,12 @@ class _TripMapScreenState extends State<TripMapScreen> {
     for (final day in p.days) {
       final s = _pinnedStay(day);
       if (s == null) continue;
-      final on = _isStayPinSelected(day.day);
+      final opacity = _stayPinOpacity(day.day);
       _stayPins[day.day] = await map.addSymbol(SymbolOptions(
         geometry: LatLng(s.latitude!, s.longitude!),
         iconImage: _stayPinImage,
         iconSize: 1,
-        iconOpacity: on ? 1 : 0.35,
+        iconOpacity: opacity,
         textField: p.days.length > 1 ? TripStrings.night(day.day) : TripStrings.stay,
         fontNames: const ['Noto Sans Medium'],
         textSize: 11,
@@ -294,7 +325,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
         textColor: _stayText,
         textHaloColor: _white,
         textHaloWidth: 1,
-        textOpacity: on ? 1 : 0.35,
+        textOpacity: opacity,
         zIndex: 10,
       ));
     }
@@ -305,19 +336,28 @@ class _TripMapScreenState extends State<TripMapScreen> {
   void _onSymbolTapped(Symbol symbol) {
     for (final e in _stayPins.entries) {
       if (_same(e.value, symbol)) {
-        _select(e.key);
+        if (_stayPinOpacity(e.key) > 0) _select(e.key);
         return;
       }
     }
     for (final e in _badges.entries) {
       if (_same(e.value, symbol)) {
         final day = _plan.plan.value?.legStart(e.key) ?? 0;
-        if (day >= 1) _select(day);
+        if (day >= 1 && _segOpacity(e.key) > 0) _select(day);
         return;
       }
     }
     for (final e in _cityLabels.entries) {
       if (_same(e.value, symbol)) {
+        _selectLeg(e.key);
+        return;
+      }
+    }
+  }
+
+  void _onCircleTapped(Circle circle) {
+    for (final e in _cityDots.entries) {
+      if (e.value == circle || e.value.id == circle.id) {
         _selectLeg(e.key);
         return;
       }
@@ -395,15 +435,18 @@ class _TripMapScreenState extends State<TripMapScreen> {
     };
   }
 
-  LineLayerProperties _lineProps(int day, bool selected, {required bool glow}) {
+  LineLayerProperties _lineProps(int day, {required bool glow}) {
+    final selected = _isSelected(day);
+    final hidden = !selected && _hidesOtherLegs;
     final color = AppColors.hexOf(TripColors.dayColor(day));
     if (glow) {
-      return LineLayerProperties(lineColor: color, lineWidth: 8, lineOpacity: selected ? 0.18 : 0.05, lineBlur: 3);
+      return LineLayerProperties(
+          lineColor: color, lineWidth: 8, lineOpacity: hidden ? 0 : (selected ? 0.18 : 0.05), lineBlur: 3);
     }
     return LineLayerProperties(
       lineColor: color,
       lineWidth: 4,
-      lineOpacity: selected ? 0.9 : 0.25,
+      lineOpacity: hidden ? 0 : (selected ? (_lighterDays ? 0.6 : 0.9) : 0.25),
       lineDasharray: _hasRoute[day] == true ? null : [2, 2],
     );
   }
@@ -427,12 +470,16 @@ class _TripMapScreenState extends State<TripMapScreen> {
         ],
       };
 
-  LineLayerProperties _segProps(bool on, {required bool glow}) {
+  LineLayerProperties _segProps(int legIndex, {required bool glow}) {
+    final on = _plan.mapShowsSegment(legIndex);
+    final hidden = !on && _hidesOtherLegs;
     final color = AppColors.hexOf(TaxiColors.accent);
     if (glow) {
-      return LineLayerProperties(lineColor: color, lineWidth: 8, lineOpacity: on ? 0.18 : 0.05, lineBlur: 3);
+      return LineLayerProperties(
+          lineColor: color, lineWidth: 8, lineOpacity: hidden ? 0 : (on ? 0.18 : 0.05), lineBlur: 3);
     }
-    return LineLayerProperties(lineColor: color, lineWidth: 4, lineOpacity: on ? 0.9 : 0.25, lineDasharray: [2, 2]);
+    return LineLayerProperties(
+        lineColor: color, lineWidth: 4, lineOpacity: hidden ? 0 : (on ? 0.9 : 0.25), lineDasharray: [2, 2]);
   }
 
   static LatLng _midpoint(List<LatLng> line) {
@@ -455,18 +502,18 @@ class _TripMapScreenState extends State<TripMapScreen> {
       final k = leg.index;
       if (k >= 2) {
         final line = _plan.segmentLine(k);
-        final on = _plan.mapShowsSegment(k);
+        final opacity = _segOpacity(k);
         final id = _segId(k);
         await map.addGeoJsonSource(id, _segSource(line));
-        await map.addLineLayer(id, '$id-glow', _segProps(on, glow: true), belowLayerId: below);
-        await map.addLineLayer(id, '$id-line', _segProps(on, glow: false), belowLayerId: below);
+        await map.addLineLayer(id, '$id-glow', _segProps(k, glow: true), belowLayerId: below);
+        await map.addLineLayer(id, '$id-line', _segProps(k, glow: false), belowLayerId: below);
         _drawnSegs.add(k);
         if (leg.arrival != null && line != null && line.length >= 2 && _carPinReady) {
           _badges[k] = await map.addSymbol(SymbolOptions(
             geometry: _midpoint(line),
             iconImage: _carPinImage,
             iconSize: 1,
-            iconOpacity: on ? 1 : 0.35,
+            iconOpacity: opacity,
             textField: _badgeText(leg),
             fontNames: const ['Noto Sans Medium'],
             textSize: 11,
@@ -475,9 +522,39 @@ class _TripMapScreenState extends State<TripMapScreen> {
             textColor: _travelText,
             textHaloColor: _white,
             textHaloWidth: 1,
-            textOpacity: on ? 1 : 0.35,
+            textOpacity: opacity,
             zIndex: 9,
           ));
+        }
+        final dots = <Circle>[];
+        final labels = <Symbol>[];
+        for (final c in _plan.segmentChangePlaces(k)) {
+          dots.add(await map.addCircle(CircleOptions(
+            geometry: c.at,
+            circleRadius: 7,
+            circleColor: _white,
+            circleOpacity: opacity,
+            circleStrokeColor: _changeStroke,
+            circleStrokeWidth: 3,
+            circleStrokeOpacity: opacity,
+          )));
+          labels.add(await map.addSymbol(SymbolOptions(
+            geometry: c.at,
+            textField: c.name,
+            fontNames: const ['Noto Sans Medium'],
+            textSize: 10,
+            textAnchor: 'left',
+            textOffset: const Offset(1.1, 0),
+            textColor: _changeText,
+            textHaloColor: _white,
+            textHaloWidth: 1.5,
+            textOpacity: opacity,
+            zIndex: 8,
+          )));
+        }
+        if (dots.isNotEmpty) {
+          _changeDots[k] = dots;
+          _changeLabels[k] = labels;
         }
       }
       if (!leg.hasPoint || leg.cityName.isEmpty) continue;
@@ -522,6 +599,8 @@ class _TripMapScreenState extends State<TripMapScreen> {
     _cityDots.clear();
     _cityLabels.clear();
     _badges.clear();
+    _changeDots.clear();
+    _changeLabels.clear();
     _circles.clear();
     _symbols.clear();
     _hasRoute.clear();
@@ -531,13 +610,13 @@ class _TripMapScreenState extends State<TripMapScreen> {
     final below = map.circleManager?.layerIds.first;
     for (final day in p.days) {
       final d = day.day;
-      final selected = _isSelected(d);
+      final opacity = _dayOpacity(d);
       final color = AppColors.hexOf(TripColors.dayColor(d));
       _hasRoute[d] = _plan.routeFor(d) != null;
       await map.addGeoJsonSource(_sourceId(d), _source(d));
-      await map.addLineLayer(_sourceId(d), '${_sourceId(d)}-glow', _lineProps(d, selected, glow: true),
+      await map.addLineLayer(_sourceId(d), '${_sourceId(d)}-glow', _lineProps(d, glow: true),
           belowLayerId: below);
-      await map.addLineLayer(_sourceId(d), '${_sourceId(d)}-line', _lineProps(d, selected, glow: false),
+      await map.addLineLayer(_sourceId(d), '${_sourceId(d)}-line', _lineProps(d, glow: false),
           belowLayerId: below);
       final circles = <Circle>[];
       final symbols = <Symbol>[];
@@ -548,9 +627,10 @@ class _TripMapScreenState extends State<TripMapScreen> {
           geometry: at,
           circleRadius: 12,
           circleColor: color,
-          circleOpacity: selected ? 1 : 0.35,
+          circleOpacity: opacity,
           circleStrokeColor: _white,
           circleStrokeWidth: 2,
+          circleStrokeOpacity: _ringOpacity(opacity),
         )));
         symbols.add(await map.addSymbol(SymbolOptions(
           geometry: at,
@@ -558,7 +638,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
           fontNames: const ['Noto Sans Medium'],
           textSize: 11,
           textColor: _white,
-          textOpacity: selected ? 1 : 0.35,
+          textOpacity: opacity,
         )));
       }
       _circles[d] = circles;
@@ -573,28 +653,34 @@ class _TripMapScreenState extends State<TripMapScreen> {
     final map = _map;
     if (map == null) return;
     for (final d in _drawnDays) {
-      final selected = _isSelected(d);
-      await map.setLayerProperties('${_sourceId(d)}-glow', _lineProps(d, selected, glow: true));
-      await map.setLayerProperties('${_sourceId(d)}-line', _lineProps(d, selected, glow: false));
+      final opacity = _dayOpacity(d);
+      await map.setLayerProperties('${_sourceId(d)}-glow', _lineProps(d, glow: true));
+      await map.setLayerProperties('${_sourceId(d)}-line', _lineProps(d, glow: false));
       for (final c in _circles[d] ?? const <Circle>[]) {
-        await map.updateCircle(c, CircleOptions(circleOpacity: selected ? 1 : 0.35));
+        await map.updateCircle(c, CircleOptions(circleOpacity: opacity, circleStrokeOpacity: _ringOpacity(opacity)));
       }
       for (final s in _symbols[d] ?? const <Symbol>[]) {
-        await map.updateSymbol(s, SymbolOptions(textOpacity: selected ? 1 : 0.35));
+        await map.updateSymbol(s, SymbolOptions(textOpacity: opacity));
       }
     }
     for (final e in _stayPins.entries) {
-      final on = _isStayPinSelected(e.key);
-      await map.updateSymbol(e.value, SymbolOptions(iconOpacity: on ? 1 : 0.35, textOpacity: on ? 1 : 0.35));
+      final opacity = _stayPinOpacity(e.key);
+      await map.updateSymbol(e.value, SymbolOptions(iconOpacity: opacity, textOpacity: opacity));
     }
     if (_drawnSegs.isEmpty && _cityDots.isEmpty) return;
     for (final k in _drawnSegs) {
-      final on = _plan.mapShowsSegment(k);
-      await map.setLayerProperties('${_segId(k)}-glow', _segProps(on, glow: true));
-      await map.setLayerProperties('${_segId(k)}-line', _segProps(on, glow: false));
+      final opacity = _segOpacity(k);
+      await map.setLayerProperties('${_segId(k)}-glow', _segProps(k, glow: true));
+      await map.setLayerProperties('${_segId(k)}-line', _segProps(k, glow: false));
       final badge = _badges[k];
       if (badge != null) {
-        await map.updateSymbol(badge, SymbolOptions(iconOpacity: on ? 1 : 0.35, textOpacity: on ? 1 : 0.35));
+        await map.updateSymbol(badge, SymbolOptions(iconOpacity: opacity, textOpacity: opacity));
+      }
+      for (final c in _changeDots[k] ?? const <Circle>[]) {
+        await map.updateCircle(c, CircleOptions(circleOpacity: opacity, circleStrokeOpacity: opacity));
+      }
+      for (final s in _changeLabels[k] ?? const <Symbol>[]) {
+        await map.updateSymbol(s, SymbolOptions(textOpacity: opacity));
       }
     }
     final citiesOn = _citiesOn;
@@ -687,7 +773,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
               child: MapLibreMap(
                 styleString: "assets/map_style.json",
                 initialCameraPosition: CameraPosition(target: _initialTarget(), zoom: 13.0),
-                minMaxZoomPreference: const MinMaxZoomPreference(8, 18),
+                minMaxZoomPreference: _wideZoom ? _multiCityZoom : _oneCityZoom,
                 compassEnabled: false,
                 rotateGesturesEnabled: false,
                 tiltGesturesEnabled: false,
@@ -698,6 +784,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
                 onMapCreated: (MapLibreMapController ctrl) {
                   _map = ctrl;
                   ctrl.onSymbolTapped.add(_onSymbolTapped);
+                  ctrl.onCircleTapped.add(_onCircleTapped);
                 },
                 onStyleLoadedCallback: _onStyleLoaded,
               ),

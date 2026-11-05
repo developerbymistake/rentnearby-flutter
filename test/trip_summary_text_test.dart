@@ -408,6 +408,44 @@ void main() {
       expect(text.endsWith(TripSummaryText.footer(r)), isTrue);
     });
 
+    test('nightGroups joins consecutive nights of one stay enquiry only', () {
+      Map<String, dynamic> base(int n, String enquiry, {int? agreed}) => {
+            ...night(n, name: 'Alaknanda View'),
+            'enquiryId': enquiry,
+            'agreedTotal': agreed,
+          };
+      final nights = [
+        night(1, name: 'Ganga View Inn'),
+        base(2, 'q2', agreed: 4200),
+        base(3, 'q2'),
+        base(4, 'q2'),
+        {'night': 5, 'date': '2026-11-05', 'listingName': 'My cousin', 'isOwn': true, 'displayStatus': 'own'},
+        base(6, 'q2'),
+      ].map(TripSummaryNight.fromJson).toList();
+      final groups = TripSummaryText.nightGroups(nights);
+      expect(groups.map((g) => g.nights.map((n) => n.night).toList()).toList(), [
+        [1],
+        [2, 3, 4],
+        [5],
+        [6],
+      ]);
+      expect(groups[1].isRange, isTrue);
+      expect(groups[1].agreedTotal, 4200);
+      expect(TripSummaryText.checkOutOf(groups[1].last.date), 'Thu 05 Nov');
+      expect(groups[0].isRange, isFalse);
+    });
+
+    test('nightGroups never joins skipped nights or nights without an enquiry', () {
+      final nights = [
+        {'night': 1, 'date': '2026-11-01', 'listingName': 'A', 'enquiryId': 'q', 'displayStatus': TripSummaryText.skippedStatus},
+        {'night': 2, 'date': '2026-11-02', 'listingName': 'A', 'enquiryId': 'q', 'displayStatus': TripSummaryText.skippedStatus},
+        {'night': 3, 'date': '2026-11-03', 'listingName': 'B'},
+        {'night': 4, 'date': '2026-11-04', 'listingName': 'B'},
+      ].map(TripSummaryNight.fromJson).toList();
+      expect(TripSummaryText.nightGroups(nights).every((g) => !g.isRange), isTrue);
+      expect(TripSummaryText.nightGroups(const []), isEmpty);
+    });
+
     test('travel alone makes the record shareable', () {
       final json = twoLegs(nights: [])..['days'] = <Map<String, dynamic>>[];
       final r = TripSummaryRecord.fromJson(json);

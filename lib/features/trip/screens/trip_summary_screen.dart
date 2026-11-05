@@ -13,6 +13,7 @@ import '../models/trip_summary_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_mcd_k1.dart';
 import '../trip_strings_steps_a1.dart';
 import '../trip_strings_steps_a3.dart';
 import '../utils/trip_format.dart';
@@ -239,7 +240,10 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     return [
       if (travel != null) ...[TripSummaryTravelCard(travel), const SizedBox(height: 12)],
       TripSummaryLegHeader(leg),
-      for (final n in leg.nights) ...[_nightCard(n), const SizedBox(height: 12)],
+      for (final g in TripSummaryText.nightGroups(leg.nights)) ...[
+        g.isRange ? _nightGroupCard(g) : _nightCard(g.first),
+        const SizedBox(height: 12),
+      ],
       for (final t in leg.taxis) ...[_taxiCard(t), const SizedBox(height: 12)],
     ];
   }
@@ -421,9 +425,17 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     );
   }
 
-  Widget _nightCard(TripSummaryNight n) {
+  Widget _nightGroupCard(TripSummaryNightGroup g) => _nightCard(
+        g.first,
+        heading: TripStringsMcdK1.nightsRange(g.first.night, g.last.night),
+        subtitle: TripStringsMcdK1.baseStayLine(g.first.listingName, TripSummaryText.checkOutOf(g.last.date)),
+        agreedTotal: g.agreedTotal,
+      );
+
+  Widget _nightCard(TripSummaryNight n, {String? heading, String? subtitle, int? agreedTotal}) {
     final date = n.date == null ? '' : TripFormat.shortDate(n.date!);
-    final heading = TripStringsA5.nightHeading(n.night, date, TripSummaryText.checkOutOf(n.date));
+    heading ??= TripStringsA5.nightHeading(n.night, date, TripSummaryText.checkOutOf(n.date));
+    final agreed = agreedTotal ?? n.agreedTotal;
     if (TripSummaryText.isSkipped(n)) {
       return TripStatusCard(
         status: TripDisplayStatus.none,
@@ -441,10 +453,10 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _titleRow(heading, n.listingName, TripStatusPill(status, label: label)),
+          _titleRow(heading, subtitle ?? n.listingName, TripStatusPill(status, label: label)),
           if (n.isOwn && (n.ownPhone ?? '').isNotEmpty) _kv(TripStrings.call, n.ownPhone!),
           for (final room in n.roomLines) _kv(TripStrings.room, TripSummaryText.roomLine(room)),
-          if (n.agreedTotal != null) _kv(TripStrings.agreed, BrowseItem.inr(n.agreedTotal!)),
+          if (agreed != null) _kv(TripStrings.agreed, BrowseItem.inr(agreed)),
           if (!n.isOwn) _kv(TripStrings.advance, TripSummaryText.advanceLine(n)),
           if ((n.cancellationText ?? '').isNotEmpty) _kv(TripStrings.cancellationTerms, n.cancellationText!),
           if (n.gstInvoice != null) _kv(TripStrings.gstInvoice, n.gstInvoice! ? TripStrings.yes : TripStrings.no),

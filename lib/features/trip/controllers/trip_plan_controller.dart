@@ -614,6 +614,15 @@ class TripPlanController extends GetxController {
     return [LatLng(prev.latitude, prev.longitude), LatLng(leg.latitude, leg.longitude)];
   }
 
+  List<TripChangePlace> segmentChangePlaces(int legIndex) {
+    if (legIndex < 2) return const [];
+    final a = legAt(legIndex)?.arrival;
+    if (a == null || !a.isJourney) return const [];
+    final cached = TripSegmentGeometryCache.get(a.planKey);
+    if (cached == null || cached.length < 2) return const [];
+    return TripSegmentGeometryCache.changePlacesFor(a.planKey);
+  }
+
   static TripStayChoice? _pinnedStayOf(TripDay day) {
     final s = day.stay;
     if (s == null || s.isSameStay || !s.hasCoordinates) return null;
@@ -629,9 +638,7 @@ class TripPlanController extends GetxController {
     void addSegmentEnds(int k) {
       final line = segmentLine(k);
       if (line == null) return;
-      points
-        ..add(line.first)
-        ..add(line.last);
+      points.addAll(line);
     }
 
     if (focus == TripMapFocus.all) {

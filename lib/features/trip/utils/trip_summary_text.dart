@@ -188,6 +188,27 @@ class TripSummaryText {
     ]);
   }
 
+  static bool _sameStay(TripSummaryNight a, TripSummaryNight b) =>
+      a.enquiryId != null &&
+      a.enquiryId == b.enquiryId &&
+      !a.isOwn &&
+      !b.isOwn &&
+      !isSkipped(a) &&
+      !isSkipped(b) &&
+      b.night == a.night + 1;
+
+  static List<TripSummaryNightGroup> nightGroups(List<TripSummaryNight> nights) {
+    final groups = <List<TripSummaryNight>>[];
+    for (final n in nights) {
+      if (groups.isNotEmpty && _sameStay(groups.last.last, n)) {
+        groups.last.add(n);
+      } else {
+        groups.add([n]);
+      }
+    }
+    return [for (final g in groups) TripSummaryNightGroup(List.unmodifiable(g))];
+  }
+
   static String checkOutOf(DateTime? date) => date == null ? '' : TripFormat.shortDate(DateTime(date.year, date.month, date.day + 1));
 
   static String dayRoute(TripSummaryDay d) {

@@ -1,4 +1,5 @@
 import 'package:bakhli/features/taxi/journeys/journey_models.dart';
+import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/data/trip_segment_geometry_cache.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
@@ -1340,7 +1341,7 @@ void main() {
       return c;
     }
 
-    List<String> keys(List<LatLng> points) => [for (final p in points) '${p.latitude},${p.longitude}']..sort();
+    List<String> keys(List<LatLng> points) => [for (final p in points) '${p.latitude.toStringAsFixed(4)},${p.longitude.toStringAsFixed(4)}']..sort();
 
     List<LatLng> todaysSet(TripPlan p, int selected) {
       final all = selected == TripPlanController.mapAll;
@@ -1458,6 +1459,35 @@ void main() {
       expect(keys(c.mapFocusPoints()), keys([const LatLng(30.75, 79.50), const LatLng(30.73, 79.48)]));
       c.selectMapDay(2);
       expect(keys(c.mapFocusPoints()), keys([const LatLng(29.95, 78.16), const LatLng(30.74, 79.49)]));
+    });
+
+    test('mapFocusPoints on a travel day fits every point of a cached road, not only its ends', () {
+      const arrival = {'mode': 'journey', 'fromName': 'Haridwar', 'journeyId': 'j2', 'planKey': 'pk', 'cars': 2};
+      final c = ctl(legsPlan(arrival: arrival));
+      TripSegmentGeometryCache.put('pk', [(lat: 29.9, lng: 78.1), (lat: 30.2, lng: 77.2), (lat: 30.7, lng: 79.4)]);
+      c.selectMapDay(2);
+      expect(keys(c.mapFocusPoints()), contains('30.2000,77.2000'));
+      c.selectMapAll();
+      expect(keys(c.mapFocusPoints()), contains('30.2000,77.2000'));
+    });
+
+    test('segmentChangePlaces come from the cached plan of a journey segment only', () {
+      WayLeg leg(int i, String to, double lat) => WayLeg(
+            legKey: 'l$i',
+            index: i,
+            from: const WayPlace(key: 'a', name: 'A', lat: 0, lng: 0),
+            to: WayPlace(key: to, name: to, lat: lat, lng: 78.3),
+            listedFare: 1000,
+            geometry: [(lat: lat - 0.2, lng: 78.3), (lat: lat, lng: 78.3)],
+          );
+      const arrival = {'mode': 'journey', 'fromName': 'Haridwar', 'journeyId': 'j2', 'planKey': 'pk', 'cars': 2};
+      final c = ctl(legsPlan(arrival: arrival));
+      expect(c.segmentChangePlaces(2), isEmpty);
+      TripSegmentGeometryCache.putPlan(WayPlan(planKey: 'pk', cars: 2, total: 0, legs: [leg(1, 'Rishikesh', 30.1), leg(2, 'Badrinath', 30.7)]));
+      expect(c.segmentChangePlaces(2).map((p) => p.name), ['Rishikesh']);
+      expect(c.segmentChangePlaces(1), isEmpty);
+      const own = {'mode': 'own', 'fromName': 'Haridwar', 'how': 'bus', 'leavesAt': '06:00'};
+      expect(ctl(legsPlan(arrival: own)).segmentChangePlaces(2), isEmpty);
     });
 
     test('travel headline, km, minutes, travel days and road minutes', () {

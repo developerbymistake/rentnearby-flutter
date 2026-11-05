@@ -142,10 +142,18 @@ class _ProblemBodyState extends State<_ProblemBody> {
       return;
     }
     final queued = c.lastProblemQueued;
+    final reported = rows.firstWhereOrNull((e) => e.id == id);
     Navigator.pop(context, true);
     if (queued) return;
     AppToast.info(TripStrings.problemNoted);
     switch (kind) {
+      case TripProblemKinds.driverNoShow when reported != null && reported.isSegment:
+        final journeyId = reported.context.journeyId ?? c.segmentJourney(c.legIndexOf(day))?.id;
+        if (journeyId != null) {
+          TripNavigation.openJourney(journeyId);
+        } else {
+          TripNavigation.openMap(day: day);
+        }
       case TripProblemKinds.driverNoShow:
         TripNavigation.openTaxi(day, nearLat: loc?.latitude, nearLng: loc?.longitude);
       case TripProblemKinds.hostNoRoom:

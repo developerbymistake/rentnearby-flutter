@@ -37,7 +37,7 @@ class TripCard extends StatelessWidget {
     final s = t.state;
     if (s == TripBookingState.completed) return s;
     if (s == TripBookingState.draft && t.isPlanned) return TripBookingState.planOnly;
-    final settled = t.staysTotal + t.taxisTotal + t.staysOwn + t.taxisOwn;
+    final settled = t.staysTotal + t.taxisTotal + t.staysOwn + t.taxisOwn + t.travelSettled;
     if (s == TripBookingState.ready && settled == 0) return TripBookingState.planOnly;
     return s;
   }

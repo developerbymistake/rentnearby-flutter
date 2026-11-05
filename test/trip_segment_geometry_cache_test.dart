@@ -51,9 +51,47 @@ void main() {
     expect(TripSegmentGeometryCache.get('p2'), isNull);
   });
 
+  test('putPlan keeps the change-car places in leg order', () {
+    WayLeg leg(int i, String to, double lat) => WayLeg(
+          legKey: 'l$i',
+          index: i,
+          from: const WayPlace(key: 'a', name: 'A', lat: 0, lng: 0),
+          to: WayPlace(key: to, name: to, lat: lat, lng: 78),
+          listedFare: 1000,
+          geometry: [(lat: lat - 1, lng: 78.0), (lat: lat, lng: 78.0)],
+        );
+    TripSegmentGeometryCache.putPlan(WayPlan(planKey: 'p3', cars: 3, total: 0, legs: [
+      leg(3, 'Badrinath', 30.7),
+      leg(1, 'Rishikesh', 30.1),
+      leg(2, 'Joshimath', 30.5),
+    ]));
+    final places = TripSegmentGeometryCache.changePlacesFor('p3');
+    expect(places.map((p) => p.name), ['Rishikesh', 'Joshimath']);
+    expect(places.first.at.latitude, 30.1);
+    expect(TripSegmentGeometryCache.changePlacesFor('other'), isEmpty);
+    expect(TripSegmentGeometryCache.changePlacesFor(null), isEmpty);
+  });
+
+  test('a one-car plan or a plan without geometry has no change places', () {
+    TripSegmentGeometryCache.putPlan(WayPlan(planKey: 'p1', cars: 1, total: 0, legs: [
+      _leg(1, [(lat: 1.0, lng: 1.0), (lat: 2.0, lng: 2.0)]),
+    ]));
+    expect(TripSegmentGeometryCache.changePlacesFor('p1'), isEmpty);
+    TripSegmentGeometryCache.putPlan(WayPlan(planKey: 'p2', cars: 2, total: 0, legs: [
+      _leg(1, [(lat: 1.0, lng: 1.0), (lat: 2.0, lng: 2.0)]),
+      _leg(2, null),
+    ]));
+    expect(TripSegmentGeometryCache.changePlacesFor('p2'), isEmpty);
+  });
+
   test('clear empties the cache', () {
+    TripSegmentGeometryCache.putPlan(WayPlan(planKey: 'p1', cars: 2, total: 0, legs: [
+      _leg(1, [(lat: 1.0, lng: 1.0), (lat: 2.0, lng: 2.0)]),
+      _leg(2, [(lat: 2.0, lng: 2.0), (lat: 3.0, lng: 3.0)]),
+    ]));
     TripSegmentGeometryCache.put('k1', [(lat: 1.0, lng: 1.0), (lat: 2.0, lng: 2.0)]);
     TripSegmentGeometryCache.clear();
     expect(TripSegmentGeometryCache.get('k1'), isNull);
+    expect(TripSegmentGeometryCache.changePlacesFor('p1'), isEmpty);
   });
 }

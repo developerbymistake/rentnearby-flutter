@@ -98,6 +98,23 @@ class TripSummaryNight {
   String confirmedLine() => _confirmedLine(confirmedBy, confirmedAt);
 }
 
+class TripSummaryNightGroup {
+  final List<TripSummaryNight> nights;
+
+  const TripSummaryNightGroup(this.nights);
+
+  TripSummaryNight get first => nights.first;
+  TripSummaryNight get last => nights.last;
+  bool get isRange => nights.length > 1;
+
+  int? get agreedTotal {
+    for (final n in nights) {
+      if (n.agreedTotal != null) return n.agreedTotal;
+    }
+    return null;
+  }
+}
+
 class TripSummaryTaxi {
   final String? enquiryId;
   final String listingName;
