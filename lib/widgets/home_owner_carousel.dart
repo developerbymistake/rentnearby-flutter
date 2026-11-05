@@ -356,7 +356,7 @@ class _OwnerBanner extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              isOwner ? 'Add Your Listing' : seekerCta,
+                              isOwner ? 'List Yours' : seekerCta,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(

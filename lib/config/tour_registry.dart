@@ -133,14 +133,14 @@ List<TourStep> _buildHomeSteps() {
       TourStep(
         key: TourKeys.homeQuickActionLeads,
         icon: Icons.bar_chart_rounded,
-        title: canStays ? 'My Stays' : 'My Listings',
+        title: canStays ? 'My Stays' : 'My Taxi',
         body: canStays ? 'Jump straight to your stay.' : 'Jump straight to your taxi.',
       ),
     TourStep(
       key: TourKeys.homeInstagramCard,
       icon: Iconsax.camera,
       title: 'Stay in the loop',
-      body: 'Follow us on Instagram for new listings, tips and updates — just one tap away.',
+      body: 'Follow us on Instagram for travel ideas, tips and updates — just one tap away.',
     ),
     TourStep(
       key: TourKeys.homeActionMenu,
@@ -165,7 +165,7 @@ List<TourStep> _buildHomeSteps() {
       icon: Iconsax.user,
       title: 'Your account lives here',
       body: owner
-          ? 'Manage your profile, listings, plan and settings from here.'
+          ? 'Manage your profile, plan and settings from here.'
           : 'Manage your profile and settings from here.',
     ),
   ];

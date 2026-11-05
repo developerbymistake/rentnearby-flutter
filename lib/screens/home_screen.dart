@@ -634,7 +634,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _ownerQuickActionTile(
               icon: Icons.bar_chart_rounded,
               gradient: AppColors.warningGradient,
-              label: stays ? 'My Stays' : 'My Listings',
+              label: stays ? 'My Stays' : 'My Taxi',
               motion: IconMotionStyle.grow,
               compact: stays,
               onTap: () => Get.toNamed(stays ? AppRoutes.myStays : AppRoutes.myTaxi),
@@ -776,7 +776,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── "Recently added across India" — newest first ──
+  // ── Recently added stays — newest first ──
 
   Widget _buildRecentlyAddedSection() {
     return Obx(() {
@@ -791,7 +791,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-              'Recently added across India',
+              'Recently added stays',
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 15,
@@ -804,9 +804,9 @@ class _HomeScreenState extends State<HomeScreen> {
           if (loading)
             _buildRecentlyAddedShimmerList()
           else if (items.isEmpty && failed.isNotEmpty)
-            _railErrorMessage(ModulePalette.rooms, () => _home.reloadSections(failed))
+            _railErrorMessage(ModulePalette.stays, () => _home.reloadSections(failed))
           else if (items.isEmpty)
-            _emptyRailMessage('No listings yet.')
+            _emptyRailMessage('No stays added yet.')
           else
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
