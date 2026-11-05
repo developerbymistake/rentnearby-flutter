@@ -403,6 +403,7 @@ class TripJourneyStrip extends StatelessWidget {
                       onPressed: () => TripTaxiBookingSheet.showForJourneyCar(
                         context,
                         legIndex: legIndex,
+                        journeyId: j.id,
                         carIndex: car,
                         car: l,
                         enquiry: _askRow(l, rows),

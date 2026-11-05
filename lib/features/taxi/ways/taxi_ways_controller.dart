@@ -277,8 +277,42 @@ class TaxiWaysController extends GetxController {
         toLat: plan.to.lat,
         toLng: plan.to.lng,
         forTripId: forTrip || forSegment ? tripId : null,
-        forTripLegIndex: forSegment ? tripLegIndex : null,
+        forTripLegIndex: forSegment && _tripController != null ? tripLegIndex : null,
       );
+
+  int? roadMinutesOf(WayPlan plan) {
+    var total = 0;
+    for (final leg in plan.legs) {
+      final m = (chosenFor(plan.planKey, leg.index) ?? leg.firstDriver)?.minutes;
+      if (m == null || m <= 0) return null;
+      total += m;
+    }
+    return plan.legs.isEmpty ? null : total;
+  }
+
+  Future<({bool go, bool replaceBooked})> _segmentGate(BuildContext? context, WayPlan plan) async {
+    final c = _tripController;
+    final k = tripLegIndex;
+    if (c == null || k == null) return (go: true, replaceBooked: false);
+    final block = await c.prepareSegmentLink(k);
+    if (block != null) {
+      AppToast.warning(block);
+      return (go: false, replaceBooked: false);
+    }
+    final booked = c.travelImpact(k).bookedRows;
+    if (booked == 0 || c.travelMatches(k, plan.planKey, date.value, people.value)) {
+      return (go: true, replaceBooked: false);
+    }
+    if (context == null || !context.mounted) return (go: false, replaceBooked: false);
+    final ok = await TravelConfirmSheet.replaceTravel(context, booked);
+    return (go: ok, replaceBooked: ok);
+  }
+
+  Future<void> _releaseUnsaved(WayPlan plan) async {
+    final c = _tripController;
+    final j = JourneysController.ensure().findByPlan(plan.planKey, date.value, people: people.value, forTripId: tripId);
+    if (c != null && j != null && j.tripId == tripId) await c.releaseJourneyLink(j.id);
+  }
 
   Future<void> saveJourney(WayPlan plan) async {
     if (busyPlans.contains(plan.planKey)) return;
@@ -309,19 +343,25 @@ class TaxiWaysController extends GetxController {
     return false;
   }
 
-  Future<_SegmentLink> _linkSegment(BuildContext? context, SavedJourney saved) async {
+  Future<_SegmentLink> _linkSegment(
+    BuildContext? context,
+    SavedJourney saved,
+    WayPlan plan, {
+    bool replaceBooked = false,
+  }) async {
     final c = _tripController;
     final k = tripLegIndex;
     if (c == null || k == null) {
       AppToast.success(TripStringsStepsA1.savedToJourneys);
       return _SegmentLink.plain;
     }
-    var r = await c.linkSegmentJourney(k, saved);
-    if (r == TripLinkResult.needsConfirm) {
-      if (context == null || !context.mounted) return _SegmentLink.failed;
+    final minutes = roadMinutesOf(plan);
+    var r = await c.linkSegmentJourney(k, saved, replaceBooked: replaceBooked, roadMinutes: minutes);
+    if (r == TripLinkResult.needsConfirm && context != null && context.mounted) {
       final booked = c.travelImpact(k).bookedRows;
-      if (!await TravelConfirmSheet.replaceTravel(context, booked)) return _SegmentLink.failed;
-      r = await c.linkSegmentJourney(k, saved, replaceBooked: true);
+      if (await TravelConfirmSheet.replaceTravel(context, booked)) {
+        r = await c.linkSegmentJourney(k, saved, replaceBooked: true, roadMinutes: minutes);
+      }
     }
     switch (r) {
       case TripLinkResult.saved:
@@ -329,8 +369,10 @@ class TaxiWaysController extends GetxController {
         return _SegmentLink.linked;
       case TripLinkResult.notSaved:
         AppToast.warning(TripStringsStepsK3.notSavedToTrip);
+        await c.releaseJourneyLink(saved.id);
         return _SegmentLink.failed;
       case TripLinkResult.needsConfirm:
+        await c.releaseJourneyLink(saved.id);
         return _SegmentLink.failed;
     }
   }
@@ -346,10 +388,19 @@ class TaxiWaysController extends GetxController {
     if (busyPlans.contains(plan.planKey)) return;
     busyPlans.add(plan.planKey);
     try {
-      final saved = await saveIfNeeded(plan, quiet: true);
-      if (saved == null) return;
+      var replaceBooked = false;
       if (forSegment) {
-        final link = await _linkSegment(context, saved);
+        final gate = await _segmentGate(context, plan);
+        if (!gate.go) return;
+        replaceBooked = gate.replaceBooked;
+      }
+      final saved = await saveIfNeeded(plan, quiet: true);
+      if (saved == null) {
+        if (forSegment) await _releaseUnsaved(plan);
+        return;
+      }
+      if (forSegment) {
+        final link = await _linkSegment(context, saved, plan, replaceBooked: replaceBooked);
         if (link == _SegmentLink.linked) {
           backToPlan();
         } else if (link == _SegmentLink.plain) {
@@ -371,12 +422,24 @@ class TaxiWaysController extends GetxController {
     if (busyPlans.contains(plan.planKey)) return;
     busyPlans.add(plan.planKey);
     try {
+      var replaceBooked = false;
+      if (forSegment) {
+        final gate = await _segmentGate(context, plan);
+        if (!gate.go) return;
+        replaceBooked = gate.replaceBooked;
+      }
       final journey = await saveIfNeeded(plan, quiet: forTrip || forSegment);
-      if (journey == null) return;
+      if (journey == null) {
+        if (forSegment) await _releaseUnsaved(plan);
+        return;
+      }
       final bool linked;
       if (forSegment) {
-        if (!context.mounted) return;
-        final link = await _linkSegment(context, journey);
+        if (!context.mounted) {
+          await _tripController?.releaseJourneyLink(journey.id);
+          return;
+        }
+        final link = await _linkSegment(context, journey, plan, replaceBooked: replaceBooked);
         if (link == _SegmentLink.failed) return;
         linked = link == _SegmentLink.linked;
       } else {

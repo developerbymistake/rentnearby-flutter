@@ -7,7 +7,6 @@ import '../../../controllers/tab_config_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../../taxi/taxi_option_sets.dart';
-import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
@@ -16,6 +15,7 @@ import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_mca_a3.dart';
+import '../trip_strings_mcb_k2.dart';
 import '../trip_strings_steps_a1.dart';
 import 'trip_cancel_sheet.dart';
 import 'trip_own_booking_sheet.dart';
@@ -158,7 +158,7 @@ class TripDayActions extends StatelessWidget {
         accent: TaxiColors.accent,
         surface: TaxiColors.surface,
         title: title,
-        subtitle: TripStringsMcbA2.journeyDriversBring,
+        subtitle: TripStringsMcbK2.journeyTile(c.legOf(day).arrival?.fromName ?? '', c.cityNameOf(day)),
         state: TripTileState.disabled,
       );
     }

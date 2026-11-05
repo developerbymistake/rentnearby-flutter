@@ -5,6 +5,7 @@ import 'package:bakhli/features/trip/models/trip_journey_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_result_model.dart';
+import 'package:bakhli/features/trip/trip_strings.dart';
 import 'package:bakhli/features/trip/trip_strings_mca_a1.dart';
 import 'package:bakhli/features/trip/utils/trip_travel_rules.dart';
 import 'package:get/get.dart';
@@ -836,7 +837,8 @@ void main() {
       expect(c.taxiEnquiriesForDay(2), isEmpty);
       expect(c.hasTaxiActivity(2), isFalse);
       expect(c.bookedTaxiEnquiryFor(2), isNull);
-      expect(c.taxiStep.sorted, 0);
+      expect(c.taxiStep.sorted, 1);
+      expect(c.taxiStep.firstUnsorted, 1);
       expect(c.segmentRows(2).length, 1);
       expect(c.carBooking(2, 1), isNotNull);
       expect(c.travelStateOf(2), TripTravelState.booked);
@@ -866,6 +868,68 @@ void main() {
       expect(c.travelGaps[2], 'Rishikesh');
       c.clearTravelGap(2);
       expect(c.travelStateOf(2), TripTravelState.notPlanned);
+    });
+
+    test('a journey travel day counts as sorted for the local taxi step', () {
+      final p = legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival);
+      final days = [
+        for (final d in p.days)
+          d.day == 2 ? d : d.copyWith(taxi: const TripTaxiChoice(taxiId: 'tx', name: 'Sunil', fare: 2000)),
+      ];
+      final c = ctl(p.copyWith(days: days), journeys: [segJourney('j2')]);
+      expect(c.taxiStep.sorted, 3);
+      expect(c.taxiStep.firstUnsorted, isNull);
+    });
+
+    test('journey arrival road minutes: given, clamped, else previous own or a whole day', () async {
+      final c = ctl(legsPlan(start: DateTime(2030, 11, 1)));
+      await c.linkSegmentJourney(2, saved('j3'), roadMinutes: 600);
+      expect(c.plan.value!.legAt(2)!.arrival!.roadMinutes, 600);
+      await c.linkSegmentJourney(2, saved('j4'), roadMinutes: 2000);
+      expect(c.plan.value!.legAt(2)!.arrival!.roadMinutes, 900);
+
+      final none = ctl(legsPlan(start: DateTime(2030, 11, 1)));
+      await none.linkSegmentJourney(2, saved('j3'));
+      expect(none.plan.value!.legAt(2)!.arrival!.roadMinutes, 450);
+
+      final own = ctl(legsPlan(
+        start: DateTime(2030, 11, 1),
+        arrival: {'mode': 'own', 'fromName': 'Haridwar', 'how': 'bus', 'roadMinutes': 240},
+      ));
+      await own.linkSegmentJourney(2, saved('j3'));
+      expect(own.plan.value!.legAt(2)!.arrival!.roadMinutes, 240);
+    });
+
+    test('an unavailable city blocks the link before anything changes', () async {
+      final c = ctl(legsPlan(start: DateTime(2030, 11, 1)));
+      c.needsUpdate.value = false;
+      c.unavailableCities.add(2);
+      expect(await c.prepareSegmentLink(2), TripStrings.cityUnavailable);
+      expect(await c.linkSegmentJourney(2, saved('j3')), TripLinkResult.notSaved);
+      expect(c.plan.value!.legAt(2)!.arrival, isNull);
+    });
+
+    test('releaseJourneyLink drops only a journey the plan does not hold', () async {
+      final c = ctl(
+        legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival),
+        journeys: [segJourney('j2'), segJourney('j9')],
+      );
+      await c.releaseJourneyLink('j2');
+      await c.releaseJourneyLink('j9');
+      expect(c.journeys.map((j) => j.id), ['j2']);
+      expect(c.segmentLegOf('j2'), 2);
+      expect(c.segmentLegOf('j9'), isNull);
+    });
+
+    test('travelMatches only for the same plan, date and people', () {
+      final c = ctl(
+        legsPlan(start: DateTime(2030, 11, 1), arrival: {...journeyArrival, 'planKey': 'k1'}),
+        journeys: [segJourney('j2')],
+      );
+      final people = c.segmentJourney(2)!.people;
+      expect(c.travelMatches(2, 'k1', DateTime(2030, 11, 2), people), isTrue);
+      expect(c.travelMatches(2, 'k2', DateTime(2030, 11, 2), people), isFalse);
+      expect(c.travelMatches(2, 'k1', DateTime(2030, 11, 3), people), isFalse);
     });
   });
 }

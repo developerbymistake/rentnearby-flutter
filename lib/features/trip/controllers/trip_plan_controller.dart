@@ -34,6 +34,8 @@ import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_mca_a1.dart';
 import '../trip_strings_mcb_a1.dart';
+import '../trip_strings_mcb_k1.dart';
+import '../trip_strings_steps_k3.dart';
 import '../utils/trip_step_rules.dart';
 import '../utils/trip_travel_rules.dart';
 import '../utils/trip_whatsapp_text.dart';
@@ -475,7 +477,8 @@ class TripPlanController extends GetxController {
 
   bool _nightSorted(TripDay d) => d.stay != null || (primaryEnquiry(d.day)?.isBooked ?? false);
 
-  bool _taxiDaySorted(TripDay d) => d.taxi != null || bookedTaxiEnquiryFor(d.day) != null;
+  bool _taxiDaySorted(TripDay d) =>
+      d.taxi != null || bookedTaxiEnquiryFor(d.day) != null || hidesLocalTaxi(d.day);
 
   ({TripStepDisplay display, int sorted, int total, int? firstUnsorted}) get stayStep {
     final days = plan.value?.days ?? const <TripDay>[];
@@ -2503,6 +2506,84 @@ class TripPlanController extends GetxController {
     return (t != null && !t.isSkipped) || taxiEnquiriesForDay(day).any((e) => e.isOpen);
   }
 
+  Future<void> cancelLocalTaxiTravelDay(int day) async {
+    final p = plan.value;
+    if (p == null || isReadOnly || !canEditDay(day)) return;
+    final enq = TripEnquiryController.to;
+    var ok = true;
+    var kept = false;
+    for (final e in taxiEnquiriesForDay(day).where((e) => e.isOpen).toList()) {
+      final days = planDaysOf(e);
+      final rest = days.where((d) => d != day).toList();
+      if (e.isBooked) {
+        ok = (rest.isEmpty ? await enq.cancel(e.id) : await _shrinkTaxiBooking(e, days, rest)) && ok;
+      } else if (e.isWithdrawable) {
+        if (rest.isEmpty) {
+          ok = await enq.withdraw(e.id) && ok;
+        } else {
+          kept = true;
+        }
+      }
+    }
+    if (!ok) return;
+    _dropLocalTaxiDay(day);
+    if (kept) {
+      AppToast.warning(TripStringsMcbK1.localTaxiLeadKept);
+    } else {
+      AppToast.success(TripStringsMcbK1.localTaxiDayRemoved(day));
+    }
+  }
+
+  Future<bool> _shrinkTaxiBooking(TripEnquiryModel e, List<int> days, List<int> rest) async {
+    final t = e.taxi;
+    final booking = _localBookingOf(e.listingId);
+    final fare = t?.agreedFare ?? booking?.agreedFare;
+    if (fare == null) return false;
+    final kept = (fare * rest.length ~/ days.length).clamp(TaxiOptionSets.minFare, TaxiOptionSets.maxFare).toInt();
+    final place = t?.pickupPlace ?? booking?.pickupPlace ?? settings.pickupPlace;
+    final saved = await TripEnquiryController.to.bookTaxi(
+      taxiId: e.listingId,
+      days: rest,
+      agreedFare: kept,
+      tollExtra: t?.tollExtra ?? booking?.tollExtra ?? false,
+      pickupTime: t?.pickupTime ?? booking?.pickupTime ?? settings.pickupTime ?? TripConstants.defaultPickupTime,
+      pickupPlace: place == null || place.trim().isEmpty ? cityNameOf(rest.first) : place,
+      closeOthers: false,
+    );
+    return saved != null;
+  }
+
+  TripTaxiBooking? _localBookingOf(String taxiId) {
+    for (final d in plan.value?.days ?? const <TripDay>[]) {
+      final t = d.taxi;
+      if (t != null && t.taxiId == taxiId && t.booking != null) return t.booking;
+    }
+    return null;
+  }
+
+  void _dropLocalTaxiDay(int day) {
+    final p = plan.value;
+    final t = p?.dayAt(day)?.taxi;
+    if (p == null || t == null || t.isSkipped) return;
+    final all = t.booking?.days ?? const <int>[];
+    _applyChoice([
+      for (final d in p.days)
+        if (d.day == day)
+          d.copyWith(clearTaxi: true)
+        else if (all.isNotEmpty && d.taxi?.taxiId == t.taxiId && (d.taxi?.booking?.days.contains(day) ?? false))
+          d.copyWith(taxi: _withoutTravelDay(d.taxi!, day))
+        else
+          d,
+    ]);
+  }
+
+  TripTaxiChoice _withoutTravelDay(TripTaxiChoice t, int day) {
+    final b = t.booking!;
+    final rest = b.days.where((x) => x != day).toList();
+    final fare = b.days.isEmpty ? b.agreedFare : b.agreedFare * rest.length ~/ b.days.length;
+    return t.copyWith(booking: b.copyWith(days: rest, agreedFare: fare));
+  }
+
   TravelImpact travelImpact(int legIndex) {
     final a = _journeyArrival(legIndex);
     if (a == null) return const TravelImpact();
@@ -2552,12 +2633,52 @@ class TripPlanController extends GetxController {
     ]);
   }
 
-  Future<TripLinkResult> linkSegmentJourney(int legIndex, SavedJourney j, {bool replaceBooked = false}) async {
+  Future<String?> prepareSegmentLink(int legIndex) async {
+    final leg = plan.value?.legAt(legIndex);
+    if (leg == null || legIndex < 2 || isReadOnly || _saveBlocked || travelBusy.contains(legIndex)) {
+      return TripStringsStepsK3.notSavedToTrip;
+    }
+    if (_hasUnavailableLeg) return TripStrings.cityUnavailable;
+    if (!await flushPendingSave() || trip.value == null) return TripStringsStepsK3.notSavedToTrip;
+    return null;
+  }
+
+  bool travelMatches(int legIndex, String planKey, DateTime date, int people) {
+    final a = _journeyArrival(legIndex);
+    if (a == null || a.planKey != planKey) return false;
+    final j = segmentJourney(legIndex);
+    return j == null || (_sameDate(j.date, date) && j.people == people);
+  }
+
+  Future<void> releaseJourneyLink(String journeyId) async {
+    if (journeyId.isEmpty || _locallyLinked(journeyId)) return;
+    _dropLocalJourney(journeyId);
+    if (trip.value == null || _saveBlocked) return;
+    await saveNow();
+  }
+
+  bool _mayDeleteJourney(String journeyId, TripJourney? j) {
+    final tripId = trip.value?.id;
+    return tripId != null &&
+        _neverAsked(journeyId, j) &&
+        Get.isRegistered<JourneysController>() &&
+        Get.find<JourneysController>().createdForTrip(journeyId, tripId);
+  }
+
+  int? segmentLegOf(String journeyId) => plan.value?.segmentLegOf(journeyId);
+
+  Future<TripLinkResult> linkSegmentJourney(
+    int legIndex,
+    SavedJourney j, {
+    bool replaceBooked = false,
+    int? roadMinutes,
+  }) async {
     final p = plan.value;
     final leg = p?.legAt(legIndex);
     if (p == null || leg == null || legIndex < 2 || isReadOnly || j.id.isEmpty || travelBusy.contains(legIndex)) {
       return TripLinkResult.notSaved;
     }
+    if (_hasUnavailableLeg) return TripLinkResult.notSaved;
     final old = _journeyArrival(legIndex);
     final oldId = old?.journeyId;
     final same = oldId == j.id;
@@ -2588,7 +2709,10 @@ class TripPlanController extends GetxController {
         planKey: j.planKey.isEmpty ? null : j.planKey,
         cars: j.cars > 0 ? j.cars.clamp(1, TripConstants.maxJourneyCars).toInt() : null,
         listedTotal: j.listedTotal,
-        roadMinutes: same ? old?.roadMinutes : null,
+        roadMinutes: roadMinutes?.clamp(0, TripConstants.journeyRoadMinutesMax).toInt() ??
+            (same ? old?.roadMinutes : null) ??
+            now.arrival?.roadMinutes ??
+            TripConstants.travelWholeDayMinutes,
       );
       final oldRoad = now.arrival?.roadMinutes;
       plan.value = next.withArrival(legIndex, arrival);
@@ -2601,8 +2725,9 @@ class TripPlanController extends GetxController {
       if (oldRoad != arrival.roadMinutes && cur.legSpotCount(legIndex) > 0 && canEditLeg(legIndex)) {
         unawaited(_planLegByCity(now.cityKey, keepDays: true));
       }
+      final deleteOld = oldId != null && !same && _mayDeleteJourney(oldId, oldJourney);
       final ok = await flushPendingSave();
-      if (oldId != null && !same && _neverAsked(oldId, oldJourney)) unawaited(_deleteJourney(oldId));
+      if (deleteOld) unawaited(_deleteJourney(oldId!));
       return ok ? TripLinkResult.saved : TripLinkResult.notSaved;
     } finally {
       travelBusy.remove(legIndex);
@@ -2623,6 +2748,10 @@ class TripPlanController extends GetxController {
       return true;
     }
     if (travelBusy.contains(legIndex)) return false;
+    if (_hasUnavailableLeg) {
+      AppToast.warning(TripStrings.cityUnavailable);
+      return false;
+    }
     final rows = segmentRows(legIndex);
     if (TripTravelRules.impactOf(rows).hasBooked && !cancelBooked) return false;
     final id = a.journeyId!;
@@ -2631,7 +2760,7 @@ class TripPlanController extends GetxController {
     try {
       if (!await _closeSegmentRows(rows)) return false;
       if (plan.value?.legAt(legIndex)?.arrival?.journeyId != id) return true;
-      final never = _neverAsked(id, j);
+      final never = _mayDeleteJourney(id, j);
       _setArrival(legIndex, null);
       _dropLocalJourney(id);
       travelGaps.remove(legIndex);
@@ -2651,6 +2780,7 @@ class TripPlanController extends GetxController {
   }
 
   Future<TripEnquiryModel?> bookJourneyCar({
+    required String journeyId,
     required int legIndex,
     required int carIndex,
     required String taxiId,
@@ -2666,12 +2796,19 @@ class TripPlanController extends GetxController {
     enq.lastErrorType = null;
     enq.lastErrorMessage = null;
     final a = _journeyArrival(legIndex);
-    if (a == null || isReadOnly) return null;
-    final journeyId = a.journeyId!;
+    if (isReadOnly) return null;
+    if (a == null || a.journeyId != journeyId) {
+      AppToast.warning(TripStringsMcbK1.journeyNotInTrip);
+      return null;
+    }
     final ok = await flushPendingSave();
     final tripId = trip.value?.id;
     if (!ok || tripId == null) {
       AppToast.warning(TripStrings.notSavedCheckConnection);
+      return null;
+    }
+    if (_journeyArrival(legIndex)?.journeyId != journeyId) {
+      AppToast.warning(TripStringsMcbK1.journeyNotInTrip);
       return null;
     }
     try {
@@ -3939,7 +4076,11 @@ class TripPlanController extends GetxController {
         if (Get.isRegistered<JourneysController>()) {
           final s = saved.plan.steps;
           unawaited(Get.find<JourneysController>().syncTripLinks(
-              saved.id, {?s.gettingThere.journeyId, ?s.comingBack.journeyId, ...saved.plan.segmentJourneyIds}));
+            saved.id,
+            {?s.gettingThere.journeyId, ?s.comingBack.journeyId, ...saved.plan.segmentJourneyIds},
+            links: _journeyLinksOf(saved.plan),
+            tripTitle: saved.title,
+          ));
         }
       }
       trip.value = saved.copyWith(
@@ -3989,6 +4130,20 @@ class TripPlanController extends GetxController {
     } finally {
       isSaving.value = false;
     }
+  }
+
+  static Map<String, JourneyTripLink> _journeyLinksOf(TripPlan p) {
+    final links = <String, JourneyTripLink>{};
+    for (final r in TripStepRole.values) {
+      final id = p.steps.of(r).journeyId;
+      if (id != null && id.isNotEmpty) links[id] = (role: r.name, legIndex: null, travelDay: null);
+    }
+    for (final l in p.legs) {
+      final id = l.arrival?.journeyId;
+      if (l.index < 2 || !(l.arrival?.isJourney ?? false) || id == null || id.isEmpty || links.containsKey(id)) continue;
+      links[id] = (role: TripJourney.segmentRole, legIndex: l.index, travelDay: p.legStart(l.index));
+    }
+    return links;
   }
 
   Future<TripModel> _update(String id, String? title, String status, TripPlan p) async {

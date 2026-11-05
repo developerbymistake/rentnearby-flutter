@@ -14,6 +14,8 @@ import 'journey_models.dart';
 import 'journey_repository.dart';
 import 'journey_strings.dart';
 
+typedef JourneyTripLink = ({String role, int? legIndex, int? travelDay});
+
 class JourneyErrorTypes {
   static const String notFound = 'JourneyNotFound';
   static const String limitReached = 'JourneyLimitReached';
@@ -50,6 +52,7 @@ class JourneysController extends GetxController {
   DateTime? _syncedAt;
   Future<void>? _running;
   bool _saving = false;
+  final _createdForTrip = <String, String>{};
 
   bool get hasUnavailable => journeys.any((j) => j.status == JourneyStatus.driverUnavailable);
 
@@ -64,6 +67,7 @@ class JourneysController extends GetxController {
     _syncedAt = null;
     journeys.clear();
     busyIds.clear();
+    _createdForTrip.clear();
     isLoading.value = false;
     loadFailed.value = false;
     isOffline.value = false;
@@ -99,21 +103,50 @@ class JourneysController extends GetxController {
     }
   }
 
-  Future<void> syncTripLinks(String tripId, Set<String> linkedIds) async {
+  Future<void> syncTripLinks(
+    String tripId,
+    Set<String> linkedIds, {
+    Map<String, JourneyTripLink> links = const {},
+    String? tripTitle,
+  }) async {
     if (journeys.isEmpty) _assign(await JourneyLocalStore.read());
-    final changed = <SavedJourney>[
-      for (final j in journeys)
-        if (linkedIds.contains(j.id) && j.tripId != tripId)
-          j.copyWith(tripId: tripId)
-        else if (!linkedIds.contains(j.id) && j.tripId == tripId)
-          j.copyWith(clearTripId: true),
-    ];
+    final changed = <SavedJourney>[];
+    for (final j in journeys) {
+      final link = links[j.id];
+      if (linkedIds.contains(j.id)) {
+        if (link != null && !_sameLink(j, tripId, link)) {
+          changed.add(_withLink(j, tripId, link, tripTitle));
+        } else if (j.tripId != tripId) {
+          changed.add(j.copyWith(tripId: tripId));
+        }
+      } else if (j.tripId == tripId) {
+        changed.add(j.copyWith(clearTripId: true));
+      }
+    }
     if (changed.isEmpty) return;
     for (final j in changed) {
       await JourneyLocalStore.upsert(j);
     }
     _assign(await JourneyLocalStore.read());
   }
+
+  static bool _sameLink(SavedJourney j, String tripId, JourneyTripLink link) =>
+      j.tripId == tripId &&
+      j.tripRole == link.role &&
+      j.tripLegIndex == link.legIndex &&
+      j.tripTravelDay == link.travelDay;
+
+  static SavedJourney _withLink(SavedJourney j, String tripId, JourneyTripLink link, String? tripTitle) =>
+      SavedJourney.fromJson({
+        ...j.toJson(),
+        'tripId': tripId,
+        'tripTitle': tripTitle ?? j.tripTitle,
+        'tripRole': link.role,
+        'tripLegIndex': link.legIndex,
+        'tripTravelDay': link.travelDay,
+      });
+
+  bool createdForTrip(String journeyId, String tripId) => _createdForTrip[journeyId] == tripId;
 
   Future<void> _drop(String id) async {
     journeys.removeWhere((j) => j.id == id);
@@ -252,7 +285,10 @@ class JourneysController extends GetxController {
     if (body == null) return null;
     _saving = true;
     try {
-      final saved = await _repo.save(body);
+      final res = await ApiService.post('/taxis/journeys', body);
+      final data = res['data'];
+      final saved = SavedJourney.fromJson(data is Map<String, dynamic> ? data : const {});
+      if (tripId != null && res['code'] == 201 && saved.id.isNotEmpty) _createdForTrip[saved.id] = tripId;
       await _commit(saved);
       if (!quiet) AppToast.success(TaxiWaysStrings.saved);
       return byId(saved.id) ?? saved;

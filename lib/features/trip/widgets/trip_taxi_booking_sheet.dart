@@ -49,6 +49,7 @@ class TripTaxiBookingSheet {
   static Future<bool> showForJourneyCar(
     BuildContext context, {
     required int legIndex,
+    required String journeyId,
     required int carIndex,
     required TripJourneyLeg car,
     TripEnquiryModel? enquiry,
@@ -61,7 +62,7 @@ class TripTaxiBookingSheet {
       backgroundColor: Colors.white,
       constraints: BoxConstraints(maxHeight: size.height * 0.9),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _JourneyCarBody(legIndex: legIndex, carIndex: carIndex, car: car, enquiry: enquiry),
+      builder: (_) => _JourneyCarBody(legIndex: legIndex, journeyId: journeyId, carIndex: carIndex, car: car, enquiry: enquiry),
     );
     return saved == true;
   }
@@ -666,11 +667,12 @@ class _BookingBodyState extends State<_BookingBody> {
 
 class _JourneyCarBody extends StatefulWidget {
   final int legIndex;
+  final String journeyId;
   final int carIndex;
   final TripJourneyLeg car;
   final TripEnquiryModel? enquiry;
 
-  const _JourneyCarBody({required this.legIndex, required this.carIndex, required this.car, this.enquiry});
+  const _JourneyCarBody({required this.legIndex, required this.journeyId, required this.carIndex, required this.car, this.enquiry});
 
   @override
   State<_JourneyCarBody> createState() => _JourneyCarBodyState();
@@ -799,6 +801,7 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
     final replaceIds = <String>[];
     Future<TripEnquiryModel?> submit() => _plan.bookJourneyCar(
           legIndex: widget.legIndex,
+          journeyId: widget.journeyId,
           carIndex: widget.carIndex,
           taxiId: taxiId,
           agreedFare: fare,

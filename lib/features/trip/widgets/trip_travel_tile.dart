@@ -8,7 +8,6 @@ import '../../taxi/taxi_option_sets.dart';
 import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../../taxi/ways/widgets/travel_confirm_sheet.dart';
 import '../controllers/trip_plan_controller.dart';
-import '../models/trip_enquiry_model.dart';
 import '../models/trip_journey_model.dart';
 import '../models/trip_plan_model.dart';
 import '../screens/trip_details_sheet.dart';
@@ -16,12 +15,11 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mcb_a1.dart';
+import '../trip_strings_mcb_k2.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_travel_rules.dart';
-import 'trip_cancel_sheet.dart';
 import 'trip_journey_strip.dart';
 import 'trip_own_travel_sheet.dart';
-import 'trip_withdraw_sheet.dart';
 
 enum _TravelAction { edit, openJourney, searchAgain, arrangeMyself, remove }
 
@@ -592,24 +590,14 @@ class TripTravelTile extends StatelessWidget {
   }
 
   Future<void> _cancelLocalTaxi(BuildContext context, TripPlanController c, int day) async {
-    final TripEnquiryModel? e = c.primaryTaxiEnquiry(day);
-    if (e != null && !e.isSegment && e.isBooked) {
-      await TripCancelSheet.show(context, enquiry: e, ownerSide: false);
-      return;
-    }
-    if (e != null && !e.isSegment && e.isWithdrawable) {
-      await TripWithdrawSheet.show(context, enquiry: e);
-      return;
-    }
-    final t = c.plan.value?.dayAt(day)?.taxi;
-    if (t == null || t.isSkipped) return;
-    if (t.isOwn) {
-      c.clearOwnTaxi(day);
-    } else if (t.booking != null) {
-      c.clearTaxiBooking(t.taxiId);
-    } else {
-      c.clearTaxi(day);
-    }
+    final ok = await TravelConfirmSheet.show(
+      context,
+      title: TripStringsMcbK2.removeDayTitle(day),
+      body: TripStringsMcbK2.removeDayBody,
+      confirm: TripStringsMcbK2.removeDay,
+    );
+    if (!ok) return;
+    await c.cancelLocalTaxiTravelDay(day);
   }
 }
 

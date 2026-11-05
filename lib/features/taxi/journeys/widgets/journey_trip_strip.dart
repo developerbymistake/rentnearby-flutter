@@ -73,11 +73,11 @@ class JourneyCarBookRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = tripControllerFor(journey);
-    final cityLeg = journey.tripLegIndex;
-    if (c == null || cityLeg == null || leg.driver.taxiId.isEmpty || journey.isCompleted) return const SizedBox.shrink();
+    if (c == null || leg.driver.taxiId.isEmpty || journey.isCompleted) return const SizedBox.shrink();
     return Obx(() {
       c.enquiryList.length;
-      c.plan.value;
+      final cityLeg = c.plan.value?.segmentLegOf(journey.id);
+      if (cityLeg == null) return const SizedBox.shrink();
       return _row(context, c.carBooking(cityLeg, leg.legIndex) != null, cityLeg);
     });
   }
@@ -116,6 +116,7 @@ class JourneyCarBookRow extends StatelessWidget {
                 onPressed: () => TripTaxiBookingSheet.showForJourneyCar(
                   context,
                   legIndex: cityLeg,
+                  journeyId: journey.id,
                   carIndex: leg.legIndex,
                   car: TripJourneyLeg.fromSaved(leg),
                 ),

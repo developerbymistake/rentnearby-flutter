@@ -136,7 +136,7 @@ class TripNavigation {
     );
   }
 
-  static Future<void>? openSegmentWays(int legIndex) {
+  static Future<void> openSegmentWays(int legIndex) async {
     final c = TripPlanController.to;
     switch (c.findWayBlock(legIndex)) {
       case TravelFindBlock.none:
@@ -145,25 +145,32 @@ class TripNavigation {
         final ctx = Get.context;
         if (ctx == null) {
           AppToast.warning(TripStringsMcbA1.addDatesFirst);
-          return null;
+          return;
         }
-        return TripDetailsSheet.edit(ctx, heading: TripStringsMcbA1.addDatesFirst);
+        await TripDetailsSheet.edit(ctx, heading: TripStringsMcbA1.addDatesFirst);
+        return;
       case TravelFindBlock.tooFarAhead:
         AppToast.warning(TripStringsMcbA1.pickDateWithinYear);
-        return null;
+        return;
       case TravelFindBlock.taxiOff:
         AppToast.warning(TripStringsMcbA1.taxiOffHere);
-        return null;
+        return;
       case TravelFindBlock.offline:
         AppToast.warning(TripStringsMcbA1.connectToFindWay);
-        return null;
+        return;
       case TravelFindBlock.readOnly:
-        return null;
+        return;
     }
+    final block = await c.prepareSegmentLink(legIndex);
+    if (block != null) {
+      AppToast.warning(block);
+      return;
+    }
+    if (!Get.isRegistered<TripPlanController>() || !identical(TripPlanController.to, c)) return;
     final from = c.prevCityPlace(legIndex);
     final to = c.cityPlaceOf(legIndex);
-    if (from == null || to == null) return null;
-    return TaxiWaysNavigation.openFeed(
+    if (from == null || to == null) return;
+    await TaxiWaysNavigation.openFeed(
       from: from,
       to: to,
       fromMyLocation: false,
