@@ -117,11 +117,12 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
       color: Colors.white,
       padding: EdgeInsets.fromLTRB(16, 6, 16, 6 + AppInsets.bottomViewPadding(context)),
       child: Center(
+        heightFactor: 1,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _maxWidth),
           child: TextButton(
             onPressed: () async {
-              if (await TripStepSkipSheet.show(context, step: kind)) c.backToPlan();
+              if (await TripStepSkipSheet.show(context, step: kind)) await c.arrangedMyself();
             },
             style: TextButton.styleFrom(
               foregroundColor: TaxiColors.accentDark,

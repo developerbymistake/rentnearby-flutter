@@ -75,10 +75,11 @@ class JourneysController extends GetxController {
     return null;
   }
 
-  SavedJourney? findByPlan(String planKey, DateTime date, {int? people}) {
+  SavedJourney? findByPlan(String planKey, DateTime date, {int? people, String? forTripId}) {
     for (final j in journeys) {
       if (j.isCompleted || j.planKey != planKey) continue;
       if (people != null && j.people != people) continue;
+      if (forTripId != null && j.tripId != null && j.tripId != forTripId) continue;
       if (j.date.year == date.year && j.date.month == date.month && j.date.day == date.day) return j;
     }
     return null;
@@ -95,6 +96,22 @@ class JourneysController extends GetxController {
     if (Get.isRegistered<TripPlanController>()) {
       Get.find<TripPlanController>().refreshLinkedJourney(byId(journey.id) ?? journey);
     }
+  }
+
+  Future<void> syncTripLinks(String tripId, Set<String> linkedIds) async {
+    if (journeys.isEmpty) _assign(await JourneyLocalStore.read());
+    final changed = <SavedJourney>[
+      for (final j in journeys)
+        if (linkedIds.contains(j.id) && j.tripId != tripId)
+          j.copyWith(tripId: tripId)
+        else if (!linkedIds.contains(j.id) && j.tripId == tripId)
+          j.copyWith(clearTripId: true),
+    ];
+    if (changed.isEmpty) return;
+    for (final j in changed) {
+      await JourneyLocalStore.upsert(j);
+    }
+    _assign(await JourneyLocalStore.read());
   }
 
   Future<void> _drop(String id) async {
@@ -250,9 +267,10 @@ class JourneysController extends GetxController {
     required double toLat,
     required double toLng,
     bool quiet = false,
+    String? forTripId,
   }) async {
     if (journeys.isEmpty) _assign(await JourneyLocalStore.read());
-    final existing = findByPlan(plan.planKey, date, people: people);
+    final existing = findByPlan(plan.planKey, date, people: people, forTripId: forTripId);
     if (existing != null) return _syncDrivers(existing, plan, chosen);
     final saved = await save(
       plan: plan,

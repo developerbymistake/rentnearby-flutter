@@ -16,6 +16,7 @@ import '../../stay/models/stay_nearby_model.dart';
 import '../../taxi/guest/taxi_browse_repository.dart';
 import '../../taxi/guest/traveller_city.dart';
 import '../../taxi/journeys/journey_models.dart';
+import '../../taxi/journeys/journeys_controller.dart';
 import '../../taxi/models/taxi_browse_item.dart';
 import '../../taxi/taxi_option_sets.dart';
 import '../data/trip_repository.dart';
@@ -77,6 +78,7 @@ class TripPlanController extends GetxController {
   TripCityModel? picked;
   int openPages = 0;
   int _enquirySeq = 0;
+  int _saveGen = 0;
   final _legacySynced = <String>{};
   bool _startFromTried = false;
   final _pendingJourneyIds = <String>{};
@@ -536,15 +538,19 @@ class TripPlanController extends GetxController {
     _setSteps(p.steps.withStep(role, const TripStep()));
   }
 
-  void reconcileSteps() {
+  void reconcileSteps([TripModel? fresh]) {
     final p = plan.value;
-    final t = trip.value;
+    final t = fresh ?? trip.value;
     if (p == null || t == null || offline.value || !t.journeysKnown || isCompleted) return;
     var next = p.steps;
     var changed = false;
     for (final r in TripStepRole.values) {
       final s = next.of(r);
-      if (s.status.linksJourney && t.journeyById(s.journeyId) == null) {
+      if (!s.status.linksJourney) continue;
+      final id = s.journeyId;
+      final gone = id == null ||
+          (!_pendingJourneyIds.contains(id) && t.plan.steps.of(r).journeyId == id && t.journeyById(id) == null);
+      if (gone) {
         next = next.withStep(r, const TripStep());
         changed = true;
       }
@@ -552,14 +558,25 @@ class TripPlanController extends GetxController {
     if (changed) _setSteps(next);
   }
 
-  List<TripJourney> _mergedJourneys(TripModel server) {
+  bool _serverLinks(TripModel server, String id) =>
+      TripStepRole.values.any((r) => server.plan.steps.of(r).journeyId == id);
+
+  bool _locallyLinked(String id) {
+    final steps = plan.value?.steps;
+    return steps != null && TripStepRole.values.any((r) => steps.of(r).journeyId == id);
+  }
+
+  List<TripJourney> _mergedJourneys(TripModel server, {bool keepLinked = true}) {
     final local = trip.value?.journeys ?? const <TripJourney>[];
     if (!server.journeysKnown) return local;
     final ids = {for (final j in server.journeys) j.id};
     return [
       ...server.journeys,
       for (final j in local)
-        if (_pendingJourneyIds.contains(j.id) && !ids.contains(j.id)) j,
+        if (!ids.contains(j.id) &&
+            (_pendingJourneyIds.contains(j.id) ||
+                (keepLinked && _locallyLinked(j.id) && !_serverLinks(server, j.id))))
+          j,
     ];
   }
 
@@ -1057,7 +1074,7 @@ class TripPlanController extends GetxController {
       checkSupply();
       _adoptDistrict(t);
       reconcilePlan();
-      reconcileSteps();
+      reconcileSteps(t);
       unawaited(syncLegacyTaxiBookings());
       unawaited(flushProblemQueue());
       await _runRecalculate();
@@ -2103,11 +2120,13 @@ class TripPlanController extends GetxController {
     if (id == null) return;
     final seq = ++_enquirySeq;
     final flow = _flow;
+    final gen = _saveGen;
     enquiriesLoading.value = true;
     try {
       final t = await _repo.get(id);
       if (flow != _flow || seq != _enquirySeq) return;
-      TripTodayCache.saveTrip(t);
+      final stale = gen != _saveGen || _saving != null;
+      if (!stale) TripTodayCache.saveTrip(t);
       enquiryList.assignAll(t.enquiries);
       trip.value = (trip.value ?? t).copyWith(
         enquiries: t.enquiries,
@@ -2117,7 +2136,7 @@ class TripPlanController extends GetxController {
       enquiriesFailed.value = false;
       offline.value = false;
       reconcilePlan();
-      reconcileSteps();
+      if (!stale) reconcileSteps(t);
       unawaited(flushProblemQueue());
     } catch (e) {
       if (flow != _flow || seq != _enquirySeq) return;
@@ -2504,8 +2523,23 @@ class TripPlanController extends GetxController {
     return trip.value?.status ?? TripStatuses.draft;
   }
 
+  TripPlan _clearDatesOnEndCut(TripPlan p, DateTime? storedEnd) {
+    final nextEnd = p.settings.endDate(p.days.length);
+    final s = p.steps;
+    if (storedEnd == null || nextEnd == null || (s.gettingThere.date == null && s.comingBack.date == null)) return p;
+    final cut = DateTime(nextEnd.year, nextEnd.month, nextEnd.day)
+        .isBefore(DateTime(storedEnd.year, storedEnd.month, storedEnd.day));
+    if (!cut) return p;
+    return p.copyWith(
+      steps: s
+          .withStep(TripStepRole.gettingThere, s.gettingThere.copyWith(clearDate: true))
+          .withStep(TripStepRole.comingBack, s.comingBack.copyWith(clearDate: true)),
+    );
+  }
+
   Future<bool> _save(bool markPlanned) async {
-    final p = plan.value!;
+    final p = _clearDatesOnEndCut(plan.value!, trip.value?.endDate);
+    if (!identical(p, plan.value)) plan.value = p;
     final flow = _flow;
     isSaving.value = true;
     try {
@@ -2514,13 +2548,19 @@ class TripPlanController extends GetxController {
           ? await _repo.create(title: _title, status: _statusFor(markPlanned, p), plan: p, clientTripId: _clientTripId)
           : await _update(current.id, _title, _statusFor(markPlanned, p), p);
       if (flow != _flow) return false;
+      _saveGen++;
       final datesMoved = current != null && (current.startDate != saved.startDate || current.endDate != saved.endDate);
       if (saved.stepsKnown) {
         _pendingJourneyIds.removeAll([?p.steps.gettingThere.journeyId, ?p.steps.comingBack.journeyId]);
+        if (Get.isRegistered<JourneysController>()) {
+          final s = saved.plan.steps;
+          unawaited(Get.find<JourneysController>()
+              .syncTripLinks(saved.id, {?s.gettingThere.journeyId, ?s.comingBack.journeyId}));
+        }
       }
       trip.value = saved.copyWith(
         enquiries: enquiryList.toList(),
-        journeys: _mergedJourneys(saved),
+        journeys: _mergedJourneys(saved, keepLinked: false),
         journeysKnown: saved.journeysKnown || (current?.journeysKnown ?? false),
       );
       _adoptServerSteps(p, saved);

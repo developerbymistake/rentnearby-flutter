@@ -24,16 +24,11 @@ class TripStatusCard extends StatelessWidget {
           color: Colors.white,
           child: InkWell(
             onTap: onTap,
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(width: 4, color: bar),
-                  Expanded(
-                    child: Padding(padding: const EdgeInsets.all(14), child: child),
-                  ),
-                ],
-              ),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(border: Border(left: BorderSide(color: bar, width: 4))),
+              padding: const EdgeInsets.all(14),
+              child: child,
             ),
           ),
         ),

@@ -7,6 +7,7 @@ import '../../../utils/dio_error_mapper.dart';
 import '../../trip/controllers/trip_plan_controller.dart';
 import '../../trip/models/trip_plan_model.dart';
 import '../../trip/trip_strings_steps_a1.dart';
+import '../../trip/trip_strings_steps_k3.dart';
 import '../journeys/journey_models.dart';
 import '../journeys/journeys_controller.dart';
 import 'ask_drivers_sheet.dart';
@@ -232,6 +233,7 @@ class TaxiWaysController extends GetxController {
         toName: plan.to.name,
         toLat: plan.to.lat,
         toLng: plan.to.lng,
+        forTripId: forTrip ? tripId : null,
       );
 
   Future<void> saveJourney(WayPlan plan) async {
@@ -245,15 +247,27 @@ class TaxiWaysController extends GetxController {
     }
   }
 
-  bool _linkToTrip(SavedJourney saved) {
+  Future<bool> _linkToTrip(SavedJourney saved) async {
     final role = TripStepRole.values.firstWhereOrNull((r) => r.name == tripRole);
     if (role != null && Get.isRegistered<TripPlanController>() && TripPlanController.to.trip.value?.id == tripId) {
-      TripPlanController.to.linkJourney(role, saved);
-      AppToast.success(TripStringsStepsA1.savedToTrip);
-      return true;
+      final c = TripPlanController.to;
+      c.linkJourney(role, saved);
+      if (c.stepOf(role).journeyId == saved.id) {
+        if (await c.flushPendingSave()) {
+          AppToast.success(TripStringsStepsA1.savedToTrip);
+        } else {
+          AppToast.warning(TripStringsStepsK3.notSavedToTrip);
+        }
+        return true;
+      }
     }
     AppToast.success(TripStringsStepsA1.savedToJourneys);
     return false;
+  }
+
+  Future<void> arrangedMyself() async {
+    if (Get.isRegistered<TripPlanController>()) await TripPlanController.to.flushPendingSave();
+    backToPlan();
   }
 
   void backToPlan() => Get.until((r) => r.settings.name == AppRoutes.tripPlan || r.isFirst);
@@ -264,7 +278,7 @@ class TaxiWaysController extends GetxController {
     try {
       final saved = await saveIfNeeded(plan, quiet: true);
       if (saved == null) return;
-      if (_linkToTrip(saved)) {
+      if (await _linkToTrip(saved)) {
         backToPlan();
       } else {
         TaxiWaysNavigation.openSavedJourney(saved.id);
@@ -280,7 +294,7 @@ class TaxiWaysController extends GetxController {
     try {
       final journey = await saveIfNeeded(plan, quiet: forTrip);
       if (journey == null) return;
-      final linked = forTrip && _linkToTrip(journey);
+      final linked = forTrip && await _linkToTrip(journey);
       if (!context.mounted) return;
       final res = await AskDriversSheet.show(
         context,
