@@ -31,6 +31,7 @@ import '../widgets/trip_status.dart';
 import '../widgets/trip_status_card.dart';
 import '../widgets/trip_withdraw_sheet.dart';
 import 'trip_details_sheet.dart';
+import 'trip_replies_leg_parts.dart';
 
 class TripRepliesScreen extends StatefulWidget {
   const TripRepliesScreen({super.key});
@@ -322,6 +323,10 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
                       color: Colors.white.withValues(alpha: 0.85),
                     ),
                   ),
+                  if (TripRepliesLegParts.legLine(_c, _rankDay) case final leg?) ...[
+                    const SizedBox(height: 2),
+                    TripRepliesLegParts.legLineText(leg),
+                  ],
                 ],
               );
             }),
@@ -535,6 +540,10 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textMedium)),
+          ],
+          if (e != null) ...[
+            if (TripRepliesLegParts.wrongCityStrip(context, _c, e) case final w?) w,
+            if (TripRepliesLegParts.oldDatesCard(_c, e) case final o?) o,
           ],
           if (status == TripDisplayStatus.confirmedByBoth && e != null && e.hasPendingRevised) ...[
             const SizedBox(height: 2),

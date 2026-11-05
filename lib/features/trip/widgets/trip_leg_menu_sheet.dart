@@ -11,13 +11,30 @@ import '../trip_navigation.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mca_n2.dart';
+import '../trip_strings_mcc_a1.dart';
+import '../trip_strings_mcc_a2.dart';
+import 'trip_leg_impact_dialog.dart';
 import 'trip_sheet_frame.dart';
 
 class TripLegMenuSheet {
-  static Future<void> show(BuildContext context, int legIndex) async {
+  static Future<void> show(BuildContext context, int legIndex) => _open(context, legIndex, false);
+
+  static Future<void> changeDays(BuildContext context, int legIndex) => _open(context, legIndex, true);
+
+  static Future<void> _open(BuildContext context, int legIndex, bool editDays) async {
     final c = TripPlanController.to;
     if (c.isReadOnly || c.needsUpdate.value || c.plan.value?.legAt(legIndex) == null) return;
-    await TripSheetFrame.show<void>(context, _LegMenuBody(legIndex: legIndex));
+    await TripSheetFrame.show<void>(context, _LegMenuBody(legIndex: legIndex, editDays: editDays));
+  }
+
+  static void toastCancelled(LegImpact impact, LegCancelResult r) {
+    if (!r.ok) {
+      AppToast.error(TripStringsMccA1.cancelFailed(r.failed));
+    } else if (impact.bookedCount > 0) {
+      AppToast.success(TripStringsMccA1.bookingsCancelled(impact.bookedCount));
+    } else if (impact.openCount > 0) {
+      AppToast.success(TripStringsMccA1.enquiriesWithdrawn(impact.openCount));
+    }
   }
 
   static TripCityModel? cityOf(int legIndex) {
@@ -73,9 +90,10 @@ class TripLegMenuSheet {
 }
 
 class _LegMenuBody extends StatefulWidget {
-  const _LegMenuBody({required this.legIndex});
+  const _LegMenuBody({required this.legIndex, this.editDays = false});
 
   final int legIndex;
+  final bool editDays;
 
   @override
   State<_LegMenuBody> createState() => _LegMenuBodyState();
@@ -85,8 +103,32 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
   final _c = TripPlanController.to;
   bool _editDays = false;
   int _days = 1;
+  bool _busy = false;
 
   int get _leg => widget.legIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    final n = _c.plan.value?.legDayCount(_leg) ?? 1;
+    _days = n;
+    _editDays = widget.editDays && _daysEditable(n);
+  }
+
+  bool _daysEditable(int n) => !_c.isReadOnly && _c.minDaysForLeg(_leg) <= n;
+
+  String _impactBody(LegImpact impact) {
+    if (impact.openCount + impact.bookedCount == 0) return '';
+    return TripStringsMccA2.impactBody(impact.bookedCount, impact.openCount);
+  }
+
+  Future<bool> _cancelRows(LegImpact impact) async {
+    setState(() => _busy = true);
+    final r = await _c.cancelLegRows(impact);
+    if (mounted) setState(() => _busy = false);
+    TripLegMenuSheet.toastCancelled(impact, r);
+    return r.ok;
+  }
 
   void _close() => Navigator.pop(context);
 
@@ -102,6 +144,16 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
   }
 
   Future<void> _saveDays() async {
+    final p = _c.plan.value;
+    final current = p?.legDayCount(_leg) ?? _days;
+    final city = p?.legAt(_leg)?.cityName ?? '';
+    if (_days != current) {
+      final impact = _c.legShrinkImpact(_leg, _days);
+      if (!impact.isEmpty || impact.laterKeepDates) {
+        await _saveDaysWithImpact(impact, city);
+        return;
+      }
+    }
     final dropped = _c.legDaysImpact(_leg, _days).droppedDaysWithBookings;
     if (dropped.isNotEmpty) {
       final ok = await showDialog<bool>(
@@ -130,13 +182,42 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
       );
       if (ok != true || !mounted) return;
     }
-    final city = _c.plan.value?.legAt(_leg)?.cityName ?? '';
     final b = _c.setLegDays(_leg, _days);
     final text = TripLegMenuSheet.blockText(b, city);
     if (text != null) {
       AppToast.warning(text);
       return;
     }
+    if (mounted) _close();
+  }
+
+  Future<void> _saveDaysWithImpact(LegImpact impact, String city) async {
+    final later = impact.laterKeepDates;
+    final laterNames = impact.laterCities.join(', ');
+    final body = [
+      _impactBody(impact),
+      if (later && laterNames.isNotEmpty) TripStringsMccA2.laterKept(laterNames),
+    ].where((s) => s.isNotEmpty).join('\n');
+    final days = _days;
+    final choice = await TripLegImpactDialog.show(
+      context,
+      title: TripStringsMccA2.changeDaysQ(city),
+      body: body,
+      impact: impact,
+      applyLabel: TripStringsMccA2.cancelAndChange,
+      keepLabel: later ? null : TripStringsMccA2.changeKeepBookings,
+      backLabel: TripStringsMccA2.keepDays,
+      offline: _c.offline.value,
+    );
+    if (choice == null || choice == TripLegImpactChoice.back || !mounted) return;
+    if (choice == TripLegImpactChoice.cancelAndApply && !await _cancelRows(impact)) return;
+    final b = _c.setLegDays(_leg, days, keepBookings: true);
+    final text = TripLegMenuSheet.blockText(b, city);
+    if (text != null) {
+      AppToast.warning(text);
+      return;
+    }
+    if (choice == TripLegImpactChoice.keepBookings) AppToast.info(TripStringsMccA2.bookingsKept);
     if (mounted) _close();
   }
 
@@ -183,6 +264,11 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
         p.legAt(_leg - 1)?.cityName ?? '',
       );
     }
+    final impact = _c.legRemoveImpact(_leg);
+    if (!impact.isEmpty) {
+      await _removeWithImpact(impact, leg.cityName, mode == TripLegRemoveMode.shift ? null : body);
+      return;
+    }
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -216,6 +302,30 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
       return;
     }
     _close();
+  }
+
+  Future<void> _removeWithImpact(LegImpact impact, String city, String? keepLine) async {
+    final body = [_impactBody(impact), ?keepLine].where((s) => s.isNotEmpty).join('\n');
+    final choice = await TripLegImpactDialog.show(
+      context,
+      title: TripStringsMccA2.removeQ(city),
+      body: body,
+      impact: impact,
+      applyLabel: TripStringsMccA2.cancelAndRemove,
+      keepLabel: TripStringsMccA2.removeKeepBookings,
+      backLabel: TripStringsMccA2.keepCity,
+      offline: _c.offline.value,
+    );
+    if (choice == null || choice == TripLegImpactChoice.back || !mounted) return;
+    if (choice == TripLegImpactChoice.cancelAndApply && !await _cancelRows(impact)) return;
+    final b = _c.removeLeg(_leg, keepBookings: true);
+    final text = TripLegMenuSheet.blockText(b, city);
+    if (text != null) {
+      AppToast.warning(text);
+      return;
+    }
+    if (choice == TripLegImpactChoice.keepBookings) AppToast.info(TripStringsMccA2.bookingsKept);
+    if (mounted) _close();
   }
 
   Widget _row({
@@ -276,6 +386,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
 
   Widget _daysEditor(TripPlan p) {
     final max = _c.maxDaysForLeg(_leg);
+    final min = _c.minDaysForLeg(_leg);
     final current = p.legDayCount(_leg);
     final fewer = _days < current && p.legSpotCount(_leg) > 0;
     return Container(
@@ -287,7 +398,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
         children: [
           Row(
             children: [
-              _stepButton(Icons.remove_rounded, _days > 1 ? () => setState(() => _days--) : null),
+              _stepButton(Icons.remove_rounded, _days > min ? () => setState(() => _days--) : null),
               Expanded(
                 child: Text(TripStringsMcaA3.days(_days),
                     textAlign: TextAlign.center,
@@ -309,7 +420,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: _days == current ? null : _saveDays,
+              onPressed: _days == current || _busy ? null : _saveDays,
               style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
               child: Text(TripStringsMcaA3.save,
                   style: TextStyle(
@@ -335,7 +446,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
       final a = p.legStart(_leg);
       final b = p.legEnd(_leg);
       final n = p.legDayCount(_leg);
-      final editable = _c.canEditLeg(_leg);
+      final editable = _daysEditable(n) && !_busy;
       final upBlock = _c.canMoveLeg(_leg, true);
       final downBlock = _c.canMoveLeg(_leg, false);
       final removeBlock = _c.canRemoveLeg(_leg);
@@ -355,7 +466,9 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
           _row(
             icon: Iconsax.calendar_edit,
             label: TripStringsMcaA3.changeDays,
-            trailing: editable ? TripStringsMcaA3.days(n) : TripStringsMcaA3.runningBlock,
+            trailing: _busy
+                ? TripStringsMccA2.cancelling
+                : (_daysEditable(n) ? TripStringsMcaA3.days(n) : TripStringsMcaA3.runningBlock),
             onTap: editable
                 ? () => setState(() {
                       _editDays = !_editDays;
@@ -368,20 +481,22 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
             icon: Iconsax.arrow_up_3,
             label: TripStringsMcaA3.moveUp,
             trailing: TripLegMenuSheet.blockText(upBlock, leg.cityName, up: true),
-            onTap: upBlock == TripLegEditBlock.none ? () => _move(true) : null,
+            onTap: upBlock == TripLegEditBlock.none && !_busy ? () => _move(true) : null,
           ),
           _row(
             icon: Iconsax.arrow_down,
             label: TripStringsMcaA3.moveDown,
             trailing: TripLegMenuSheet.blockText(downBlock, leg.cityName, up: false),
-            onTap: downBlock == TripLegEditBlock.none ? () => _move(false) : null,
+            onTap: downBlock == TripLegEditBlock.none && !_busy ? () => _move(false) : null,
           ),
           _row(
             icon: Iconsax.trash,
             label: TripStringsMcaA3.removeCity,
             color: AppColors.error,
             trailing: TripLegMenuSheet.blockText(removeBlock, leg.cityName),
-            onTap: removeBlock == TripLegEditBlock.none || removeBlock == TripLegEditBlock.bookings ? _remove : null,
+            onTap: (removeBlock == TripLegEditBlock.none || removeBlock == TripLegEditBlock.bookings) && !_busy
+                ? _remove
+                : null,
           ),
         ],
       );

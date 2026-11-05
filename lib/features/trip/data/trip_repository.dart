@@ -25,6 +25,8 @@ class TripErrorTypes {
   static const String journeyNotInPlan = 'JourneyNotInPlan';
   static const String routeMismatch = 'RouteMismatch';
   static const String journeyNotFound = 'JourneyNotFound';
+  static const String noStayNight = 'NoStayNight';
+  static const String daysAcrossCities = 'DaysAcrossCities';
 }
 
 class TripCitySupply {

@@ -1,3 +1,7 @@
+import 'dart:math' as math;
+import '../../../utils/search_fold.dart';
+import '../models/trip_enquiry_model.dart';
+import '../models/trip_plan_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 
@@ -6,6 +10,26 @@ class TripPreviewDay {
   final List<String> spots;
 
   const TripPreviewDay({required this.day, this.spots = const []});
+}
+
+class WrongCityInfo {
+  final int wrong;
+  final int total;
+  final int firstWrongDay;
+  final String dayCity;
+  final int homeLegIndex;
+  final int dayLegIndex;
+
+  const WrongCityInfo({
+    required this.wrong,
+    required this.total,
+    required this.firstWrongDay,
+    required this.dayCity,
+    required this.homeLegIndex,
+    required this.dayLegIndex,
+  });
+
+  bool get partial => wrong < total;
 }
 
 class TripEnquiryRules {
@@ -122,5 +146,84 @@ class TripEnquiryRules {
     if (diff.inHours >= 48) return '${diff.inDays} d';
     if (diff.inHours >= 1) return '${diff.inHours} h';
     return '${diff.inMinutes} min';
+  }
+
+  static List<DateTime> datesOf(TripEnquiryModel e) {
+    if (e.isTaxi && e.days.isNotEmpty) return e.taxiDates;
+    final a = e.checkIn;
+    if (a == null || (e.isTaxi && e.checkOut == null)) return const [];
+    final n = e.nights;
+    return [for (var k = 0; k < (n < 1 ? 1 : n); k++) DateTime(a.year, a.month, a.day + k)];
+  }
+
+  static int? dayOf(DateTime start, DateTime date, int dayCount) {
+    final n = DateTime.utc(date.year, date.month, date.day).difference(DateTime.utc(start.year, start.month, start.day)).inDays + 1;
+    return n >= 1 && n <= dayCount ? n : null;
+  }
+
+  static double _km(double lat1, double lon1, double lat2, double lon2) {
+    double rad(double d) => d * math.pi / 180;
+    final dLat = rad(lat2 - lat1);
+    final dLon = rad(lon2 - lon1);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(rad(lat1)) * math.cos(rad(lat2)) * math.sin(dLon / 2) * math.sin(dLon / 2);
+    return 6371 * 2 * math.asin(math.min(1.0, math.sqrt(a)));
+  }
+
+  static int? homeLegIndex(TripEnquiryModel e, TripPlan plan) {
+    final city = SearchFold.fold(e.context.city);
+    if (city.isNotEmpty) {
+      for (final l in plan.legs) {
+        if (SearchFold.fold(l.cityName) == city) return l.index;
+      }
+    }
+    final lat = e.listingLatitude;
+    final lon = e.listingLongitude;
+    if (lat == null || lon == null) return null;
+    int? best;
+    var bestKm = double.infinity;
+    for (final l in plan.legs) {
+      if (!l.hasPoint) continue;
+      final km = _km(lat, lon, l.latitude, l.longitude);
+      if (km < bestKm) {
+        bestKm = km;
+        best = l.index;
+      }
+    }
+    return best;
+  }
+
+  static WrongCityInfo? wrongCity(TripEnquiryModel e, TripPlan plan, TripSettings settings) {
+    final start = settings.startDate;
+    if (e.isSegment || !plan.isMultiCity || start == null) return null;
+    final home = homeLegIndex(e, plan);
+    if (home == null) return null;
+    final dates = [...datesOf(e)]..sort();
+    var total = 0;
+    var wrong = 0;
+    int? first;
+    for (final date in dates) {
+      final day = dayOf(start, date, plan.days.length);
+      if (day == null) continue;
+      total++;
+      if (plan.legIndexOf(day) == home) continue;
+      wrong++;
+      first ??= day;
+    }
+    if (wrong == 0 || first == null) return null;
+    return WrongCityInfo(
+      wrong: wrong,
+      total: total,
+      firstWrongDay: first,
+      dayCity: plan.cityNameOf(first),
+      homeLegIndex: home,
+      dayLegIndex: plan.legIndexOf(first),
+    );
+  }
+
+  static bool isOutsideTrip(TripEnquiryModel e, TripSettings settings, int dayCount) {
+    final start = settings.startDate;
+    if (e.isSegment || start == null) return false;
+    return datesOf(e).any((d) => dayOf(start, d, dayCount) == null);
   }
 }

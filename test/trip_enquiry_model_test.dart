@@ -517,4 +517,30 @@ void main() {
     expect(TripSummaryModel.fromJson({'id': 't2', 'status': 'Completed', 'bookingState': 'completed'}).isCompleted, isTrue);
     expect(TripSummaryModel.fromJson({'id': 't3'}).state, TripBookingState.draft);
   });
+
+  test('wrong city and outside trip flags parse, defaults on an old row (MC-C)', () {
+    final e = TripEnquiryModel.fromJson({
+      'id': 'e9',
+      'kind': 'Stay',
+      'wrongCity': true,
+      'wrongNights': 1,
+      'wrongTotal': 3,
+      'wrongFirstDay': 2,
+      'wrongDayCity': 'Badrinath',
+      'outsideTrip': true,
+    });
+    expect(e.wrongCity, isTrue);
+    expect(e.wrongNights, 1);
+    expect(e.wrongTotal, 3);
+    expect(e.wrongFirstDay, 2);
+    expect(e.wrongDayCity, 'Badrinath');
+    expect(e.outsideTrip, isTrue);
+    final old = TripEnquiryModel.fromJson({'id': 'e10', 'kind': 'Stay'});
+    expect(old.wrongCity, isFalse);
+    expect(old.wrongNights, 0);
+    expect(old.wrongTotal, 0);
+    expect(old.wrongFirstDay, isNull);
+    expect(old.wrongDayCity, isNull);
+    expect(old.outsideTrip, isFalse);
+  });
 }

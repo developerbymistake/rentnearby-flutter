@@ -1060,6 +1060,58 @@ class EditImpact {
   bool get isEmpty => droppedDaysWithBookings.isEmpty;
 }
 
+class LegImpact {
+  final List<TripEnquiryModel> open;
+  final List<TripEnquiryModel> booked;
+  final List<TripEnquiryModel> cars;
+  final List<int> travelLegs;
+  final bool laterKeepDates;
+  final List<String> laterCities;
+
+  const LegImpact({
+    this.open = const [],
+    this.booked = const [],
+    this.cars = const [],
+    this.travelLegs = const [],
+    this.laterKeepDates = false,
+    this.laterCities = const [],
+  });
+
+  const LegImpact.empty()
+      : open = const [],
+        booked = const [],
+        cars = const [],
+        travelLegs = const [],
+        laterKeepDates = false,
+        laterCities = const [];
+
+  static bool _carBooked(TripEnquiryModel e) =>
+      e.status == TripEnquiryStatuses.bookedByTraveller || e.status == TripEnquiryStatuses.confirmedByBoth;
+
+  int get openCount => open.length + cars.where((e) => !_carBooked(e)).length;
+
+  int get bookedCount => booked.length + cars.where(_carBooked).length;
+
+  int get hosts => {for (final e in [...open, ...booked]) if (!e.isTaxi) e.id}.length;
+
+  int get drivers => {for (final e in [...open, ...booked, ...cars]) if (e.isTaxi) e.id}.length;
+
+  bool get isEmpty => open.isEmpty && booked.isEmpty && cars.isEmpty;
+
+  bool get hasBooked => bookedCount > 0;
+}
+
+class LegCancelResult {
+  final int closed;
+  final int failed;
+
+  const LegCancelResult({this.closed = 0, this.failed = 0});
+
+  bool get ok => failed == 0;
+}
+
+enum NoStayBlock { none, readOnly, hasEnquiry }
+
 class TripPlan {
   final int version;
   final List<TripCityLeg> legs;

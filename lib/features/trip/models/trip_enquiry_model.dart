@@ -378,6 +378,12 @@ class TripEnquiryModel {
   final TripOfferModel? pendingChange;
   final int counterCount;
   final int revisedCount;
+  final bool wrongCity;
+  final int wrongNights;
+  final int wrongTotal;
+  final int? wrongFirstDay;
+  final String? wrongDayCity;
+  final bool outsideTrip;
   final bool? _isSegment;
 
   const TripEnquiryModel({
@@ -421,6 +427,12 @@ class TripEnquiryModel {
     this.pendingChange,
     this.counterCount = 0,
     this.revisedCount = 0,
+    this.wrongCity = false,
+    this.wrongNights = 0,
+    this.wrongTotal = 0,
+    this.wrongFirstDay,
+    this.wrongDayCity,
+    this.outsideTrip = false,
     bool? isSegment,
   }) : _isSegment = isSegment;
 
@@ -579,6 +591,12 @@ class TripEnquiryModel {
       pendingChange: offer('pendingChange'),
       counterCount: (json['counterCount'] as num?)?.toInt() ?? 0,
       revisedCount: (json['revisedCount'] as num?)?.toInt() ?? 0,
+      wrongCity: json['wrongCity'] == true,
+      wrongNights: (json['wrongNights'] as num?)?.toInt() ?? 0,
+      wrongTotal: (json['wrongTotal'] as num?)?.toInt() ?? 0,
+      wrongFirstDay: (json['wrongFirstDay'] as num?)?.toInt(),
+      wrongDayCity: (json['wrongDayCity'] as String?)?.isEmpty ?? true ? null : json['wrongDayCity'] as String,
+      outsideTrip: json['outsideTrip'] == true,
       isSegment: json['isSegment'] is bool ? json['isSegment'] as bool : null,
     );
   }

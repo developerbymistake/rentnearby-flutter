@@ -26,6 +26,7 @@ import '../widgets/trip_taxi_booking_sheet.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_withdraw_sheet.dart';
 import 'trip_details_sheet.dart';
+import 'trip_replies_leg_parts.dart';
 
 class TripTaxiRepliesScreen extends StatefulWidget {
   const TripTaxiRepliesScreen({super.key});
@@ -206,6 +207,10 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
                       color: Colors.white.withValues(alpha: 0.85),
                     ),
                   ),
+                  if (TripRepliesLegParts.legLine(_c, _day) case final leg?) ...[
+                    const SizedBox(height: 2),
+                    TripRepliesLegParts.legLineText(leg),
+                  ],
                 ],
               );
             }),
@@ -371,6 +376,8 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textMedium)),
+          if (TripRepliesLegParts.wrongCityStrip(context, _c, e) case final w?) w,
+          if (TripRepliesLegParts.oldDatesCard(_c, e) case final o?) o,
           if (status == TripDisplayStatus.fareSent && note.isNotEmpty) ...[
             const SizedBox(height: 2),
             Text(note,

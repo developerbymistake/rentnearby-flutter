@@ -588,7 +588,7 @@ void main() {
       expect(p.dayAt(3)!.stay?.sameAsDay, isNull);
     });
 
-    test('a booked taxi covering two cities stays inside the first one (#MCA6)', () {
+    test('a booked taxi covering two cities is not written into the plan (MC-C D7)', () {
       final c = withPlan(stayAcrossLegs());
       c.enquiryList.assignAll([
         TripEnquiryModel(
@@ -605,8 +605,9 @@ void main() {
       ]);
       c.reconcilePlan();
       final p = c.plan.value!;
-      expect(p.dayAt(2)!.taxi?.booking?.days, [2]);
+      expect(p.dayAt(2)!.taxi, isNull);
       expect(p.dayAt(3)!.taxi, isNull);
+      expect(c.bookedTaxiEnquiryFor(2)?.id, 't1');
     });
 
     test('a journey to the old first city needs attention after a city move (#MCA7)', () {
@@ -930,6 +931,248 @@ void main() {
       expect(c.travelMatches(2, 'k1', DateTime(2030, 11, 2), people), isTrue);
       expect(c.travelMatches(2, 'k2', DateTime(2030, 11, 2), people), isFalse);
       expect(c.travelMatches(2, 'k1', DateTime(2030, 11, 3), people), isFalse);
+    });
+  });
+
+  group('bookings per leg (MC-C)', () {
+    String iso(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    TripPlan legsPlan({
+      DateTime? start,
+      List<int> legOfDay = const [1, 2, 2],
+      Map<String, dynamic>? arrival,
+    }) =>
+        TripPlan.fromJson({
+          'version': 4,
+          'cityKey': 1,
+          'cityName': 'Haridwar',
+          'legs': [
+            {'index': 1, 'cityKey': 1, 'cityName': 'Haridwar', 'latitude': 29.95, 'longitude': 78.16},
+            {'index': 2, 'cityKey': 2, 'cityName': 'Badrinath', 'latitude': 30.74, 'longitude': 79.49, 'arrival': ?arrival},
+          ],
+          'settings': {'startDate': iso(start ?? DateTime(2030, 11, 1))},
+          'days': [
+            for (var i = 0; i < legOfDay.length; i++) {'day': i + 1, 'leg': legOfDay[i]},
+          ],
+        });
+
+    TripPlanController ctl(TripPlan p, {List<TripEnquiryModel> rows = const [], List<TripJourney> journeys = const []}) {
+      final c = TripPlanController();
+      addTearDown(c.onClose);
+      c.plan.value = p;
+      c.trip.value = _trip(p).copyWith(journeys: journeys, journeysKnown: true, enquiries: rows);
+      c.enquiryList.assignAll(rows);
+      return c;
+    }
+
+    TripEnquiryModel stayRow(String id, int night, String status, {int nights = 1, String city = 'Haridwar'}) =>
+        TripEnquiryModel(
+          id: id,
+          tripId: 't1',
+          listingId: 'l-$id',
+          listingName: id,
+          status: status,
+          displayStatusWire: status == TripEnquiryStatuses.confirmedByBoth ? 'confirmedByBoth' : 'asked',
+          checkIn: DateTime(2030, 11, night),
+          checkOut: DateTime(2030, 11, night + nights),
+          agreedTotal: status == TripEnquiryStatuses.confirmedByBoth ? 2000 : null,
+          context: TripEnquiryContext(city: city),
+        );
+
+    TripEnquiryModel taxiRow(String id, List<int> days, String status) => TripEnquiryModel(
+          id: id,
+          tripId: 't1',
+          kind: TripEnquiryKinds.taxi,
+          listingId: 'x-$id',
+          status: status,
+          checkIn: DateTime(2030, 11, days.first),
+          days: days,
+          context: const TripEnquiryContext(city: 'Haridwar'),
+        );
+
+    TripEnquiryModel carRow(String status) => TripEnquiryModel(
+          id: 'car',
+          tripId: 't1',
+          kind: TripEnquiryKinds.taxi,
+          listingId: 'taxi1',
+          day: 2,
+          checkIn: DateTime(2030, 11, 2),
+          days: const [2],
+          status: status,
+          context: const TripEnquiryContext(journeyId: 'j2', journeyLegIndex: 1),
+        );
+
+    const journeyArrival = {'mode': 'journey', 'fromName': 'Haridwar', 'journeyId': 'j2', 'cars': 1};
+
+    TripJourney segJourney() => TripJourney(
+          id: 'j2',
+          fromName: 'Haridwar',
+          toName: 'Badrinath',
+          date: DateTime(2030, 11, 2),
+          anyAsked: true,
+          legs: [TripJourneyLeg(legIndex: 1, fromName: 'Haridwar', toName: 'Badrinath', lastEnquiryId: 'x')],
+        );
+
+    test('remove impact: own-leg rows by date, cars of the next leg, counts', () {
+      final c = ctl(
+        legsPlan(arrival: journeyArrival),
+        journeys: [segJourney()],
+        rows: [
+          stayRow('s1', 1, TripEnquiryStatuses.asked),
+          taxiRow('t1', const [1], TripEnquiryStatuses.bookedByTraveller),
+          stayRow('s2', 2, TripEnquiryStatuses.asked, city: 'Badrinath'),
+          carRow(TripEnquiryStatuses.bookedByTraveller),
+        ],
+      );
+      final i = c.legRemoveImpact(1);
+      expect(i.open.map((e) => e.id), ['s1']);
+      expect(i.booked.map((e) => e.id), ['t1']);
+      expect(i.cars.map((e) => e.id), ['car']);
+      expect(i.travelLegs, [2]);
+      expect(i.hosts, 1);
+      expect(i.drivers, 2);
+      expect(i.bookedCount, 2);
+      expect(i.openCount, 1);
+      expect(i.hasBooked, isTrue);
+      expect(i.isEmpty, isFalse);
+      expect(i.laterKeepDates, isTrue);
+      expect(i.laterCities, ['Badrinath']);
+    });
+
+    test('removeLeg asks first, keepBookings applies; canRemoveLeg never says bookings', () {
+      final c = ctl(legsPlan(), rows: [stayRow('s1', 1, TripEnquiryStatuses.confirmedByBoth)]);
+      expect(c.canRemoveLeg(1), TripLegEditBlock.none);
+      expect(c.removeLeg(1), TripLegEditBlock.bookings);
+      expect(c.plan.value!.legCount, 2);
+      expect(c.removeLeg(1, keepBookings: true), TripLegEditBlock.none);
+      expect(c.plan.value!.legCount, 1);
+    });
+
+    test('reorder stays blocked by a dated row', () {
+      final c = ctl(legsPlan(), rows: [stayRow('s2', 2, TripEnquiryStatuses.asked, city: 'Badrinath')]);
+      expect(c.canMoveLeg(1, false), TripLegEditBlock.bookings);
+      expect(c.moveLeg(1, false), TripLegEditBlock.bookings);
+      expect(c.plan.value!.legs.first.cityName, 'Haridwar');
+    });
+
+    test('shrink impact counts dropped days only; later legs join when they shift', () {
+      final c = ctl(legsPlan(legOfDay: const [1, 2, 2, 2]), rows: [
+        stayRow('kept', 2, TripEnquiryStatuses.confirmedByBoth, city: 'Badrinath'),
+        stayRow('dropped', 4, TripEnquiryStatuses.asked, city: 'Badrinath'),
+      ]);
+      final last = c.legShrinkImpact(2, 2);
+      expect(last.open.map((e) => e.id), ['dropped']);
+      expect(last.booked, isEmpty);
+      expect(last.laterKeepDates, isFalse);
+      expect(c.legShrinkImpact(2, 3).isEmpty, isTrue);
+      expect(c.setLegDays(2, 2), TripLegEditBlock.bookings);
+      expect(c.plan.value!.legDayCount(2), 3);
+
+      final first = ctl(legsPlan(legOfDay: const [1, 1, 2]), rows: [
+        stayRow('later', 3, TripEnquiryStatuses.confirmedByBoth, city: 'Badrinath'),
+      ]);
+      final i = first.legShrinkImpact(1, 1);
+      expect(i.laterKeepDates, isTrue);
+      expect(i.booked.map((e) => e.id), ['later']);
+      expect(i.laterCities, ['Badrinath']);
+    });
+
+    test('cancel paths do nothing offline and leave the plan alone', () async {
+      final c = ctl(legsPlan(), rows: [stayRow('s1', 1, TripEnquiryStatuses.confirmedByBoth)]);
+      c.offline.value = true;
+      final r = await c.cancelLegRows(c.legRemoveImpact(1));
+      expect(r.ok, isFalse);
+      expect(r.failed, 1);
+      expect(r.closed, 0);
+      expect(await c.cancelAndRemoveLeg(1), TripLegEditBlock.bookings);
+      expect(c.plan.value!.legCount, 2);
+      expect((await c.cancelLegRows(const LegImpact.empty())).ok, isTrue);
+    });
+
+    test('a running leg cannot be removed, moved or shrunk past today; a later leg stays free', () {
+      final now = DateTime.now();
+      final yesterday = DateTime(now.year, now.month, now.day - 1);
+      final c = ctl(legsPlan(start: yesterday, legOfDay: const [1, 1, 2, 2]));
+      expect(c.legRunning(1), isTrue);
+      expect(c.legRunning(2), isFalse);
+      expect(c.canRemoveLeg(1), TripLegEditBlock.running);
+      expect(c.canMoveLeg(1, false), TripLegEditBlock.running);
+      expect(c.minDaysForLeg(1), 2);
+      expect(c.minDaysForLeg(2), 1);
+      expect(c.setLegDays(1, 1), TripLegEditBlock.running);
+      expect(c.canRemoveLeg(2), TripLegEditBlock.none);
+    });
+
+    test('No stay tonight is refused while the night has a stay, and clears the shortlist', () {
+      final p = legsPlan();
+      final days = [
+        for (final d in p.days)
+          d.day == 3 ? d.copyWith(stayShortlist: const [TripStayShortlistItem(stayId: 'x', name: 'X')]) : d,
+      ];
+      final c = ctl(p.copyWith(days: days), rows: [stayRow('s2', 2, TripEnquiryStatuses.asked, city: 'Badrinath')]);
+      expect(c.canSkipNight(2), NoStayBlock.hasEnquiry);
+      expect(c.setSkippedNight(2), NoStayBlock.hasEnquiry);
+      expect(c.plan.value!.dayAt(2)!.stay, isNull);
+      expect(c.canSkipNight(3), NoStayBlock.none);
+      expect(c.setSkippedNight(3), NoStayBlock.none);
+      expect(c.plan.value!.dayAt(3)!.stay?.isSkipped, isTrue);
+      expect(c.plan.value!.dayAt(3)!.stayShortlist, isEmpty);
+      expect(c.canSkipNight(9), NoStayBlock.readOnly);
+    });
+
+    test('the enquiry run stops before a skipped night and at the leg end', () {
+      final p = legsPlan(legOfDay: const [1, 1, 2, 2, 2]);
+      final days = [
+        for (final d in p.days) d.day == 4 ? d.copyWith(stay: const TripStayChoice.skippedNight()) : d,
+      ];
+      final c = ctl(p.copyWith(days: days));
+      expect(c.enquiryNightsRun(1), [1, 2]);
+      expect(c.enquiryNightsRun(3), [3]);
+      expect(c.enquiryNightsRun(5), [5]);
+    });
+
+    test('reconcile never copies a wrong-city stay into the plan choice', () {
+      final c = ctl(legsPlan(), rows: [
+        stayRow('home', 1, TripEnquiryStatuses.confirmedByBoth),
+        stayRow('wrong', 2, TripEnquiryStatuses.confirmedByBoth),
+      ]);
+      c.reconcilePlan();
+      final p = c.plan.value!;
+      expect(p.dayAt(1)!.stay?.stayId, 'l-home');
+      expect(p.dayAt(2)!.stay, isNull);
+      expect(c.wrongCityForDay(2)?.id, 'wrong');
+      expect(c.wrongCityForDay(1), isNull);
+      expect(c.wrongCityRows.map((e) => e.id), ['wrong']);
+      expect(c.wrongCityOf(c.enquiryList.firstWhere((e) => e.id == 'wrong'))?.dayCity, 'Badrinath');
+    });
+
+    test('a one-city trip never flags a wrong city', () {
+      final c = ctl(_plan(start: DateTime(2030, 11, 1)),
+          rows: [stayRow('s', 2, TripEnquiryStatuses.confirmedByBoth, city: 'Elsewhere')]);
+      expect(c.wrongCityRows, isEmpty);
+      expect(c.wrongCityForDay(2), isNull);
+    });
+
+    test('without a plan the server flags are the fallback', () {
+      final c = TripPlanController();
+      addTearDown(c.onClose);
+      final e = TripEnquiryModel.fromJson({
+        'id': 'e1',
+        'kind': 'Stay',
+        'wrongCity': true,
+        'wrongNights': 1,
+        'wrongTotal': 2,
+        'wrongFirstDay': 3,
+        'wrongDayCity': 'Badrinath',
+        'outsideTrip': true,
+      });
+      final w = c.wrongCityOf(e)!;
+      expect(w.wrong, 1);
+      expect(w.total, 2);
+      expect(w.firstWrongDay, 3);
+      expect(w.dayCity, 'Badrinath');
+      expect(c.isOutsideTrip(e), isTrue);
     });
   });
 }

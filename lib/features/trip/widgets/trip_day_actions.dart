@@ -5,6 +5,7 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../controllers/tab_config_controller.dart';
 import '../../../models/browse_item.dart';
+import '../../../utils/app_toast.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../../taxi/taxi_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
@@ -16,9 +17,11 @@ import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mcb_k2.dart';
+import '../trip_strings_mcc_a2.dart';
 import '../trip_strings_steps_a1.dart';
 import 'trip_cancel_sheet.dart';
 import 'trip_own_booking_sheet.dart';
+import 'trip_sheet_frame.dart';
 import 'trip_status.dart';
 import 'trip_withdraw_sheet.dart';
 
@@ -78,6 +81,7 @@ class TripDayActions extends StatelessWidget {
     required String subtitle,
     VoidCallback? onTap,
     TripTileState state = TripTileState.active,
+    VoidCallback? onMenu,
   }) =>
       _ActionTile(
         icon: icon,
@@ -89,6 +93,7 @@ class TripDayActions extends StatelessWidget {
         state: state,
         status: TripTileStatus.none,
         onTap: onTap,
+        onMenu: onMenu,
       );
 
   Widget _taxiSlot(BuildContext context, TripPlanController c, TripDay d, bool readOnly) {
@@ -265,6 +270,7 @@ class TripDayActions extends StatelessWidget {
   }
 
   Widget _stayTile(BuildContext context, TripPlanController c, TripDay d, bool readOnly) {
+    final menu = readOnly ? null : () => _nightMenu(context, c);
     final stay = d.stay;
     final primary = c.primaryEnquiry(day);
     final display = primary?.display;
@@ -320,6 +326,7 @@ class TripDayActions extends StatelessWidget {
         advance: advance,
         onTap: () => TripNavigation.openReplies(day),
         onLongPress: longPress,
+        onMenu: menu,
       );
     }
     if (stay != null && stay.isSkipped) {
@@ -335,6 +342,7 @@ class TripDayActions extends StatelessWidget {
         onLongPress: readOnly
             ? null
             : () => _confirmClear(context, TripStrings.removeFromPlan, TripStrings.noStayTonight, () => c.clearSkippedNight(day)),
+        onMenu: menu,
       );
     }
     final own = c.ownStayOf(day);
@@ -355,6 +363,7 @@ class TripDayActions extends StatelessWidget {
         onLongPress: readOnly
             ? null
             : () => _confirmClear(context, TripStrings.removeFromPlan, own.name, () => same ? c.clearStay(day) : c.clearOwnStay(day)),
+        onMenu: menu,
       );
     }
     final shortlist = d.stayShortlist;
@@ -372,6 +381,7 @@ class TripDayActions extends StatelessWidget {
         onLongPress: readOnly
             ? null
             : () => _confirmClear(context, TripStrings.removeFromPlan, stay.name, () => c.clearStay(day)),
+        onMenu: menu,
       );
     }
     if (shortlist.isNotEmpty) {
@@ -386,6 +396,7 @@ class TripDayActions extends StatelessWidget {
         display: TripDisplayStatus.shortlisted,
         onTap: readOnly ? null : () => TripNavigation.openStay(day),
         onLongPress: readOnly ? null : () => _removeShortlist(context, c),
+        onMenu: menu,
       );
     }
     final stayTitle = _stayTitle(c);
@@ -417,6 +428,7 @@ class TripDayActions extends StatelessWidget {
         title: stayTitle,
         subtitle: TripStringsA4.nightFindStay(day),
         onTap: () => TripNavigation.openStay(day),
+        onMenu: menu,
       );
     }
     return _emptyTile(
@@ -426,6 +438,45 @@ class TripDayActions extends StatelessWidget {
       title: stayTitle,
       subtitle: TripStrings.addOwnStay,
       onTap: () => TripOwnBookingSheet.show(context, day: day),
+      onMenu: menu,
+    );
+  }
+
+  Future<void> _nightMenu(BuildContext context, TripPlanController c) async {
+    final skipped = c.plan.value?.dayAt(day)?.stay?.isSkipped ?? false;
+    final block = skipped ? NoStayBlock.none : c.canSkipNight(day);
+    if (block == NoStayBlock.readOnly) return;
+    final blocked = block == NoStayBlock.hasEnquiry;
+    await TripSheetFrame.show<void>(
+      context,
+      Builder(
+        builder: (sheetCtx) => TripSheetFrame(
+          title: TripStringsMccA2.nightMenuTitle(day),
+          description: c.isMultiCity ? TripStringsMcaA3.stayIn(c.cityNameOf(day)) : null,
+          children: [
+            _NightMenuRow(
+              icon: skipped ? Iconsax.undo : Iconsax.moon,
+              label: skipped ? TripStringsMccA2.undo : TripStringsMccA2.noStayTonight,
+              hint: skipped
+                  ? TripStringsMccA2.undoHint
+                  : (blocked ? TripStringsMccA2.nightHasStay(day) : TripStringsMccA2.noStayHint),
+              warn: blocked,
+              onTap: blocked
+                  ? null
+                  : () {
+                      Navigator.pop(sheetCtx);
+                      if (skipped) {
+                        c.clearSkippedNight(day);
+                        return;
+                      }
+                      if (c.setSkippedNight(day) == NoStayBlock.hasEnquiry) {
+                        AppToast.warning(TripStringsMccA2.nightHasStay(day));
+                      }
+                    },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -525,6 +576,7 @@ class _ActionTile extends StatelessWidget {
   final TripTileStatus status;
   final TripDisplayStatus? display;
   final TripAdvanceModel? advance;
+  final VoidCallback? onMenu;
 
   const _ActionTile({
     required this.icon,
@@ -539,6 +591,7 @@ class _ActionTile extends StatelessWidget {
     this.status = TripTileStatus.none,
     this.display,
     this.advance,
+    this.onMenu,
   });
 
   @override
@@ -567,6 +620,9 @@ class _ActionTile extends StatelessWidget {
         : (coloured ? TripStatusVisuals.surface(shown) : TripStatusColors.bookedSurface);
     final edge = adv != null ? barColor : (coloured ? TripStatusVisuals.bar(shown) : TripStatusColors.booked);
     final chevron = booked ? tone : (selected ? accent : AppColors.textHint);
+    final menu = onMenu;
+    final narrow = MediaQuery.sizeOf(context).width < 360 || MediaQuery.textScalerOf(context).scale(10) > 11.5;
+    final showIcon = menu == null || !narrow;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -595,17 +651,21 @@ class _ActionTile extends StatelessWidget {
                 Container(width: 4, color: barColor),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                    padding: menu == null
+                        ? const EdgeInsets.symmetric(horizontal: 10, vertical: 9)
+                        : const EdgeInsets.fromLTRB(10, 2, 0, 2),
                     child: Row(
                       children: [
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                              color: iconColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                          child: Icon(icon, size: 15, color: iconColor),
-                        ),
-                        const SizedBox(width: 8),
+                        if (showIcon) ...[
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                                color: iconColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                            child: Icon(icon, size: 15, color: iconColor),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -632,13 +692,75 @@ class _ActionTile extends StatelessWidget {
                             ],
                           ),
                         ),
-                        if (active && onTap != null) Icon(Icons.chevron_right_rounded, size: 18, color: chevron),
+                        if (menu != null)
+                          IconButton(
+                            onPressed: () {
+                              if (!TripPlanController.to.isCompleted) menu();
+                            },
+                            tooltip: TripStringsMccA2.moreOptions,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                            icon: Icon(Icons.more_vert_rounded, size: 18, color: active ? chevron : muted),
+                          )
+                        else if (active && onTap != null)
+                          Icon(Icons.chevron_right_rounded, size: 18, color: chevron),
                       ],
                     ),
                   ),
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NightMenuRow extends StatelessWidget {
+  const _NightMenuRow({required this.icon, required this.label, required this.hint, this.warn = false, this.onTap});
+
+  final IconData icon;
+  final String label;
+  final String hint;
+  final bool warn;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    final fg = enabled ? AppColors.textDark : AppColors.textHint;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          child: Row(
+            children: [
+              Icon(icon, size: 19, color: enabled ? StayColors.accent : AppColors.textHint),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: fg)),
+                    Text(hint,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            color: warn ? AppColors.warningText : AppColors.textLight)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

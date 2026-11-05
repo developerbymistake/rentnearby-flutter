@@ -7,6 +7,7 @@ import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
+import '../screens/trip_details_sheet.dart';
 import '../screens/trip_edit_spot_sheet.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
@@ -14,9 +15,12 @@ import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_mca_a3.dart';
 import '../utils/trip_format.dart';
+import 'trip_cancel_sheet.dart';
 import 'trip_day_actions.dart';
 import 'trip_leg_menu_sheet.dart';
 import 'trip_status.dart';
+import 'trip_withdraw_sheet.dart';
+import 'trip_wrong_city_strip.dart';
 
 class TripDayTile extends StatelessWidget {
   final int day;
@@ -39,6 +43,7 @@ class TripDayTile extends StatelessWidget {
         final plan = c.plan.value;
         c.result.value;
         c.trip.value;
+        c.enquiryList.length;
         final d = plan?.dayAt(day);
         if (plan == null || d == null) return const SizedBox.shrink();
         final readOnly = c.isReadOnly || c.needsUpdate.value || c.isDayPast(day);
@@ -112,6 +117,7 @@ class TripDayTile extends StatelessWidget {
               ),
             const SizedBox(height: 10),
             TripDayActions(day),
+            _wrongCity(context, c, readOnly),
             if (!readOnly) ...[
               _taxiRedNote(c),
               _redNote(c, d),
@@ -120,6 +126,27 @@ class TripDayTile extends StatelessWidget {
         );
       }),
     );
+  }
+
+  Widget _wrongCity(BuildContext context, TripPlanController c, bool readOnly) {
+    final e = c.wrongCityForDay(day);
+    final info = e == null ? null : c.wrongCityOf(e);
+    if (e == null || info == null) return const SizedBox.shrink();
+    VoidCallback? cancel;
+    if (!readOnly) {
+      if (e.isWithdrawable) {
+        cancel = () => TripWithdrawSheet.show(context, enquiry: e);
+      } else if (e.isBooked) {
+        cancel = () => TripCancelSheet.show(context, enquiry: e, ownerSide: false);
+      }
+    }
+    final plan = c.plan.value;
+    final changeDays = readOnly || plan == null
+        ? null
+        : () => plan.isMultiCity
+            ? TripLegMenuSheet.changeDays(context, plan.legIndexOf(day))
+            : TripDetailsSheet.edit(context);
+    return TripWrongCityStrip(enquiry: e, info: info, onCancel: cancel, onChangeDays: changeDays);
   }
 
   Widget _travelLine(String from, String to) {
