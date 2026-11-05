@@ -4199,6 +4199,7 @@ class TripPlanController extends GetxController {
             cur.isOwn ||
             cur.stayId != want.stayId ||
             cur.pricePerNight != want.pricePerNight ||
+            (want.hasCoordinates && (cur.latitude != want.latitude || cur.longitude != want.longitude)) ||
             cur.sameAsDay != want.sameAsDay) {
           days[i] = d.copyWith(stay: want);
           changed = true;
