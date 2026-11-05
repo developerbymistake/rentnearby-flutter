@@ -16,6 +16,8 @@ class TripTodayCache {
     StorageService.saveTripCache(t.id, {
       ...base,
       'plan': plan.toJson(),
+      'legCount': plan.legs.length,
+      'legCities': plan.legs.map((l) => l.cityName).toList(),
       if (t.journeysKnown) 'journeys': t.journeys.map((j) => j.toJson()).toList(),
     });
   }

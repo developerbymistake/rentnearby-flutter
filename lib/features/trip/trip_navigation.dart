@@ -12,14 +12,21 @@ import 'widgets/trip_city_sheet.dart';
 
 class TripNavigation {
   static Future<void> start(BuildContext context) async {
-    final city = await TripCitySheet.pick(context);
-    if (city == null) return;
-    await Get.toNamed(AppRoutes.tripSpots, arguments: {'city': city});
+    final pick = await TripCitySheet.pick(context);
+    if (pick == null) return;
+    await startWith(pick.city, next: pick.next);
   }
 
-  static Future<void>? startWith(TripCityModel city) => Get.toNamed(AppRoutes.tripSpots, arguments: {'city': city});
+  static Future<void>? startWith(TripCityModel city, {TripCityModel? next}) =>
+      Get.toNamed(AppRoutes.tripSpots, arguments: {'city': city, 'next': ?next});
 
-  static Future<void>? openSpots(TripCityModel city, {String? tripId, Set<String> existingIds = const {}}) =>
+  static Future<void>? openSpots(
+    TripCityModel city, {
+    String? tripId,
+    Set<String> existingIds = const {},
+    int? legIndex,
+    bool newLeg = false,
+  }) =>
       Get.toNamed(
         AppRoutes.tripSpots,
         arguments: {
@@ -27,8 +34,35 @@ class TripNavigation {
           'tripId': tripId,
           'existingIds': existingIds,
           'adding': true,
+          'legIndex': ?legIndex,
+          'newLeg': newLeg,
         },
       );
+
+  static Future<TripLegEditBlock?> addCity(BuildContext context) async {
+    final c = TripPlanController.to;
+    final block = c.canAddLeg(null);
+    if (block != TripLegEditBlock.none) {
+      c.showLegBlock(block);
+      return block;
+    }
+    final pick = await TripCitySheet.pick(
+      context,
+      mode: TripCitySheetMode.add,
+      afterCity: c.lastCityName,
+      inTrip: {for (final l in c.legs) l.cityKey},
+    );
+    if (pick == null) return null;
+    final city = pick.city;
+    final again = c.canAddLeg(city);
+    if (again != TripLegEditBlock.none) {
+      c.showLegBlock(again, city: city.name);
+      return again;
+    }
+    if (!city.isReady) return c.addLeg(city, const []);
+    await openSpots(city, tripId: c.trip.value?.id, newLeg: true);
+    return c.legs.any((l) => l.cityKey == city.cityKey) ? TripLegEditBlock.none : null;
+  }
 
   static Future<void>? openPlan({String? tripId, bool fresh = false}) =>
       Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId, 'fresh': fresh});
@@ -84,9 +118,9 @@ class TripNavigation {
       AppToast.warning(TripStringsStepsA1.pickStartFirst);
       return null;
     }
-    final city = c.cityPlace;
-    if (city == null) return null;
     final going = role == TripStepRole.gettingThere;
+    final city = going ? c.cityPlace : c.lastCityPlace;
+    if (city == null) return null;
     final people = c.settings.peopleCount;
     return TaxiWaysNavigation.openFeed(
       from: going ? start.place : city,

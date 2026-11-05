@@ -14,6 +14,7 @@ import '../controllers/trip_supply_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
+import '../trip_strings_mca_a3.dart';
 import '../utils/trip_format.dart';
 import '../widgets/trip_filter_chips.dart';
 import '../widgets/trip_night_chooser.dart';
@@ -113,6 +114,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
   }
 
   String _title(int d) {
+    if (_plan.isMultiCity) return TripStringsMcaA3.stayIn(_plan.cityNameOf(d));
     final date = _plan.dateOf(d);
     final now = DateTime.now();
     final today = date != null && date.year == now.year && date.month == now.month && date.day == now.day;
@@ -121,6 +123,9 @@ class _TripStayScreenState extends State<TripStayScreen> {
 
   String _subtitle(int d) {
     final date = _plan.dateOf(d);
+    if (_plan.isMultiCity) {
+      return TripStringsMcaA3.nightLine(d, date, TripStrings.peopleText(_plan.settings.peopleCount));
+    }
     return TripStrings.joinDots([
       _plan.cityName,
       date == null ? null : TripFormat.dayMonth(date),
@@ -164,7 +169,8 @@ class _TripStayScreenState extends State<TripStayScreen> {
     ];
   }
 
-  bool _noSupply() => _plan.stayTabOff.value || (!_plan.supplyAvailable && !_plan.supplyPending);
+  bool _noSupply() =>
+      _plan.stayTabOff.value || (!_plan.supplyAvailableFor(_supply.day.value) && !_plan.supplyPendingFor(_supply.day.value));
 
   Widget _buildTop() {
     return Obx(() {
@@ -275,7 +281,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
       if (_noSupply()) return _box(_noSupplyView());
       final mode = TripNightChooser.modeOf(_plan, d);
       if (mode != TripNightMode.nightByNight) return _box(_modeCard(d, mode));
-      if (_plan.supplyPending || _supply.stayLoading.value) return _skeletons();
+      if (_plan.supplyPendingFor(_supply.day.value) || _supply.stayLoading.value) return _skeletons();
       final all = _supply.stays;
       if (all.isEmpty) {
         if (_supply.stayFailed.value) {
@@ -361,10 +367,15 @@ class _TripStayScreenState extends State<TripStayScreen> {
   String _whatsAppText() {
     final p = _plan.plan.value;
     final settings = _plan.settings;
-    final start = settings.startDate;
-    final end = p == null ? null : settings.endDate(p.days.length);
+    final d = _supply.day.value;
+    final legPlan = p != null && p.isMultiCity ? p : null;
+    final leg = legPlan?.legIndexOf(d) ?? 1;
+    final start = legPlan == null ? settings.startDate : settings.dateOf(legPlan.legStart(leg));
+    final end = p == null
+        ? null
+        : (legPlan == null ? settings.endDate(p.days.length) : settings.dateOf(legPlan.legEnd(leg)));
     return TripStrings.stayWhatsAppText(
-      _plan.cityName,
+      legPlan?.cityNameOf(d) ?? _plan.cityName,
       start == null ? null : (end == null ? TripFormat.shortDate(start) : TripFormat.dateRange(start, end)),
       settings.peopleSummary,
     );

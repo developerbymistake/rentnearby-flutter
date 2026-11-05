@@ -34,7 +34,8 @@ class TripTaxiEnquirySheet {
   }
 
   static List<int> defaultDays(TripPlanController c, int day, {required bool whole, Set<String> taxiIds = const {}}) {
-    final all = [for (final d in c.plan.value?.days ?? const <TripDay>[]) d.day];
+    final p = c.plan.value;
+    final all = p == null ? const <int>[] : [for (final d in p.daysOf(p.legIndexOf(day))) d.day];
     final ahead = [for (final d in all) if (!c.isDayPast(d)) d];
     if (ahead.isEmpty) return const [];
     final out = <int>[];
@@ -452,7 +453,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           _pickup(),
           const SizedBox(height: 16),
           _label(TripStrings.daysToInclude),
-          _daysWrap(p.days),
+          _daysWrap(p.daysOf(p.legIndexOf(widget.day))),
           const SizedBox(height: 16),
           _label(TripStrings.itineraryFromPlan),
           _itinerary(chosen),

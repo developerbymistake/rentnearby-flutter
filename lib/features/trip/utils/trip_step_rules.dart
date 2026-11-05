@@ -55,10 +55,19 @@ class TripStepRules {
 
   static int sortedCount(List<TripStepDisplay> five) => five.where(isSorted).length;
 
-  static TripSteps withAutoNotNeeded(TripSteps steps, double? cityLat, double? cityLon) {
-    final inside = insideCity(steps.startFrom, cityLat, cityLon);
+  static TripSteps withAutoNotNeeded(
+    TripSteps steps,
+    double? firstLat,
+    double? firstLon, [
+    double? lastLat,
+    double? lastLon,
+  ]) {
+    final hasLast = lastLat != null && lastLon != null;
+    final insideFirst = insideCity(steps.startFrom, firstLat, firstLon);
+    final insideLast = hasLast ? insideCity(steps.startFrom, lastLat, lastLon) : insideFirst;
     var out = steps;
     for (final r in TripStepRole.values) {
+      final inside = r == TripStepRole.gettingThere ? insideFirst : insideLast;
       final s = out.of(r);
       if (inside && s.status == TripStepStatus.notStarted && s.journeyId == null) {
         out = out.withStep(r, s.copyWith(status: TripStepStatus.notNeeded, clearDate: true));

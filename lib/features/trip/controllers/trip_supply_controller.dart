@@ -32,7 +32,7 @@ class TripSupplyController extends GetxController {
   final taxiHasMore = false.obs;
   int _taxiPage = 1;
   int _taxiSeq = 0;
-  bool _taxisLoaded = false;
+  String? _taxisDistrict;
 
   final stays = <StayNearbyModel>[].obs;
   final stayLoading = false.obs;
@@ -40,6 +40,7 @@ class TripSupplyController extends GetxController {
   final stayRadiusKm = TripConstants.stayRadiusKm.obs;
   int _staySeq = 0;
   int? _staysDay;
+  String? _staysDistrict;
   ({double lat, double lng})? _staysPoint;
   ({double lat, double lng})? _searchPoint;
 
@@ -113,13 +114,21 @@ class TripSupplyController extends GetxController {
     _searchPoint = null;
   }
 
+  String? get dayDistrictId => _plan.plan.value?.districtIdOf(day.value);
+
   Future<void> ensureTaxis() async {
-    if (!_taxisLoaded && !taxiLoading.value) await loadTaxis();
+    final districtId = dayDistrictId;
+    if (districtId == null) {
+      _clearTaxis();
+      return;
+    }
+    if (_taxisDistrict == districtId) return;
+    await loadTaxis();
   }
 
   Future<void> ensureStays() async {
-    if (_staysDay != day.value) {
-      if (!stayLoading.value) await loadStays();
+    if (_staysDay != day.value || _staysDistrict != dayDistrictId) {
+      await loadStays();
       return;
     }
     if (_middlePoint(day.value) != _staysPoint) {
@@ -128,11 +137,22 @@ class TripSupplyController extends GetxController {
     }
   }
 
+  void _clearTaxis() {
+    _taxiSeq++;
+    _taxisDistrict = null;
+    taxis.clear();
+    taxiHasMore.value = false;
+    taxiFailed.value = false;
+    taxiLoading.value = false;
+    taxiLoadingMore.value = false;
+  }
+
   Future<void> loadTaxis({bool reset = true}) async {
     final p = _plan.plan.value;
-    final districtId = p?.districtId;
+    final districtId = p?.districtIdOf(day.value);
     if (p == null || districtId == null) return;
     if (!reset && (!taxiHasMore.value || taxiLoadingMore.value || taxiLoading.value)) return;
+    if (!reset && districtId != _taxisDistrict) return;
     final seq = ++_taxiSeq;
     final page = reset ? 1 : _taxiPage + 1;
     if (reset) {
@@ -145,7 +165,7 @@ class TripSupplyController extends GetxController {
     } else {
       taxiLoadingMore.value = true;
     }
-    _taxisLoaded = true;
+    _taxisDistrict = districtId;
     try {
       final res = await const TaxiBrowseRepository().browseLocal(
         districtId: districtId,
@@ -189,19 +209,28 @@ class TripSupplyController extends GetxController {
       final lng = spots.fold<double>(0, (sum, s) => sum + s.longitude) / spots.length;
       return (lat: lat, lng: lng);
     }
-    final cLat = p?.centreLatitude;
-    final cLng = p?.centreLongitude;
-    if (cLat != null && cLng != null) return (lat: cLat, lng: cLng);
-    return null;
+    if (p == null || p.dayAt(d) == null) return null;
+    final leg = p.legOf(d);
+    if (leg.latitude == 0 && leg.longitude == 0) return null;
+    return (lat: leg.latitude, lng: leg.longitude);
   }
 
   Future<void> loadStays() async {
     final p = _plan.plan.value;
-    final districtId = p?.districtId;
-    if (p == null || districtId == null) return;
+    final districtId = p?.districtIdOf(day.value);
+    if (p == null || districtId == null) {
+      _staySeq++;
+      _staysDay = day.value;
+      _staysDistrict = null;
+      stays.clear();
+      stayFailed.value = false;
+      stayLoading.value = false;
+      return;
+    }
     final d = day.value;
     final seq = ++_staySeq;
     _staysDay = d;
+    _staysDistrict = districtId;
     stays.clear();
     hostelAvailable.value = false;
     stayFailed.value = false;

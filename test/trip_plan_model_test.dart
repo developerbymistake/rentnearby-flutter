@@ -68,14 +68,14 @@ void main() {
 
   group('trip steps JSON', () {
     test('steps key is always written as an object', () {
-      const plan = TripPlan(cityKey: 1, cityName: 'Nainital');
+      final plan = TripPlan.singleCity(cityKey: 1, cityName: 'Nainital');
       final json = plan.toJson();
       expect(json['steps'], isA<Map<String, dynamic>>());
       expect((json['steps'] as Map).isEmpty, isTrue);
     });
 
     test('steps round-trip with start, journey, note and date', () {
-      final plan = TripPlan(
+      final plan = TripPlan.singleCity(
         cityKey: 1,
         cityName: 'Nainital',
         steps: TripSteps(
@@ -156,6 +156,120 @@ void main() {
       expect(TripSettings.fromJson({'maxDays': 15}).maxDays, isNull);
       expect(const TripSettings().toJson().containsKey('maxDays'), isFalse);
       expect(s.copyWith(clearMaxDays: true).maxDays, isNull);
+    });
+  });
+
+  group('plan v4 legs', () {
+    Map<String, dynamic> twoLegJson() => {
+          'version': 4,
+          'cityKey': 1,
+          'cityName': 'Haridwar',
+          'centreLatitude': 29.95,
+          'centreLongitude': 78.16,
+          'legs': [
+            {'index': 1, 'cityKey': 1, 'cityName': 'Haridwar', 'districtId': 'd1', 'latitude': 29.95, 'longitude': 78.16},
+            {
+              'index': 2,
+              'cityKey': 2,
+              'cityName': 'Badrinath',
+              'latitude': 30.74,
+              'longitude': 79.49,
+              'notReady': true,
+              'arrival': {'mode': 'own', 'fromName': 'Haridwar', 'how': 'bus', 'leavesAt': '06:45', 'roadMinutes': 450},
+            },
+          ],
+          'days': [
+            {'day': 1, 'leg': 1},
+            {'day': 2, 'leg': 2},
+            {'day': 3, 'leg': 2},
+          ],
+          'settings': {'startDate': '2026-11-01'},
+        };
+
+    test('a v3 document reads as one leg and every day is leg 1', () {
+      final p = TripPlan.fromJson({
+        'version': 3,
+        'cityKey': 1,
+        'cityName': 'Nainital',
+        'days': [
+          {'day': 1},
+          {'day': 2},
+        ],
+      });
+      expect(p.legCount, 1);
+      expect(p.isMultiCity, isFalse);
+      expect(p.cityName, 'Nainital');
+      expect(p.days.every((d) => d.leg == 1), isTrue);
+    });
+
+    test('empty legs read as one leg from the city fields', () {
+      final p = TripPlan.fromJson({
+        'cityKey': 5,
+        'cityName': 'Almora',
+        'legs': [],
+        'days': [
+          {'day': 1},
+        ],
+      });
+      expect(p.legs.length, 1);
+      expect(p.legs.first.cityKey, 5);
+    });
+
+    test('a day without leg takes the previous leg and a decreasing leg is raised', () {
+      final json = twoLegJson();
+      (json['days'] as List)[2] = {'day': 3};
+      var p = TripPlan.fromJson(json);
+      expect(p.days.map((d) => d.leg).toList(), [1, 2, 2]);
+      final dec = twoLegJson();
+      (dec['days'] as List)[2] = {'day': 3, 'leg': 1};
+      p = TripPlan.fromJson(dec);
+      expect(p.days.map((d) => d.leg).toList(), [1, 2, 2]);
+    });
+
+    test('two legs round trip keeps legs, leg, arrival and the leg 1 copies', () {
+      final p = TripPlan.fromJson(twoLegJson());
+      final json = p.toJson();
+      expect(json['version'], 4);
+      expect(json['cityName'], 'Haridwar');
+      expect((json['legs'] as List).length, 2);
+      expect(((json['days'] as List)[2] as Map)['leg'], 2);
+      final back = TripPlan.fromJson(json);
+      final arrival = back.legs[1].arrival;
+      expect(arrival?.how, TripTravelHow.bus);
+      expect(arrival?.leavesAt, '06:45');
+      expect(arrival?.roadMinutes, 450);
+      expect(back.legs[1].notReady, isTrue);
+      expect(back.legs.first.districtId, 'd1');
+    });
+
+    test('toJson always writes legs for a single-city plan', () {
+      final json = TripPlan.singleCity(cityKey: 1, cityName: 'Nainital', days: const [TripDay(day: 1)]).toJson();
+      expect((json['legs'] as List).length, 1);
+      expect(json['version'], 4);
+    });
+
+    test('leg helpers', () {
+      final p = TripPlan.fromJson(twoLegJson());
+      expect(p.legStart(1), 1);
+      expect(p.legEnd(1), 1);
+      expect(p.legStart(2), 2);
+      expect(p.legEnd(2), 3);
+      expect(p.legDayCount(2), 2);
+      expect(p.daysOf(2).map((d) => d.day).toList(), [2, 3]);
+      expect(p.isTravelDay(1), isFalse);
+      expect(p.isTravelDay(2), isTrue);
+      expect(p.isTravelDay(3), isFalse);
+      expect(p.cityNameOf(3), 'Badrinath');
+      expect(p.legCities, ['Haridwar', 'Badrinath']);
+    });
+
+    test('steps survive a v4 round trip', () {
+      final json = twoLegJson();
+      json['steps'] = {
+        'startFrom': {'name': 'Delhi', 'lat': 28.61, 'lon': 77.21},
+      };
+      final back = TripPlan.fromJson(TripPlan.fromJson(json).toJson());
+      expect(back.steps.startFrom?.name, 'Delhi');
     });
   });
 }

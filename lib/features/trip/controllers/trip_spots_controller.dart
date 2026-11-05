@@ -5,13 +5,14 @@ import '../../../utils/dio_error_mapper.dart';
 import '../data/trip_repository.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_constants.dart';
-import '../trip_strings.dart';
+import '../trip_strings_mca_a2.dart';
 
 class TripSpotsController extends GetxController {
   final int cityKey;
   final Set<String> existingIds;
+  final int otherSpots;
 
-  TripSpotsController(this.cityKey, {this.existingIds = const {}});
+  TripSpotsController(this.cityKey, {this.existingIds = const {}, this.otherSpots = 0});
 
   final _repo = const TripRepository();
 
@@ -131,8 +132,8 @@ class TripSpotsController extends GetxController {
       selected.remove(id);
       return;
     }
-    if (selected.length + existingIds.length >= TripConstants.maxSpots) {
-      AppToast.warning(TripStrings.maxPlaces);
+    if (selected.length + existingIds.length + otherSpots >= TripConstants.maxSpots) {
+      AppToast.warning(TripStringsMcaA2.maxPlaces);
       return;
     }
     selected.add(id);

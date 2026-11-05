@@ -83,7 +83,7 @@ class TripShortlistBar extends StatelessWidget {
           !supply.stayFailed.value &&
           supply.stays.isEmpty &&
           !supply.canWidenRadius;
-      final noSupply = c.stayTabOff.value || (!c.supplyAvailable && !c.supplyPending) || (emptyList && n == 0);
+      final noSupply = c.stayTabOff.value || (!c.supplyAvailableFor(day) && !c.supplyPendingFor(day)) || (emptyList && n == 0);
       final mode = TripNightChooser.modeOf(c, day);
       final ownOnly = noSupply || mode != TripNightMode.nightByNight;
       final asked = askedIds(c, day);

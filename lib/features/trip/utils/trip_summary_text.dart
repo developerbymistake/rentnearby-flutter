@@ -135,7 +135,7 @@ class TripSummaryText {
   static String headerLine(TripSummaryRecord r) {
     final dates = datesOf(r);
     return TripStrings.joinDots([
-      r.city,
+      r.routeLine,
       dates.isEmpty ? TripStringsA5.datesNotSet : dates,
       TripStrings.peopleText(r.people),
     ]);
@@ -179,7 +179,7 @@ class TripSummaryText {
 
   static String _compose(TripSummaryRecord r, int level) {
     final lines = <String>[
-      r.title.isEmpty ? TripStrings.shareSubject(r.city) : r.title,
+      r.title.isEmpty ? TripStrings.shareSubject(r.routeLine) : r.title,
       headerLine(r),
       '',
     ];

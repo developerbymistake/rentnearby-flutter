@@ -3,6 +3,7 @@ import '../../../models/place_result_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_steps_a1.dart';
+import 'trip_city_model.dart';
 import 'trip_enquiry_model.dart';
 import 'trip_spot_model.dart';
 
@@ -572,8 +573,188 @@ class TripTaxiShortlistItem {
       };
 }
 
+enum TripTravelHow {
+  car,
+  bus,
+  train,
+  other;
+
+  static TripTravelHow? parse(Object? wire) {
+    for (final h in values) {
+      if (h.name == wire) return h;
+    }
+    return null;
+  }
+
+  String get wire => name;
+}
+
+class TripTravelModes {
+  static const String own = 'own';
+}
+
+class TripTravel {
+  final String mode;
+  final String fromName;
+  final TripTravelHow? how;
+  final String? ownName;
+  final String? ownPhone;
+  final String? leavesAt;
+  final int? roadMinutes;
+  final String? note;
+
+  const TripTravel.own({
+    required this.fromName,
+    this.how,
+    this.ownName,
+    this.ownPhone,
+    this.leavesAt,
+    this.roadMinutes,
+    this.note,
+  }) : mode = TripTravelModes.own;
+
+  bool get hasPhone => ownPhone != null && ownPhone!.isNotEmpty;
+
+  TripTravel copyWith({
+    String? fromName,
+    TripTravelHow? how,
+    String? ownName,
+    String? ownPhone,
+    String? leavesAt,
+    int? roadMinutes,
+    String? note,
+  }) =>
+      TripTravel.own(
+        fromName: fromName ?? this.fromName,
+        how: how ?? this.how,
+        ownName: ownName ?? this.ownName,
+        ownPhone: ownPhone ?? this.ownPhone,
+        leavesAt: leavesAt ?? this.leavesAt,
+        roadMinutes: roadMinutes ?? this.roadMinutes,
+        note: note ?? this.note,
+      );
+
+  static String? _text(Object? raw) {
+    final s = raw is String ? raw.trim() : null;
+    return s == null || s.isEmpty ? null : s;
+  }
+
+  factory TripTravel.fromJson(Map<String, dynamic> json) => TripTravel.own(
+        fromName: _text(json['fromName']) ?? '',
+        how: TripTravelHow.parse(json['how']),
+        ownName: _text(json['ownName']),
+        ownPhone: _text(json['ownPhone']),
+        leavesAt: _text(json['leavesAt']),
+        roadMinutes: (json['roadMinutes'] as num?)?.toInt(),
+        note: _text(json['note']),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'mode': mode,
+        'fromName': fromName,
+        'how': ?how?.wire,
+        'ownName': ?ownName,
+        'ownPhone': ?ownPhone,
+        'leavesAt': ?leavesAt,
+        'roadMinutes': ?roadMinutes,
+        'note': ?note,
+      };
+}
+
+class TripCityLeg {
+  final int index;
+  final int cityKey;
+  final String cityName;
+  final String? districtId;
+  final double latitude;
+  final double longitude;
+  final bool notReady;
+  final TripTravel? arrival;
+
+  const TripCityLeg({
+    required this.index,
+    required this.cityKey,
+    required this.cityName,
+    this.districtId,
+    required this.latitude,
+    required this.longitude,
+    this.notReady = false,
+    this.arrival,
+  });
+
+  factory TripCityLeg.fromCity(int index, TripCityModel c) => TripCityLeg(
+        index: index,
+        cityKey: c.cityKey,
+        cityName: c.name,
+        latitude: c.latitude,
+        longitude: c.longitude,
+        notReady: !c.isReady,
+      );
+
+  bool get hasPoint => !(latitude == 0 && longitude == 0);
+
+  PlaceResult get place => PlaceResult(name: cityName, subtitle: '', latLng: LatLng(latitude, longitude));
+
+  TripCityModel get city => TripCityModel(
+        cityKey: cityKey,
+        name: cityName,
+        latitude: latitude,
+        longitude: longitude,
+        status: notReady ? TripCityStatus.notReady : TripCityStatus.ready,
+      );
+
+  TripCityLeg copyWith({
+    int? index,
+    String? districtId,
+    double? latitude,
+    double? longitude,
+    TripTravel? arrival,
+    bool clearArrival = false,
+    bool? notReady,
+  }) =>
+      TripCityLeg(
+        index: index ?? this.index,
+        cityKey: cityKey,
+        cityName: cityName,
+        districtId: districtId ?? this.districtId,
+        latitude: latitude ?? this.latitude,
+        longitude: longitude ?? this.longitude,
+        notReady: notReady ?? this.notReady,
+        arrival: clearArrival ? null : (arrival ?? this.arrival),
+      );
+
+  factory TripCityLeg.fromJson(Map<String, dynamic> json) => TripCityLeg(
+        index: (json['index'] as num?)?.toInt() ?? 1,
+        cityKey: (json['cityKey'] as num?)?.toInt() ?? 0,
+        cityName: json['cityName'] as String? ?? '',
+        districtId: json['districtId'] as String?,
+        latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
+        longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
+        notReady: json['notReady'] == true,
+        arrival: json['arrival'] is Map<String, dynamic>
+            ? TripTravel.fromJson(json['arrival'] as Map<String, dynamic>)
+            : null,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'index': index,
+        'cityKey': cityKey,
+        'cityName': cityName,
+        'districtId': ?districtId,
+        'latitude': latitude,
+        'longitude': longitude,
+        if (notReady) 'notReady': true,
+        if (index >= 2) 'arrival': ?arrival?.toJson(),
+      };
+}
+
+enum TripLegEditBlock { none, onlyLeg, maxLegs, noDays, duplicate, offline, readOnly, running, bookings, edge }
+
+enum TripLegRemoveMode { shift, keepLaterDates }
+
 class TripDay {
   final int day;
+  final int leg;
   final List<TripSpotRef> spots;
   final TripTaxiChoice? taxi;
   final TripStayChoice? stay;
@@ -582,6 +763,7 @@ class TripDay {
 
   const TripDay({
     required this.day,
+    this.leg = 1,
     this.spots = const [],
     this.taxi,
     this.stay,
@@ -593,6 +775,7 @@ class TripDay {
 
   TripDay copyWith({
     int? day,
+    int? leg,
     List<TripSpotRef>? spots,
     TripTaxiChoice? taxi,
     TripStayChoice? stay,
@@ -603,6 +786,7 @@ class TripDay {
   }) =>
       TripDay(
         day: day ?? this.day,
+        leg: leg ?? this.leg,
         spots: spots ?? this.spots,
         taxi: clearTaxi ? null : (taxi ?? this.taxi),
         stay: clearStay ? null : (stay ?? this.stay),
@@ -612,6 +796,7 @@ class TripDay {
 
   factory TripDay.fromJson(Map<String, dynamic> json) => TripDay(
         day: (json['day'] as num).toInt(),
+        leg: (json['leg'] as num?)?.toInt() ?? 1,
         spots: ((json['spots'] as List?) ?? const [])
             .map((e) => TripSpotRef.fromJson(e as Map<String, dynamic>))
             .toList(),
@@ -627,6 +812,7 @@ class TripDay {
 
   Map<String, dynamic> toJson() => {
         'day': day,
+        'leg': leg,
         'spots': spots.map((s) => s.toJson()).toList(),
         'taxi': ?taxi?.toJson(),
         'stay': ?stay?.toJson(),
@@ -806,26 +992,140 @@ class EditImpact {
 
 class TripPlan {
   final int version;
-  final int cityKey;
-  final String? districtId;
-  final String cityName;
-  final double? centreLatitude;
-  final double? centreLongitude;
+  final List<TripCityLeg> legs;
   final List<TripDay> days;
   final TripSettings settings;
   final TripSteps steps;
 
   const TripPlan({
     this.version = TripConstants.planVersion,
-    required this.cityKey,
-    this.districtId,
-    required this.cityName,
-    this.centreLatitude,
-    this.centreLongitude,
+    required this.legs,
     this.days = const [],
     this.settings = const TripSettings(),
     this.steps = const TripSteps(),
   });
+
+  factory TripPlan.singleCity({
+    required int cityKey,
+    required String cityName,
+    String? districtId,
+    double? centreLatitude,
+    double? centreLongitude,
+    List<TripDay> days = const [],
+    TripSettings settings = const TripSettings(),
+    TripSteps steps = const TripSteps(),
+  }) =>
+      TripPlan(
+        legs: [
+          TripCityLeg(
+            index: 1,
+            cityKey: cityKey,
+            cityName: cityName,
+            districtId: districtId,
+            latitude: centreLatitude ?? 0,
+            longitude: centreLongitude ?? 0,
+          ),
+        ],
+        days: days,
+        settings: settings,
+        steps: steps,
+      );
+
+  static const TripCityLeg _noLeg = TripCityLeg(index: 1, cityKey: 0, cityName: '', latitude: 0, longitude: 0);
+
+  TripCityLeg get _first => legs.isEmpty ? _noLeg : legs.first;
+
+  int get cityKey => _first.cityKey;
+
+  String get cityName => _first.cityName;
+
+  String? get districtId => _first.districtId;
+
+  double? get centreLatitude => legs.isEmpty || !_first.hasPoint ? null : _first.latitude;
+
+  double? get centreLongitude => legs.isEmpty || !_first.hasPoint ? null : _first.longitude;
+
+  int get legCount => legs.isEmpty ? 1 : legs.length;
+
+  bool get isMultiCity => legs.length > 1;
+
+  List<String> get legCities => legs.isEmpty ? [cityName] : [for (final l in legs) l.cityName];
+
+  TripCityLeg? legAt(int index) => index >= 1 && index <= legs.length ? legs[index - 1] : null;
+
+  int legIndexOf(int day) {
+    final d = dayAt(day);
+    if (d == null || legs.isEmpty) return 1;
+    return d.leg.clamp(1, legs.length);
+  }
+
+  TripCityLeg legOf(int day) => legAt(legIndexOf(day)) ?? _first;
+
+  List<TripDay> daysOf(int legIndex) => [
+        for (final d in days)
+          if (d.leg == legIndex) d,
+      ];
+
+  int legStart(int legIndex) {
+    for (final d in days) {
+      if (d.leg == legIndex) return d.day;
+    }
+    return 0;
+  }
+
+  int legEnd(int legIndex) {
+    var end = 0;
+    for (final d in days) {
+      if (d.leg == legIndex) end = d.day;
+    }
+    return end;
+  }
+
+  int legDayCount(int legIndex) => days.where((d) => d.leg == legIndex).length;
+
+  int legSpotCount(int legIndex) =>
+      days.where((d) => d.leg == legIndex).fold(0, (sum, d) => sum + d.spots.length);
+
+  bool isTravelDay(int day) {
+    if (dayAt(day) == null) return false;
+    final k = legIndexOf(day);
+    return k >= 2 && legStart(k) == day;
+  }
+
+  String? districtIdOf(int day) => legOf(day).districtId;
+
+  String cityNameOf(int day) => legOf(day).cityName;
+
+  int? legIndexOfCity(int cityKey) {
+    for (final l in legs) {
+      if (l.cityKey == cityKey) return l.index;
+    }
+    return null;
+  }
+
+  static List<TripCityLeg> reindex(List<TripCityLeg> legs) => [
+        for (var i = 0; i < legs.length; i++)
+          legs[i].index == i + 1 && (i > 0 || legs[i].arrival == null)
+              ? legs[i]
+              : legs[i].copyWith(index: i + 1, clearArrival: i == 0),
+      ];
+
+  TripPlan withLegs(List<TripCityLeg> legs) => copyWith(legs: reindex(legs));
+
+  TripPlan withLegDistrict(int legIndex, String districtId) {
+    if (legAt(legIndex) == null) return this;
+    return copyWith(legs: [
+      for (final l in legs) l.index == legIndex ? l.copyWith(districtId: districtId) : l,
+    ]);
+  }
+
+  TripPlan withArrival(int legIndex, TripTravel? arrival) {
+    if (legIndex < 2 || legAt(legIndex) == null) return this;
+    return copyWith(legs: [
+      for (final l in legs)
+        l.index == legIndex ? l.copyWith(arrival: arrival, clearArrival: arrival == null) : l,
+    ]);
+  }
 
   List<TripSpotRef> get allSpots => [for (final d in days) ...d.spots];
 
@@ -857,48 +1157,80 @@ class TripPlan {
   }
 
   TripPlan copyWith({
-    String? districtId,
-    double? centreLatitude,
-    double? centreLongitude,
+    List<TripCityLeg>? legs,
     List<TripDay>? days,
     TripSettings? settings,
     TripSteps? steps,
-  }) =>
-      TripPlan(
-        version: version,
-        cityKey: cityKey,
-        districtId: districtId ?? this.districtId,
-        cityName: cityName,
-        centreLatitude: centreLatitude ?? this.centreLatitude,
-        centreLongitude: centreLongitude ?? this.centreLongitude,
-        days: days ?? this.days,
-        settings: settings ?? this.settings,
-        steps: steps ?? this.steps,
-      );
+    String? districtId,
+    double? centreLatitude,
+    double? centreLongitude,
+  }) {
+    var next = legs ?? this.legs;
+    if ((districtId != null || centreLatitude != null || centreLongitude != null) && next.isNotEmpty) {
+      next = [
+        next.first.copyWith(districtId: districtId, latitude: centreLatitude, longitude: centreLongitude),
+        ...next.skip(1),
+      ];
+    }
+    return TripPlan(
+      version: version,
+      legs: next,
+      days: days ?? this.days,
+      settings: settings ?? this.settings,
+      steps: steps ?? this.steps,
+    );
+  }
 
-  factory TripPlan.fromJson(Map<String, dynamic> json) => TripPlan(
-        version: (json['version'] as num?)?.toInt() ?? TripConstants.planVersion,
-        cityKey: (json['cityKey'] as num).toInt(),
-        districtId: json['districtId'] as String?,
-        cityName: json['cityName'] as String? ?? '',
-        centreLatitude: (json['centreLatitude'] as num?)?.toDouble(),
-        centreLongitude: (json['centreLongitude'] as num?)?.toDouble(),
-        days: ((json['days'] as List?) ?? const [])
-            .map((e) => TripDay.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        settings: json['settings'] is Map<String, dynamic>
-            ? TripSettings.fromJson(json['settings'] as Map<String, dynamic>)
-            : const TripSettings(),
-        steps: TripSteps.fromJson(json['steps'] is Map<String, dynamic> ? json['steps'] as Map<String, dynamic> : null),
-      );
+  factory TripPlan.fromJson(Map<String, dynamic> json) {
+    final rawLegs = json['legs'] is List ? json['legs'] as List : const [];
+    var legs = <TripCityLeg>[
+      for (final e in rawLegs)
+        if (e is Map<String, dynamic>) TripCityLeg.fromJson(e),
+    ];
+    if (legs.isEmpty) {
+      legs = [
+        TripCityLeg(
+          index: 1,
+          cityKey: (json['cityKey'] as num?)?.toInt() ?? 0,
+          cityName: json['cityName'] as String? ?? '',
+          districtId: json['districtId'] as String?,
+          latitude: (json['centreLatitude'] as num?)?.toDouble() ?? 0,
+          longitude: (json['centreLongitude'] as num?)?.toDouble() ?? 0,
+        ),
+      ];
+    }
+    legs = reindex(legs);
+    final rawDays = json['days'] is List ? json['days'] as List : const [];
+    final days = <TripDay>[];
+    var prev = 1;
+    for (final e in rawDays) {
+      if (e is! Map<String, dynamic>) continue;
+      final raw = (e['leg'] as num?)?.toInt();
+      var leg = days.isEmpty ? 1 : (raw ?? prev);
+      if (leg > legs.length) leg = legs.length;
+      if (leg < prev) leg = prev;
+      prev = leg;
+      days.add(TripDay.fromJson(e).copyWith(leg: leg));
+    }
+    return TripPlan(
+      version: (json['version'] as num?)?.toInt() ?? TripConstants.planVersion,
+      legs: legs,
+      days: days,
+      settings: json['settings'] is Map<String, dynamic>
+          ? TripSettings.fromJson(json['settings'] as Map<String, dynamic>)
+          : const TripSettings(),
+      steps: TripSteps.fromJson(json['steps'] is Map<String, dynamic> ? json['steps'] as Map<String, dynamic> : null),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
-        'version': version,
+        'version': version < TripConstants.planVersion ? TripConstants.planVersion : version,
         'cityKey': cityKey,
         'districtId': ?districtId,
         'cityName': cityName,
         'centreLatitude': ?centreLatitude,
         'centreLongitude': ?centreLongitude,
+        'legs': [for (final l in legs) l.toJson()],
         'days': days.map((d) => d.toJson()).toList(),
         'settings': settings.toJson(),
         'steps': steps.toJson(),

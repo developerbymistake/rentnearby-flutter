@@ -5,8 +5,13 @@ class TripConstants {
   static const double stayRadiusKm = 5;
   static const double stayRadiusWideKm = 12;
   static const int spotsPageSize = 20;
-  static const int maxSpots = 40;
-  static const int planVersion = 3;
+  static const int maxSpots = 60;
+  static const int planVersion = 4;
+  static const int maxLegs = 4;
+  static const int travelHalfDayMinutes = 240;
+  static const int travelWholeDayMinutes = 450;
+  static const int ownTravelNameMax = 80;
+  static const int ownTravelPhoneLength = 10;
   static const int citiesPageSize = 200;
   static const int citiesMaxPages = 50;
   static const Duration autosaveDebounce = Duration(milliseconds: 1500);

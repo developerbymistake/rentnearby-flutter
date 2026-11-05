@@ -9,6 +9,7 @@ import '../models/trip_spot_category.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_mca_a4.dart';
 import '../trip_strings_steps_a1.dart';
 import '../trip_strings_steps_a3.dart';
 import '../utils/trip_format.dart';
@@ -161,7 +162,7 @@ class TripCard extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              t.cityName,
+                              t.routeLine,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -174,7 +175,12 @@ class TripCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        TripStringsA5.cardMeta(t.dayCount, t.spotCount),
+                        t.legCount > 1
+                            ? TripStrings.joinDots(
+                                [TripStringsA5.cardMeta(t.dayCount, t.spotCount), TripStringsMcaA4.citiesCount(t.legCount)])
+                            : TripStringsA5.cardMeta(t.dayCount, t.spotCount),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
                       ),
                       Text(

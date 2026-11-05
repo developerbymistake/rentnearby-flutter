@@ -1,6 +1,7 @@
 import '../utils/trip_format.dart';
 import '../widgets/trip_status.dart';
 import '../trip_strings.dart';
+import '../trip_strings_mca_a4.dart';
 import 'trip_enquiry_model.dart';
 import 'trip_journey_model.dart';
 import 'trip_plan_model.dart';
@@ -21,6 +22,12 @@ class TripSummaryRoom {
 
 List<T> _list<T>(Object? raw, T Function(Map<String, dynamic>) build) =>
     ((raw as List?) ?? const []).whereType<Map<String, dynamic>>().map(build).toList();
+
+List<String>? _citiesOf(Object? raw) {
+  if (raw is! List) return null;
+  final out = raw.whereType<String>().where((c) => c.isNotEmpty).toList();
+  return out.isEmpty ? null : out;
+}
 
 String _confirmedLine(String? confirmedBy, DateTime? at) {
   if (confirmedBy == null || at == null) return TripStrings.notConfirmedYet;
@@ -183,6 +190,7 @@ class TripSummaryRecord {
   final TripSteps steps;
   final TripJourney? gettingThere;
   final TripJourney? comingBack;
+  final List<String>? _cities;
 
   const TripSummaryRecord({
     required this.tripId,
@@ -201,7 +209,11 @@ class TripSummaryRecord {
     this.steps = const TripSteps(),
     this.gettingThere,
     this.comingBack,
-  });
+    List<String>? cities,
+  }) : _cities = cities;
+
+  List<String> get cities => _cities ?? [city];
+  String get routeLine => cities.length > 1 ? TripStringsMcaA4.routeOf(cities) : city;
 
   TripJourney? journeyOf(TripStepRole r) => r == TripStepRole.gettingThere ? gettingThere : comingBack;
 
@@ -226,6 +238,7 @@ class TripSummaryRecord {
         comingBack: json['comingBack'] is Map<String, dynamic>
             ? TripJourney.fromJson(json['comingBack'] as Map<String, dynamic>)
             : null,
+        cities: _citiesOf(json['legCities']),
       );
 
   bool get hasTravel =>

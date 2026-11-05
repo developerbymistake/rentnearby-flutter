@@ -17,6 +17,7 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a3.dart';
+import '../trip_strings_mca_a3.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
 import '../widgets/trip_back_to_plan_bar.dart';
@@ -79,6 +80,11 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
       _plan.releaseIfIdle();
     }
     super.dispose();
+  }
+
+  void _changeDay(int d) {
+    _supply.setDay(d);
+    _supply.ensureTaxis();
   }
 
   void _onScroll() {
@@ -277,13 +283,16 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
         final date = _plan.dateOf(d);
         final today = TripEnquiryRules.todayIst(DateTime.now().toUtc());
         final isToday = date != null && date.year == today.year && date.month == today.month && date.day == today.day;
+        final multi = _plan.isMultiCity;
         return TripPageHeader(
-          title: TripStrings.dayTitle(d, today: isToday),
-          subtitle: TripStrings.joinDots([
-            _plan.cityName,
-            date == null ? null : TripFormat.dayMonth(date),
-            TripStrings.peopleText(_plan.settings.peopleCount),
-          ]),
+          title: multi ? TripStringsMcaA3.taxiIn(_plan.cityNameOf(d)) : TripStrings.dayTitle(d, today: isToday),
+          subtitle: multi
+              ? TripStringsMcaA3.dayLine(d, date, TripStrings.peopleText(_plan.settings.peopleCount))
+              : TripStrings.joinDots([
+                  _plan.cityName,
+                  date == null ? null : TripFormat.dayMonth(date),
+                  TripStrings.peopleText(_plan.settings.peopleCount),
+                ]),
           onBack: () => Get.back(),
           gradient: TaxiColors.gradient,
           bottom: TripTaxiStayToggle(
@@ -311,7 +320,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TripRouteStrip(day: d, onDayChanged: _supply.setDay, accent: TaxiColors.accent),
+            TripRouteStrip(day: d, onDayChanged: _changeDay, accent: TaxiColors.accent),
             if (showChips) ...[
               const SizedBox(height: 12),
               TripFilterChips(accent: TaxiColors.accent, items: [
@@ -331,7 +340,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
                   onTap: () => _supply.onlySuv.value = !_supply.onlySuv.value,
                 ),
                 TripFilterChip(
-                  label: TripStringsA3.wholeTrip,
+                  label: _plan.isMultiCity ? TripStringsMcaA3.allDaysIn(_plan.cityNameOf(d)) : TripStringsA3.wholeTrip,
                   selected: _wholeTrip.value,
                   onTap: () => _wholeTrip.value = !_wholeTrip.value,
                 ),

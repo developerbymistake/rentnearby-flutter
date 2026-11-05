@@ -121,12 +121,22 @@ void main() {
 
     test('auto not needed both ways', () {
       const inside = TripSteps(startFrom: _delhi);
-      final on = TripStepRules.withAutoNotNeeded(inside, _delhi.lat, _delhi.lon);
+      final on = TripStepRules.withAutoNotNeeded(inside, _delhi.lat, _delhi.lon, _delhi.lat, _delhi.lon);
       expect(on.gettingThere.status, TripStepStatus.notNeeded);
       expect(on.comingBack.status, TripStepStatus.notNeeded);
-      final off = TripStepRules.withAutoNotNeeded(on, 29.39, 79.45);
+      final off = TripStepRules.withAutoNotNeeded(on, 29.39, 79.45, 29.39, 79.45);
       expect(off.gettingThere.status, TripStepStatus.notStarted);
       expect(off.comingBack.status, TripStepStatus.notStarted);
+    });
+
+    test('auto not needed reads the first city for getting there and the last for coming back', () {
+      const start = TripSteps(startFrom: _delhi);
+      final out = TripStepRules.withAutoNotNeeded(start, _delhi.lat, _delhi.lon, 29.39, 79.45);
+      expect(out.gettingThere.status, TripStepStatus.notNeeded);
+      expect(out.comingBack.status, TripStepStatus.notStarted);
+      final back = TripStepRules.withAutoNotNeeded(start, 29.39, 79.45, _delhi.lat, _delhi.lon);
+      expect(back.gettingThere.status, TripStepStatus.notStarted);
+      expect(back.comingBack.status, TripStepStatus.notNeeded);
     });
 
     test('auto not needed never touches own, skipped or a linked journey', () {
@@ -135,7 +145,7 @@ void main() {
         gettingThere: TripStep(status: TripStepStatus.own),
         comingBack: TripStep(status: TripStepStatus.chosen, journeyId: 'j1'),
       );
-      final out = TripStepRules.withAutoNotNeeded(s, _delhi.lat, _delhi.lon);
+      final out = TripStepRules.withAutoNotNeeded(s, _delhi.lat, _delhi.lon, _delhi.lat, _delhi.lon);
       expect(out.gettingThere.status, TripStepStatus.own);
       expect(out.comingBack.status, TripStepStatus.chosen);
     });

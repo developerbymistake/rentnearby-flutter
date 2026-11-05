@@ -79,6 +79,7 @@ class AppToast {
   }
 
   static void _show(String message, ToastificationType type, Alignment alignment, {bool compact = false}) {
+    if (Get.overlayContext == null && overlayKey.currentState == null) return;
     final accent = _accentColor(type);
     toastification.show(
       context: Get.overlayContext,

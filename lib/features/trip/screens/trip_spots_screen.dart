@@ -5,6 +5,7 @@ import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
+import '../../../utils/app_toast.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/gradient_button.dart';
 import '../../../widgets/selectable_chip.dart';
@@ -13,8 +14,10 @@ import '../controllers/trip_spots_controller.dart';
 import '../models/trip_city_model.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_spot_category.dart';
+import '../models/trip_spot_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
+import '../trip_strings_mca_a2.dart';
 import '../widgets/trip_city_sheet.dart';
 import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_spot_row.dart';
@@ -29,7 +32,10 @@ class TripSpotsScreen extends StatefulWidget {
 
 class _TripSpotsScreenState extends State<TripSpotsScreen> {
   late final TripCityModel _city;
+  late final TripCityModel? _next;
   late final bool _adding;
+  late final bool _newLeg;
+  late final int? _legIndex;
   late final Set<String> _existingIds;
   late final TripSpotsController _ctrl;
   late final TripPlanController _plan;
@@ -37,20 +43,36 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   bool _picking = false;
   bool _starting = false;
 
+  bool get _intoTrip => _adding || _newLeg;
+
   @override
   void initState() {
     super.initState();
     final args = Get.arguments as Map;
     _city = args['city'] as TripCityModel;
-    _adding = args['adding'] == true;
+    _newLeg = args['newLeg'] == true;
+    _adding = !_newLeg && args['adding'] == true;
+    _legIndex = args['legIndex'] as int?;
     _existingIds = (args['existingIds'] as Set<String>?) ?? const <String>{};
+    _plan = TripPlanController.to;
+    final next = args['next'] as TripCityModel?;
+    _next = _intoTrip || next?.cityKey == _city.cityKey ? null : next;
+    final other = _intoTrip ? _plan.spotCount - _existingIds.length : 0;
     final tag = '${_city.cityKey}';
     _ctrl = Get.isRegistered<TripSpotsController>(tag: tag)
         ? Get.find<TripSpotsController>(tag: tag)
-        : Get.put(TripSpotsController(_city.cityKey, existingIds: _existingIds), tag: tag);
-    _plan = TripPlanController.to;
+        : Get.put(
+            TripSpotsController(_city.cityKey, existingIds: _existingIds, otherSpots: other < 0 ? 0 : other),
+            tag: tag,
+          );
     _plan.openPages++;
     _scroll.addListener(_onScroll);
+    if (_newLeg) WidgetsBinding.instance.addPostFrameCallback((_) => _consumePendingNext());
+  }
+
+  void _consumePendingNext() {
+    if (!Get.isRegistered<TripPlanController>() || !identical(Get.find<TripPlanController>(), _plan)) return;
+    if (_plan.pendingNextCity.value?.cityKey == _city.cityKey) _plan.pendingNextCity.value = null;
   }
 
   @override
@@ -78,11 +100,35 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     _picking = true;
     try {
       final picked = await TripCitySheet.pick(context);
-      if (picked == null || !mounted || picked.cityKey == _city.cityKey) return;
-      Get.offNamed(AppRoutes.tripSpots, arguments: {'city': picked}, preventDuplicates: false);
+      if (picked == null || !mounted) return;
+      if (picked.city.cityKey == _city.cityKey && picked.next?.cityKey == _next?.cityKey) return;
+      Get.offNamed(
+        AppRoutes.tripSpots,
+        arguments: {'city': picked.city, 'next': picked.next},
+        preventDuplicates: false,
+      );
     } finally {
       _picking = false;
     }
+  }
+
+  Future<void> _addLeg(List<TripSpotModel> chosen) async {
+    final block = await _plan.addLeg(_city, chosen);
+    if (!mounted) return;
+    switch (block) {
+      case TripLegEditBlock.none:
+        Get.back();
+        return;
+      case TripLegEditBlock.maxLegs ||
+            TripLegEditBlock.noDays ||
+            TripLegEditBlock.duplicate ||
+            TripLegEditBlock.offline ||
+            TripLegEditBlock.bookings:
+        break;
+      default:
+        AppToast.warning(TripStringsMcaA2.cantChangeTrip);
+    }
+    _starting = false;
   }
 
   Future<void> _planMyDays() async {
@@ -90,8 +136,12 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     final chosen = _ctrl.chosen;
     if (chosen.isEmpty) return;
     _starting = true;
+    if (_newLeg) {
+      await _addLeg(chosen);
+      return;
+    }
     if (_adding) {
-      _plan.addSpots(chosen.where((s) => !_existingIds.contains(s.id)).toList());
+      _plan.addSpots(chosen.where((s) => !_existingIds.contains(s.id)).toList(), legIndex: _legIndex);
       Get.back();
       return;
     }
@@ -105,7 +155,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       _starting = false;
       return;
     }
-    unawaited(_plan.startFromSelection(_city, chosen, settings: settings));
+    unawaited(_plan.startFromSelection(_city, chosen, settings: settings, queuedNext: _next));
     Get.offNamed(AppRoutes.tripPlan);
   }
 
@@ -169,10 +219,14 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
                     ),
                   );
                 }),
+                if (_next case final next?) ...[
+                  const SizedBox(height: 6),
+                  _nextChip(next),
+                ],
               ],
             ),
           ),
-          if (!_adding)
+          if (!_intoTrip)
             TextButton(
               onPressed: _changeCity,
               style: TextButton.styleFrom(
@@ -189,6 +243,30 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       ),
     );
   }
+
+  Widget _nextChip(TripCityModel next) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.45)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Iconsax.routing_2, size: 14, color: Colors.white),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                TripStringsMcaA2.nextCity(next.name),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _buildChips() {
     return Obx(() {
@@ -313,7 +391,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, -4))],
         ),
         child: GradientButton(
-          label: '$n ${n == 1 ? 'spot' : 'spots'} · ${TripStrings.planMyDays}',
+          label: _newLeg ? TripStringsMcaA2.spotsAddToTrip(n) : '$n ${n == 1 ? 'spot' : 'spots'} · ${TripStrings.planMyDays}',
           height: 52,
           gradient: TripColors.gradient,
           shadowColor: TripColors.accent,

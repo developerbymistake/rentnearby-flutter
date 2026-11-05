@@ -17,8 +17,9 @@ class TripNightChooser extends StatelessWidget {
   final int day;
 
   static TripStayChoice? baseOf(TripPlanController c, int day) {
-    if (day <= 1) return null;
-    final prev = c.plan.value?.dayAt(day - 1)?.stay;
+    final p = c.plan.value;
+    if (day <= 1 || p == null || p.legIndexOf(day - 1) != p.legIndexOf(day)) return null;
+    final prev = p.dayAt(day - 1)?.stay;
     if (prev == null || prev.isSkipped) return null;
     return prev;
   }

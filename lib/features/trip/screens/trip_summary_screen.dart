@@ -77,7 +77,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     final r = _record;
     if (r == null) return;
     try {
-      await SharePlus.instance.share(ShareParams(text: TripSummaryText.build(r), subject: TripStrings.shareSubject(r.city)));
+      await SharePlus.instance.share(ShareParams(text: TripSummaryText.build(r), subject: TripStrings.shareSubject(r.routeLine)));
     } catch (_) {
       AppToast.error(TripStringsA5.shareFailed);
     }

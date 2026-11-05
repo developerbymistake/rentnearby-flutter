@@ -13,6 +13,7 @@ import '../models/trip_enquiry_model.dart';
 import '../trip_constants.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_mca_a3.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
 import '../widgets/trip_back_to_plan_bar.dart';
@@ -165,7 +166,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
       final short = TripEnquiryRules.enquiryExpiry(start, checkIn, now).veryShortNotice;
       final daysLeft = TripEnquiryRules.daysUntil(start, now);
       final preview = TripEnquiryRules.previewText(
-        city: _c.cityName,
+        city: p.isMultiCity ? p.cityNameOf(_day) : _c.cityName,
         checkIn: checkIn,
         checkOut: checkOut,
         allNights: allNights,
@@ -215,13 +216,16 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
               value: allNights,
               activeTrackColor: StayColors.accent,
               onChanged: _sending ? null : (v) => setState(() => _allNights = v),
-              title: Text(TripStrings.allNights,
+              title: Text(
+                  p.isMultiCity ? TripStringsMcaA3.allNightsIn(p.cityNameOf(_day), run) : TripStrings.allNights,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                       fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-              subtitle: Text(TripStrings.nights(run),
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+              subtitle: p.isMultiCity
+                  ? null
+                  : Text(TripStrings.nights(run),
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
             ),
           const SizedBox(height: 10),
           Container(

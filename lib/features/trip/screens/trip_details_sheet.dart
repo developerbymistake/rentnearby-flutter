@@ -50,6 +50,7 @@ class TripDetailsSheet {
       startLocked: c.isRunning,
       showStartFrom: true,
       initialStart: c.startFrom,
+      showDays: !c.isMultiCity,
     );
     if (result == null) return false;
     final moved = result.startFromTouched && await c.setStartFrom(result.startFrom);
@@ -222,6 +223,7 @@ class TripDetailsSheet {
     bool startLocked = false,
     bool showStartFrom = false,
     TripStartFrom? initialStart,
+    bool showDays = true,
   }) =>
       showModalBottomSheet<_DetailsResult>(
         context: context,
@@ -241,6 +243,7 @@ class TripDetailsSheet {
           startLocked: startLocked,
           showStartFrom: showStartFrom,
           initialStart: initialStart,
+          showDays: showDays,
         ),
       );
 }
@@ -297,6 +300,7 @@ class _DetailsBody extends StatefulWidget {
   final bool startLocked;
   final bool showStartFrom;
   final TripStartFrom? initialStart;
+  final bool showDays;
 
   const _DetailsBody({
     required this.initial,
@@ -309,6 +313,7 @@ class _DetailsBody extends StatefulWidget {
     this.startLocked = false,
     this.showStartFrom = false,
     this.initialStart,
+    this.showDays = true,
   });
 
   @override
@@ -564,7 +569,7 @@ class _DetailsBodyState extends State<_DetailsBody> {
                 TripStringsA4.peopleHelp,
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
               ),
-              if (widget.spotCount > 0) ...[
+              if (widget.showDays && widget.spotCount > 0) ...[
                 const SizedBox(height: 16),
                 _label(TripStringsA4.days),
                 const SizedBox(height: 2),

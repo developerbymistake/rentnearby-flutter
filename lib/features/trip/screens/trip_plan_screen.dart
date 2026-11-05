@@ -12,14 +12,20 @@ import '../../../utils/input_formatters.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_plan_controller.dart';
+import '../models/trip_city_model.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
+import '../trip_strings_mca_a3.dart';
 import '../utils/trip_format.dart';
+import '../widgets/trip_add_city_card.dart';
 import '../widgets/trip_day_tile.dart';
+import '../widgets/trip_leg_chips.dart';
+import '../widgets/trip_leg_header.dart';
+import '../widgets/trip_leg_menu_sheet.dart';
 import '../widgets/trip_lifecycle_actions.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_plan_hint_strip.dart';
@@ -31,6 +37,7 @@ import '../widgets/trip_step_skip_sheet.dart';
 import '../widgets/trip_steps_strip.dart';
 import '../widgets/trip_summary_strip.dart';
 import '../widgets/trip_today_card.dart';
+import '../widgets/trip_travel_tile.dart';
 import '../widgets/trip_update_app_card.dart';
 import 'trip_details_sheet.dart';
 
@@ -50,7 +57,12 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   final _gettingKey = GlobalKey();
   final _comingKey = GlobalKey();
   final Map<int, GlobalKey> _dayKeys = {};
+  final Map<int, GlobalKey> _legKeys = {};
   Worker? _startWorker;
+  Worker? _nextWorker;
+  Worker? _nextTripWorker;
+  Worker? _addedWorker;
+  bool _nextOpening = false;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -67,7 +79,13 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     final tripId = args is Map ? args['tripId'] as String? : null;
     final fresh = args is Map && args['fresh'] == true;
     _startWorker = ever<TripPlan?>(_c.plan, (_) => _checkStartFrom());
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkStartFrom());
+    _nextWorker = ever<TripCityModel?>(_c.pendingNextCity, (_) => _openPendingNext());
+    _nextTripWorker = ever(_c.trip, (_) => _openPendingNext());
+    _addedWorker = ever<int?>(_c.lastAddedLeg, _scrollToAdded);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkStartFrom();
+      _openPendingNext();
+    });
     if (tripId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -84,6 +102,9 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _startWorker?.dispose();
+    _nextWorker?.dispose();
+    _nextTripWorker?.dispose();
+    _addedWorker?.dispose();
     _scroll.dispose();
     if (Get.isRegistered<TripPlanController>() && identical(Get.find<TripPlanController>(), _c)) {
       _c.openPages--;
@@ -97,7 +118,38 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     unawaited(_c.ensureStartFrom());
   }
 
+  void _openPendingNext() {
+    final next = _c.pendingNextCity.value;
+    if (!mounted || _nextOpening || next == null || _c.trip.value == null || _c.isReadOnly) return;
+    if (ModalRoute.of(context)?.isCurrent != true) return;
+    _nextOpening = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        _nextOpening = false;
+        return;
+      }
+      if (next.isReady) {
+        await TripNavigation.openSpots(next, tripId: _c.trip.value?.id, newLeg: true);
+      } else {
+        await _c.addLeg(next, const []);
+      }
+      if (identical(_c.pendingNextCity.value, next)) _c.pendingNextCity.value = null;
+      _nextOpening = false;
+    });
+  }
+
+  void _scrollToAdded(int? legIndex) {
+    if (legIndex == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await _scrollTo(_legKey(legIndex));
+      if (_c.lastAddedLeg.value == legIndex) _c.lastAddedLeg.value = null;
+    });
+  }
+
   GlobalKey _dayKey(int day) => _dayKeys.putIfAbsent(day, () => GlobalKey());
+
+  GlobalKey _legKey(int legIndex) => _legKeys.putIfAbsent(legIndex, () => GlobalKey());
 
   Future<void> _scrollTo(GlobalKey key) async {
     if (key.currentContext == null && _scroll.hasClients) {
@@ -181,6 +233,10 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   void _addPlaces() {
     final picked = _c.picked;
     final plan = _c.plan.value;
+    if (plan != null && plan.isMultiCity) {
+      TripLegMenuSheet.addPlaces(plan.legCount);
+      return;
+    }
     if (picked == null || plan == null) return;
     TripNavigation.openSpots(picked, tripId: _c.trip.value?.id, existingIds: plan.spotIds);
   }
@@ -331,7 +387,8 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                           children: [
                             Flexible(
                               child: Text(
-                                '$days ${days == 1 ? 'day' : 'days'} · $spots ${spots == 1 ? 'spot' : 'spots'}',
+                                '$days ${days == 1 ? 'day' : 'days'} · $spots ${spots == 1 ? 'spot' : 'spots'}'
+                                '${plan.isMultiCity ? ' · ${TripStringsMcaA3.cities(plan.legCount)}' : ''}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: _subtitleStyle,
@@ -643,13 +700,24 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     return Obx(() {
       _c.trip.value;
       if (!_showSteps) return const SizedBox.shrink();
+      final multi = _c.plan.value?.isMultiCity ?? false;
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
         child: Center(
           heightFactor: 1,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
-            child: TripStepsStrip(onTap: _onStep, onLongPress: _c.isReadOnly ? null : _onStepLong),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TripStepsStrip(onTap: _onStep, onLongPress: _c.isReadOnly ? null : _onStepLong),
+                if (multi) ...[
+                  const SizedBox(height: 6),
+                  TripLegChips(onTap: (k) => _scrollTo(_legKey(k))),
+                ],
+              ],
+            ),
           ),
         ),
       );
@@ -706,10 +774,13 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
             TripStepCard(role: TripStepRole.gettingThere, anchorKey: _gettingKey),
             const SizedBox(height: 14),
           ],
-          const TripPlanHintStrip(),
+          if (!plan.isMultiCity) const TripPlanHintStrip(),
           if (!_c.isReadOnly) _redBanner(),
-          for (final d in plan.days) ...[
-            KeyedSubtree(key: _dayKey(d.day), child: TripDayTile(d.day, key: ValueKey('trip-day-${d.day}'))),
+          ...(plan.isMultiCity
+              ? [for (var k = 1; k <= plan.legCount; k++) ..._legSection(plan, k)]
+              : [for (final d in plan.days) ..._dayTile(d.day)]),
+          if (!_c.isReadOnly && !_c.needsUpdate.value) ...[
+            const TripAddCityCard(),
             const SizedBox(height: 14),
           ],
           if (steps && plan.days.isNotEmpty) ...[
@@ -722,6 +793,21 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       );
     });
   }
+
+  List<Widget> _dayTile(int day) => [
+        KeyedSubtree(key: _dayKey(day), child: TripDayTile(day, key: ValueKey('trip-day-$day'))),
+        const SizedBox(height: 14),
+      ];
+
+  List<Widget> _legSection(TripPlan plan, int k) => [
+        if (k >= 2) ...[
+          TripTravelTile(key: ValueKey('trip-travel-$k'), legIndex: k),
+          const SizedBox(height: 12),
+        ],
+        TripLegHeader(key: ValueKey('trip-leg-$k'), legIndex: k, anchorKey: _legKey(k)),
+        TripPlanHintStrip(key: ValueKey('trip-hint-$k'), legIndex: k),
+        for (final d in plan.daysOf(k)) ..._dayTile(d.day),
+      ];
 
   Widget _offlineStrip() {
     if (!_c.offline.value || _c.todayDay != null || _c.isCompleted) return const SizedBox.shrink();

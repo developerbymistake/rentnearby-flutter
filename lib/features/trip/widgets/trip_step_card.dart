@@ -188,7 +188,7 @@ class TripStepCard extends StatelessWidget {
 
   Widget _emptyCard(BuildContext context, TripPlanController c) {
     final start = c.startFrom;
-    final city = c.cityName;
+    final city = role == TripStepRole.comingBack ? c.lastCityName : c.cityName;
     final back = role == TripStepRole.comingBack;
     final people = c.settings.peopleCount;
     return _frame(children: [

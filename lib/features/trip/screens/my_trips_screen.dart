@@ -63,7 +63,7 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
     try {
       final snap = await TripSummarySource.load(t.id);
       await SharePlus.instance
-          .share(ShareParams(text: TripSummaryText.build(snap.record), subject: TripStrings.shareSubject(t.cityName)));
+          .share(ShareParams(text: TripSummaryText.build(snap.record), subject: TripStrings.shareSubject(t.routeLine)));
     } catch (e) {
       if (TripSummarySource.isGone(e)) {
         _ctrl.removeLocal(t.id);

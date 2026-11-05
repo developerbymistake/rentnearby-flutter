@@ -14,6 +14,7 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
+import '../trip_strings_mca_a3.dart';
 import '../trip_strings_steps_a1.dart';
 import 'trip_cancel_sheet.dart';
 import 'trip_own_booking_sheet.dart';
@@ -37,6 +38,7 @@ class TripDayActions extends StatelessWidget {
     return Obx(() {
       TabConfigController.to.version.value;
       c.taxiSupply.value;
+      c.taxiSupplyByLeg.length;
       c.taxiTabOff.value;
       c.stayTabOff.value;
       c.trip.value;
@@ -44,6 +46,7 @@ class TripDayActions extends StatelessWidget {
       final d = c.plan.value?.dayAt(day);
       if (d == null) return const SizedBox.shrink();
       final readOnly = c.isReadOnly || c.needsUpdate.value || c.isDayPast(day);
+      _ensureLegSupply(c, readOnly);
       return Row(
         children: [
           Expanded(child: _taxiSlot(context, c, d, readOnly)),
@@ -53,6 +56,18 @@ class TripDayActions extends StatelessWidget {
       );
     });
   }
+
+  void _ensureLegSupply(TripPlanController c, bool readOnly) {
+    if (readOnly || !c.supplyAvailableFor(day) || c.taxiSupplyFor(day) != null) return;
+    final leg = c.plan.value?.legIndexOf(day) ?? 1;
+    WidgetsBinding.instance.addPostFrameCallback((_) => c.ensureSupply(leg));
+  }
+
+  String _taxiTitle(TripPlanController c) =>
+      c.isMultiCity ? TripStringsMcaA3.taxiIn(c.cityNameOf(day)) : TripStringsA4.taxi;
+
+  String _stayTitle(TripPlanController c) =>
+      c.isMultiCity ? TripStringsMcaA3.stayTonightIn(c.cityNameOf(day)) : TripStrings.stay;
 
   Widget _emptyTile({
     required IconData icon,
@@ -135,33 +150,35 @@ class TripDayActions extends StatelessWidget {
                 : () => _confirmClear(context, TripStringsA4.removeTaxi, taxi.name, () => c.clearTaxi(day)),
       );
     }
+    final title = _taxiTitle(c);
     if (readOnly) {
       return _emptyTile(
         icon: Iconsax.car,
         accent: TaxiColors.accent,
         surface: TaxiColors.surface,
-        title: TripStringsA4.taxi,
+        title: title,
         subtitle: TripStringsA4.notBooked,
         state: TripTileState.disabled,
       );
     }
-    if (c.supplyPending || (c.supplyAvailable && !c.taxiTabOff.value && c.taxiSupply.value == null)) {
+    if (c.supplyPendingFor(day) || (c.supplyAvailableFor(day) && !c.taxiTabOff.value && c.taxiSupplyFor(day) == null)) {
       return _emptyTile(
         icon: Iconsax.car,
         accent: TaxiColors.accent,
         surface: TaxiColors.surface,
-        title: TripStringsA4.taxi,
+        title: title,
         subtitle: TripStrings.checking,
         state: TripTileState.pending,
       );
     }
-    if (c.canFindTaxi) {
+    final travel = c.plan.value?.isTravelDay(day) ?? false;
+    if (c.canFindTaxiOn(day)) {
       return _emptyTile(
         icon: Iconsax.car,
         accent: TaxiColors.accent,
         surface: TaxiColors.surface,
-        title: TripStringsA4.taxi,
-        subtitle: TripStringsA4.findADriver,
+        title: title,
+        subtitle: travel ? '${TripStringsA4.findADriver} · ${TripStringsMcaA3.afterYouArrive}' : TripStringsA4.findADriver,
         onTap: () => TripNavigation.openTaxi(day),
       );
     }
@@ -169,8 +186,8 @@ class TripDayActions extends StatelessWidget {
       icon: Iconsax.car,
       accent: TaxiColors.accent,
       surface: TaxiColors.surface,
-      title: TripStringsA4.taxi,
-      subtitle: TripStrings.addOwnTaxi,
+      title: title,
+      subtitle: travel ? '${TripStrings.addOwnTaxi} · ${TripStringsMcaA3.afterYouArrive}' : TripStrings.addOwnTaxi,
       onTap: () => TripOwnBookingSheet.show(context, day: day, kind: TripOwnKind.taxi),
     );
   }
@@ -360,32 +377,33 @@ class TripDayActions extends StatelessWidget {
         onLongPress: readOnly ? null : () => _removeShortlist(context, c),
       );
     }
+    final stayTitle = _stayTitle(c);
     if (readOnly) {
       return _emptyTile(
         icon: Iconsax.building_4,
         accent: StayColors.accent,
         surface: StayColors.surface,
-        title: TripStrings.stay,
+        title: stayTitle,
         subtitle: TripStringsA4.notBooked,
         state: TripTileState.disabled,
       );
     }
-    if (c.supplyPending) {
+    if (c.supplyPendingFor(day)) {
       return _emptyTile(
         icon: Iconsax.building_4,
         accent: StayColors.accent,
         surface: StayColors.surface,
-        title: TripStrings.stay,
+        title: stayTitle,
         subtitle: TripStrings.checking,
         state: TripTileState.pending,
       );
     }
-    if (c.canFindStay) {
+    if (c.canFindStayOn(day)) {
       return _emptyTile(
         icon: Iconsax.building_4,
         accent: StayColors.accent,
         surface: StayColors.surface,
-        title: TripStrings.stay,
+        title: stayTitle,
         subtitle: TripStringsA4.nightFindStay(day),
         onTap: () => TripNavigation.openStay(day),
       );
@@ -394,7 +412,7 @@ class TripDayActions extends StatelessWidget {
       icon: Iconsax.building_4,
       accent: StayColors.accent,
       surface: StayColors.surface,
-      title: TripStrings.stay,
+      title: stayTitle,
       subtitle: TripStrings.addOwnStay,
       onTap: () => TripOwnBookingSheet.show(context, day: day),
     );

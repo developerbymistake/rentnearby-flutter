@@ -52,11 +52,11 @@ class _TripHomeCardState extends State<TripHomeCard> {
 
   static String _runningTitle(TripSummaryModel t) {
     final start = t.startDate;
-    if (start == null) return TripStringsA4.tomorrowTitle(t.cityName);
+    if (start == null) return TripStringsA4.tomorrowTitle(t.routeLine);
     final now = DateTime.now();
     final n = DateTime.utc(now.year, now.month, now.day).difference(DateTime.utc(start.year, start.month, start.day)).inDays + 1;
-    if (n < 1) return TripStringsA4.tomorrowTitle(t.cityName);
-    return TripStringsA4.runningTitle(n, t.dayCount, t.cityName);
+    if (n < 1) return TripStringsA4.tomorrowTitle(t.routeLine);
+    return TripStringsA4.runningTitle(n, t.dayCount, t.routeLine);
   }
 
   Widget _card({

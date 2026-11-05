@@ -125,7 +125,7 @@ class TripEditSpotSheet extends StatelessWidget {
                   fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark),
             ),
             const SizedBox(height: 12),
-            for (final d in plan.days) ...[
+            for (final d in plan.daysOf(plan.legIndexOf(currentDay))) ...[
               _dayOption(
                 context,
                 day: d.day,

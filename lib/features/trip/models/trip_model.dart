@@ -1,3 +1,4 @@
+import '../trip_strings_mca_a4.dart';
 import '../widgets/trip_status.dart';
 import 'trip_enquiry_model.dart';
 import 'trip_journey_model.dart';
@@ -10,6 +11,17 @@ class TripStatuses {
 }
 
 DateTime? _instant(Object? raw) => raw is String ? DateTime.tryParse(raw) : null;
+
+List<String>? _legCitiesOf(Object? raw) {
+  if (raw is! List) return null;
+  final out = raw.whereType<String>().where((c) => c.isNotEmpty).toList();
+  return out.isEmpty ? null : out;
+}
+
+int _legCountOf(Object? raw, List<String>? cities) {
+  final n = raw is num ? raw.toInt() : (cities?.length ?? 1);
+  return n < 1 ? 1 : n;
+}
 
 class TripModel {
   final String id;
@@ -33,6 +45,8 @@ class TripModel {
   final String bookingState;
   final List<TripJourney> journeys;
   final bool journeysKnown;
+  final int legCount;
+  final List<String>? _legCities;
   final Map<String, dynamic>? raw;
 
   const TripModel({
@@ -57,8 +71,13 @@ class TripModel {
     this.bookingState = 'draft',
     this.journeys = const [],
     this.journeysKnown = false,
+    this.legCount = 1,
+    List<String>? legCities,
     this.raw,
-  });
+  }) : _legCities = legCities;
+
+  List<String> get legCities => _legCities ?? [cityName];
+  String get routeLine => legCount > 1 ? TripStringsMcaA4.routeOf(legCities) : cityName;
 
   bool get isPlanned => status == TripStatuses.planned;
   bool get isCompleted => status == TripStatuses.completed;
@@ -116,6 +135,8 @@ class TripModel {
         bookingState: bookingState ?? this.bookingState,
         journeys: journeys ?? this.journeys,
         journeysKnown: journeysKnown ?? this.journeysKnown,
+        legCount: legCount,
+        legCities: _legCities,
         raw: raw,
       );
 
@@ -148,6 +169,8 @@ class TripModel {
             .where((j) => j.id.isNotEmpty)
             .toList(),
         journeysKnown: json['journeys'] is List,
+        legCount: _legCountOf(json['legCount'], _legCitiesOf(json['legCities'])),
+        legCities: _legCitiesOf(json['legCities']),
         raw: json,
       );
 }
@@ -180,6 +203,8 @@ class TripSummaryModel {
   final DateTime? completedAt;
   final TripStepDisplay? gettingThere;
   final TripStepDisplay? comingBack;
+  final int legCount;
+  final List<String>? _legCities;
 
   const TripSummaryModel({
     required this.id,
@@ -209,7 +234,12 @@ class TripSummaryModel {
     this.completedAt,
     this.gettingThere,
     this.comingBack,
-  });
+    this.legCount = 1,
+    List<String>? legCities,
+  }) : _legCities = legCities;
+
+  List<String> get legCities => _legCities ?? [cityName];
+  String get routeLine => legCount > 1 ? TripStringsMcaA4.routeOf(legCities) : cityName;
 
   bool get hasOwnBooking => staysOwn + taxisOwn > 0;
 
@@ -261,6 +291,8 @@ class TripSummaryModel {
         completedAt: completedAt ?? this.completedAt,
         gettingThere: gettingThere,
         comingBack: comingBack,
+        legCount: legCount,
+        legCities: _legCities,
       );
 
   TripSummaryModel withMuted(DateTime? at) => _with(mutedAt: at, completedAt: completedAt);
@@ -296,6 +328,8 @@ class TripSummaryModel {
         completedAt: _instant(json['completedAt']),
         gettingThere: TripStepDisplay.parse(json['gettingThere']),
         comingBack: TripStepDisplay.parse(json['comingBack']),
+        legCount: _legCountOf(json['legCount'], _legCitiesOf(json['legCities'])),
+        legCities: _legCitiesOf(json['legCities']),
       );
 }
 

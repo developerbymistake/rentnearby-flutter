@@ -12,8 +12,10 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
+import '../trip_strings_mca_a3.dart';
 import '../utils/trip_format.dart';
 import 'trip_day_actions.dart';
+import 'trip_leg_menu_sheet.dart';
 import 'trip_status.dart';
 
 class TripDayTile extends StatelessWidget {
@@ -47,10 +49,15 @@ class TripDayTile extends StatelessWidget {
             .where((w) => w.code == TripWarningCodes.closedDay)
             .map((w) => _closedText(plan, w))
             .toList();
+        final legIndex = plan.legIndexOf(day);
+        final leg = plan.legOf(day);
+        final travel = plan.isTravelDay(day);
+        final prev = travel ? plan.legAt(legIndex - 1)?.cityName : null;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _header(color, total, over, c.isEstimate(day), d.spots.isEmpty, plan.settings.dateOf(day)),
+            _header(color, total, over, c.isEstimate(day), d.spots.isEmpty, plan.settings.dateOf(day), travel),
+            if (prev != null) _travelLine(prev, leg.cityName),
             for (final text in closed)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
@@ -68,7 +75,11 @@ class TripDayTile extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 8),
-            if (d.spots.isEmpty && c.spotCount == 0 && !readOnly)
+            if (d.spots.isEmpty && leg.notReady && plan.isMultiCity)
+              _notReady(readOnly, legIndex)
+            else if (d.spots.isEmpty && plan.isMultiCity && plan.legSpotCount(legIndex) == 0 && !readOnly)
+              _addLegPlaces(legIndex)
+            else if (d.spots.isEmpty && c.spotCount == 0 && !readOnly)
               _addPlaces(c)
             else if (d.spots.isEmpty)
               const Text(
@@ -111,16 +122,59 @@ class TripDayTile extends StatelessWidget {
     );
   }
 
-  Widget _addPlaces(TripPlanController c) {
+  Widget _travelLine(String from, String to) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        TripStringsMcaA3.fromTo(from, to),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+      ),
+    );
+  }
+
+  Widget _notReady(bool readOnly, int legIndex) {
+    return Row(
+      children: [
+        const Icon(Iconsax.info_circle, size: 15, color: AppColors.textLight),
+        const SizedBox(width: 6),
+        const Expanded(
+          child: Text(
+            TripStringsMcaA3.noPlacesYet,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
+          ),
+        ),
+        if (!readOnly)
+          TextButton(
+            onPressed: () => TripLegMenuSheet.addPlaces(legIndex),
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44), padding: const EdgeInsets.symmetric(horizontal: 8)),
+            child: const Text(
+              TripStringsMcaA3.addPlaces,
+              maxLines: 1,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _addLegPlaces(int legIndex) => _addButton(() => TripLegMenuSheet.addPlaces(legIndex));
+
+  Widget _addPlaces(TripPlanController c) => _addButton(() {
+        final picked = c.picked;
+        final plan = c.plan.value;
+        if (picked == null || plan == null) return;
+        TripNavigation.openSpots(picked, tripId: c.trip.value?.id, existingIds: plan.spotIds);
+      });
+
+  Widget _addButton(VoidCallback onPressed) {
     return Align(
       alignment: Alignment.centerLeft,
       child: OutlinedButton.icon(
-        onPressed: () {
-          final picked = c.picked;
-          final plan = c.plan.value;
-          if (picked == null || plan == null) return;
-          TripNavigation.openSpots(picked, tripId: c.trip.value?.id, existingIds: plan.spotIds);
-        },
+        onPressed: onPressed,
         icon: const Icon(Iconsax.add_circle, size: 18, color: TripColors.accentDark),
         label: const Text(
           TripStringsA4.addPlaces,
@@ -267,10 +321,11 @@ class TripDayTile extends StatelessWidget {
     return name == null ? w.message : '$name is closed on that day';
   }
 
-  Widget _header(Color color, int total, bool over, bool estimate, bool free, DateTime? date) {
+  Widget _header(Color color, int total, bool over, bool estimate, bool free, DateTime? date, bool travel) {
     return Row(
       children: [
-        Expanded(
+        Flexible(
+          fit: travel ? FlexFit.loose : FlexFit.tight,
           child: Text(
             date == null ? 'Day $day' : 'Day $day · ${TripFormat.shortDate(date)}',
             maxLines: 1,
@@ -279,6 +334,31 @@ class TripDayTile extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
+        if (travel) ...[
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(999)),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Iconsax.routing, size: 12, color: TripColors.accentDark),
+                  SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      TripStringsMcaA3.travelDay,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+        ],
         if (estimate) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),

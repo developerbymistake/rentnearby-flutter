@@ -225,20 +225,22 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
       final d = c.plan.value?.dayAt(day);
       if (d == null) return const SizedBox.shrink();
       final date = c.dateOf(day);
+      final city = c.isMultiCity ? c.cityNameOf(day) : null;
+      final line = [?city, if (date != null) TripFormat.shortDate(date)].join(' · ');
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           _titleRow('Day $day', TripColors.dayColor(day), _dayLine(c, day, d.spots.length)),
-          if (date != null) ...[
+          if (line.isNotEmpty) ...[
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Iconsax.calendar_1, size: 13, color: AppColors.textLight),
+                Icon(city != null ? Iconsax.location : Iconsax.calendar_1, size: 13, color: AppColors.textLight),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    TripFormat.shortDate(date),
+                    line,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(

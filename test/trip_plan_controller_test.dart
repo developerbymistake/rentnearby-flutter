@@ -5,6 +5,7 @@ import 'package:bakhli/features/trip/models/trip_journey_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_result_model.dart';
+import 'package:bakhli/features/trip/trip_strings_mca_a1.dart';
 import 'package:get/get.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -40,7 +41,7 @@ TripModel _trip(TripPlan plan, {String status = TripStatuses.planned}) => TripMo
 
 const _lastStay = TripStayChoice(stayId: 's9', name: 'Deodar Homestay', pricePerNight: 1900);
 
-TripPlan _plan({DateTime? start}) => TripPlan(
+TripPlan _plan({DateTime? start}) => TripPlan.singleCity(
       cityKey: 1,
       cityName: 'Nainital',
       settings: TripSettings(startDate: start),
@@ -56,6 +57,8 @@ TripPlan _plan({DateTime? start}) => TripPlan(
     );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('night rule: the last day keeps its night', () {
     test('auto plan keeps the last-day stay and shortlist (#1, #34)', () {
       final c = TripPlanController();
@@ -65,7 +68,7 @@ void main() {
         osrmAvailable: true,
         dayLimitMinutes: 450,
       );
-      final out = c.applyAutoForTest(_plan(), withDays);
+      final out = c.applyAutoForTest(_plan(), 1, withDays);
       expect(out.days.last.stay?.stayId, 's9');
       expect(out.days.last.stayShortlist.single.stayId, 's8');
     });
@@ -209,7 +212,7 @@ void main() {
     TripPlanController withPlan({TripSteps steps = const TripSteps(), DateTime? start}) {
       final c = TripPlanController();
       addTearDown(c.onClose);
-      final p = TripPlan(
+      final p = TripPlan.singleCity(
         cityKey: 1,
         cityName: 'Nainital',
         centreLatitude: 29.4,
@@ -400,6 +403,108 @@ void main() {
       expect(c.canComplete, isFalse);
       c.plan.value = _plan();
       expect(c.canComplete, isTrue);
+    });
+  });
+
+  group('multi-city legs', () {
+    TripPlan twoLegs() => TripPlan.fromJson({
+          'version': 4,
+          'cityKey': 1,
+          'cityName': 'Haridwar',
+          'legs': [
+            {'index': 1, 'cityKey': 1, 'cityName': 'Haridwar', 'latitude': 29.95, 'longitude': 78.16},
+            {'index': 2, 'cityKey': 2, 'cityName': 'Badrinath', 'latitude': 30.74, 'longitude': 79.49},
+          ],
+          'settings': {'startDate': '2030-11-01'},
+          'days': [
+            {'day': 1, 'leg': 1, 'spots': [_spot('a').toJson()]},
+            {'day': 2, 'leg': 2, 'spots': []},
+            {'day': 3, 'leg': 2, 'spots': [_spot('b').toJson()]},
+          ],
+        });
+
+    TripPlanController withPlan(TripPlan p) {
+      final c = TripPlanController();
+      addTearDown(c.onClose);
+      c.plan.value = p;
+      c.trip.value = _trip(p);
+      return c;
+    }
+
+    test('applyAuto on one leg keeps the other legs and renumbers', () {
+      final c = TripPlanController();
+      final r = TripPlanResult(
+        days: [_resultDay(2, const ['b']), _resultDay(3, const ['c'])],
+        warnings: const [],
+        osrmAvailable: true,
+        dayLimitMinutes: 450,
+      );
+      final out = c.applyAutoForTest(twoLegs(), 2, r);
+      expect(out.legCount, 2);
+      expect(out.days.first.leg, 1);
+      expect(out.days.first.spots.single.id, 'a');
+      expect(out.days.where((d) => d.leg == 2).length, greaterThanOrEqualTo(1));
+      expect(out.days.map((d) => d.day).toList(), [for (var i = 1; i <= out.days.length; i++) i]);
+    });
+
+    test('renumber keeps one day per leg and clears a cross-leg sameAsDay', () {
+      final c = TripPlanController();
+      const stay = TripStayChoice(stayId: 's1', name: 'Hotel');
+      final days = [
+        const TripDay(day: 1, leg: 1, stay: stay),
+        const TripDay(day: 2, leg: 2, stay: TripStayChoice(stayId: 's1', name: 'Hotel', sameAsDay: 1)),
+      ];
+      final out = c.renumberForTest(days);
+      expect(out.map((d) => d.leg).toList(), [1, 2]);
+      expect(out.last.stay?.sameAsDay, isNull);
+    });
+
+    test('removeLeg without bookings shifts later legs', () {
+      final c = withPlan(twoLegs());
+      expect(c.canRemoveLeg(1), TripLegEditBlock.none);
+      expect(c.removeLegMode(1), TripLegRemoveMode.shift);
+      expect(c.removeLeg(1), TripLegEditBlock.none);
+      expect(c.plan.value!.legCount, 1);
+      expect(c.plan.value!.cityName, 'Badrinath');
+    });
+
+    test('the only leg cannot be removed and the edge legs cannot move', () {
+      final single = withPlan(_plan(start: DateTime(2030, 11, 1)));
+      expect(single.canRemoveLeg(1), TripLegEditBlock.onlyLeg);
+      final c = withPlan(twoLegs());
+      expect(c.canMoveLeg(1, true), TripLegEditBlock.edge);
+      expect(c.canMoveLeg(2, false), TripLegEditBlock.edge);
+      expect(c.canMoveLeg(1, false), TripLegEditBlock.none);
+    });
+
+    test('moveLeg swaps the day blocks and re-indexes', () {
+      final c = withPlan(twoLegs());
+      expect(c.moveLeg(1, false), TripLegEditBlock.none);
+      final p = c.plan.value!;
+      expect(p.legs.first.cityName, 'Badrinath');
+      expect(p.legs.last.cityName, 'Haridwar');
+      expect(p.legs.map((l) => l.index).toList(), [1, 2]);
+      expect(p.cityName, 'Badrinath');
+    });
+
+    test('setLegDays refuses zero and beyond the trip cap', () {
+      final c = withPlan(twoLegs());
+      expect(c.setLegDays(2, 0), isNot(TripLegEditBlock.none));
+      expect(c.setLegDays(2, 14), isNot(TripLegEditBlock.none));
+    });
+
+    test('moveSpot across legs does nothing', () {
+      final c = withPlan(twoLegs());
+      expect(c.moveSpot('a', 3), isFalse);
+      expect(c.plan.value!.days.first.spots.single.id, 'a');
+    });
+
+    test('default title lists the cities like the server', () {
+      expect(TripStringsMcaA1.defaultTitle(['Haridwar']), 'Haridwar trip');
+      expect(TripStringsMcaA1.defaultTitle(['Haridwar', 'Badrinath']), 'Haridwar, Badrinath trip');
+      final long = TripStringsMcaA1.defaultTitle(['A' * 30, 'B' * 30, 'C' * 30]);
+      expect(long.length, lessThanOrEqualTo(80));
+      expect(long.endsWith('more trip'), isTrue);
     });
   });
 }
