@@ -1,9 +1,13 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../config/app_routes.dart';
+import '../../utils/app_toast.dart';
+import '../taxi/ways/taxi_ways_navigation.dart';
 import 'controllers/trip_plan_controller.dart';
 import 'models/trip_city_model.dart';
 import 'models/trip_enquiry_model.dart';
+import 'models/trip_plan_model.dart';
+import 'trip_strings_steps_a1.dart';
 import 'widgets/trip_city_sheet.dart';
 
 class TripNavigation {
@@ -72,6 +76,30 @@ class TripNavigation {
       'isBlockedByMe': false,
     });
   }
+
+  static Future<void>? openWays(TripStepRole role) {
+    final c = TripPlanController.to;
+    final start = c.startFrom;
+    if (start == null) {
+      AppToast.warning(TripStringsStepsA1.pickStartFirst);
+      return null;
+    }
+    final city = c.cityPlace;
+    if (city == null) return null;
+    final going = role == TripStepRole.gettingThere;
+    final people = c.settings.peopleCount;
+    return TaxiWaysNavigation.openFeed(
+      from: going ? start.place : city,
+      to: going ? city : start.place,
+      date: c.stepDate(role),
+      people: people > 0 ? people : null,
+      fromTrip: true,
+      tripId: c.trip.value?.id,
+      tripRole: role.name,
+    );
+  }
+
+  static Future<void>? openJourney(String journeyId) => TaxiWaysNavigation.openSavedJourney(journeyId);
 
   static Future<void>? openSummary(String tripId) => Get.toNamed(AppRoutes.tripSummary, arguments: {'tripId': tripId});
 

@@ -54,6 +54,9 @@ class TripConstants {
   static const int problemNoteMax = 300;
   static const int reasonMax = 300;
   static const int problemQueueTries = 1;
+  static const double sameCityMeters = 5000;
+  static const int stepNudgeDays = 7;
+  static const int startFromNameMax = 80;
   static final RegExp upiPattern = RegExp(r'^[A-Za-z0-9._-]{2,50}@[A-Za-z]{2,64}$');
 }
 

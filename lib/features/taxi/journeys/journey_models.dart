@@ -322,6 +322,7 @@ class SavedJourney {
   final DateTime? lastRefreshedAt;
   final List<SavedJourneyLeg> legs;
   final DateTime? savedLocallyAt;
+  final String? tripId;
 
   const SavedJourney({
     required this.id,
@@ -342,6 +343,7 @@ class SavedJourney {
     this.lastRefreshedAt,
     this.legs = const [],
     this.savedLocallyAt,
+    this.tripId,
   });
 
   factory SavedJourney.fromJson(Map<String, dynamic> j) {
@@ -369,6 +371,7 @@ class SavedJourney {
       lastRefreshedAt: _time(j['lastRefreshedAt']),
       legs: legs,
       savedLocallyAt: _time(j['savedLocallyAt']),
+      tripId: _strN(j['tripId']),
     );
   }
 
@@ -391,9 +394,17 @@ class SavedJourney {
         'lastRefreshedAt': ?lastRefreshedAt?.toUtc().toIso8601String(),
         'legs': legs.map((l) => l.toJson(includeContacts: includeContacts)).toList(),
         'savedLocallyAt': ?savedLocallyAt?.toUtc().toIso8601String(),
+        'tripId': ?tripId,
       };
 
-  SavedJourney copyWith({JourneyStatus? status, List<SavedJourneyLeg>? legs, DateTime? savedLocallyAt}) => SavedJourney(
+  SavedJourney copyWith({
+    JourneyStatus? status,
+    List<SavedJourneyLeg>? legs,
+    DateTime? savedLocallyAt,
+    String? tripId,
+    bool clearTripId = false,
+  }) =>
+      SavedJourney(
         id: id,
         fromName: fromName,
         fromLat: fromLat,
@@ -412,6 +423,7 @@ class SavedJourney {
         lastRefreshedAt: lastRefreshedAt,
         legs: legs ?? this.legs,
         savedLocallyAt: savedLocallyAt ?? this.savedLocallyAt,
+        tripId: clearTripId ? null : (tripId ?? this.tripId),
       );
 
   SavedJourney withContacts(JourneyPhones phones) => copyWith(legs: legs.map((l) => l.withContacts(phones)).toList());

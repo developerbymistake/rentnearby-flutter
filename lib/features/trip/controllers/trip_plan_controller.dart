@@ -3,26 +3,33 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show listEquals, visibleForTesting;
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
+import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import '../../../config/app_tabs.dart';
+import '../../../controllers/location_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
+import '../../../models/place_result_model.dart';
 import '../../../services/api_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../stay/models/stay_nearby_model.dart';
 import '../../taxi/guest/taxi_browse_repository.dart';
+import '../../taxi/guest/traveller_city.dart';
+import '../../taxi/journeys/journey_models.dart';
 import '../../taxi/models/taxi_browse_item.dart';
 import '../../taxi/taxi_option_sets.dart';
 import '../data/trip_repository.dart';
 import '../data/trip_today_cache.dart';
 import '../models/trip_city_model.dart';
 import '../models/trip_enquiry_model.dart';
+import '../models/trip_journey_model.dart';
 import '../models/trip_model.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../utils/trip_step_rules.dart';
 import '../utils/trip_whatsapp_text.dart';
 import '../widgets/trip_status.dart';
 import 'my_trips_controller.dart';
@@ -71,6 +78,8 @@ class TripPlanController extends GetxController {
   int openPages = 0;
   int _enquirySeq = 0;
   final _legacySynced = <String>{};
+  bool _startFromTried = false;
+  final _pendingJourneyIds = <String>{};
 
   String? _title;
   String? _clientTripId;
@@ -123,14 +132,16 @@ class TripPlanController extends GetxController {
   int get priceSoFar {
     var sum = 0;
     for (final d in plan.value?.days ?? const <TripDay>[]) {
-      sum += d.taxi?.fare ?? 0;
+      final taxi = d.taxi;
+      if (taxi != null && !taxi.isSkipped) sum += taxi.fare ?? 0;
       final stay = d.stay;
       if (stay != null && !stay.isSkipped) sum += stay.pricePerNight ?? 0;
     }
     return sum;
   }
 
-  int get taxisChosen => (plan.value?.days ?? const <TripDay>[]).where((d) => d.taxi != null).length;
+  int get taxisChosen =>
+      (plan.value?.days ?? const <TripDay>[]).where((d) => d.taxi != null && !d.taxi!.isSkipped).length;
 
   bool get hasChoice => (plan.value?.days ?? const <TripDay>[]).any((d) => d.taxi != null || d.stay != null);
 
@@ -231,6 +242,345 @@ class TripPlanController extends GetxController {
   bool canEditDay(int day) => !isReadOnly && !isDayPast(day);
 
   bool get canComplete => trip.value != null && !isCompleted && (!hasDates || isRunning || isLastDayOrAfter);
+
+  TripSteps get steps => plan.value?.steps ?? const TripSteps();
+
+  TripStartFrom? get startFrom => steps.startFrom;
+
+  List<TripJourney> get journeys => trip.value?.journeys ?? const [];
+
+  TripStep stepOf(TripStepRole role) => steps.of(role);
+
+  DateTime? stepDate(TripStepRole role) => TripStepRules.expectedDate(role, stepOf(role), settings, dayCount);
+
+  ({double lat, double lon})? get _cityPoint {
+    final p = plan.value;
+    final lat = p?.centreLatitude ?? picked?.latitude ?? trip.value?.cityLatitude;
+    final lon = p?.centreLongitude ?? picked?.longitude ?? trip.value?.cityLongitude;
+    if (lat == null || lon == null || (lat == 0 && lon == 0)) return null;
+    return (lat: lat, lon: lon);
+  }
+
+  PlaceResult? get cityPlace {
+    final pt = _cityPoint;
+    if (pt == null || cityName.isEmpty) return null;
+    return PlaceResult(name: cityName, subtitle: '', latLng: LatLng(pt.lat, pt.lon));
+  }
+
+  bool get startsInsideCity {
+    final pt = _cityPoint;
+    return TripStepRules.insideCity(startFrom, pt?.lat, pt?.lon);
+  }
+
+  TripJourney? journeyFor(TripStepRole role) {
+    final s = stepOf(role);
+    if (!s.hasJourney) return null;
+    final j = trip.value?.journeyById(s.journeyId);
+    if (j == null) return null;
+    final expected = stepDate(role);
+    return j.withFlags(
+      role: role,
+      expectedDate: expected,
+      dateChanged: TripStepRules.dateChanged(expected, j.date),
+      startChanged: TripStepRules.startChanged(role, startFrom, j),
+    );
+  }
+
+  TripStepDisplay stepDisplay(TripStepRole role) => TripStepRules.display(stepOf(role), journeyFor(role));
+
+  bool stepNeedsAttention(TripStepRole role) {
+    if (isReadOnly) return false;
+    if (journeyFor(role)?.needsAttention ?? false) return true;
+    return role == TripStepRole.gettingThere &&
+        TripStepRules.needsNudge(stepOf(role), startFrom, settings.startDate, _today);
+  }
+
+  TripStepRole? get startChangedRole {
+    for (final r in TripStepRole.values) {
+      if (journeyFor(r)?.startChanged ?? false) return r;
+    }
+    return null;
+  }
+
+  TripStepDisplay get itineraryDisplay => spotCount > 0 ? TripStepDisplay.chosen : TripStepDisplay.notStarted;
+
+  bool _nightSorted(TripDay d) => d.stay != null || (primaryEnquiry(d.day)?.isBooked ?? false);
+
+  bool _taxiDaySorted(TripDay d) => d.taxi != null || bookedTaxiEnquiryFor(d.day) != null;
+
+  ({TripStepDisplay display, int sorted, int total, int? firstUnsorted}) get stayStep {
+    final days = plan.value?.days ?? const <TripDay>[];
+    var sorted = 0;
+    var skipped = 0;
+    var own = 0;
+    int? first;
+    for (final d in days) {
+      if (!_nightSorted(d)) {
+        first ??= d.day;
+        continue;
+      }
+      sorted++;
+      if (d.stay?.isSkipped ?? false) {
+        skipped++;
+      } else if (ownStayOf(d.day) != null) {
+        own++;
+      }
+    }
+    return (
+      display: TripStepRules.groupDisplay(total: days.length, sorted: sorted, skipped: skipped, own: own),
+      sorted: sorted,
+      total: days.length,
+      firstUnsorted: first,
+    );
+  }
+
+  ({TripStepDisplay display, int sorted, int total, int? firstUnsorted}) get taxiStep {
+    final days = plan.value?.days ?? const <TripDay>[];
+    var sorted = 0;
+    var skipped = 0;
+    var own = 0;
+    int? first;
+    for (final d in days) {
+      if (!_taxiDaySorted(d)) {
+        first ??= d.day;
+        continue;
+      }
+      sorted++;
+      if (d.taxi?.isSkipped ?? false) {
+        skipped++;
+      } else if (d.taxi?.isOwn ?? false) {
+        own++;
+      }
+    }
+    return (
+      display: TripStepRules.groupDisplay(total: days.length, sorted: sorted, skipped: skipped, own: own),
+      sorted: sorted,
+      total: days.length,
+      firstUnsorted: first,
+    );
+  }
+
+  bool get stayNeedsAttention =>
+      !isReadOnly && (plan.value?.days ?? const <TripDay>[]).any((d) => primaryEnquiry(d.day)?.isRed ?? false);
+
+  bool get taxiNeedsAttention =>
+      !isReadOnly && (plan.value?.days ?? const <TripDay>[]).any((d) => primaryTaxiEnquiry(d.day)?.isRed ?? false);
+
+  TripStepDisplay displayOf(TripStepKind k) => switch (k) {
+        TripStepKind.itinerary => itineraryDisplay,
+        TripStepKind.gettingThere => stepDisplay(TripStepRole.gettingThere),
+        TripStepKind.stay => stayStep.display,
+        TripStepKind.localTaxi => taxiStep.display,
+        TripStepKind.comingBack => stepDisplay(TripStepRole.comingBack),
+      };
+
+  bool attentionOf(TripStepKind k) => switch (k) {
+        TripStepKind.itinerary => false,
+        TripStepKind.gettingThere => stepNeedsAttention(TripStepRole.gettingThere),
+        TripStepKind.stay => stayNeedsAttention,
+        TripStepKind.localTaxi => taxiNeedsAttention,
+        TripStepKind.comingBack => stepNeedsAttention(TripStepRole.comingBack),
+      };
+
+  int get stepsSorted => TripStepRules.sortedCount([for (final k in TripStepKind.values) displayOf(k)]);
+
+  TripJourney? get journeyToday {
+    if (isCompleted) return null;
+    for (final r in TripStepRole.values) {
+      final j = journeyFor(r);
+      if (j != null && _sameDate(j.date, _today)) return j;
+    }
+    return null;
+  }
+
+  static TripStartFrom? _cleanStart(TripStartFrom? v) {
+    if (v == null) return null;
+    var name = v.name.trim();
+    if (name.isEmpty) return null;
+    if (name.length > TripConstants.startFromNameMax) name = name.substring(0, TripConstants.startFromNameMax).trim();
+    return TripStartFrom(name: name, lat: v.lat, lon: v.lon);
+  }
+
+  void _setSteps(TripSteps next) {
+    final p = plan.value;
+    if (p == null) return;
+    final pt = _cityPoint;
+    plan.value = p.copyWith(steps: TripStepRules.withAutoNotNeeded(next, pt?.lat, pt?.lon));
+    scheduleSave();
+  }
+
+  void _dropLocalJourney(String? id) {
+    if (id == null) return;
+    _pendingJourneyIds.remove(id);
+    final t = trip.value;
+    if (t == null || !t.journeys.any((j) => j.id == id)) return;
+    trip.value = t.copyWith(journeys: t.journeys.where((j) => j.id != id).toList());
+  }
+
+  Future<void> ensureStartFrom() async {
+    final p = plan.value;
+    if (p == null || _startFromTried || p.steps.startFrom != null) return;
+    if (isReadOnly || offline.value || tripGone.value || plannerOff.value || needsUpdate.value) return;
+    if (!Get.isRegistered<LocationController>()) return;
+    final city = travellerCity(Get.find<LocationController>());
+    final start = city == null
+        ? null
+        : _cleanStart(TripStartFrom(
+            name: city.place.name,
+            lat: city.place.latLng.latitude,
+            lon: city.place.latLng.longitude,
+          ));
+    if (start == null) return;
+    _startFromTried = true;
+    _setSteps(p.steps.copyWith(startFrom: start));
+  }
+
+  Future<bool> setStartFrom(TripStartFrom? v) async {
+    final p = plan.value;
+    if (p == null || isReadOnly) return false;
+    final next = _cleanStart(v);
+    final old = p.steps.startFrom;
+    if (next == null ? old == null : next.sameAs(old)) return false;
+    _startFromTried = true;
+    _setSteps(next == null ? p.steps.copyWith(clearStartFrom: true) : p.steps.copyWith(startFrom: next));
+    return startChangedRole != null;
+  }
+
+  void linkJourney(TripStepRole role, SavedJourney j) {
+    final p = plan.value;
+    if (p == null || isReadOnly || j.id.isEmpty) return;
+    var next = p.steps;
+    if (next.of(role.other).journeyId == j.id) next = next.withStep(role.other, const TripStep());
+    final cur = next.of(role);
+    final oldId = cur.journeyId;
+    final keepBooked = cur.status == TripStepStatus.booked && oldId == j.id;
+    final def = TripStepRules.expectedDate(role, const TripStep(), settings, dayCount);
+    final date = def != null && TripStepRules.dateChanged(def, j.date) ? j.date : null;
+    next = next.withStep(
+      role,
+      TripStep(status: keepBooked ? TripStepStatus.booked : TripStepStatus.chosen, journeyId: j.id, date: date),
+    );
+    if (oldId != null && oldId != j.id) _dropLocalJourney(oldId);
+    final t = trip.value;
+    if (t != null) {
+      final local = TripJourney.fromSaved(j, role, expectedDate: date ?? def, startFrom: next.startFrom);
+      trip.value = t.copyWith(journeys: [
+        for (final x in t.journeys)
+          if (x.id != j.id) x,
+        local,
+      ]);
+    }
+    _pendingJourneyIds.add(j.id);
+    _setSteps(next);
+  }
+
+  void refreshLinkedJourney(SavedJourney j) {
+    final t = trip.value;
+    if (t == null || plan.value == null) return;
+    for (final r in TripStepRole.values) {
+      if (stepOf(r).journeyId != j.id) continue;
+      final local = TripJourney.fromSaved(j, r, expectedDate: stepDate(r), startFrom: startFrom);
+      trip.value = t.copyWith(journeys: [
+        for (final x in t.journeys)
+          if (x.id != j.id) x,
+        local,
+      ]);
+      return;
+    }
+  }
+
+  void unlinkJourney(TripStepRole role) {
+    final p = plan.value;
+    if (p == null) return;
+    final cur = p.steps.of(role);
+    if (cur.journeyId == null && !cur.status.linksJourney) return;
+    _dropLocalJourney(cur.journeyId);
+    _setSteps(p.steps.withStep(role, const TripStep()));
+  }
+
+  void markStepBooked(TripStepRole role) {
+    final p = plan.value;
+    final cur = p?.steps.of(role);
+    if (p == null || cur == null || isReadOnly || cur.status != TripStepStatus.chosen || !cur.hasJourney) return;
+    _setSteps(p.steps.withStep(role, cur.copyWith(status: TripStepStatus.booked)));
+  }
+
+  void unmarkStepBooked(TripStepRole role) {
+    final p = plan.value;
+    final cur = p?.steps.of(role);
+    if (p == null || cur == null || isReadOnly || cur.status != TripStepStatus.booked) return;
+    _setSteps(p.steps.withStep(role, cur.copyWith(status: TripStepStatus.chosen)));
+  }
+
+  void markStepOwn(TripStepRole role, {String? note}) {
+    final p = plan.value;
+    if (p == null || isReadOnly) return;
+    var n = note?.trim();
+    if (n != null && n.length > TripConstants.noteMax) n = n.substring(0, TripConstants.noteMax).trim();
+    _dropLocalJourney(p.steps.of(role).journeyId);
+    _setSteps(p.steps.withStep(role, TripStep(status: TripStepStatus.own, note: n == null || n.isEmpty ? null : n)));
+  }
+
+  void skipStep(TripStepRole role) {
+    final p = plan.value;
+    if (p == null || isReadOnly) return;
+    _dropLocalJourney(p.steps.of(role).journeyId);
+    _setSteps(p.steps.withStep(role, const TripStep(status: TripStepStatus.skipped)));
+  }
+
+  void resetStep(TripStepRole role) {
+    final p = plan.value;
+    if (p == null || isReadOnly) return;
+    final s = p.steps.of(role).status;
+    if (s != TripStepStatus.own && s != TripStepStatus.skipped && s != TripStepStatus.notNeeded) return;
+    _setSteps(p.steps.withStep(role, const TripStep()));
+  }
+
+  void reconcileSteps() {
+    final p = plan.value;
+    final t = trip.value;
+    if (p == null || t == null || offline.value || !t.journeysKnown || isCompleted) return;
+    var next = p.steps;
+    var changed = false;
+    for (final r in TripStepRole.values) {
+      final s = next.of(r);
+      if (s.status.linksJourney && t.journeyById(s.journeyId) == null) {
+        next = next.withStep(r, const TripStep());
+        changed = true;
+      }
+    }
+    if (changed) _setSteps(next);
+  }
+
+  List<TripJourney> _mergedJourneys(TripModel server) {
+    final local = trip.value?.journeys ?? const <TripJourney>[];
+    if (!server.journeysKnown) return local;
+    final ids = {for (final j in server.journeys) j.id};
+    return [
+      ...server.journeys,
+      for (final j in local)
+        if (_pendingJourneyIds.contains(j.id) && !ids.contains(j.id)) j,
+    ];
+  }
+
+  @visibleForTesting
+  void adoptServerStepsForTest(TripPlan sent, TripModel saved) => _adoptServerSteps(sent, saved);
+
+  void _adoptServerSteps(TripPlan sent, TripModel saved) {
+    final local = plan.value;
+    if (local == null || !saved.stepsKnown) return;
+    var next = local.steps;
+    var changed = false;
+    for (final r in TripStepRole.values) {
+      final asSent = sent.steps.of(r);
+      final server = saved.plan.steps.of(r);
+      if (asSent.journeyId != null && server.journeyId != asSent.journeyId && next.of(r).journeyId == asSent.journeyId) {
+        next = next.withStep(r, server);
+        changed = true;
+      }
+    }
+    if (changed) plan.value = local.copyWith(steps: next);
+  }
 
   TripEnquiryModel? todayStay(int day) {
     final e = primaryEnquiry(day);
@@ -517,6 +867,8 @@ class TripPlanController extends GetxController {
     confirmLinks.clear();
     offline.value = false;
     picked = null;
+    _startFromTried = false;
+    _pendingJourneyIds.clear();
     if (Get.isRegistered<TripSupplyController>()) Get.delete<TripSupplyController>(force: true);
   }
 
@@ -705,6 +1057,7 @@ class TripPlanController extends GetxController {
       checkSupply();
       _adoptDistrict(t);
       reconcilePlan();
+      reconcileSteps();
       unawaited(syncLegacyTaxiBookings());
       unawaited(flushProblemQueue());
       await _runRecalculate();
@@ -1316,7 +1669,16 @@ class TripPlanController extends GetxController {
       confirmed.sort(_newestFirst);
       open.sort(_newestFirst);
     }
-    plan.value = p.copyWith(settings: next);
+    final daysCut = redo && next.maxDays != null && next.maxDays! < dayCount;
+    var steps = p.steps;
+    if (next.startDateIso != old.startDateIso || daysCut) {
+      steps = steps
+          .withStep(TripStepRole.gettingThere, steps.gettingThere.copyWith(clearDate: true))
+          .withStep(TripStepRole.comingBack, steps.comingBack.copyWith(clearDate: true));
+    } else if (redo) {
+      steps = steps.withStep(TripStepRole.comingBack, steps.comingBack.copyWith(clearDate: true));
+    }
+    plan.value = p.copyWith(settings: next, steps: steps);
     if (redo) {
       unawaited(autoPlan());
     } else if (replan) {
@@ -1747,10 +2109,15 @@ class TripPlanController extends GetxController {
       if (flow != _flow || seq != _enquirySeq) return;
       TripTodayCache.saveTrip(t);
       enquiryList.assignAll(t.enquiries);
-      trip.value = (trip.value ?? t).copyWith(enquiries: t.enquiries);
+      trip.value = (trip.value ?? t).copyWith(
+        enquiries: t.enquiries,
+        journeys: _mergedJourneys(t),
+        journeysKnown: t.journeysKnown || (trip.value?.journeysKnown ?? false),
+      );
       enquiriesFailed.value = false;
       offline.value = false;
       reconcilePlan();
+      reconcileSteps();
       unawaited(flushProblemQueue());
     } catch (e) {
       if (flow != _flow || seq != _enquirySeq) return;
@@ -2007,6 +2374,51 @@ class TripPlanController extends GetxController {
     if (plan.value?.dayAt(day)?.stay?.isSkipped ?? false) clearStay(day);
   }
 
+  bool _canSkipTaxiDay(TripDay d) =>
+      canEditDay(d.day) && !(d.taxi?.isBooked ?? false) && bookedTaxiEnquiryFor(d.day) == null;
+
+  void setSkippedTaxiDay(int day) {
+    final p = plan.value;
+    final d = p?.dayAt(day);
+    if (p == null || d == null || !_canSkipTaxiDay(d)) return;
+    _applyChoice([
+      for (final x in p.days)
+        x.day == day ? x.copyWith(taxi: const TripTaxiChoice.skippedDay(), taxiShortlist: const []) : x,
+    ]);
+  }
+
+  void clearSkippedTaxiDay(int day) {
+    if (plan.value?.dayAt(day)?.taxi?.isSkipped ?? false) clearTaxi(day);
+  }
+
+  void skipRemainingNights() {
+    final p = plan.value;
+    if (p == null || isReadOnly) return;
+    final targets = {
+      for (final d in p.days)
+        if (canEditDay(d.day) && !_nightSorted(d) && !enquiriesForNight(d.day).any((e) => e.isOpen)) d.day,
+    };
+    if (targets.isEmpty) return;
+    _applyChoice([
+      for (final x in p.days)
+        targets.contains(x.day) ? x.copyWith(stay: const TripStayChoice.skippedNight(), stayShortlist: const []) : x,
+    ]);
+  }
+
+  void skipRemainingTaxiDays() {
+    final p = plan.value;
+    if (p == null || isReadOnly) return;
+    final targets = {
+      for (final d in p.days)
+        if (_canSkipTaxiDay(d) && !_taxiDaySorted(d) && !taxiEnquiriesForDay(d.day).any((e) => e.isOpen)) d.day,
+    };
+    if (targets.isEmpty) return;
+    _applyChoice([
+      for (final x in p.days)
+        targets.contains(x.day) ? x.copyWith(taxi: const TripTaxiChoice.skippedDay(), taxiShortlist: const []) : x,
+    ]);
+  }
+
   List<StayNearbyModel>? shortlistAsModels(int day) {
     final items = plan.value?.dayAt(day)?.stayShortlist ?? const <TripStayShortlistItem>[];
     if (items.isEmpty) return null;
@@ -2103,10 +2515,21 @@ class TripPlanController extends GetxController {
           : await _update(current.id, _title, _statusFor(markPlanned, p), p);
       if (flow != _flow) return false;
       final datesMoved = current != null && (current.startDate != saved.startDate || current.endDate != saved.endDate);
-      trip.value = saved.copyWith(enquiries: enquiryList.toList());
+      if (saved.stepsKnown) {
+        _pendingJourneyIds.removeAll([?p.steps.gettingThere.journeyId, ?p.steps.comingBack.journeyId]);
+      }
+      trip.value = saved.copyWith(
+        enquiries: enquiryList.toList(),
+        journeys: _mergedJourneys(saved),
+        journeysKnown: saved.journeysKnown || (current?.journeysKnown ?? false),
+      );
+      _adoptServerSteps(p, saved);
       _adoptDistrict(saved);
       saveFailed.value = false;
       lastSavedAt.value = DateTime.now();
+      final latest = plan.value;
+      final cached = trip.value;
+      if (latest != null && cached != null) TripTodayCache.savePlan(cached, latest);
       if (datesMoved && enquiryList.isNotEmpty) unawaited(refreshEnquiries());
       return true;
     } catch (e) {

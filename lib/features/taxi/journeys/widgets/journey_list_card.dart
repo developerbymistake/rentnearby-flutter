@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../config/app_colors.dart';
+import '../../../trip/trip_colors.dart';
+import '../../../trip/trip_strings_steps_a3.dart';
 import '../../taxi_option_sets.dart';
 import '../../ways/taxi_ways_strings.dart';
 import '../journey_models.dart';
@@ -112,6 +114,20 @@ class JourneyListCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 12, color: AppColors.textLight),
                       ),
+                      if (j.tripId != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(999)),
+                            child: const Text(
+                              TripStringsStepsA3.inYourTrip,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: TripColors.accentDark),
+                            ),
+                          ),
+                        ),
                     ]),
                   ),
                   const SizedBox(width: 8),

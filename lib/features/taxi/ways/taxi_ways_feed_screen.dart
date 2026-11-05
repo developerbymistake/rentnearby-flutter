@@ -4,7 +4,11 @@ import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/module_palette.dart';
 import '../../../models/place_result_model.dart';
+import '../../../config/app_insets.dart';
 import '../../../widgets/empty_state_view.dart';
+import '../../trip/models/trip_plan_model.dart';
+import '../../trip/trip_strings_steps_a3.dart';
+import '../../trip/widgets/trip_step_skip_sheet.dart';
 import '../../trip/widgets/trip_shimmers.dart';
 import '../journeys/journey_models.dart';
 import '../journeys/journeys_controller.dart';
@@ -42,7 +46,9 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     if (args is Map && args['from'] is PlaceResult && args['to'] is PlaceResult) {
       final date = args['date'];
       final people = args['people'];
-      _fromTrip = args['fromTrip'] == true;
+      final tripId = args['tripId'];
+      final tripRole = args['tripRole'];
+      _fromTrip = args['fromTrip'] == true || tripId is String;
       _c = Get.put(
         TaxiWaysController(
           from: args['from'] as PlaceResult,
@@ -50,6 +56,8 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
           fromMyLocation: args['fromMyLocation'] == true,
           date: date is DateTime ? date : null,
           people: people is int ? people : null,
+          tripId: tripId is String ? tripId : null,
+          tripRole: tripRole is String ? tripRole : null,
         ),
         tag: _tag,
       );
@@ -88,6 +96,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     }
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
+      bottomNavigationBar: c.forTrip ? _arrangeBar(context, c) : null,
       body: RefreshIndicator(
         color: TaxiColors.accent,
         onRefresh: c.pullRefresh,
@@ -97,6 +106,35 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
             SliverToBoxAdapter(child: _header(context, c)),
             SliverToBoxAdapter(child: _centred(Obx(() => _body(context, c)))),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _arrangeBar(BuildContext context, TaxiWaysController c) {
+    final kind = c.tripRole == TripStepRole.comingBack.name ? TripStepKind.comingBack : TripStepKind.gettingThere;
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.fromLTRB(16, 6, 16, 6 + AppInsets.bottomViewPadding(context)),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _maxWidth),
+          child: TextButton(
+            onPressed: () async {
+              if (await TripStepSkipSheet.show(context, step: kind)) c.backToPlan();
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: TaxiColors.accentDark,
+              minimumSize: const Size(double.infinity, 48),
+            ),
+            child: const Text(
+              TripStringsStepsA3.arrangeMyself,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+          ),
         ),
       ),
     );

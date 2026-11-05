@@ -66,6 +66,81 @@ void main() {
     });
   });
 
+  group('trip steps JSON', () {
+    test('steps key is always written as an object', () {
+      const plan = TripPlan(cityKey: 1, cityName: 'Nainital');
+      final json = plan.toJson();
+      expect(json['steps'], isA<Map<String, dynamic>>());
+      expect((json['steps'] as Map).isEmpty, isTrue);
+    });
+
+    test('steps round-trip with start, journey, note and date', () {
+      final plan = TripPlan(
+        cityKey: 1,
+        cityName: 'Nainital',
+        steps: TripSteps(
+          startFrom: const TripStartFrom(name: 'Delhi', lat: 28.61, lon: 77.21),
+          gettingThere: TripStep(status: TripStepStatus.chosen, journeyId: 'j1', date: DateTime(2026, 11, 1)),
+          comingBack: const TripStep(status: TripStepStatus.own, note: 'Own car, leaving 6 am'),
+        ),
+      );
+      final steps = plan.toJson()['steps'] as Map<String, dynamic>;
+      expect((steps['gettingThere'] as Map)['date'], '2026-11-01');
+      final back = TripPlan.fromJson(plan.toJson()).steps;
+      expect(back.startFrom?.name, 'Delhi');
+      expect(back.startFrom?.lat, 28.61);
+      expect(back.gettingThere.status, TripStepStatus.chosen);
+      expect(back.gettingThere.journeyId, 'j1');
+      expect(back.gettingThere.date, DateTime(2026, 11, 1));
+      expect(back.comingBack.status, TripStepStatus.own);
+      expect(back.comingBack.note, 'Own car, leaving 6 am');
+    });
+
+    test('journeyId is never written empty and reads empty as null', () {
+      const s = TripStep(status: TripStepStatus.chosen, journeyId: '');
+      expect(s.toJson().containsKey('journeyId'), isFalse);
+      const none = TripStep(status: TripStepStatus.skipped);
+      expect(none.toJson().containsKey('journeyId'), isFalse);
+      final read = TripStep.fromJson({'status': 'chosen', 'journeyId': ''});
+      expect(read.journeyId, isNull);
+      expect(read.hasJourney, isFalse);
+    });
+
+    test('an old plan without steps reads defaults and an unknown status reads not started', () {
+      final p = TripPlan.fromJson({'cityKey': 1, 'cityName': 'Nainital'});
+      expect(p.steps.startFrom, isNull);
+      expect(p.steps.gettingThere.status, TripStepStatus.notStarted);
+      expect(TripStep.fromJson({'status': 'weird'}).status, TripStepStatus.notStarted);
+    });
+
+    test('a default step is omitted, a set one is written', () {
+      const s = TripSteps(comingBack: TripStep(status: TripStepStatus.skipped));
+      final json = s.toJson();
+      expect(json.containsKey('gettingThere'), isFalse);
+      expect((json['comingBack'] as Map)['status'], 'skipped');
+    });
+  });
+
+  group('skipped taxi day', () {
+    test('no taxi this day writes skipped and no taxiId', () {
+      const t = TripTaxiChoice.skippedDay();
+      final json = t.toJson();
+      expect(json['skipped'], isTrue);
+      expect(json.containsKey('taxiId'), isFalse);
+      expect(json.values.contains(''), isFalse);
+      final back = TripTaxiChoice.fromJson(json);
+      expect(back.isSkipped, isTrue);
+      expect(back.isOwn, isFalse);
+      expect(back.fare, isNull);
+    });
+
+    test('skipped survives copyWith and a day round trip', () {
+      final day = TripDay(day: 1, taxi: const TripTaxiChoice.skippedDay().copyWith());
+      final back = TripDay.fromJson(day.toJson());
+      expect(back.taxi?.isSkipped, isTrue);
+    });
+  });
+
   group('settings', () {
     test('check-out is the morning after the last day', () {
       final s = TripSettings(startDate: DateTime(2026, 11, 1));

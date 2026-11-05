@@ -1,7 +1,180 @@
+import 'package:maplibre_gl/maplibre_gl.dart';
+import '../../../models/place_result_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../trip_strings_steps_a1.dart';
 import 'trip_enquiry_model.dart';
 import 'trip_spot_model.dart';
+
+enum TripStepRole {
+  gettingThere,
+  comingBack;
+
+  static TripStepRole? parse(Object? wire) => switch (wire) {
+        'gettingThere' => gettingThere,
+        'comingBack' => comingBack,
+        _ => null,
+      };
+
+  TripStepRole get other => this == gettingThere ? comingBack : gettingThere;
+}
+
+enum TripStepStatus {
+  notStarted,
+  chosen,
+  booked,
+  own,
+  skipped,
+  notNeeded;
+
+  static TripStepStatus parse(Object? wire) {
+    for (final s in values) {
+      if (s.name == wire) return s;
+    }
+    return notStarted;
+  }
+
+  bool get linksJourney => this == chosen || this == booked;
+}
+
+enum TripStepDisplay {
+  notStarted,
+  asked,
+  chosen,
+  booked,
+  own,
+  skipped,
+  notNeeded;
+
+  static TripStepDisplay? parse(Object? wire) {
+    for (final s in values) {
+      if (s.name == wire) return s;
+    }
+    return null;
+  }
+}
+
+enum TripStepKind { itinerary, gettingThere, stay, localTaxi, comingBack }
+
+String _isoDay(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+DateTime? _parseDay(Object? raw) {
+  final d = raw is String ? DateTime.tryParse(raw) : null;
+  return d == null ? null : DateTime(d.year, d.month, d.day);
+}
+
+class TripStartFrom {
+  final String name;
+  final double lat;
+  final double lon;
+
+  const TripStartFrom({required this.name, required this.lat, required this.lon});
+
+  PlaceResult get place => PlaceResult(name: name, subtitle: '', latLng: LatLng(lat, lon));
+
+  bool sameAs(TripStartFrom? o) => o != null && o.name == name && o.lat == lat && o.lon == lon;
+
+  static TripStartFrom? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final name = (raw['name'] as String?)?.trim() ?? '';
+    final lat = (raw['lat'] as num?)?.toDouble();
+    final lon = (raw['lon'] as num?)?.toDouble();
+    if (name.isEmpty || lat == null || lon == null) return null;
+    return TripStartFrom(name: name, lat: lat, lon: lon);
+  }
+
+  factory TripStartFrom.fromJson(Map<String, dynamic> json) =>
+      tryParse(json) ?? const TripStartFrom(name: '', lat: 0, lon: 0);
+
+  Map<String, dynamic> toJson() => {'name': name, 'lat': lat, 'lon': lon};
+}
+
+class TripStep {
+  final TripStepStatus status;
+  final String? journeyId;
+  final String? note;
+  final DateTime? date;
+
+  const TripStep({this.status = TripStepStatus.notStarted, this.journeyId, this.note, this.date});
+
+  bool get hasJourney => status.linksJourney && journeyId != null && journeyId!.isNotEmpty;
+
+  bool get isDefault => status == TripStepStatus.notStarted && journeyId == null && note == null && date == null;
+
+  TripStep copyWith({
+    TripStepStatus? status,
+    String? journeyId,
+    String? note,
+    DateTime? date,
+    bool clearJourney = false,
+    bool clearNote = false,
+    bool clearDate = false,
+  }) =>
+      TripStep(
+        status: status ?? this.status,
+        journeyId: clearJourney ? null : (journeyId ?? this.journeyId),
+        note: clearNote ? null : (note ?? this.note),
+        date: clearDate ? null : (date ?? this.date),
+      );
+
+  factory TripStep.fromJson(Map<String, dynamic> json) {
+    final id = json['journeyId'];
+    final note = (json['note'] as String?)?.trim();
+    return TripStep(
+      status: TripStepStatus.parse(json['status']),
+      journeyId: id is String && id.isNotEmpty ? id : null,
+      note: note == null || note.isEmpty ? null : note,
+      date: _parseDay(json['date']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'status': status.name,
+        if (journeyId != null && journeyId!.isNotEmpty) 'journeyId': journeyId,
+        'note': ?note,
+        if (date != null) 'date': _isoDay(date!),
+      };
+}
+
+class TripSteps {
+  final TripStartFrom? startFrom;
+  final TripStep gettingThere;
+  final TripStep comingBack;
+
+  const TripSteps({this.startFrom, this.gettingThere = const TripStep(), this.comingBack = const TripStep()});
+
+  TripStep of(TripStepRole r) => r == TripStepRole.gettingThere ? gettingThere : comingBack;
+
+  TripSteps withStep(TripStepRole r, TripStep s) => TripSteps(
+        startFrom: startFrom,
+        gettingThere: r == TripStepRole.gettingThere ? s : gettingThere,
+        comingBack: r == TripStepRole.comingBack ? s : comingBack,
+      );
+
+  TripSteps copyWith({TripStartFrom? startFrom, bool clearStartFrom = false}) => TripSteps(
+        startFrom: clearStartFrom ? null : (startFrom ?? this.startFrom),
+        gettingThere: gettingThere,
+        comingBack: comingBack,
+      );
+
+  factory TripSteps.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const TripSteps();
+    final g = json['gettingThere'];
+    final c = json['comingBack'];
+    return TripSteps(
+      startFrom: TripStartFrom.tryParse(json['startFrom']),
+      gettingThere: g is Map<String, dynamic> ? TripStep.fromJson(g) : const TripStep(),
+      comingBack: c is Map<String, dynamic> ? TripStep.fromJson(c) : const TripStep(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'startFrom': ?startFrom?.toJson(),
+        if (!gettingThere.isDefault) 'gettingThere': gettingThere.toJson(),
+        if (!comingBack.isDefault) 'comingBack': comingBack.toJson(),
+      };
+}
 
 class TripSpotRef {
   final String id;
@@ -136,6 +309,7 @@ class TripTaxiChoice {
   final String? note;
   final bool wholeTrip;
   final TripTaxiBooking? booking;
+  final bool skipped;
 
   const TripTaxiChoice({
     required this.taxiId,
@@ -147,9 +321,24 @@ class TripTaxiChoice {
     this.note,
     this.wholeTrip = false,
     this.booking,
+    this.skipped = false,
   });
 
+  const TripTaxiChoice.skippedDay()
+      : taxiId = '',
+        name = TripStringsStepsA1.noTaxiThisDay,
+        fare = null,
+        vehicleTypeName = null,
+        isOwn = false,
+        ownPhone = null,
+        note = null,
+        wholeTrip = false,
+        booking = null,
+        skipped = true;
+
   bool get isBooked => booking != null;
+
+  bool get isSkipped => skipped;
 
   factory TripTaxiChoice.own({required String name, String? phone, String? note, int? fare}) => TripTaxiChoice(
         taxiId: '',
@@ -170,9 +359,12 @@ class TripTaxiChoice {
         note: note,
         wholeTrip: wholeTrip,
         booking: clearBooking ? null : (booking ?? this.booking),
+        skipped: skipped,
       );
 
-  factory TripTaxiChoice.fromJson(Map<String, dynamic> json) => TripTaxiChoice(
+  factory TripTaxiChoice.fromJson(Map<String, dynamic> json) => json['skipped'] == true
+      ? const TripTaxiChoice.skippedDay()
+      : TripTaxiChoice(
         taxiId: json['taxiId'] as String? ?? '',
         name: json['name'] as String? ?? '',
         fare: (json['fare'] as num?)?.toInt(),
@@ -186,17 +378,19 @@ class TripTaxiChoice {
             : null,
       );
 
-  Map<String, dynamic> toJson() => {
-        if (!isOwn) 'taxiId': taxiId,
-        'name': name,
-        'fare': ?fare,
-        'vehicleTypeName': ?vehicleTypeName,
-        if (isOwn) 'isOwn': true,
-        'ownPhone': ?ownPhone,
-        'note': ?note,
-        if (wholeTrip) 'wholeTrip': true,
-        'booking': ?booking?.toJson(),
-      };
+  Map<String, dynamic> toJson() => skipped
+      ? {'skipped': true, 'name': name}
+      : {
+          if (!isOwn) 'taxiId': taxiId,
+          'name': name,
+          'fare': ?fare,
+          'vehicleTypeName': ?vehicleTypeName,
+          if (isOwn) 'isOwn': true,
+          'ownPhone': ?ownPhone,
+          'note': ?note,
+          if (wholeTrip) 'wholeTrip': true,
+          'booking': ?booking?.toJson(),
+        };
 }
 
 class TripStayChoice {
@@ -619,6 +813,7 @@ class TripPlan {
   final double? centreLongitude;
   final List<TripDay> days;
   final TripSettings settings;
+  final TripSteps steps;
 
   const TripPlan({
     this.version = TripConstants.planVersion,
@@ -629,6 +824,7 @@ class TripPlan {
     this.centreLongitude,
     this.days = const [],
     this.settings = const TripSettings(),
+    this.steps = const TripSteps(),
   });
 
   List<TripSpotRef> get allSpots => [for (final d in days) ...d.spots];
@@ -666,6 +862,7 @@ class TripPlan {
     double? centreLongitude,
     List<TripDay>? days,
     TripSettings? settings,
+    TripSteps? steps,
   }) =>
       TripPlan(
         version: version,
@@ -676,6 +873,7 @@ class TripPlan {
         centreLongitude: centreLongitude ?? this.centreLongitude,
         days: days ?? this.days,
         settings: settings ?? this.settings,
+        steps: steps ?? this.steps,
       );
 
   factory TripPlan.fromJson(Map<String, dynamic> json) => TripPlan(
@@ -691,6 +889,7 @@ class TripPlan {
         settings: json['settings'] is Map<String, dynamic>
             ? TripSettings.fromJson(json['settings'] as Map<String, dynamic>)
             : const TripSettings(),
+        steps: TripSteps.fromJson(json['steps'] is Map<String, dynamic> ? json['steps'] as Map<String, dynamic> : null),
       );
 
   Map<String, dynamic> toJson() => {
@@ -702,5 +901,6 @@ class TripPlan {
         'centreLongitude': ?centreLongitude,
         'days': days.map((d) => d.toJson()).toList(),
         'settings': settings.toJson(),
+        'steps': steps.toJson(),
       };
 }

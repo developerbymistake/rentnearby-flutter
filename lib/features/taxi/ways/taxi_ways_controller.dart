@@ -1,7 +1,12 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import '../../../config/app_routes.dart';
 import '../../../models/place_result_model.dart';
+import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../../trip/controllers/trip_plan_controller.dart';
+import '../../trip/models/trip_plan_model.dart';
+import '../../trip/trip_strings_steps_a1.dart';
 import '../journeys/journey_models.dart';
 import '../journeys/journeys_controller.dart';
 import 'ask_drivers_sheet.dart';
@@ -11,7 +16,7 @@ import 'taxi_ways_repository.dart';
 
 class TaxiWaysController extends GetxController {
   static const maxPeople = 12;
-  static const maxDaysAhead = 90;
+  static const maxDaysAhead = 365;
 
   TaxiWaysController({
     required PlaceResult from,
@@ -19,6 +24,8 @@ class TaxiWaysController extends GetxController {
     bool fromMyLocation = false,
     DateTime? date,
     int? people,
+    this.tripId,
+    this.tripRole,
   })  : from = Rx<PlaceResult>(from),
         to = Rx<PlaceResult>(to),
         fromMyLocation = fromMyLocation.obs,
@@ -30,6 +37,10 @@ class TaxiWaysController extends GetxController {
   final Rx<DateTime> date;
   final RxInt people;
   final RxBool fromMyLocation;
+  final String? tripId;
+  final String? tripRole;
+
+  bool get forTrip => tripId != null && TripStepRole.values.any((r) => r.name == tripRole);
 
   final result = Rxn<TaxiWaysResult>();
   final isLoading = false.obs;
@@ -209,7 +220,8 @@ class TaxiWaysController extends GetxController {
     chosen[planKey] = current;
   }
 
-  Future<SavedJourney?> saveIfNeeded(WayPlan plan) => JourneysController.ensure().saveIfNeeded(
+  Future<SavedJourney?> saveIfNeeded(WayPlan plan, {bool quiet = false}) => JourneysController.ensure().saveIfNeeded(
+        quiet: quiet,
         plan: plan,
         chosen: chosenOf(plan.planKey),
         date: date.value,
@@ -233,12 +245,42 @@ class TaxiWaysController extends GetxController {
     }
   }
 
+  bool _linkToTrip(SavedJourney saved) {
+    final role = TripStepRole.values.firstWhereOrNull((r) => r.name == tripRole);
+    if (role != null && Get.isRegistered<TripPlanController>() && TripPlanController.to.trip.value?.id == tripId) {
+      TripPlanController.to.linkJourney(role, saved);
+      AppToast.success(TripStringsStepsA1.savedToTrip);
+      return true;
+    }
+    AppToast.success(TripStringsStepsA1.savedToJourneys);
+    return false;
+  }
+
+  void backToPlan() => Get.until((r) => r.settings.name == AppRoutes.tripPlan || r.isFirst);
+
+  Future<void> useForTrip(WayPlan plan) async {
+    if (busyPlans.contains(plan.planKey)) return;
+    busyPlans.add(plan.planKey);
+    try {
+      final saved = await saveIfNeeded(plan, quiet: true);
+      if (saved == null) return;
+      if (_linkToTrip(saved)) {
+        backToPlan();
+      } else {
+        TaxiWaysNavigation.openSavedJourney(saved.id);
+      }
+    } finally {
+      busyPlans.remove(plan.planKey);
+    }
+  }
+
   Future<void> askDrivers(BuildContext context, WayPlan plan) async {
     if (busyPlans.contains(plan.planKey)) return;
     busyPlans.add(plan.planKey);
     try {
-      final journey = await saveIfNeeded(plan);
+      final journey = await saveIfNeeded(plan, quiet: forTrip);
       if (journey == null) return;
+      final linked = forTrip && _linkToTrip(journey);
       if (!context.mounted) return;
       final res = await AskDriversSheet.show(
         context,
@@ -252,7 +294,11 @@ class TaxiWaysController extends GetxController {
       );
       if (res == null) return;
       JourneysController.ensure().recordAsk(journey.id, res);
-      TaxiWaysNavigation.openSavedJourney(journey.id);
+      if (linked) {
+        backToPlan();
+      } else {
+        TaxiWaysNavigation.openSavedJourney(journey.id);
+      }
     } finally {
       busyPlans.remove(plan.planKey);
     }

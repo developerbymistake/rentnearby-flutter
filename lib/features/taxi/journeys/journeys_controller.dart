@@ -4,6 +4,8 @@ import '../../../controllers/auth_controller.dart';
 import '../../../services/api_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../../trip/controllers/trip_plan_controller.dart';
+import '../../trip/models/trip_plan_model.dart';
 import '../ways/models/ask_models.dart';
 import '../ways/models/taxi_ways_models.dart';
 import '../ways/taxi_ways_strings.dart';
@@ -90,6 +92,9 @@ class JourneysController extends GetxController {
   Future<void> _commit(SavedJourney journey) async {
     await JourneyLocalStore.upsert(journey);
     _assign(await JourneyLocalStore.read());
+    if (Get.isRegistered<TripPlanController>()) {
+      Get.find<TripPlanController>().refreshLinkedJourney(byId(journey.id) ?? journey);
+    }
   }
 
   Future<void> _drop(String id) async {
@@ -203,6 +208,7 @@ class JourneysController extends GetxController {
     required String toName,
     required double toLat,
     required double toLng,
+    bool quiet = false,
   }) async {
     if (_saving) return null;
     final body = _saveBody(
@@ -222,7 +228,7 @@ class JourneysController extends GetxController {
     try {
       final saved = await _repo.save(body);
       await _commit(saved);
-      AppToast.success(TaxiWaysStrings.saved);
+      if (!quiet) AppToast.success(TaxiWaysStrings.saved);
       return byId(saved.id) ?? saved;
     } catch (e) {
       _toastSaveError(e);
@@ -243,6 +249,7 @@ class JourneysController extends GetxController {
     required String toName,
     required double toLat,
     required double toLng,
+    bool quiet = false,
   }) async {
     if (journeys.isEmpty) _assign(await JourneyLocalStore.read());
     final existing = findByPlan(plan.planKey, date, people: people);
@@ -258,6 +265,7 @@ class JourneysController extends GetxController {
       toName: toName,
       toLat: toLat,
       toLng: toLng,
+      quiet: quiet,
     );
     return saved == null ? null : _syncDrivers(saved, plan, chosen);
   }
@@ -342,8 +350,10 @@ class JourneysController extends GetxController {
     if (busyIds.contains(id)) return false;
     busyIds.add(id);
     try {
+      final tripId = byId(id)?.tripId;
       await _repo.delete(id);
       await _drop(id);
+      _unlinkFromTrip(tripId, id);
       AppToast.success(JourneyStrings.deleted);
       return true;
     } catch (e) {
@@ -351,6 +361,15 @@ class JourneysController extends GetxController {
       return false;
     } finally {
       busyIds.remove(id);
+    }
+  }
+
+  void _unlinkFromTrip(String? tripId, String journeyId) {
+    if (!Get.isRegistered<TripPlanController>()) return;
+    final c = Get.find<TripPlanController>();
+    if (tripId != null && c.trip.value?.id != tripId) return;
+    for (final role in TripStepRole.values) {
+      if (c.stepOf(role).journeyId == journeyId) c.unlinkJourney(role);
     }
   }
 

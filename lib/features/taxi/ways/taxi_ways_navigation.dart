@@ -10,6 +10,8 @@ class TaxiWaysNavigation {
     DateTime? date,
     int? people,
     bool fromTrip = false,
+    String? tripId,
+    String? tripRole,
   }) =>
       Get.toNamed(AppRoutes.taxiWays, arguments: {
         'from': from,
@@ -18,6 +20,8 @@ class TaxiWaysNavigation {
         'date': ?date,
         'people': ?people,
         'fromTrip': fromTrip,
+        'tripId': ?tripId,
+        'tripRole': ?tripRole,
       });
 
   static Future<void>? openPlan({required String planKey, required String controllerTag}) =>

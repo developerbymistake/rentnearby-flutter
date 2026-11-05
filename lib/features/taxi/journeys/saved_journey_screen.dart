@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../widgets/empty_state_view.dart';
+import '../../trip/trip_strings_steps_a3.dart';
 import '../../trip/utils/trip_format.dart';
 import '../../trip/widgets/trip_payment_line.dart';
 import '../../trip/widgets/trip_shimmers.dart';
@@ -122,6 +123,18 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
             ),
           ]),
         ),
+        if (j?.tripId != null)
+          Container(
+            constraints: const BoxConstraints(minHeight: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(999)),
+            child: const Text(
+              TripStringsStepsA3.inYourTrip,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+            ),
+          ),
         if (j != null && id != null)
           InkWell(
             borderRadius: BorderRadius.circular(999),

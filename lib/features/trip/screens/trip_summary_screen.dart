@@ -8,13 +8,17 @@ import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/gradient_button.dart';
+import '../models/trip_plan_model.dart';
 import '../models/trip_summary_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_steps_a1.dart';
+import '../trip_strings_steps_a3.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_summary_source.dart';
 import '../utils/trip_summary_text.dart';
+import '../widgets/trip_journey_compact.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_payment_line.dart';
 import '../widgets/trip_shimmers.dart';
@@ -198,6 +202,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                       _section(TripStringsA5.itinerary),
                       for (final d in days) ...[_dayCard(d), const SizedBox(height: 12)],
                     ],
+                    ..._stepSection(r, TripStepRole.gettingThere),
                     if (r.nights.isNotEmpty) ...[
                       _section(TripStringsA5.staysSection),
                       for (final n in r.nights) ...[_nightCard(n), const SizedBox(height: 12)],
@@ -206,6 +211,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                       _section(TripStringsA5.taxisSection),
                       for (final t in r.taxis) ...[_taxiCard(t), const SizedBox(height: 12)],
                     ],
+                    ..._stepSection(r, TripStepRole.comingBack),
                     if (r.agreedTotal > 0) _totalStrip(r.agreedTotal),
                     const SizedBox(height: 12),
                     Text(
@@ -217,6 +223,52 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _stepSection(TripSummaryRecord r, TripStepRole role) {
+    if (!TripSummaryText.stepShown(r, role)) return const [];
+    return [
+      _section(role == TripStepRole.gettingThere ? TripStringsStepsA3.gettingThereCaps : TripStringsStepsA3.comingBackCaps),
+      _stepCard(r, role),
+      const SizedBox(height: 12),
+    ];
+  }
+
+  Widget _stepCard(TripSummaryRecord r, TripStepRole role) {
+    final display = TripSummaryText.stepDisplay(r, role);
+    final j = TripSummaryText.journeyOf(r, role);
+    final own = display == TripStepDisplay.own;
+    final status = switch (display) {
+      TripStepDisplay.own => TripDisplayStatus.own,
+      TripStepDisplay.booked => TripDisplayStatus.bookedByYou,
+      TripStepDisplay.asked => TripDisplayStatus.asked,
+      _ => TripDisplayStatus.none,
+    };
+    final pill = TripStatusPill(status, taxi: true, label: TripStringsStepsA1.stepLabel(display));
+    if (own || j == null) {
+      final note = (r.steps.of(role).note ?? '').trim();
+      return TripStatusCard(
+        status: status,
+        child: _titleRow(TripStringsStepsA3.arrangedByYou, note, pill),
+      );
+    }
+    return TripStatusCard(
+      status: status,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _titleRow(
+            TripStringsStepsA3.routeLine(j.places),
+            TripStrings.joinDots([TripFormat.shortDate(j.date), TripStringsStepsA3.carsLine(j.cars)]),
+            pill,
+          ),
+          const SizedBox(height: 8),
+          TripJourneyCompact(journey: j),
+          const SizedBox(height: 10),
+          const TripPaymentLine(text: TripStrings.taxiPayLine),
         ],
       ),
     );

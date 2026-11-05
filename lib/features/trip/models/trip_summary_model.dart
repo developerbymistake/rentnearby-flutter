@@ -2,6 +2,8 @@ import '../utils/trip_format.dart';
 import '../widgets/trip_status.dart';
 import '../trip_strings.dart';
 import 'trip_enquiry_model.dart';
+import 'trip_journey_model.dart';
+import 'trip_plan_model.dart';
 
 class TripSummaryRoom {
   final String? roomName;
@@ -178,6 +180,9 @@ class TripSummaryRecord {
   final List<TripSummaryNight> nights;
   final List<TripSummaryTaxi> taxis;
   final List<TripSummaryDay> days;
+  final TripSteps steps;
+  final TripJourney? gettingThere;
+  final TripJourney? comingBack;
 
   const TripSummaryRecord({
     required this.tripId,
@@ -193,7 +198,12 @@ class TripSummaryRecord {
     this.nights = const [],
     this.taxis = const [],
     this.days = const [],
+    this.steps = const TripSteps(),
+    this.gettingThere,
+    this.comingBack,
   });
+
+  TripJourney? journeyOf(TripStepRole r) => r == TripStepRole.gettingThere ? gettingThere : comingBack;
 
   factory TripSummaryRecord.fromJson(Map<String, dynamic> json) => TripSummaryRecord(
         tripId: json['tripId'] as String? ?? '',
@@ -209,9 +219,22 @@ class TripSummaryRecord {
         nights: _list(json['nights'], TripSummaryNight.fromJson),
         taxis: _list(json['taxis'], TripSummaryTaxi.fromJson),
         days: _list(json['days'], TripSummaryDay.fromJson),
+        steps: TripSteps.fromJson(json['steps'] is Map<String, dynamic> ? json['steps'] as Map<String, dynamic> : null),
+        gettingThere: json['gettingThere'] is Map<String, dynamic>
+            ? TripJourney.fromJson(json['gettingThere'] as Map<String, dynamic>)
+            : null,
+        comingBack: json['comingBack'] is Map<String, dynamic>
+            ? TripJourney.fromJson(json['comingBack'] as Map<String, dynamic>)
+            : null,
       );
 
-  bool get isEmpty => nights.isEmpty && taxis.isEmpty;
+  bool get hasTravel =>
+      gettingThere != null ||
+      comingBack != null ||
+      steps.gettingThere.status == TripStepStatus.own ||
+      steps.comingBack.status == TripStepStatus.own;
+
+  bool get isEmpty => nights.isEmpty && taxis.isEmpty && !hasTravel;
 
   bool get hasItinerary => days.any((d) => d.spots.isNotEmpty);
 

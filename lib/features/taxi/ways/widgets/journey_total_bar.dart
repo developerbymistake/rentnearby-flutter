@@ -49,6 +49,8 @@ class JourneyTotalBar extends StatelessWidget {
   final String askLabel;
   final VoidCallback? onAsk;
   final VoidCallback? onSave;
+  final VoidCallback? onUse;
+  final String? useLabel;
   final bool busy;
 
   const JourneyTotalBar({
@@ -57,6 +59,8 @@ class JourneyTotalBar extends StatelessWidget {
     required this.askLabel,
     required this.onAsk,
     this.onSave,
+    this.onUse,
+    this.useLabel,
     this.busy = false,
   });
 
@@ -86,7 +90,26 @@ class JourneyTotalBar extends StatelessWidget {
           ),
         ]),
         const SizedBox(height: 10),
-        Row(children: [
+        if (onUse != null) ...[
+          JourneyAskButton(label: useLabel ?? '', onPressed: onUse, busy: busy),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: busy ? null : onAsk,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: TaxiColors.accentDark,
+              minimumSize: const Size(double.infinity, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              side: BorderSide(color: TaxiColors.accent.withValues(alpha: 0.5)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: Text(
+              askLabel,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ] else
+          Row(children: [
           if (onSave != null) ...[
             SizedBox(
               width: 48,

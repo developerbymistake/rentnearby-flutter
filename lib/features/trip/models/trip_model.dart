@@ -1,5 +1,6 @@
 import '../widgets/trip_status.dart';
 import 'trip_enquiry_model.dart';
+import 'trip_journey_model.dart';
 import 'trip_plan_model.dart';
 
 class TripStatuses {
@@ -30,6 +31,8 @@ class TripModel {
   final DateTime? mutedAt;
   final DateTime? completedAt;
   final String bookingState;
+  final List<TripJourney> journeys;
+  final bool journeysKnown;
   final Map<String, dynamic>? raw;
 
   const TripModel({
@@ -52,12 +55,27 @@ class TripModel {
     this.mutedAt,
     this.completedAt,
     this.bookingState = 'draft',
+    this.journeys = const [],
+    this.journeysKnown = false,
     this.raw,
   });
 
   bool get isPlanned => status == TripStatuses.planned;
   bool get isCompleted => status == TripStatuses.completed;
   bool get isMuted => mutedAt != null;
+
+  bool get stepsKnown {
+    final p = raw?['plan'];
+    return p is Map && p.containsKey('steps');
+  }
+
+  TripJourney? journeyById(String? id) {
+    if (id == null) return null;
+    for (final j in journeys) {
+      if (j.id == id) return j;
+    }
+    return null;
+  }
 
   TripModel copyWith({
     String? title,
@@ -73,6 +91,8 @@ class TripModel {
     DateTime? mutedAt,
     DateTime? completedAt,
     String? bookingState,
+    List<TripJourney>? journeys,
+    bool? journeysKnown,
   }) =>
       TripModel(
         id: id,
@@ -94,6 +114,8 @@ class TripModel {
         mutedAt: mutedAt ?? this.mutedAt,
         completedAt: completedAt ?? this.completedAt,
         bookingState: bookingState ?? this.bookingState,
+        journeys: journeys ?? this.journeys,
+        journeysKnown: journeysKnown ?? this.journeysKnown,
         raw: raw,
       );
 
@@ -120,6 +142,12 @@ class TripModel {
         mutedAt: _instant(json['mutedAt']),
         completedAt: _instant(json['completedAt']),
         bookingState: json['bookingState'] as String? ?? 'draft',
+        journeys: ((json['journeys'] as List?) ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(TripJourney.fromJson)
+            .where((j) => j.id.isNotEmpty)
+            .toList(),
+        journeysKnown: json['journeys'] is List,
         raw: json,
       );
 }
@@ -150,6 +178,8 @@ class TripSummaryModel {
   final int taxisOwn;
   final DateTime? mutedAt;
   final DateTime? completedAt;
+  final TripStepDisplay? gettingThere;
+  final TripStepDisplay? comingBack;
 
   const TripSummaryModel({
     required this.id,
@@ -177,6 +207,8 @@ class TripSummaryModel {
     this.taxisOwn = 0,
     this.mutedAt,
     this.completedAt,
+    this.gettingThere,
+    this.comingBack,
   });
 
   bool get hasOwnBooking => staysOwn + taxisOwn > 0;
@@ -227,6 +259,8 @@ class TripSummaryModel {
         taxisOwn: taxisOwn,
         mutedAt: mutedAt,
         completedAt: completedAt ?? this.completedAt,
+        gettingThere: gettingThere,
+        comingBack: comingBack,
       );
 
   TripSummaryModel withMuted(DateTime? at) => _with(mutedAt: at, completedAt: completedAt);
@@ -260,6 +294,8 @@ class TripSummaryModel {
         taxisOwn: (json['taxisOwn'] as num?)?.toInt() ?? 0,
         mutedAt: _instant(json['mutedAt']),
         completedAt: _instant(json['completedAt']),
+        gettingThere: TripStepDisplay.parse(json['gettingThere']),
+        comingBack: TripStepDisplay.parse(json['comingBack']),
       );
 }
 

@@ -11,9 +11,11 @@ import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
+import '../models/trip_journey_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_steps_a3.dart';
 import '../utils/trip_format.dart';
 import 'trip_problem_sheet.dart';
 
@@ -32,13 +34,16 @@ class TripTodayCard extends StatelessWidget {
       c.plan.value;
       c.enquiryList.length;
       c.trip.value;
-      final n = c.todayDay;
-      if (n == null || c.isCompleted) return const SizedBox.shrink();
+      final today = c.todayDay;
+      final journey = c.journeyToday;
+      if ((today == null && journey == null) || c.isCompleted) return const SizedBox.shrink();
+      final n = today ?? _nearestDay(c);
       final offline = c.offline.value;
       final rows = <Widget>[
-        ..._stayRow(c, n),
-        ..._taxiRow(c, n),
-        ..._routeRow(c, n, offline),
+        if (journey != null) ..._travelRows(journey),
+        if (today != null) ..._stayRow(c, n),
+        if (today != null) ..._taxiRow(c, n),
+        if (today != null) ..._routeRow(c, n, offline),
       ];
       return Padding(
         padding: const EdgeInsets.only(bottom: 14),
@@ -62,7 +67,7 @@ class TripTodayCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            TripStrings.todayDay(n, c.dayCount),
+                            today == null ? TripStringsStepsA3.travelDay(_todayDate) : TripStrings.todayDay(n, c.dayCount),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -109,6 +114,61 @@ class TripTodayCard extends StatelessWidget {
           ],
         ),
       );
+
+  static int _nearestDay(TripPlanController c) {
+    final first = c.dateOf(1);
+    return first != null && _todayDate.isBefore(first) ? 1 : c.dayCount;
+  }
+
+  static List<Widget> _travelRows(TripJourney j) {
+    final legs = j.legs;
+    if (legs.isEmpty) return const [];
+    final multi = legs.length > 1;
+    final leg = multi ? legs[1] : legs.first;
+    final phone = _validPhone(leg.phone);
+    final wa = _validPhone(leg.whatsApp);
+    final head = j.role == TripStepRole.comingBack ? TripStringsStepsA3.todayComingBack : TripStringsStepsA3.todayGettingThere;
+    final paused = legs.where((l) => !l.driverAvailable).firstOrNull;
+    return [
+      Text(
+        head,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+            fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight),
+      ),
+      _Row(
+        icon: Iconsax.routing_2,
+        accent: TaxiColors.accent,
+        surface: TaxiColors.surface,
+        title: multi ? TripStringsStepsA3.changeCarAt(leg.changePlace) : TripStringsStepsA3.takesYou(leg.driverName, j.toName),
+        subtitle: multi
+            ? TripStringsStepsA3.nextDriver(leg.driverName)
+            : [leg.vehicleTypeName, leg.plateDisplay].where((e) => e != null && e.isNotEmpty).join(' · '),
+        actionLabel: phone == null ? null : TripStringsStepsA3.call,
+        onAction: () => ContactLauncher.call(phone!),
+        secondLabel: wa == null ? null : TripStringsStepsA3.whatsApp,
+        onSecond: () => ContactLauncher.whatsApp(wa!),
+      ),
+      if (paused != null)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(10)),
+          child: Row(children: [
+            const Icon(Iconsax.warning_2, size: 15, color: AppColors.warningText),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                TripStringsStepsA3.pausedBackup(paused.driverName, paused.backupName),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
+              ),
+            ),
+          ]),
+        ),
+    ];
+  }
 
   static DateTime get _todayDate {
     final d = DateTime.now();
@@ -284,6 +344,8 @@ class _Row extends StatelessWidget {
     required this.subtitle,
     this.actionLabel,
     this.onAction,
+    this.secondLabel,
+    this.onSecond,
   });
 
   final IconData icon;
@@ -293,6 +355,8 @@ class _Row extends StatelessWidget {
   final String subtitle;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final String? secondLabel;
+  final VoidCallback? onSecond;
 
   @override
   Widget build(BuildContext context) {
@@ -338,6 +402,21 @@ class _Row extends StatelessWidget {
             ),
             child: Text(
               actionLabel!,
+              maxLines: 1,
+              style: const TextStyle(
+                  fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+            ),
+          ),
+        if (secondLabel != null && onSecond != null)
+          TextButton(
+            onPressed: onSecond,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(44, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              tapTargetSize: MaterialTapTargetSize.padded,
+            ),
+            child: Text(
+              secondLabel!,
               maxLines: 1,
               style: const TextStyle(
                   fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: TripColors.accentDark),

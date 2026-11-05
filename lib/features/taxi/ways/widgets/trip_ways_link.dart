@@ -17,6 +17,7 @@ class TripWaysLink extends StatelessWidget {
   final double lng;
   final DateTime? date;
   final int? people;
+  final PlaceResult? from;
   final EdgeInsets? padding;
 
   const TripWaysLink({
@@ -26,6 +27,7 @@ class TripWaysLink extends StatelessWidget {
     required this.lng,
     this.date,
     this.people,
+    this.from,
     this.padding,
   });
 
@@ -39,15 +41,16 @@ class TripWaysLink extends StatelessWidget {
   }
 
   void _open() {
-    final from = myLocation();
-    if (from == null) {
+    final start = from;
+    final origin = start ?? myLocation();
+    if (origin == null) {
       AppToast.warning(TripStringsA6.noLocation);
       return;
     }
     TaxiWaysNavigation.openFeed(
-      from: from,
+      from: origin,
       to: PlaceResult(name: cityName, subtitle: '', latLng: LatLng(lat, lng)),
-      fromMyLocation: true,
+      fromMyLocation: start == null,
       date: date,
       people: people,
       fromTrip: date != null || people != null,

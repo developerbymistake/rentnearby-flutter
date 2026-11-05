@@ -3,8 +3,10 @@ import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_shadows.dart';
+import '../../../config/module_palette.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../../widgets/location_switch_sheet.dart';
 import '../../../widgets/selectable_chip.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
@@ -14,8 +16,10 @@ import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_g3.dart';
+import '../trip_strings_steps_a2.dart';
 import '../utils/trip_format.dart';
 import '../widgets/trip_change_request_sheet.dart';
+import '../widgets/trip_step_card.dart';
 import '../widgets/trip_status.dart';
 
 class TripDetailsSheet {
@@ -25,8 +29,10 @@ class TripDetailsSheet {
     required int dayCount,
     int spotCount = 0,
     bool allowSkip = true,
-  }) =>
-      _show(context, initial: initial, dayCount: dayCount, spotCount: spotCount, endKnown: false, allowSkip: allowSkip);
+  }) async {
+    final r = await _show(context, initial: initial, dayCount: dayCount, spotCount: spotCount, endKnown: false, allowSkip: allowSkip);
+    return r?.settings;
+  }
 
   static Future<bool> edit(BuildContext context, {String? heading, String? description}) async {
     final c = TripPlanController.to;
@@ -42,8 +48,18 @@ class TripDetailsSheet {
       heading: heading,
       description: description,
       startLocked: c.isRunning,
+      showStartFrom: true,
+      initialStart: c.startFrom,
     );
     if (result == null) return false;
+    final moved = result.startFromTouched && await c.setStartFrom(result.startFrom);
+    if (!context.mounted) return false;
+    final saved = await _saveSettings(context, c, old, result.settings);
+    if (moved && context.mounted) await TripStepCard.askSearchAgain(context);
+    return saved;
+  }
+
+  static Future<bool> _saveSettings(BuildContext context, TripPlanController c, TripSettings old, TripSettings result) async {
     final newStart = result.startDate;
     final daysCut = result.maxDays != old.maxDays && c.daysAfterLimit(result.maxDays) < c.dayCount;
     if (newStart != null && (newStart != old.startDate || daysCut)) {
@@ -194,7 +210,7 @@ class TripDetailsSheet {
         ),
       );
 
-  static Future<TripSettings?> _show(
+  static Future<_DetailsResult?> _show(
     BuildContext context, {
     required TripSettings initial,
     required int dayCount,
@@ -204,8 +220,10 @@ class TripDetailsSheet {
     String? heading,
     String? description,
     bool startLocked = false,
+    bool showStartFrom = false,
+    TripStartFrom? initialStart,
   }) =>
-      showModalBottomSheet<TripSettings>(
+      showModalBottomSheet<_DetailsResult>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
@@ -221,9 +239,13 @@ class TripDetailsSheet {
           heading: heading,
           description: description,
           startLocked: startLocked,
+          showStartFrom: showStartFrom,
+          initialStart: initialStart,
         ),
       );
 }
+
+typedef _DetailsResult = ({TripSettings settings, TripStartFrom? startFrom, bool startFromTouched});
 
 class _BookingLine extends StatelessWidget {
   final TripEnquiryModel e;
@@ -273,6 +295,8 @@ class _DetailsBody extends StatefulWidget {
   final String? heading;
   final String? description;
   final bool startLocked;
+  final bool showStartFrom;
+  final TripStartFrom? initialStart;
 
   const _DetailsBody({
     required this.initial,
@@ -283,6 +307,8 @@ class _DetailsBody extends StatefulWidget {
     this.heading,
     this.description,
     this.startLocked = false,
+    this.showStartFrom = false,
+    this.initialStart,
   });
 
   @override
@@ -297,6 +323,8 @@ class _DetailsBodyState extends State<_DetailsBody> {
   late int? _maxDays = widget.initial.maxDays;
   late int _pace = widget.initial.dayLimitMinutes == TripPace.relaxed ? TripPace.relaxed : TripPace.normal;
   late final Set<String> _needs = widget.initial.needs.toSet();
+  late TripStartFrom? _startFrom = widget.initialStart;
+  bool _startTouched = false;
   String? _error;
 
   bool get _datesRequired => widget.heading != null;
@@ -352,9 +380,8 @@ class _DetailsBodyState extends State<_DetailsBody> {
     final start = _start;
     final needs = [for (final n in TripNeeds.all) if (_needs.contains(n)) n];
     final base = widget.initial;
-    Navigator.pop(
-      context,
-      TripSettings(
+    final _DetailsResult result = (
+      settings: TripSettings(
         dayLimitMinutes: _pace,
         startDate: start,
         adults: _adults,
@@ -364,6 +391,90 @@ class _DetailsBodyState extends State<_DetailsBody> {
         pickupTime: base.pickupTime,
         pickupPlace: base.pickupPlace,
         maxDays: _maxDays,
+      ),
+      startFrom: _startFrom,
+      startFromTouched: _startTouched,
+    );
+    Navigator.pop(context, result);
+  }
+
+  Future<void> _pickStartFrom() async {
+    FocusScope.of(context).unfocus();
+    final p = await LocationSwitchSheet.pick(context, palette: ModulePalette.trip, title: TripStringsStepsA2.pickCity);
+    if (p == null || !mounted) return;
+    setState(() {
+      _startFrom = TripStartFrom(name: p.name, lat: p.latitude, lon: p.longitude);
+      _startTouched = true;
+    });
+  }
+
+  Widget _startFromRow() {
+    final start = _startFrom;
+    return Material(
+      color: TripColors.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: _pickStartFrom,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 56),
+          padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: TripColors.accentLight.withValues(alpha: 0.7), width: 1.3),
+          ),
+          child: Row(
+            children: [
+              const Icon(Iconsax.location, size: 20, color: TripColors.accentDark),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      TripStringsStepsA2.startingFrom,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                        color: AppColors.warningText,
+                      ),
+                    ),
+                    Text(
+                      start?.name ?? TripStringsStepsA2.notSet,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: start == null ? AppColors.textLight : AppColors.textDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      start == null ? TripStringsStepsA2.pickCity : TripStringsStepsA2.change,
+                      maxLines: 1,
+                      style: const TextStyle(
+                          fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -426,6 +537,17 @@ class _DetailsBodyState extends State<_DetailsBody> {
                       ),
                     ),
                   ],
+                ),
+              ],
+              if (widget.showStartFrom) ...[
+                const SizedBox(height: 10),
+                _startFromRow(),
+                const SizedBox(height: 6),
+                const Text(
+                  TripStringsStepsA2.startFromHelp,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
                 ),
               ],
               const SizedBox(height: 14),

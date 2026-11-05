@@ -1,11 +1,23 @@
 import '../../../services/storage_service.dart';
 import '../models/trip_model.dart';
+import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
 
 class TripTodayCache {
   static void saveTrip(TripModel t) {
     final raw = t.raw;
     if (raw != null) StorageService.saveTripCache(t.id, raw);
+  }
+
+  static void savePlan(TripModel t, TripPlan plan) {
+    final cached = StorageService.getTripCache(t.id);
+    final base = cached ?? t.raw;
+    if (base == null) return;
+    StorageService.saveTripCache(t.id, {
+      ...base,
+      'plan': plan.toJson(),
+      if (t.journeysKnown) 'journeys': t.journeys.map((j) => j.toJson()).toList(),
+    });
   }
 
   static TripModel? trip(String id) {

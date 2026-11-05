@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../config/app_colors.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
+import '../../../models/place_result_model.dart';
+import '../../../utils/dio_error_mapper.dart';
+import '../../trip/controllers/trip_plan_controller.dart';
+import '../../trip/models/trip_plan_model.dart';
+import '../../trip/trip_strings_steps_a3.dart';
 import '../models/taxi_browse_item.dart';
 import '../taxi_option_sets.dart';
-import '../ways/widgets/trip_ways_link.dart';
+import '../ways/models/taxi_ways_models.dart';
+import '../ways/taxi_ways_navigation.dart';
+import '../ways/taxi_ways_repository.dart';
 import 'taxi_browse_repository.dart';
 import 'taxi_card.dart';
 import 'taxi_navigation.dart';
 import 'traveller_city.dart';
 
-enum _Phase { locating, loading, list, empty, unavailable, error }
+enum _Phase { locating, loading, list, empty, unavailable, error, offline, summary, noWays }
 
 class StayTaxisSection extends StatefulWidget {
   final String? stayCityId;
@@ -41,12 +49,17 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
   static const _previewCount = 3;
 
   final _repo = const TaxiBrowseRepository();
+  final _waysRepo = const TaxiWaysRepository();
   final _loc = Get.find<LocationController>();
   Worker? _locWorker;
   List<TaxiBrowseItem> _items = const [];
   TaxiFromPlace? _from;
   _Phase _phase = _Phase.locating;
   int _gen = 0;
+  String _summary = '';
+  String? _tripId;
+  DateTime? _tripDate;
+  int? _tripPeople;
 
   @override
   void initState() {
@@ -68,7 +81,7 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
 
   void _resolveFrom() {
     if (!mounted || _from != null) return;
-    final from = travellerCity(_loc);
+    final from = _tripFrom() ?? travellerCity(_loc);
     if (from == null) {
       final next = _loc.locationLoading.value ? _Phase.locating : _Phase.unavailable;
       if (next != _phase) setState(() => _phase = next);
@@ -79,6 +92,24 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
     _from = from;
     _load();
   }
+
+  TaxiFromPlace? _tripFrom() {
+    if (!Get.isRegistered<TripPlanController>()) return null;
+    final c = Get.find<TripPlanController>();
+    final t = c.trip.value;
+    final start = c.startFrom;
+    if (t == null || c.plan.value == null || c.isReadOnly || start == null) return null;
+    final cityGap = TaxiOptionSets.distanceMeters(t.cityLatitude, t.cityLongitude, widget.toLat, widget.toLng);
+    if (cityGap >= _sameCityMeters) return null;
+    if (TaxiOptionSets.distanceMeters(start.lat, start.lon, widget.toLat, widget.toLng) < _sameCityMeters) return null;
+    _tripId = t.id;
+    _tripDate = c.stepDate(TripStepRole.gettingThere);
+    final n = c.settings.peopleCount;
+    _tripPeople = n > 0 ? n : null;
+    return (place: PlaceResult(name: start.name, subtitle: '', latLng: LatLng(start.lat, start.lon)), districtId: '', cityId: null);
+  }
+
+  bool get _forTrip => _tripId != null;
 
   bool get _sameCity {
     final from = _from;
@@ -96,23 +127,77 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
     setState(() => _phase = _Phase.loading);
     try {
       final p = from.place.latLng;
-      final page = _sameCity
-          ? await _repo.browseLocal(districtId: from.districtId, cityId: from.cityId, pageSize: _previewCount)
-          : await _repo.search(
-              fromLat: p.latitude,
-              fromLng: p.longitude,
-              toLat: widget.toLat,
-              toLng: widget.toLng,
-              pageSize: _previewCount,
-            );
+      if (!_sameCity) {
+        final r = await _waysRepo.ways(
+          fromLat: p.latitude,
+          fromLng: p.longitude,
+          toLat: widget.toLat,
+          toLng: widget.toLng,
+          date: _date,
+          people: _people,
+          fromMyLocation: !_forTrip,
+          fromName: from.place.name,
+          toName: widget.stayCityName,
+        );
+        if (!mounted || myGen != _gen) return;
+        setState(() {
+          _summary = _summaryOf(r);
+          _phase = r.hasWays ? _Phase.summary : _Phase.noWays;
+        });
+        return;
+      }
+      final page = await _repo.browseLocal(districtId: from.districtId, cityId: from.cityId, pageSize: _previewCount);
       if (!mounted || myGen != _gen) return;
       setState(() {
         _items = page.items.take(_previewCount).toList();
         _phase = _items.isEmpty ? _Phase.empty : _Phase.list;
       });
-    } catch (_) {
-      if (mounted && myGen == _gen) setState(() => _phase = _Phase.error);
+    } catch (e) {
+      if (!mounted || myGen != _gen) return;
+      setState(() => _phase = DioErrorMapper.isNetworkError(e) ? _Phase.offline : _Phase.error);
     }
+  }
+
+  DateTime get _date {
+    final d = _tripDate ?? widget.date;
+    if (d != null) return d;
+    final n = DateTime.now();
+    return DateTime(n.year, n.month, n.day + 1);
+  }
+
+  int get _people => _tripPeople ?? widget.people ?? 2;
+
+  static String _summaryOf(TaxiWaysResult r) {
+    final direct = r.allTheWay;
+    final plans = r.plans.where((p) => p.cars > 1).toList()..sort((a, b) => a.total.compareTo(b.total));
+    if (direct.isNotEmpty) {
+      final from = direct.map((d) => d.listedFare).reduce((a, b) => a < b ? a : b);
+      if (plans.isEmpty) return TripStringsStepsA3.directOnly(direct.length, from);
+      return TripStringsStepsA3.waysSummary(
+        direct: direct.length,
+        directFrom: from,
+        cars: plans.first.cars,
+        carsFrom: plans.first.total,
+      );
+    }
+    if (plans.isEmpty) return TripStringsStepsA3.noWaysYet;
+    final fewest = plans.map((p) => p.cars).reduce((a, b) => a < b ? a : b);
+    return TripStringsStepsA3.noDirect(fewest);
+  }
+
+  void _openFeed() {
+    final from = _from;
+    if (from == null) return;
+    TaxiWaysNavigation.openFeed(
+      from: from.place,
+      to: PlaceResult(name: widget.stayCityName, subtitle: '', latLng: LatLng(widget.toLat, widget.toLng)),
+      fromMyLocation: !_forTrip,
+      date: _forTrip ? _date : widget.date,
+      people: _forTrip ? _people : widget.people,
+      fromTrip: _forTrip || widget.date != null || widget.people != null,
+      tripId: _tripId,
+      tripRole: _forTrip ? TripStepRole.gettingThere.name : null,
+    );
   }
 
   void _seeAll() {
@@ -134,29 +219,16 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
     final local = from != null && _sameCity;
     final fromName = from?.place.name ?? '';
     final String label;
-    final String? value;
     if (from == null) {
-      label = 'Taxis to ${widget.stayCityName}';
-      value = null;
+      label = TripStringsStepsA3.gettingThere;
     } else if (local) {
-      label = 'Local taxis in $fromName';
-      value = null;
+      label = TripStringsStepsA3.localTaxisIn(fromName);
     } else {
-      label = 'Taxis to ${widget.stayCityName}';
-      value = 'From $fromName';
+      label = TripStringsStepsA3.fromTo(fromName, widget.stayCityName);
     }
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _header(label: label, value: value),
-      if (from != null && !local && TabConfigController.to.isTaxiActive)
-        TripWaysLink(
-          cityName: widget.stayCityName,
-          lat: widget.toLat,
-          lng: widget.toLng,
-          date: widget.date,
-          people: widget.people,
-          padding: const EdgeInsets.only(top: 10),
-        ),
+      _header(label: label, seeAll: local || from == null),
       ...switch (_phase) {
         _Phase.locating => [_note('Finding your city...')],
         _Phase.loading => [
@@ -187,7 +259,13 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
         _Phase.unavailable => [
             _note('Turn on location to see taxis from your city', action: 'Open Taxi', onTap: _seeAll),
           ],
-        _Phase.error => [_note("Couldn't load taxis", action: 'Retry', onTap: _load)],
+        _Phase.error => [
+            _note(local ? "Couldn't load taxis" : TripStringsStepsA3.waysFailed,
+                action: TripStringsStepsA3.retry, onTap: _load),
+          ],
+        _Phase.offline => [_note(TripStringsStepsA3.waysOffline, action: TripStringsStepsA3.retry, onTap: _load)],
+        _Phase.summary => [_note(_summary, action: TripStringsStepsA3.seeWays, onTap: _openFeed)],
+        _Phase.noWays => [_note(TripStringsStepsA3.noWaysYet, action: TripStringsStepsA3.seeWays, onTap: _openFeed)],
       },
     ]);
   }
@@ -227,7 +305,7 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
     );
   }
 
-  Widget _header({required String label, String? value}) {
+  Widget _header({required String label, required bool seeAll}) {
     return Material(
       color: Colors.white,
       shape: RoundedRectangleBorder(
@@ -251,39 +329,30 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
                 Text(label,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: value != null ? 11 : 13,
-                      fontWeight: value != null ? FontWeight.w400 : FontWeight.w700,
-                      color: value != null ? AppColors.textLight : AppColors.textDark,
-                    )),
-                if (value != null)
-                  Text(value,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                    style: const TextStyle(
+                        fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark)),
               ]),
             ),
           ),
-          const SizedBox(width: 4),
-          InkWell(
-            onTap: _seeAll,
-            borderRadius: BorderRadius.circular(12),
-            child: const SizedBox(
-              height: 44,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text('See all',
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: TaxiColors.accentDark)),
-                  SizedBox(width: 2),
-                  Icon(Iconsax.arrow_right_3, size: 14, color: TaxiColors.accentDark),
-                ]),
+          if (seeAll) const SizedBox(width: 4),
+          if (seeAll)
+            InkWell(
+              onTap: _seeAll,
+              borderRadius: BorderRadius.circular(12),
+              child: const SizedBox(
+                height: 44,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text('See all',
+                        style: TextStyle(
+                            fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: TaxiColors.accentDark)),
+                    SizedBox(width: 2),
+                    Icon(Iconsax.arrow_right_3, size: 14, color: TaxiColors.accentDark),
+                  ]),
+                ),
               ),
             ),
-          ),
         ]),
       ),
     );

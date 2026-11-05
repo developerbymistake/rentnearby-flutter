@@ -1,5 +1,7 @@
+import 'package:bakhli/features/taxi/journeys/journey_models.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
+import 'package:bakhli/features/trip/models/trip_journey_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_result_model.dart';
@@ -182,6 +184,192 @@ void main() {
         days: const [2, 4],
       );
       expect(e.taxiDates, [DateTime(2030, 11, 2), DateTime(2030, 11, 4)]);
+    });
+  });
+
+  group('trip steps', () {
+    const delhi = TripStartFrom(name: 'Delhi', lat: 28.6139, lon: 77.2090);
+
+    SavedJourney journey(String id, DateTime date) => SavedJourney(
+          id: id,
+          fromName: 'Delhi',
+          fromLat: 28.6139,
+          fromLng: 77.2090,
+          toName: 'Nainital',
+          toLat: 29.4,
+          toLng: 79.4,
+          date: date,
+          people: 4,
+          cars: 1,
+          status: JourneyStatus.notAsked,
+          createdAt: DateTime(2030, 1, 1),
+          updatedAt: DateTime(2030, 1, 1),
+        );
+
+    TripPlanController withPlan({TripSteps steps = const TripSteps(), DateTime? start}) {
+      final c = TripPlanController();
+      addTearDown(c.onClose);
+      final p = TripPlan(
+        cityKey: 1,
+        cityName: 'Nainital',
+        centreLatitude: 29.4,
+        centreLongitude: 79.4,
+        settings: TripSettings(startDate: start ?? DateTime(2030, 11, 1)),
+        days: const [TripDay(day: 1), TripDay(day: 2)],
+        steps: steps,
+      );
+      c.plan.value = p;
+      c.trip.value = _trip(p);
+      return c;
+    }
+
+    test('link stores no date when it matches the default and inserts the local journey', () {
+      final c = withPlan(steps: const TripSteps(startFrom: delhi));
+      c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
+      final s = c.stepOf(TripStepRole.gettingThere);
+      expect(s.status, TripStepStatus.chosen);
+      expect(s.journeyId, 'j1');
+      expect(s.date, isNull);
+      expect(c.journeyFor(TripStepRole.gettingThere)?.id, 'j1');
+      expect(c.stepDisplay(TripStepRole.gettingThere), TripStepDisplay.chosen);
+    });
+
+    test('coming back default is check-out, another day is stored', () {
+      final c = withPlan(steps: const TripSteps(startFrom: delhi));
+      c.linkJourney(TripStepRole.comingBack, journey('j2', DateTime(2030, 11, 3)));
+      expect(c.stepOf(TripStepRole.comingBack).date, isNull);
+      expect(c.stepDate(TripStepRole.comingBack), DateTime(2030, 11, 3));
+      c.linkJourney(TripStepRole.comingBack, journey('j3', DateTime(2030, 11, 4)));
+      expect(c.stepOf(TripStepRole.comingBack).date, DateTime(2030, 11, 4));
+      expect(c.journeys.map((j) => j.id), ['j3']);
+    });
+
+    test('one journey id per trip: linking it to the other role clears the first', () {
+      final c = withPlan(steps: const TripSteps(startFrom: delhi));
+      c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
+      c.linkJourney(TripStepRole.comingBack, journey('j1', DateTime(2030, 11, 3)));
+      expect(c.stepOf(TripStepRole.gettingThere).journeyId, isNull);
+      expect(c.stepOf(TripStepRole.comingBack).journeyId, 'j1');
+    });
+
+    test('booked toggle, unlink, own and skip clear the link', () {
+      final c = withPlan(steps: const TripSteps(startFrom: delhi));
+      c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
+      c.markStepBooked(TripStepRole.gettingThere);
+      expect(c.stepDisplay(TripStepRole.gettingThere), TripStepDisplay.booked);
+      c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
+      expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.booked);
+      c.unmarkStepBooked(TripStepRole.gettingThere);
+      expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.chosen);
+      c.unlinkJourney(TripStepRole.gettingThere);
+      expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notStarted);
+      expect(c.journeys, isEmpty);
+
+      c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
+      c.markStepOwn(TripStepRole.gettingThere, note: '  Own car  ');
+      expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.own);
+      expect(c.stepOf(TripStepRole.gettingThere).note, 'Own car');
+      expect(c.stepOf(TripStepRole.gettingThere).journeyId, isNull);
+      expect(c.journeys, isEmpty);
+
+      c.linkJourney(TripStepRole.comingBack, journey('j2', DateTime(2030, 11, 3)));
+      c.skipStep(TripStepRole.comingBack);
+      expect(c.stepOf(TripStepRole.comingBack).status, TripStepStatus.skipped);
+      expect(c.stepOf(TripStepRole.comingBack).journeyId, isNull);
+      c.resetStep(TripStepRole.comingBack);
+      expect(c.stepOf(TripStepRole.comingBack).status, TripStepStatus.notStarted);
+    });
+
+    test('not needed when starting inside the city, back when moved out', () async {
+      final c = withPlan();
+      await c.setStartFrom(const TripStartFrom(name: 'Nainital', lat: 29.401, lon: 79.401));
+      expect(c.startsInsideCity, isTrue);
+      expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notNeeded);
+      expect(c.stepOf(TripStepRole.comingBack).status, TripStepStatus.notNeeded);
+      await c.setStartFrom(delhi);
+      expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notStarted);
+      expect(c.stepOf(TripStepRole.comingBack).status, TripStepStatus.notStarted);
+    });
+
+    test('a new start city flags a linked journey', () async {
+      final c = withPlan(steps: const TripSteps(startFrom: delhi));
+      c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
+      expect(await c.setStartFrom(const TripStartFrom(name: 'Dehradun', lat: 30.3165, lon: 78.0322)), isTrue);
+      expect(c.startChangedRole, TripStepRole.gettingThere);
+      expect(c.stepNeedsAttention(TripStepRole.gettingThere), isTrue);
+    });
+
+    test('a start date change clears both step dates and flags the journey', () async {
+      final c = withPlan(
+        steps: TripSteps(
+          startFrom: delhi,
+          gettingThere: const TripStep(status: TripStepStatus.chosen, journeyId: 'j1'),
+          comingBack: TripStep(status: TripStepStatus.own, date: DateTime(2030, 11, 4)),
+        ),
+      );
+      c.trip.value = c.trip.value!.copyWith(journeys: [
+        TripJourney.fromSaved(journey('j1', DateTime(2030, 11, 1)), TripStepRole.gettingThere),
+      ], journeysKnown: true);
+      await c.saveSettings(c.settings.copyWith(startDate: DateTime(2030, 11, 8)));
+      expect(c.stepOf(TripStepRole.comingBack).date, isNull);
+      expect(c.journeyFor(TripStepRole.gettingThere)?.dateChanged, isTrue);
+    });
+
+    test('adopts server-dropped journeys only when the local step still holds them', () {
+      final c = withPlan(steps: const TripSteps(startFrom: delhi));
+      c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
+      final sent = c.plan.value!;
+      final serverPlan = sent.copyWith(steps: const TripSteps(startFrom: delhi));
+      final saved = TripModel.fromJson({'id': 't1', 'cityKey': 1, 'plan': serverPlan.toJson(), 'journeys': const []});
+      c.adoptServerStepsForTest(sent, saved);
+      expect(c.stepOf(TripStepRole.gettingThere).journeyId, isNull);
+      expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notStarted);
+
+      c.linkJourney(TripStepRole.gettingThere, journey('j2', DateTime(2030, 11, 1)));
+      c.adoptServerStepsForTest(sent, saved);
+      expect(c.stepOf(TripStepRole.gettingThere).journeyId, 'j2');
+    });
+
+    test('reconcile drops a link whose journey is gone, but not offline', () {
+      final c = withPlan(
+        steps: const TripSteps(gettingThere: TripStep(status: TripStepStatus.chosen, journeyId: 'gone')),
+      );
+      c.trip.value = c.trip.value!.copyWith(journeysKnown: true);
+      c.offline.value = true;
+      c.reconcileSteps();
+      expect(c.stepOf(TripStepRole.gettingThere).journeyId, 'gone');
+      c.offline.value = false;
+      c.reconcileSteps();
+      expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notStarted);
+    });
+
+    test('skipped taxi day counts as sorted and costs nothing', () {
+      final c = withPlan();
+      c.setSkippedTaxiDay(1);
+      expect(c.plan.value!.dayAt(1)!.taxi!.isSkipped, isTrue);
+      expect(c.hasTaxiActivity(1), isTrue);
+      expect(c.priceSoFar, 0);
+      expect(c.taxiStep.sorted, 1);
+      expect(c.taxiStep.firstUnsorted, 2);
+      c.skipRemainingTaxiDays();
+      expect(c.taxiStep.display, TripStepDisplay.skipped);
+      c.clearSkippedTaxiDay(1);
+      expect(c.plan.value!.dayAt(1)!.taxi, isNull);
+    });
+
+    test('skip remaining nights marks every open night', () {
+      final c = withPlan();
+      c.skipRemainingNights();
+      expect(c.stayStep.display, TripStepDisplay.skipped);
+      expect(c.stayStep.sorted, 2);
+    });
+
+    test('journey today on the travel day', () {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final c = withPlan(start: today, steps: const TripSteps(startFrom: delhi));
+      c.linkJourney(TripStepRole.gettingThere, journey('j1', today));
+      expect(c.journeyToday?.id, 'j1');
     });
   });
 

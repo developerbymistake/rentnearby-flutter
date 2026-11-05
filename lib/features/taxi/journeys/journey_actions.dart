@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
+import '../../trip/trip_strings_steps_a3.dart';
 import '../ways/ask_drivers_sheet.dart';
 import '../ways/change_driver_sheet.dart';
 import '../ways/taxi_ways_strings.dart';
@@ -46,7 +47,11 @@ class JourneyActions {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text(TaxiWaysStrings.deleteJourney),
-        content: const Text(JourneyStrings.deleteBody),
+        content: Text(
+          j.tripId == null
+              ? JourneyStrings.deleteBody
+              : '${JourneyStrings.deleteBody} ${TripStringsStepsA3.alsoRemovedFromTrip}',
+        ),
         actions: [
           TextButton(
             style: TextButton.styleFrom(minimumSize: const Size(64, 44)),

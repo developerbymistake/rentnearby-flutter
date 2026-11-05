@@ -14,6 +14,7 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
+import '../trip_strings_steps_a1.dart';
 import 'trip_cancel_sheet.dart';
 import 'trip_own_booking_sheet.dart';
 import 'trip_status.dart';
@@ -78,6 +79,22 @@ class TripDayActions extends StatelessWidget {
     final enquiryTile = _taxiTile(context, c, readOnly);
     if (enquiryTile != null) return enquiryTile;
     final taxi = d.taxi;
+    if (taxi != null && taxi.isSkipped) {
+      return _ActionTile(
+        icon: Iconsax.car,
+        accent: TaxiColors.accent,
+        surface: TaxiColors.surface,
+        title: TripStringsStepsA1.noTaxiThisDay,
+        subtitle: TripStringsStepsA1.stepLabel(TripStepDisplay.skipped),
+        selected: false,
+        status: TripTileStatus.none,
+        onTap: readOnly ? null : () => TripNavigation.openTaxi(day),
+        onLongPress: readOnly
+            ? null
+            : () => _confirmClear(
+                context, TripStrings.removeFromPlan, TripStringsStepsA1.noTaxiThisDay, () => c.clearSkippedTaxiDay(day)),
+      );
+    }
     if (taxi != null && taxi.isOwn) {
       final fare = taxi.fare;
       return _ActionTile(

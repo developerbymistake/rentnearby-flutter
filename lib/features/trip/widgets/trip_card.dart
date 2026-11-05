@@ -4,12 +4,16 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_shadows.dart';
 import '../../../models/browse_item.dart';
 import '../models/trip_model.dart';
+import '../models/trip_plan_model.dart';
 import '../models/trip_spot_category.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_steps_a1.dart';
+import '../trip_strings_steps_a3.dart';
 import '../utils/trip_format.dart';
 import 'trip_status.dart';
+import 'trip_step_dot.dart';
 
 class TripCard extends StatelessWidget {
   final TripSummaryModel trip;
@@ -35,6 +39,33 @@ class TripCard extends StatelessWidget {
     if (s == TripBookingState.ready && settled == 0) return TripBookingState.planOnly;
     return s;
   }
+
+  static bool showGettingThere(TripStepDisplay? d) =>
+      d != null && d != TripStepDisplay.notStarted && d != TripStepDisplay.notNeeded;
+
+  static bool showComingBack(TripStepDisplay? d) =>
+      d == TripStepDisplay.booked || d == TripStepDisplay.own || d == TripStepDisplay.chosen || d == TripStepDisplay.asked;
+
+  Widget _stepChip(String step, TripStepDisplay d) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(999)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TripStepDot(d, size: 12),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                TripStringsStepsA3.stepChip(step, TripStringsStepsA1.stepLabel(d)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: TripColors.accentDark),
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _chip(String label, IconData icon, {Color? color, Color? surface}) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -89,7 +120,9 @@ class TripCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = trip;
     final hasOwn = t.staysOwn + t.taxisOwn > 0;
-    final hasChips = t.staysTotal > 0 || t.taxisTotal > 0 || t.agreedTotal > 0 || hasOwn;
+    final gt = showGettingThere(t.gettingThere) ? t.gettingThere : null;
+    final cb = showComingBack(t.comingBack) ? t.comingBack : null;
+    final hasChips = t.staysTotal > 0 || t.taxisTotal > 0 || t.agreedTotal > 0 || hasOwn || gt != null || cb != null;
     final dates = t.startDate == null
         ? TripStringsA5.noDatesYet
         : TripStrings.joinDots([
@@ -179,6 +212,8 @@ class TripCard extends StatelessWidget {
                   if (hasOwn)
                     _chip(TripStringsA5.ownBooking, Iconsax.home_2,
                         color: AppColors.tripBooked, surface: TripStatusColors.bookedSurface),
+                  if (gt != null) _stepChip(TripStringsStepsA3.gettingThere, gt),
+                  if (cb != null) _stepChip(TripStringsStepsA3.comingBack, cb),
                   if (t.agreedTotal > 0) _chip(TripStrings.agreedChip(BrowseItem.inr(t.agreedTotal)), Iconsax.wallet_2),
                 ],
               ),

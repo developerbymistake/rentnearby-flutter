@@ -151,4 +151,115 @@ void main() {
     final r = TripSummaryRecord.fromJson(record(nights: [night(3)]));
     expect(TripSummaryText.checkOutOf(r.nights.first.date), 'Wed 04 Nov');
   });
+
+  Map<String, dynamic> leg(int i, String from, String to, String driver, int fare, {String? meeting}) => {
+        'legIndex': i,
+        'fromName': from,
+        'toName': to,
+        'meetingPlace': meeting,
+        'listedFare': fare,
+        'carsNeeded': 1,
+        'driverAvailable': true,
+        'lastKnownStatus': 'Unknown',
+        'taxiId': 't$i',
+        'driverName': driver,
+        'phone': '9800000000',
+      };
+
+  Map<String, dynamic> journey(String role, {List<Map<String, dynamic>>? legs, String date = '2026-11-01'}) {
+    final l = legs ??
+        [
+          leg(1, 'Delhi', 'Haridwar', 'Sunil Kumar', 4200),
+          leg(2, 'Haridwar', 'Nainital', 'Mohan Bisht', 9800),
+        ];
+    return {
+      'id': 'j-$role',
+      'role': role,
+      'fromName': 'Delhi',
+      'fromLat': 28.6,
+      'fromLng': 77.2,
+      'toName': 'Nainital',
+      'toLat': 29.4,
+      'toLng': 79.5,
+      'date': date,
+      'people': 4,
+      'cars': l.length,
+      'status': 'Ready',
+      'listedTotal': 14000,
+      'legs': l,
+    };
+  }
+
+  Map<String, dynamic> withSteps(Map<String, dynamic> steps, {Map<String, dynamic>? gt, Map<String, dynamic>? cb}) =>
+      {
+        ...record(),
+        'steps': steps,
+        'gettingThere': ?gt,
+        'comingBack': ?cb,
+      };
+
+  test('getting there block shows route, cars, about total, car rows and the change place', () {
+    final r = TripSummaryRecord.fromJson(withSteps(
+      {
+        'gettingThere': {'status': 'chosen', 'journeyId': 'j-gettingThere'},
+      },
+      gt: journey('gettingThere'),
+    ));
+    final text = TripSummaryText.build(r);
+    expect(text, contains('Getting there'));
+    expect(text, contains('Delhi → Haridwar → Nainital'));
+    expect(text, contains('2 cars'));
+    expect(text, contains('about ${BrowseItem.inr(14000)}'));
+    expect(text, contains('Car 1 Sunil Kumar'));
+    expect(text, contains('Car 2 Mohan Bisht'));
+    expect(text, contains('change car at Haridwar'));
+    expect(text.indexOf('Getting there'), lessThan(text.indexOf('Night 1')));
+    expect(text, isNot(contains('9800000000')));
+  });
+
+  test('coming back with one car sits after the taxis', () {
+    final r = TripSummaryRecord.fromJson(withSteps(
+      {
+        'comingBack': {'status': 'booked', 'journeyId': 'j-comingBack'},
+      },
+      cb: journey('comingBack', legs: [leg(1, 'Nainital', 'Delhi', 'Rajesh Kumar', 5200)], date: '2026-11-03'),
+    ));
+    final text = TripSummaryText.build(r);
+    expect(text, contains('Coming back'));
+    expect(text, contains('1 car'));
+    expect(text, contains('Car 1 Rajesh Kumar'));
+    expect(text.indexOf('Coming back'), greaterThan(text.indexOf('Mohan Bisht')));
+  });
+
+  test('own step is one line with the note', () {
+    final r = TripSummaryRecord.fromJson(withSteps({
+      'gettingThere': {'status': 'own', 'note': 'Own car, leaving 6 am'},
+    }));
+    final text = TripSummaryText.build(r);
+    expect(text, contains('Arranged by you · Own car, leaving 6 am'));
+  });
+
+  test('skipped and not needed steps are omitted', () {
+    final r = TripSummaryRecord.fromJson(withSteps({
+      'gettingThere': {'status': 'skipped'},
+      'comingBack': {'status': 'notNeeded'},
+    }));
+    final text = TripSummaryText.build(r);
+    expect(text, isNot(contains('Getting there')));
+    expect(text, isNot(contains('Coming back')));
+    expect(TripSummaryText.hasSteps(r), isFalse);
+  });
+
+  test('a chosen journey alone brings the driver pay line', () {
+    final r = TripSummaryRecord.fromJson({
+      ...withSteps(
+        {
+          'gettingThere': {'status': 'chosen', 'journeyId': 'j-gettingThere'},
+        },
+        gt: journey('gettingThere'),
+      ),
+      'taxis': <Map<String, dynamic>>[],
+    });
+    expect(TripSummaryText.footer(r), contains(TripStrings.taxiPayLine));
+  });
 }

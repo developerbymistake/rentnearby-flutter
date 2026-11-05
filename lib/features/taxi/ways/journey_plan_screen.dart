@@ -12,6 +12,7 @@ import 'models/taxi_ways_models.dart';
 import 'taxi_ways_controller.dart';
 import 'taxi_ways_navigation.dart';
 import 'taxi_ways_strings.dart';
+import '../../trip/trip_strings_steps_a3.dart';
 import 'trip_strings_a6.dart';
 import 'widgets/journey_rail.dart';
 import 'widgets/journey_total_bar.dart';
@@ -122,6 +123,8 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
               busy: c.busyPlans.contains(plan.planKey),
               onAsk: () => c.askDrivers(context, plan),
               onSave: () => c.saveJourney(plan),
+              onUse: c.forTrip ? () => c.useForTrip(plan) : null,
+              useLabel: TripStringsStepsA3.useForMyTrip,
             );
           }),
       ]),
