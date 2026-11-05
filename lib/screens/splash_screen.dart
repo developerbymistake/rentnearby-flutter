@@ -10,6 +10,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/tab_config_controller.dart';
 import '../services/storage_service.dart';
 import '../utils/update_decision.dart';
+import 'splash/splash_hero.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,6 +19,8 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver {
+  static const _minSplash = Duration(milliseconds: 1500);
+  static const _minSplashReduced = Duration(milliseconds: 1000);
   bool _waitingForSettings = false;
   Worker? _updateGateWorker;
 
@@ -47,7 +50,8 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
 
   Future<void> _start() async {
     await Future.wait([
-      Future.delayed(const Duration(milliseconds: 1000)),
+      Future.delayed(WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations
+          ? _minSplashReduced : _minSplash),
       AppVersionController.to.initialCheck
           .timeout(AppConstants.appVersionSplashWait, onTimeout: () {})
           .catchError((_) {}),
@@ -168,13 +172,9 @@ class _SplashScreenState extends State<SplashScreen> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SizedBox.expand(
-        child: Image.asset(
-          'assets/images/splash_screen.png',
-          fit: BoxFit.cover,
-        ),
-      ),
+    return const Scaffold(
+      backgroundColor: AppColors.textDark,
+      body: SplashHero(),
     );
   }
 }
