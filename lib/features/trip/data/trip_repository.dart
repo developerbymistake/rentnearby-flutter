@@ -1,3 +1,6 @@
+import 'package:get/get.dart';
+import '../../../config/app_tabs.dart';
+import '../../../controllers/tab_config_controller.dart';
 import '../../../services/api_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../utils/network_retry.dart';
@@ -31,10 +34,19 @@ class TripErrorTypes {
 
 class TripCitySupply {
   final String? districtId;
-  final int stays;
-  final int drivers;
+  final int listedStays;
+  final int listedDrivers;
 
-  const TripCitySupply({this.districtId, this.stays = 0, this.drivers = 0});
+  const TripCitySupply({this.districtId, int stays = 0, int drivers = 0})
+      : listedStays = stays,
+        listedDrivers = drivers;
+
+  static bool _tabOn(int index) =>
+      !Get.isRegistered<TabConfigController>() || TabConfigController.to.isActiveForIndex(index);
+
+  int get stays => _tabOn(AppTabs.stays) ? listedStays : 0;
+
+  int get drivers => _tabOn(AppTabs.taxi) ? listedDrivers : 0;
 
   bool get isEmpty => districtId == null || (stays == 0 && drivers == 0);
 

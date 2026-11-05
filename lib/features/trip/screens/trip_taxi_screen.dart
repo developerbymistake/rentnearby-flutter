@@ -17,6 +17,7 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a3.dart';
+import '../trip_strings_fin_a1.dart';
 import '../trip_strings_mca_a3.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
@@ -208,7 +209,8 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
       );
       if (!ok || !mounted) return;
     }
-    await TripTaxiBookingSheet.show(context, taxi: t, day: _day);
+    final e = _plan.taxiEnquiryForDriver(_day, t.id);
+    await TripTaxiBookingSheet.show(context, taxi: t, day: _day, enquiry: e, initialFare: e?.taxi?.driverFare);
   }
 
   Future<void> _shortlist(TaxiBrowseItem t) async {
@@ -553,6 +555,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
           itemBuilder: (_, i) {
             final t = list[i];
             final status = _plan.taxiStatusFor(d, t.id);
+            final removable = _plan.canRemoveTaxiShortlist(d, t.id);
             return _narrow(Obx(() => TripDriverRow(
                   key: ValueKey('${t.id}-$d'),
                   item: t,
@@ -565,11 +568,19 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
                   onCall: () => _contact(t, whatsApp: false),
                   onWhatsApp: () => _contact(t, whatsApp: true),
                   onShortlist: () => status == null ? _shortlist(t) : TripNavigation.openTaxiReplies(d),
-                  menuItems: _menu(d),
-                  onMenu: (v) => switch (v) {
-                    0 => _select(t),
-                    1 => _book(t),
-                    _ => _open(t),
+                  onRemove: removable ? () => _plan.removeTaxiShortlist(d, t.id) : null,
+                  menuItems: _menu(d, removable: removable),
+                  onMenu: (v) {
+                    switch (v) {
+                      case 0:
+                        _select(t);
+                      case 1:
+                        _book(t);
+                      case 3:
+                        _plan.removeTaxiShortlist(d, t.id);
+                      default:
+                        _open(t);
+                    }
                   },
                 )));
           },
@@ -578,7 +589,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
     });
   }
 
-  List<PopupMenuEntry<int>> _menu(int d) {
+  List<PopupMenuEntry<int>> _menu(int d, {bool removable = false}) {
     PopupMenuItem<int> item(int v, IconData icon, String label) => PopupMenuItem<int>(
           value: v,
           child: Row(
@@ -596,6 +607,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
       item(0, Iconsax.tick_circle, TripStringsA3.useForDay(d)),
       item(1, Iconsax.receipt_edit, TripStringsA3.iBookedThis),
       item(2, Iconsax.eye, TripStringsA3.viewDetails),
+      if (removable) item(3, Iconsax.close_circle, TripStringsFinA1.removeFromShortlist),
     ];
   }
 

@@ -190,6 +190,8 @@ class TripSummaryDay {
         spots: ((json['spots'] as List?) ?? const []).whereType<String>().toList(),
         minutes: (json['minutes'] as num?)?.toInt() ?? 0,
       );
+
+  TripSummaryDay withMinutes(int value) => TripSummaryDay(day: day, date: date, spots: spots, minutes: value);
 }
 
 class TripSummaryTravelModes {
@@ -468,6 +470,30 @@ class TripSummaryRecord {
       );
 
   bool get isMultiCity => legs.length > 1;
+
+  TripSummaryRecord withDayMinutes(Map<int, int> byDay) {
+    if (byDay.isEmpty) return this;
+    return TripSummaryRecord(
+      tripId: tripId,
+      title: title,
+      city: city,
+      startDate: startDate,
+      endDate: endDate,
+      adults: adults,
+      kids: kids,
+      bookingState: bookingState,
+      agreedTotal: agreedTotal,
+      generatedAt: generatedAt,
+      nights: nights,
+      taxis: taxis,
+      days: [for (final d in days) byDay[d.day] == null ? d : d.withMinutes(byDay[d.day]!)],
+      steps: steps,
+      gettingThere: gettingThere,
+      comingBack: comingBack,
+      cities: _cities,
+      legs: legs,
+    );
+  }
 
   bool get hasLegTravel => legs.any((l) => l.travel != null);
 

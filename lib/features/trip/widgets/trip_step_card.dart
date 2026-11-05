@@ -338,6 +338,7 @@ class TripStepCard extends StatelessWidget {
     final checkOut = c.checkOutDate;
     final onCheckOut = back && checkOut != null && _sameDay(j.date, checkOut);
     final changed = j.dateChanged || j.startChanged;
+    final canAsk = c.stepCanAsk(role);
     final main = _frame(
       amber: j.needsAttention,
       children: [
@@ -354,7 +355,7 @@ class TripStepCard extends StatelessWidget {
         const SizedBox(height: 10),
         TripJourneyCompact(journey: j, tone: booked ? TripStatusColors.booked : null),
         if (!readOnly) ...[
-          if (!booked) ...[
+          if (!booked && canAsk) ...[
             const SizedBox(height: 12),
             _pair(
               _outlined(TripStringsStepsA2.change, () => TripNavigation.openWays(role)),
@@ -365,9 +366,10 @@ class TripStepCard extends StatelessWidget {
           Wrap(
             spacing: 4,
             children: [
-              booked
-                  ? _textAction(TripStringsStepsA2.notBookedYet, () => c.unmarkStepBooked(role))
-                  : _textAction(TripStringsStepsA2.iBookedIt, () => c.markStepBooked(role)),
+              if (booked)
+                _textAction(TripStringsStepsA2.notBookedYet, () => c.unmarkStepBooked(role))
+              else if (canAsk)
+                _textAction(TripStringsStepsA2.iBookedIt, () => c.markStepBooked(role)),
               _textAction(TripStringsStepsA2.openJourney, () => TripNavigation.openJourney(j.id)),
             ],
           ),

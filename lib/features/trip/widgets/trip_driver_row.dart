@@ -19,6 +19,7 @@ class TripDriverRow extends StatelessWidget {
     required this.onWhatsApp,
     required this.onShortlist,
     required this.onMenu,
+    this.onRemove,
     this.status,
     this.shortlisted = false,
     this.shortlistFull = false,
@@ -40,6 +41,7 @@ class TripDriverRow extends StatelessWidget {
   final VoidCallback onWhatsApp;
   final VoidCallback onShortlist;
   final ValueChanged<int> onMenu;
+  final VoidCallback? onRemove;
   final List<PopupMenuEntry<int>> menuItems;
 
   bool get _booked => status == TripDisplayStatus.bookedByYou || status == TripDisplayStatus.confirmedByBoth;
@@ -190,7 +192,14 @@ class TripDriverRow extends StatelessWidget {
       onTap: contactBusy ? null : onWhatsApp,
     );
     final Widget third;
-    if (status != null) {
+    if (onRemove != null) {
+      third = _button(
+        icon: const Icon(Iconsax.close_circle, size: 16, color: AppColors.error),
+        label: TripStrings.remove,
+        color: AppColors.error,
+        onTap: onRemove,
+      );
+    } else if (status != null) {
       third = _button(
         icon: const Icon(Iconsax.eye, size: 16, color: TaxiColors.accentDark),
         label: TripStringsA3.viewStatus,

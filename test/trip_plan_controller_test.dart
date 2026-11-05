@@ -1234,14 +1234,14 @@ void main() {
       expect(c.removeLegMode(1), TripLegRemoveMode.shift);
     });
 
-    test('growing a leg never pulls later bookings into the impact', () async {
+    test('growing a leg is blocked while a later leg holds bookings (#63)', () async {
       final c = ctl(legsPlan(legOfDay: const [1, 2, 2]),
           rows: [stayRow('later', 2, TripEnquiryStatuses.confirmedByBoth, city: 'Badrinath')]);
       expect(c.legShrinkImpact(1, 2).isEmpty, isTrue);
-      expect(c.legShrinkImpact(1, 2).laterKeepDates, isFalse);
-      expect(c.canSetLegDays(1, 2), TripLegEditBlock.none);
-      expect(await c.setLegDays(1, 2), isTrue);
-      expect(c.plan.value!.legDayCount(1), 2);
+      expect(c.canSetLegDays(1, 2), TripLegEditBlock.bookings);
+      expect(c.maxDaysForLeg(1), 1);
+      expect(await c.setLegDays(1, 2), isFalse);
+      expect(c.plan.value!.legDayCount(1), 1);
       expect(c.plan.value!.legDayCount(2), 2);
     });
 

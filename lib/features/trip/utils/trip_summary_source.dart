@@ -1,9 +1,13 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show listEquals;
+import 'package:get/get.dart';
 import '../../../services/api_service.dart';
 import '../../../services/storage_service.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../../utils/network_retry.dart';
+import '../controllers/trip_plan_controller.dart';
 import '../data/trip_repository.dart';
+import '../data/trip_today_cache.dart';
 import '../models/trip_summary_model.dart';
 
 class TripSummarySnapshot {
@@ -30,12 +34,36 @@ class TripSummarySource {
     return data is Map<String, dynamic> ? data : const {};
   }
 
+  static TripSummaryRecord _withRoadTime(TripSummaryRecord r) {
+    final live = Get.isRegistered<TripPlanController>() ? Get.find<TripPlanController>() : null;
+    final byDay = <int, int>{};
+    if (live != null && live.trip.value?.id == r.tripId) {
+      for (final d in r.days) {
+        final m = live.roadDayMinutes(d.day, d.spots);
+        if (m != null && m > 0) byDay[d.day] = m;
+      }
+      return r.withDayMinutes(byDay);
+    }
+    final plan = TripTodayCache.trip(r.tripId)?.plan;
+    final result = TripTodayCache.result(r.tripId);
+    if (plan == null || result == null) return r;
+    for (final d in r.days) {
+      final pd = plan.dayAt(d.day);
+      final rd = result.dayAt(d.day);
+      if (pd == null || rd == null || rd.totalMinutes <= 0) continue;
+      if (!listEquals([for (final s in pd.spots) s.id], rd.spotIds)) continue;
+      if (!listEquals([for (final s in pd.spots) s.name], d.spots)) continue;
+      byDay[d.day] = rd.totalMinutes;
+    }
+    return r.withDayMinutes(byDay);
+  }
+
   static TripSummarySnapshot? cached(String tripId) {
     final json = StorageService.getTripSummaryCache(tripId);
     if (json == null) return null;
     try {
       return TripSummarySnapshot(
-        TripSummaryRecord.fromJson(json),
+        _withRoadTime(TripSummaryRecord.fromJson(json)),
         cachedAt: DateTime.tryParse(json[_savedKey] as String? ?? '') ?? DateTime.now(),
       );
     } catch (_) {
@@ -48,7 +76,7 @@ class TripSummarySource {
     final saved = cached(tripId);
     try {
       final data = _data(saved == null ? await withRetry(() => ApiService.get(path)) : await ApiService.get(path));
-      final record = TripSummaryRecord.fromJson(data);
+      final record = _withRoadTime(TripSummaryRecord.fromJson(data));
       StorageService.saveTripSummaryCache(tripId, {...data, _savedKey: DateTime.now().toIso8601String()});
       return TripSummarySnapshot(record);
     } catch (e) {

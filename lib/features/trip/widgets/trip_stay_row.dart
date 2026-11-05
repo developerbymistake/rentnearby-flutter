@@ -8,6 +8,7 @@ import '../../stay/models/stay_nearby_model.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
+import '../trip_strings_fin_b1.dart';
 import '../utils/trip_format.dart';
 import 'trip_status.dart';
 
@@ -18,6 +19,8 @@ class TripStayRow extends StatelessWidget {
     required this.shortlisted,
     required this.onOpen,
     this.status,
+    this.statusLine,
+    this.onOpenChat,
     this.readOnly = false,
     this.onCall,
     this.onWhatsApp,
@@ -28,6 +31,8 @@ class TripStayRow extends StatelessWidget {
   final StayNearbyModel stay;
   final bool shortlisted;
   final TripDisplayStatus? status;
+  final String? statusLine;
+  final VoidCallback? onOpenChat;
   final bool readOnly;
   final VoidCallback onOpen;
   final VoidCallback? onCall;
@@ -39,10 +44,12 @@ class TripStayRow extends StatelessWidget {
   static const double actionHeight = 46;
 
   static String? typeLine(StayNearbyModel s) {
-    final guests = s.maxGuests;
+    final room = s.bestRoomName?.trim() ?? '';
+    final guests = room.isNotEmpty ? s.bestRoomGuests : s.maxGuests;
+    final guestsText = guests != null && guests > 0 ? TripStringsA2.guests(guests) : null;
     final parts = [
       if (s.stayTypeName != null && s.stayTypeName!.trim().isNotEmpty) s.stayTypeName!.trim(),
-      if (guests != null && guests > 0) TripStringsA2.guests(guests),
+      if (room.isNotEmpty) TripStringsFinB1.roomLine(room, guestsText) else ?guestsText,
     ];
     return parts.isEmpty ? null : parts.join(' · ');
   }
@@ -67,6 +74,7 @@ class TripStayRow extends StatelessWidget {
         .toList();
     final time = s.checkInTime;
     final parts = [
+      if (s.hasGroundFloorRoom) TripStringsFinB1.groundFloor,
       ...meals,
       if (time != null && time.trim().isNotEmpty) TripStringsA2.checkIn(_checkIn(time.trim())),
     ];
@@ -152,7 +160,7 @@ class TripStayRow extends StatelessWidget {
 
   Widget _body() {
     final type = typeLine(stay);
-    final facts = factsLine(stay);
+    final facts = statusLine ?? factsLine(stay);
     final price = stay.minPricePerNight;
     final st = status;
     return Row(
@@ -174,8 +182,10 @@ class TripStayRow extends StatelessWidget {
                         style: const TextStyle(
                             fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                   ),
-                  const SizedBox(width: 8),
-                  _pill(TripFormat.km(stay.distanceKm), StayColors.accentDark, StayColors.surface),
+                  if (stay.distanceKm > 0) ...[
+                    const SizedBox(width: 8),
+                    _pill(TripFormat.km(stay.distanceKm), StayColors.accentDark, StayColors.surface),
+                  ],
                 ],
               ),
               if (_paused || st != null || stay.isFeatured) ...[
@@ -240,7 +250,7 @@ class TripStayRow extends StatelessWidget {
 
   Widget? _actions() {
     if (_paused) {
-      if (!shortlisted || onRemove == null || readOnly) return null;
+      if ((!shortlisted && status == null) || onRemove == null || readOnly) return null;
       return _strip([
         _ActionSpec(
           icon: Iconsax.close_circle,
@@ -261,7 +271,14 @@ class TripStayRow extends StatelessWidget {
       ),
     ];
     if (!readOnly) {
-      if (status != null) {
+      if (status != null && onOpenChat != null) {
+        specs.add(_ActionSpec(
+          icon: Iconsax.message,
+          label: TripStrings.openChat,
+          color: StayColors.accentDark,
+          onTap: onOpenChat,
+        ));
+      } else if (status != null) {
         specs.add(const _ActionSpec(icon: Iconsax.tick_circle, label: TripStringsA2.asked, color: AppColors.textHint));
       } else if (shortlisted) {
         specs.add(_ActionSpec(

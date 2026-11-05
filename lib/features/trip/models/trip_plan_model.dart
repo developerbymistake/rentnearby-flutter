@@ -1029,14 +1029,22 @@ class SettingsSaveResult {
   final bool saved;
   final List<TripEnquiryModel> confirmedAffected;
   final List<TripEnquiryModel> openAffected;
+  final List<TripEnquiryModel> bookedTaxiAffected;
+  final List<TripEnquiryModel> openTaxiAffected;
 
   const SettingsSaveResult({
     required this.saved,
     this.confirmedAffected = const [],
     this.openAffected = const [],
+    this.bookedTaxiAffected = const [],
+    this.openTaxiAffected = const [],
   });
 
-  bool get hasAffected => confirmedAffected.isNotEmpty || openAffected.isNotEmpty;
+  bool get hasAffected =>
+      confirmedAffected.isNotEmpty ||
+      openAffected.isNotEmpty ||
+      bookedTaxiAffected.isNotEmpty ||
+      openTaxiAffected.isNotEmpty;
 }
 
 class DateChangeImpact {

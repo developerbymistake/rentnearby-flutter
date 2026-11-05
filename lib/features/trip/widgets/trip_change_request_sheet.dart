@@ -18,17 +18,30 @@ import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
 
 class TripChangeRequestSheet {
-  static Future<bool> show(BuildContext context, {required TripEnquiryModel enquiry, TripSettings? prefill}) async {
-    final ok = await TripSheetFrame.show<bool>(context, _ChangeBody(enquiry: enquiry, prefill: prefill));
+  static Future<bool> show(
+    BuildContext context, {
+    required TripEnquiryModel enquiry,
+    TripSettings? prefill,
+    DateTime? checkIn,
+    DateTime? checkOut,
+    String? title,
+  }) async {
+    final ok = await TripSheetFrame.show<bool>(
+      context,
+      _ChangeBody(enquiry: enquiry, prefill: prefill, checkIn: checkIn, checkOut: checkOut, title: title),
+    );
     return ok == true;
   }
 }
 
 class _ChangeBody extends StatefulWidget {
-  const _ChangeBody({required this.enquiry, this.prefill});
+  const _ChangeBody({required this.enquiry, this.prefill, this.checkIn, this.checkOut, this.title});
 
   final TripEnquiryModel enquiry;
   final TripSettings? prefill;
+  final DateTime? checkIn;
+  final DateTime? checkOut;
+  final String? title;
 
   @override
   State<_ChangeBody> createState() => _ChangeBodyState();
@@ -64,8 +77,8 @@ class _ChangeBodyState extends State<_ChangeBody> {
     _origKids = e.context.kids ?? 0;
     final acceptedRooms = accepted?.rooms ?? 0;
     _origRooms = acceptedRooms > 0 ? acceptedRooms : (e.context.rooms ?? TripConstants.defaultRooms);
-    _checkIn = _origIn;
-    _checkOut = _origOut;
+    _checkIn = _day(widget.checkIn) ?? _origIn;
+    _checkOut = _day(widget.checkOut) ?? _origOut;
     final want = widget.prefill;
     _adults = (want?.adults ?? _origAdults).clamp(1, TripConstants.maxAdults);
     _kids = (want?.kids ?? _origKids).clamp(0, TripConstants.maxKids);
@@ -198,7 +211,7 @@ class _ChangeBodyState extends State<_ChangeBody> {
   @override
   Widget build(BuildContext context) {
     return TripSheetFrame(
-      title: TripStrings.changeRequest,
+      title: widget.title ?? TripStrings.changeRequest,
       description: widget.enquiry.listingName.isEmpty ? null : widget.enquiry.listingName,
       footer: const TripPaymentLine(),
       children: [

@@ -22,6 +22,7 @@ import '../utils/trip_format.dart';
 import '../utils/trip_report.dart';
 import '../widgets/trip_accept_sheet.dart';
 import '../widgets/trip_cancel_sheet.dart';
+import '../widgets/trip_change_request_sheet.dart';
 import '../widgets/trip_counter_sheet.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_phone_booking_sheet.dart';
@@ -622,6 +623,14 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
         ),
       );
 
+  Future<void> _sendChange(TripEnquiryModel e) async {
+    final day = e.day;
+    final from = day == null || day > _c.dayCount ? null : _c.dateOf(day);
+    final to = from == null ? null : DateTime(from.year, from.month, from.day + e.nights);
+    final sent = await TripChangeRequestSheet.show(context, enquiry: e, checkIn: from, checkOut: to);
+    if (sent && mounted) await _c.refreshEnquiries();
+  }
+
   Widget _actions(_Entry x) {
     final e = x.enquiry;
     final status = x.status;
@@ -670,6 +679,9 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
             () => TripCancelSheet.show(context, enquiry: e, ownerSide: false),
             color: AppColors.error);
       case TripDisplayStatus.confirmedByBoth:
+        if (!_c.isReadOnly && TripEnquiryRules.isOutsideTrip(e!, _c.settings, _c.dayCount)) {
+          add(Iconsax.calendar_edit, TripStrings.sendChangeRequest, () => _sendChange(e!));
+        }
         add(Iconsax.close_circle, TripStrings.cancelBooking,
             () => TripCancelSheet.show(context, enquiry: e!, ownerSide: false),
             color: AppColors.error);

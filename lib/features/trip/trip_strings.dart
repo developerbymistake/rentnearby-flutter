@@ -382,6 +382,7 @@ class TripStrings {
   static const String markedReceived = 'Marked as received';
   static const String notYetNoted = 'Noted. Reminders continue hourly.';
   static const String replacedByNewer = 'Replaced by a newer request';
+  static const String advanceCancelled = 'Booking cancelled';
   static const String holdEnded = 'Hold ended';
   static const String advanceNotMarked = 'Advance not marked';
   static String canStillMark(String g) => 'If $g paid, you can still mark it until check-in.';

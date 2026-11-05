@@ -4,9 +4,12 @@ import '../../../config/app_colors.dart';
 import '../../../utils/app_toast.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
+import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
+import '../trip_strings_fin_a1.dart';
+import 'trip_change_request_sheet.dart';
 import 'trip_withdraw_sheet.dart';
 
 enum TripNightMode { same, nightByNight, none }
@@ -39,6 +42,18 @@ class TripNightChooser extends StatelessWidget {
   static bool visible(TripPlanController c, int day) =>
       !c.isReadOnly && !c.isDayPast(day) && c.plan.value?.dayAt(day) != null && !isBooked(c, day);
 
+  static Future<void> askAddNight(BuildContext context, TripPlanController c, int day, TripEnquiryModel e) async {
+    final out = e.acceptedOffer?.checkOut ?? e.checkOut;
+    if (out == null) return;
+    final sent = await TripChangeRequestSheet.show(
+      context,
+      enquiry: e,
+      checkOut: DateTime(out.year, out.month, out.day + 1),
+      title: TripStringsFinA1.askHostAddNight(e.listingName, day),
+    );
+    if (sent) await c.refreshEnquiries();
+  }
+
   Future<bool> _clearOpen(BuildContext context, TripPlanController c) async {
     final open = c.enquiriesForNight(day).where((e) => e.isUnconfirmed).toList();
     if (open.isEmpty) return true;
@@ -51,13 +66,18 @@ class TripNightChooser extends StatelessWidget {
     if (mode == current) return;
     switch (mode) {
       case TripNightMode.same:
+        final change = c.sameStayNeedsChange(day);
+        if (change != null) {
+          await askAddNight(context, c, day, change);
+          return;
+        }
         if (baseOf(c, day) == null) {
           AppToast.warning(TripStringsA2.noBaseStay);
           return;
         }
         if (!await _clearOpen(context, c)) return;
         if (current == TripNightMode.none) c.clearSkippedNight(day);
-        if (!c.setSameAsLastNight(day)) AppToast.warning(TripStringsA2.noBaseStay);
+        if (!c.setSameAsLastNight(day) && c.sameStayNeedsChange(day) == null) AppToast.warning(TripStringsA2.noBaseStay);
       case TripNightMode.none:
         if (!await _clearOpen(context, c)) return;
         c.setSkippedNight(day);

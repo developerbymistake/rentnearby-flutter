@@ -25,7 +25,8 @@ class TripLegHeader extends StatelessWidget {
       final b = p.legEnd(legIndex);
       final spots = p.legSpotCount(legIndex);
       final range = TripStringsMcaA3.dayRangeWithDates(a, b, c.dateOf(a), c.dateOf(b));
-      final line = spots > 0 ? '$range · ${TripStringsMcaA3.spots(spots)}' : range;
+      final nights = TripStringsMcaA3.nights(p.legDayCount(legIndex));
+      final line = spots > 0 ? '$range · ${TripStringsMcaA3.spots(spots)} · $nights' : '$range · $nights';
       final menu = !c.isReadOnly && !c.needsUpdate.value;
       final unavailable = c.legUnavailable(legIndex);
       return Padding(

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:get/get.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
@@ -7,8 +8,9 @@ import '../models/trip_model.dart';
 import '../trip_strings.dart';
 
 class MyTripsController extends GetxController {
-  static MyTripsController get to =>
-      Get.isRegistered<MyTripsController>() ? Get.find<MyTripsController>() : Get.put(MyTripsController());
+  static MyTripsController get to => Get.isRegistered<MyTripsController>()
+      ? Get.find<MyTripsController>()
+      : Get.put(MyTripsController(), permanent: true);
 
   static const _pageSize = 20;
 
@@ -28,12 +30,72 @@ class MyTripsController extends GetxController {
   int _seq = 0;
   bool _loadedOnce = false;
   Future<void>? _ensuring;
+  DateTime? _loadedDay;
+  final _doneIds = <String>{};
+  AppLifecycleListener? _lifecycle;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _lifecycle = AppLifecycleListener(onResume: refreshIfStale);
+  }
+
+  @override
+  void onClose() {
+    _lifecycle?.dispose();
+    super.onClose();
+  }
+
+  static DateTime get _today {
+    final n = DateTime.now();
+    return DateTime(n.year, n.month, n.day);
+  }
+
+  Future<void> refreshIfStale() {
+    if (!_loadedOnce || isLoading.value) return Future.value();
+    if (_loadedDay == _today && state.value == _upcoming) return Future.value();
+    return load();
+  }
+
+  void resetView() {
+    if (state.value == _upcoming) return;
+    state.value = _upcoming;
+    items.assignAll(upcoming);
+    hasMore.value = false;
+  }
+
+  void adoptCompleted(String id, DateTime? at) {
+    _doneIds.add(id);
+    final wasUpcoming = upcoming.any((t) => t.id == id);
+    if (wasUpcoming) upcoming.removeWhere((t) => t.id == id);
+    final index = items.indexWhere((t) => t.id == id);
+    if (index >= 0 && !items[index].isCompleted) {
+      if (state.value == _upcoming) {
+        items.removeAt(index);
+      } else {
+        items[index] = items[index].asCompleted(at);
+      }
+    }
+    if (wasUpcoming) {
+      _shiftCount(false, -1);
+      _shiftCount(true, 1);
+    }
+  }
+
+  void adoptMuted(String id, DateTime? at) {
+    final i = items.indexWhere((t) => t.id == id);
+    if (i >= 0 && items[i].mutedAt != at) items[i] = items[i].withMuted(at);
+    final u = upcoming.indexWhere((t) => t.id == id);
+    if (u >= 0 && upcoming[u].mutedAt != at) upcoming[u] = upcoming[u].withMuted(at);
+  }
 
   TripSummaryModel? get runningTrip {
     final now = DateTime.now();
-    final source = upcoming.isNotEmpty ? upcoming : (_repo.cachedList(_upcoming)?.value.items ?? const <TripSummaryModel>[]);
+    final source = upcoming.isNotEmpty || _loadedDay != null
+        ? upcoming
+        : (_repo.cachedList(_upcoming)?.value.items ?? const <TripSummaryModel>[]);
     for (final t in source) {
-      if (t.isRunningOn(now)) return t;
+      if (!_doneIds.contains(t.id) && t.isRunningOn(now)) return t;
     }
     return null;
   }
@@ -55,6 +117,7 @@ class MyTripsController extends GetxController {
       final res = await _repo.list(page: 1, pageSize: _pageSize, state: current);
       if (seq != _seq) return;
       _loadedOnce = true;
+      if (current == _upcoming) _loadedDay = _today;
       offlineCopyAt.value = null;
       counts.value = res.counts;
       items.assignAll(res.items);
@@ -151,6 +214,7 @@ class MyTripsController extends GetxController {
   Future<bool> markComplete(String id) async {
     try {
       final trip = await _repo.complete(id);
+      _doneIds.add(id);
       upcoming.removeWhere((t) => t.id == id);
       final index = items.indexWhere((t) => t.id == id);
       if (index >= 0) {
@@ -173,8 +237,7 @@ class MyTripsController extends GetxController {
   Future<bool> toggleMute(String id, bool muted) async {
     try {
       final trip = await _repo.mute(id, muted: muted);
-      final index = items.indexWhere((t) => t.id == id);
-      if (index >= 0) items[index] = items[index].withMuted(trip.mutedAt);
+      adoptMuted(id, trip.mutedAt);
       AppToast.success(trip.isMuted ? TripStrings.remindersMuted : TripStrings.remindersOn);
       return true;
     } catch (e) {

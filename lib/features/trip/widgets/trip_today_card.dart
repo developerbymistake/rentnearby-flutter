@@ -15,6 +15,7 @@ import '../models/trip_journey_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_fin_b1.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mcb_a1.dart';
 import '../trip_strings_mcd_a3.dart';
@@ -42,11 +43,13 @@ class TripTodayCard extends StatelessWidget {
       c.trip.value;
       final today = c.todayDay;
       final journey = c.journeyToday;
-      if ((today == null && journey == null) || c.isCompleted) return const SizedBox.shrink();
+      final checkOutDay = today == null && c.isCheckOutDay;
+      if ((today == null && journey == null && !checkOutDay) || c.isCompleted) return const SizedBox.shrink();
       final n = today ?? _nearestDay(c);
       final offline = c.offline.value;
       final travelDay = today != null && c.isMultiCity && c.isTravelDay(n);
       final rows = <Widget>[
+        if (checkOutDay) ..._checkOutRow(c, c.dayCount + 1),
         if (journey != null) ..._travelRows(journey),
         if (travelDay) ..._travelDayRows(c, n),
         if (travelDay) ..._checkOutRow(c, n),
@@ -73,7 +76,7 @@ class TripTodayCard extends StatelessWidget {
                 children: [
                   Text(
                     today == null
-                        ? TripStringsStepsA3.travelDay(_todayDate)
+                        ? (journey == null ? TripStringsFinB1.checkOutDay : TripStringsStepsA3.travelDay(_todayDate))
                         : !c.isMultiCity
                             ? TripStrings.todayDay(n, c.dayCount)
                             : travelDay

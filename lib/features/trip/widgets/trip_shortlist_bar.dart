@@ -11,6 +11,7 @@ import '../screens/trip_stay_enquiry_sheet.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
+import '../trip_strings_fin_b1.dart';
 import 'trip_night_chooser.dart';
 import 'trip_own_booking_sheet.dart';
 import 'trip_page_bottom_bar.dart';
@@ -90,14 +91,16 @@ class TripShortlistBar extends StatelessWidget {
       final used = usedCount(c, day);
       final sendable = c.sendableShortlist(day).length;
       return TripPageBottomBar(
-        counterText: ownOnly ? '' : TripStringsA2.counter(used, withAsked: asked.isNotEmpty),
+        counterText: ownOnly || used == 0
+            ? TripStringsFinB1.nothingShortlisted
+            : TripStringsA2.counter(used, withAsked: asked.isNotEmpty),
         secondaryLabel: TripStrings.haveStay,
         secondaryIcon: Iconsax.home_hashtag,
         onSecondary: () => openOwn(context, day),
-        primaryLabel: sendable == 0 ? TripStringsA2.sendEnquiry : TripStrings.sendToStays(sendable),
-        onPrimary: sendable == 0 ? null : () => send(context, day),
+        primaryLabel: ownOnly || sendable == 0 ? TripStringsA2.sendEnquiry : TripStrings.sendToStays(sendable),
+        onPrimary: ownOnly || sendable == 0 ? null : () => send(context, day),
         hint: !ownOnly && used >= TripConstants.maxShortlist ? TripStrings.shortlistFull : null,
-        showPrimary: !ownOnly,
+        showPrimary: true,
         accent: StayColors.accent,
         gradient: StayColors.gradient,
       );

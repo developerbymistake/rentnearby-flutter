@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
+import '../../../utils/app_toast.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../widgets/gradient_button.dart';
 import '../../taxi/taxi_option_sets.dart';
@@ -12,6 +13,8 @@ import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
+import '../trip_strings_fin_b1.dart';
+import '../trip_strings_mcc_k2.dart';
 import '../utils/trip_format.dart';
 import 'trip_cancel_sheet.dart';
 import 'trip_filter_chips.dart';
@@ -97,6 +100,8 @@ class _OwnBodyState extends State<_OwnBody> {
 
   bool _dayOpen(int d) => !_c.isDayPast(d) && _c.bookedTaxiEnquiryFor(d) == null;
 
+  bool _sameCity(int d) => _c.legIndexOf(d) == _c.legIndexOf(_day);
+
   Set<int> _initialDays() {
     final p = _c.plan.value;
     if (p == null) return {_day};
@@ -104,13 +109,13 @@ class _OwnBodyState extends State<_OwnBody> {
     if (t != null) {
       final same = {
         for (final d in p.days)
-          if (d.taxi?.isOwn == true && d.taxi!.name == t.name && _dayOpen(d.day)) d.day,
+          if (d.taxi?.isOwn == true && d.taxi!.name == t.name && _dayOpen(d.day) && _sameCity(d.day)) d.day,
       };
       if (same.isNotEmpty) return same;
     }
     return {
       for (final d in p.days)
-        if (_dayOpen(d.day) && (d.day == _day || (d.day > _day && d.taxi == null))) d.day,
+        if (_dayOpen(d.day) && _sameCity(d.day) && (d.day == _day || (d.day > _day && d.taxi == null))) d.day,
     };
   }
 
@@ -157,12 +162,26 @@ class _OwnBodyState extends State<_OwnBody> {
     if (r is OwnSaved) Navigator.pop(context, true);
   }
 
-  void _saveTaxi() {
+  Future<void> _saveTaxi() async {
     final fare = int.tryParse(_fare.text.trim());
-    final days = _days.where(_dayOpen).toList()..sort();
+    final days = _days.where((d) => _dayOpen(d) && _sameCity(d)).toList()..sort();
     if (days.isEmpty) return;
-    _c.setOwnTaxi(days: days, name: _name.text.trim(), phone: _phone.text.trim(), note: _note.text.trim(), farePerDay: fare);
-    Navigator.pop(context, true);
+    OwnSaveResult save() => _c.setOwnTaxi(
+          days: days,
+          name: _name.text.trim(),
+          phone: _phone.text.trim(),
+          note: _note.text.trim(),
+          farePerDay: fare,
+          legDay: _day,
+        );
+    var r = save();
+    if (r is OwnNeedsWithdraw) {
+      if (!await TripWithdrawSheet.showForRemove(context, open: r.open)) return;
+      if (!mounted) return;
+      r = save();
+    }
+    if (!mounted) return;
+    if (r is OwnSaved) Navigator.pop(context, true);
   }
 
   Future<void> _save() async {
@@ -170,7 +189,7 @@ class _OwnBodyState extends State<_OwnBody> {
     setState(() => _busy = true);
     try {
       if (_isTaxi) {
-        _saveTaxi();
+        await _saveTaxi();
       } else {
         await _saveStay();
       }
@@ -228,7 +247,7 @@ class _OwnBodyState extends State<_OwnBody> {
 
   Widget _dayChips() {
     final n = _c.dayCount;
-    final anyOpen = [for (var d = 1; d <= n; d++) d].any(_dayOpen);
+    final anyOpen = [for (var d = 1; d <= n; d++) d].any((d) => _dayOpen(d) && _sameCity(d));
     if (!anyOpen) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 8),
@@ -248,6 +267,11 @@ class _OwnBodyState extends State<_OwnBody> {
             for (var d = 1; d <= n; d++) _dayChip(d),
           ],
         ),
+        if (_c.isMultiCity)
+          Text(TripStringsFinB1.ownTaxiCityHint(_c.cityNameOf(_day)),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight)),
         if (_days.isEmpty)
           const Text(TripStringsA2.pickADay,
               style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.error)),
@@ -262,18 +286,23 @@ class _OwnBodyState extends State<_OwnBody> {
     final label = !open && _c.bookedTaxiEnquiryFor(d) != null
         ? '$base · ${TripStringsA2.booked}'
         : (date == null ? base : '$base · ${TripFormat.dayMonth(date)}');
+    final city = _sameCity(d);
     final chip = TripChipView(
       accent: TaxiColors.accent,
       chip: TripFilterChip(
         label: label,
-        selected: open && _days.contains(d),
+        selected: open && city && _days.contains(d),
         onTap: () {
           if (!open) return;
+          if (!city) {
+            AppToast.warning(TripStringsMccK2.pickInOneCity);
+            return;
+          }
           setState(() => _days.contains(d) ? _days.remove(d) : _days.add(d));
         },
       ),
     );
-    return open ? chip : Opacity(opacity: 0.45, child: chip);
+    return open && city ? chip : Opacity(opacity: 0.45, child: chip);
   }
 
   @override

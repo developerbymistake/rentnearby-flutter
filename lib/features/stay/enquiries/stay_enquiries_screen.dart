@@ -45,6 +45,7 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
     final args = Get.arguments;
     _targetId = args is Map ? args['enquiryId']?.toString() : null;
     _ctrl.focusId.value = null;
+    if (_ctrl.stay.value == null) _ctrl.ensureStay();
     _focusWorker = ever<String?>(_ctrl.focusId, (id) {
       if (id == null || !mounted) return;
       _ctrl.focusId.value = null;
@@ -124,10 +125,13 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                  Text(TripStrings.tripEnquiry,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13, color: Colors.white70)),
+                  Obx(() {
+                    final name = _ctrl.stay.value?.name;
+                    return Text(name == null || name.isEmpty ? TripStrings.tripEnquiry : name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13, color: Colors.white70));
+                  }),
                 ]),
               ),
             ]),
@@ -193,7 +197,14 @@ class _StayEnquiriesScreenState extends State<StayEnquiriesScreen> with WidgetsB
       ));
     }
     if (items.isEmpty) {
-      final empty = failed
+      final empty = failed && _ctrl.executionDisabled.value
+          ? EmptyStateView(
+              icon: Iconsax.pause_circle,
+              title: TripStrings.plannerOff,
+              subtitle: TripStrings.plannerOffSubtitle,
+              palette: StayColors.palette,
+            )
+          : failed
           ? EmptyStateView(
               icon: Iconsax.wifi_square,
               title: TripStrings.couldNotLoad,
@@ -469,6 +480,10 @@ class _EnquiryCard extends StatelessWidget {
               () => StayEnquiryActions.acceptChange(context, e, change.id)));
           buttons.add(btn(TripStrings.sendDifferentOffer, StayEnquiryButtonKind.plain,
               () => StayEnquiryActions.revisedOffer(context, e, changeRequest: change)));
+          if (adv.isPending || adv.isProofSent) {
+            buttons.add(btn(TripStrings.markAdvanceReceived, StayEnquiryButtonKind.positive, () => StayEnquiryActions.markReceived(context, e)));
+            buttons.add(btn(TripStrings.notYet, StayEnquiryButtonKind.plain, () => StayEnquiryActions.notYet(context, e)));
+          }
         } else if (adv.isPending || adv.isProofSent) {
           buttons.add(btn(TripStrings.markAdvanceReceived, StayEnquiryButtonKind.positive, () => StayEnquiryActions.markReceived(context, e)));
           buttons.add(btn(TripStrings.notYet, StayEnquiryButtonKind.plain, () => StayEnquiryActions.notYet(context, e)));
@@ -482,7 +497,9 @@ class _EnquiryCard extends StatelessWidget {
         if (canOverride && !adv.hasRequest) {
           buttons.add(btn(TripStrings.notMe, StayEnquiryButtonKind.negative, () => StayEnquiryActions.hostConfirm(context, e, confirm: false)));
         }
-        buttons.add(btn(TripStrings.cancelBooking, StayEnquiryButtonKind.negative, () => StayEnquiryActions.cancel(context, e)));
+        if (!StayEnquiryBucket.hasEnded(e)) {
+          buttons.add(btn(TripStrings.cancelBooking, StayEnquiryButtonKind.negative, () => StayEnquiryActions.cancel(context, e)));
+        }
       case TripDisplayStatus.holdExpired:
         if (_checkInOpen(e)) {
           if (chat != null) buttons.add(chat);

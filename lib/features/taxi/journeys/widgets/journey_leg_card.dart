@@ -3,10 +3,12 @@ import '../../../../config/app_colors.dart';
 import '../../../../models/browse_item.dart';
 import '../../../../utils/contact_launcher.dart';
 import '../../../trip/trip_colors.dart';
+import '../../../trip/trip_strings_fin_b1.dart';
 import '../../taxi_option_sets.dart';
 import '../../ways/models/taxi_ways_models.dart';
 import '../../ways/taxi_ways_strings.dart';
 import '../../ways/trip_strings_a6.dart';
+import '../../ways/trip_strings_mcb_a2.dart';
 import '../journey_models.dart';
 import '../journey_strings.dart';
 
@@ -57,7 +59,9 @@ class JourneyLegCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final d = leg.driver;
-    final unavailable = !leg.driverAvailable;
+    final booked = leg.isBooked;
+    final unavailable = !leg.driverAvailable && !booked;
+    final change = canChange && !booked;
     final (statusFg, statusBg) = _statusColors();
     final backup = leg.readyBackup;
     final backupNames = leg.backups.where((b) => b.available).map((b) => b.driverName).toList();
@@ -126,11 +130,18 @@ class JourneyLegCard extends StatelessWidget {
                   ],
                   const SizedBox(height: 8),
                   Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                    if (unavailable)
+                    if (booked)
+                      leg.isConfirmedByBoth
+                          ? _pill(TripStringsMcbA2.confirmedByBoth, TripStatusColors.both, TripStatusColors.bothSurface)
+                          : _pill(TripStringsMcbA2.bookedByYou, TripStatusColors.booked, TripStatusColors.bookedSurface)
+                    else if (unavailable)
                       _pill(JourneyStrings.unavailableTag, AppColors.errorText, AppColors.errorSurface)
                     else
                       _pill(JourneyFormat.statusLine(leg, DateTime.now()), statusFg, statusBg),
-                    if (!unavailable && leg.lastKnownStatus == LegStatus.free && quoted != null)
+                    if (booked && leg.agreedFare != null)
+                      Text(TripStringsFinB1.agreedFare(BrowseItem.inr(leg.agreedFare!)),
+                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMedium))
+                    else if (!booked && !unavailable && leg.lastKnownStatus == LegStatus.free && quoted != null)
                       Text(JourneyStrings.driverQuote(quoted),
                           style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
                   ]),
@@ -152,7 +163,7 @@ class JourneyLegCard extends StatelessWidget {
                             )
                           : OutlinedButton(
                               style: _outlined(TaxiColors.accentDark),
-                              onPressed: busy || !canChange ? null : onChangeDriver,
+                              onPressed: busy || !change ? null : onChangeDriver,
                               child: _label(TaxiWaysStrings.changeDriver),
                             ),
                     )
@@ -182,14 +193,14 @@ class JourneyLegCard extends StatelessWidget {
                         child: Text(JourneyStrings.noNumber, style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
                       ),
                   ],
-                  if (backupNames.isNotEmpty || (canChange && !unavailable))
+                  if (!booked && (backupNames.isNotEmpty || (change && !unavailable)))
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Wrap(spacing: 8, runSpacing: 0, crossAxisAlignment: WrapCrossAlignment.center, children: [
                         if (backupNames.isNotEmpty)
                           Text(TaxiWaysStrings.backup(backupNames),
                               style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
-                        if (canChange && !unavailable)
+                        if (change && !unavailable)
                           TextButton(
                             style: TextButton.styleFrom(
                               minimumSize: const Size(44, 44),

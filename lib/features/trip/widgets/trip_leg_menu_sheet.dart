@@ -4,13 +4,15 @@ import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../utils/app_toast.dart';
 import '../controllers/trip_plan_controller.dart';
+import '../controllers/trip_spots_controller.dart';
 import '../models/trip_city_model.dart';
 import '../models/trip_plan_model.dart';
+import '../models/trip_spot_model.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_a4.dart';
+import '../trip_strings_fin_a1.dart';
 import '../trip_strings_mca_a3.dart';
-import '../trip_strings_mca_n2.dart';
 import '../trip_strings_mcc_a1.dart';
 import '../trip_strings_mcc_a2.dart';
 import 'trip_leg_impact_dialog.dart';
@@ -52,28 +54,40 @@ class TripLegMenuSheet {
     );
   }
 
-  static void addPlaces(int legIndex) {
+  static Future<void> addPlaces(int legIndex) async {
     final c = TripPlanController.to;
     final plan = c.plan.value;
-    if (plan == null) return;
-    var target = legIndex;
-    if (plan.legAt(target)?.notReady ?? true) {
-      target = 0;
-      for (var k = plan.legCount; k >= 1; k--) {
-        final l = plan.legAt(k);
-        if (l != null && !l.notReady) {
-          target = k;
-          break;
+    final leg = plan?.legAt(legIndex);
+    final city = cityOf(legIndex);
+    if (plan == null || leg == null || city == null) return;
+    Worker? watch;
+    if (leg.notReady) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final tag = '${city.cityKey}';
+        if (!Get.isRegistered<TripSpotsController>(tag: tag)) return;
+        final spots = Get.find<TripSpotsController>(tag: tag);
+        void check() {
+          if (spots.items.isNotEmpty && spots.status.value == TripSpotStatus.ready) c.markLegReady(legIndex);
         }
-      }
-      if (target == 0) {
-        AppToast.warning(TripStringsMcaN2.noReadyCity);
-        return;
-      }
+
+        check();
+        watch = ever(spots.items, (_) => check());
+      });
     }
-    final city = cityOf(target);
-    if (city == null) return;
-    TripNavigation.openSpots(city, tripId: c.trip.value?.id, existingIds: plan.spotIds, legIndex: target);
+    await TripNavigation.openSpots(city, tripId: c.trip.value?.id, existingIds: plan.spotIds, legIndex: legIndex);
+    watch?.dispose();
+    final now = c.plan.value;
+    if ((now?.legAt(legIndex)?.notReady ?? false) && (now?.legSpotCount(legIndex) ?? 0) > 0) c.markLegReady(legIndex);
+  }
+
+  static int? lastReadyLeg() {
+    final plan = TripPlanController.to.plan.value;
+    if (plan == null) return null;
+    for (var k = plan.legCount; k >= 1; k--) {
+      final l = plan.legAt(k);
+      if (l != null && !l.notReady) return k;
+    }
+    return null;
   }
 
   static String? blockText(TripLegEditBlock b, String city, {bool? up}) => switch (b) {
@@ -399,6 +413,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
     final min = _c.minDaysForLeg(_leg);
     final current = p.legDayCount(_leg);
     final fewer = _days < current && p.legSpotCount(_leg) > 0;
+    final blocked = !fewer && _days >= current && _c.growthBlockedByBookings(_leg);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -421,11 +436,16 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(fewer ? TripStringsMcaA3.fewerDays : TripStringsMcaA3.daysLeftNote(max),
+          Text(
+              fewer
+                  ? TripStringsMcaA3.fewerDays
+                  : (blocked ? TripStringsFinA1.growBlocked : TripStringsMcaA3.daysLeftNote(max)),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                  fontFamily: 'Poppins', fontSize: 11.5, color: fewer ? AppColors.warningText : AppColors.textLight)),
+                  fontFamily: 'Poppins',
+                  fontSize: 11.5,
+                  color: fewer || blocked ? AppColors.warningText : AppColors.textLight)),
           const SizedBox(height: 6),
           Align(
             alignment: Alignment.centerRight,
@@ -464,15 +484,14 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
         title: leg.cityName,
         description: TripStringsMcaA3.dayRangeWithDates(a, b, _c.dateOf(a), _c.dateOf(b)),
         children: [
-          if (!leg.notReady)
-            _row(
-              icon: Iconsax.add_circle,
-              label: TripStringsMcaA3.addPlaces,
-              onTap: () {
-                _close();
-                TripLegMenuSheet.addPlaces(_leg);
-              },
-            ),
+          _row(
+            icon: Iconsax.add_circle,
+            label: TripStringsMcaA3.addPlaces,
+            onTap: () {
+              _close();
+              TripLegMenuSheet.addPlaces(_leg);
+            },
+          ),
           _row(
             icon: Iconsax.calendar_edit,
             label: TripStringsMcaA3.changeDays,

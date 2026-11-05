@@ -8,6 +8,7 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../models/browse_item.dart';
+import '../../../utils/app_toast.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/gradient_button.dart';
@@ -19,7 +20,9 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
+import '../trip_strings_fin_b1.dart';
 import '../trip_strings_mca_a3.dart';
+import '../trip_strings_mca_n2.dart';
 import '../utils/trip_format.dart';
 import '../widgets/trip_add_city_card.dart';
 import '../widgets/trip_day_tile.dart';
@@ -234,7 +237,12 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     final picked = _c.picked;
     final plan = _c.plan.value;
     if (plan != null && plan.isMultiCity) {
-      TripLegMenuSheet.addPlaces(plan.legCount);
+      final leg = TripLegMenuSheet.lastReadyLeg();
+      if (leg == null) {
+        AppToast.warning(TripStringsMcaN2.noReadyCity);
+      } else {
+        TripLegMenuSheet.addPlaces(leg);
+      }
       return;
     }
     if (picked == null || plan == null) return;
@@ -848,9 +856,12 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         ? TripStrings.hostCancelled
         : TripStatusVisuals.label(e.display, taxi: taxi);
     final again = _c.canAskAgain(taxi ? TripEnquiryKinds.taxi : TripEnquiryKinds.stay, day);
-    final text = taxi
-        ? (again ? '${e.listingName} · $label.' : '${e.listingName} · $label. ${TripStrings.askAnother} ›')
-        : (again ? '$label.' : '$label. ${TripStrings.findAnother} ›');
+    final split = taxi ? null : _splitLine(e);
+    final text = split != null
+        ? '$split ›'
+        : taxi
+            ? (again ? '${e.listingName} · $label.' : '${e.listingName} · $label. ${TripStrings.askAnother} ›')
+            : (again ? '$label.' : '$label. ${TripStrings.findAnother} ›');
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Material(
@@ -899,6 +910,22 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         ),
       ),
     );
+  }
+
+  String? _splitLine(TripEnquiryModel e) {
+    final failIn = e.checkIn;
+    final failOut = e.checkOut;
+    if (e.failReason != 'ProblemHostNoRoom' || failIn == null || failOut == null) return null;
+    bool same(DateTime? a, DateTime b) => a != null && a.year == b.year && a.month == b.month && a.day == b.day;
+    final kept = _c.enquiryList.firstWhereOrNull(
+        (x) => x.id != e.id && !x.isTaxi && x.isBooked && x.listingId == e.listingId && same(x.checkOut, failIn));
+    final keptIn = kept?.checkIn;
+    final a = _c.dayOfDate(failIn);
+    final b = _c.dayOfDate(failOut);
+    final k = _c.dayOfDate(keptIn);
+    if (kept == null || a == null || k == null) return null;
+    final last = b == null ? a + e.nights - 1 : b - 1;
+    return TripStringsFinB1.splitNights(a, last < a ? a : last, k, a - 1);
   }
 
   List<Widget> _outsideDates() {

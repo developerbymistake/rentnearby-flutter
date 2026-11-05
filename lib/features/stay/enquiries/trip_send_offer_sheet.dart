@@ -92,6 +92,7 @@ class _OfferBodyState extends State<_OfferBody> {
   final _needs = <String>{};
   bool _gst = false;
   bool _saving = false;
+  String? _serverError;
   bool _clamped = false;
 
   @override
@@ -324,14 +325,20 @@ class _OfferBodyState extends State<_OfferBody> {
       body['needsEchoed'] = _needs.toList();
       if (widget.counter != null) body['counterOfferId'] = widget.counter!.id;
     }
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _serverError = null;
+    });
     final ctrl = StayEnquiriesController.ensure();
     final ok = widget.revised ? await ctrl.revisedOffer(widget.enquiry, body) : await ctrl.sendOffer(widget.enquiry, body);
     if (!mounted) return;
     if (ok) {
       Navigator.pop(context, true);
     } else {
-      setState(() => _saving = false);
+      setState(() {
+        _saving = false;
+        _serverError = ctrl.lastErrorMessage;
+      });
     }
   }
 
@@ -351,6 +358,10 @@ class _OfferBodyState extends State<_OfferBody> {
       title: revised ? TripStrings.revisedOffer : TripStrings.sendOffer,
       description: description,
       footer: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (_serverError != null) ...[
+          Text(_serverError!, style: const TextStyle(fontSize: 12, color: AppColors.errorText, height: 1.4)),
+          const SizedBox(height: 8),
+        ],
         GradientButton(
           onPressed: _saving ? null : _submit,
           isLoading: _saving,

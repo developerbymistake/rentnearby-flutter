@@ -16,12 +16,23 @@ class TripLeadBucket {
   static const String closed = 'closed';
   static const List<String> all = [newOnes, replied, booked, closed];
 
-  static String of(TripEnquiryModel e) => switch (e.status) {
-        TripEnquiryStatuses.asked => newOnes,
-        TripEnquiryStatuses.fareSent => replied,
-        TripEnquiryStatuses.bookedByTraveller || TripEnquiryStatuses.confirmedByBoth => booked,
-        _ => closed,
-      };
+  static bool hasEnded(TripEnquiryModel e) {
+    final out = e.checkOut;
+    if (out == null) return false;
+    final now = DateTime.now();
+    return DateTime(out.year, out.month, out.day).isBefore(DateTime(now.year, now.month, now.day));
+  }
+
+  static String of(TripEnquiryModel e) {
+    final isBooked = e.status == TripEnquiryStatuses.bookedByTraveller || e.status == TripEnquiryStatuses.confirmedByBoth;
+    if (isBooked && hasEnded(e)) return closed;
+    return switch (e.status) {
+      TripEnquiryStatuses.asked || TripEnquiryStatuses.bookedByTraveller => newOnes,
+      TripEnquiryStatuses.fareSent => replied,
+      TripEnquiryStatuses.confirmedByBoth => TripLeadBucket.booked,
+      _ => closed,
+    };
+  }
 }
 
 class TripLeadsController extends GetxController {
@@ -51,6 +62,7 @@ class TripLeadsController extends GetxController {
   final loadMoreFailed = false.obs;
   final hasMore = false.obs;
   final failed = false.obs;
+  final executionDisabled = false.obs;
   final busyIds = <String>{}.obs;
   final focusId = RxnString();
 
@@ -69,6 +81,7 @@ class TripLeadsController extends GetxController {
     bucket.value = TripLeadBucket.newOnes;
     hasMore.value = false;
     failed.value = false;
+    executionDisabled.value = false;
     loading.value = false;
     loadingMore.value = false;
     loadMoreFailed.value = false;
@@ -99,6 +112,7 @@ class TripLeadsController extends GetxController {
     _page = 1;
     loading.value = true;
     failed.value = false;
+    executionDisabled.value = false;
     loadMoreFailed.value = false;
     items.clear();
     hasMore.value = false;
@@ -108,9 +122,10 @@ class TripLeadsController extends GetxController {
       items.assignAll(page.items);
       hasMore.value = page.hasMore;
       _setCounts(page.counts);
-    } catch (_) {
+    } catch (e) {
       if (id != _requestId) return;
       failed.value = true;
+      executionDisabled.value = DioErrorMapper.errorType(e) == TripEnquiryErrorTypes.executionDisabled;
     } finally {
       if (id == _requestId) loading.value = false;
     }
@@ -126,11 +141,15 @@ class TripLeadsController extends GetxController {
       items.assignAll(page.items);
       hasMore.value = page.hasMore;
       failed.value = false;
+      executionDisabled.value = false;
       loadMoreFailed.value = false;
       _setCounts(page.counts);
-    } catch (_) {
+    } catch (e) {
       if (id != _requestId) return;
-      if (items.isEmpty) failed.value = true;
+      if (items.isEmpty) {
+        failed.value = true;
+        executionDisabled.value = DioErrorMapper.errorType(e) == TripEnquiryErrorTypes.executionDisabled;
+      }
     }
   }
 

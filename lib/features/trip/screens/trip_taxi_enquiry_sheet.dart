@@ -29,6 +29,7 @@ class TripTaxiEnquirySheet {
   static bool _bookedByOther(TripPlanController c, int day, Set<String> ids) {
     final booked = c.bookedTaxiEnquiryFor(day);
     if (booked != null) return !ids.contains(booked.listingId);
+    if (c.ownTaxiOf(day) != null) return true;
     final t = c.plan.value?.dayAt(day)?.taxi;
     return t != null && t.isBooked && !t.isOwn && !ids.contains(t.taxiId);
   }

@@ -10,6 +10,7 @@ import '../../../utils/input_formatters.dart';
 import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
+import '../models/trip_journey_model.dart';
 import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_navigation.dart';
@@ -79,26 +80,63 @@ class _ProblemBodyState extends State<_ProblemBody> {
     for (final e in _carRows(c)) {
       add(_carLabel(e), e.owner.phone);
     }
+    for (final car in _journeyCars(c)) {
+      add(_journeyCarLabel(car), car.phone);
+    }
     return out;
   }
 
   List<TripEnquiryModel> _carRows(TripPlanController c) {
     final day = widget.day;
-    if (!c.isMultiCity || !c.isTravelDay(day)) return const [];
+    if (c.todayDay == null || !c.isMultiCity || !c.isTravelDay(day)) return const [];
     return c.segmentRows(c.legIndexOf(day)).where((e) => e.isBooked).toList();
   }
 
+  List<TripJourneyLeg> _journeyCars(TripPlanController c) => c.journeyToday?.legs ?? const <TripJourneyLeg>[];
+
+  List<TripJourneyLeg> _cars(String kind) =>
+      kind == TripProblemKinds.driverNoShow ? _journeyCars(TripPlanController.to) : const <TripJourneyLeg>[];
+
   List<TripEnquiryModel> _booked(String kind) {
     final c = TripPlanController.to;
-    final rows = switch (kind) {
+    final taxis = c.problemTaxiRows(widget.day);
+    return switch (kind) {
       TripProblemKinds.driverNoShow => [
-          ...c.taxiEnquiriesForDay(widget.day),
-          ..._carRows(c).where((e) => !c.taxiEnquiriesForDay(widget.day).any((x) => x.id == e.id)),
+          ...taxis,
+          ..._carRows(c).where((e) => !taxis.any((x) => x.id == e.id)),
         ],
-      TripProblemKinds.hostNoRoom => c.enquiriesForNight(widget.day),
+      TripProblemKinds.hostNoRoom => c.problemStayRows(widget.day),
       _ => const <TripEnquiryModel>[],
     };
-    return rows.where((e) => e.isBooked).toList();
+  }
+
+  String _journeyCarLabel(TripJourneyLeg car) =>
+      TripStringsMcdA3.carCandidate(car.legIndex, car.driverName.isEmpty ? TripStrings.driver : car.driverName);
+
+  Future<void> _pickCar(TripJourneyLeg car) async {
+    if (_busyKind != null) return;
+    final c = TripPlanController.to;
+    final journeyId = c.journeyToday?.id;
+    const kind = TripProblemKinds.driverNoShow;
+    final loc = Get.isRegistered<LocationController>() ? Get.find<LocationController>().userLocation.value : null;
+    setState(() => _busyKind = kind);
+    final ok = await c.reportProblem(
+      day: widget.day,
+      kind: kind,
+      note: _journeyCarLabel(car),
+      latitude: loc?.latitude,
+      longitude: loc?.longitude,
+    );
+    if (!mounted) return;
+    if (!ok) {
+      setState(() => _busyKind = null);
+      return;
+    }
+    final queued = c.lastProblemQueued;
+    Navigator.pop(context, true);
+    if (queued) return;
+    AppToast.info(TripStrings.problemNoted);
+    if (journeyId != null) TripNavigation.openJourney(journeyId);
   }
 
   bool _spansEarlier(TripEnquiryModel e) {
@@ -117,8 +155,13 @@ class _ProblemBodyState extends State<_ProblemBody> {
       return;
     }
     final rows = _booked(kind);
-    if (enquiryId == null && rows.length > 1) {
+    final cars = _cars(kind);
+    if (enquiryId == null && rows.length + cars.length > 1) {
       setState(() => _pickerKind = _pickerKind == kind ? null : kind);
+      return;
+    }
+    if (enquiryId == null && rows.isEmpty && cars.length == 1) {
+      await _pickCar(cars.first);
       return;
     }
     FocusScope.of(context).unfocus();
@@ -154,6 +197,13 @@ class _ProblemBodyState extends State<_ProblemBody> {
         } else {
           TripNavigation.openMap(day: day);
         }
+      case TripProblemKinds.driverNoShow when c.todayDay == null:
+        final todayJourney = c.journeyToday?.id;
+        if (todayJourney != null) {
+          TripNavigation.openJourney(todayJourney);
+        } else {
+          TripNavigation.openMap(day: day);
+        }
       case TripProblemKinds.driverNoShow:
         TripNavigation.openTaxi(day, nearLat: loc?.latitude, nearLng: loc?.longitude);
       case TripProblemKinds.hostNoRoom:
@@ -185,9 +235,11 @@ class _ProblemBodyState extends State<_ProblemBody> {
           ],
           _row(Iconsax.car, TripStrings.driverDidNotCome, TripProblemKinds.driverNoShow),
           ..._extra(TripProblemKinds.driverNoShow),
-          const SizedBox(height: 8),
-          _row(Iconsax.building_4, TripStrings.hostNoRoom, TripProblemKinds.hostNoRoom),
-          ..._extra(TripProblemKinds.hostNoRoom),
+          if (!c.problemOnTravelOnly) ...[
+            const SizedBox(height: 8),
+            _row(Iconsax.building_4, TripStrings.hostNoRoom, TripProblemKinds.hostNoRoom),
+            ..._extra(TripProblemKinds.hostNoRoom),
+          ],
           const SizedBox(height: 8),
           _row(Iconsax.danger, TripStrings.roadClosed, TripProblemKinds.roadClosed),
           const SizedBox(height: 8),
@@ -235,9 +287,11 @@ class _ProblemBodyState extends State<_ProblemBody> {
 
   List<Widget> _extra(String kind) {
     final rows = _booked(kind);
-    if (rows.isEmpty) return const [];
+    final cars = _cars(kind);
+    if (rows.isEmpty && cars.isEmpty) return const [];
     final taxi = kind == TripProblemKinds.driverNoShow;
-    if (rows.length == 1) {
+    if (rows.length + cars.length == 1) {
+      if (rows.isEmpty) return const [];
       if (!_spansEarlier(rows.first)) return const [];
       return [
         const SizedBox(height: 6),
@@ -258,8 +312,37 @@ class _ProblemBodyState extends State<_ProblemBody> {
         _candidate(e, taxi),
         const SizedBox(height: 6),
       ],
+      for (final car in cars) ...[
+        _carCandidate(car),
+        const SizedBox(height: 6),
+      ],
     ];
   }
+
+  Widget _carCandidate(TripJourneyLeg car) => Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: _busyKind == null ? () => _pickCar(car) : null,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 56),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: TripColors.accent.withValues(alpha: 0.5)),
+            ),
+            child: Text(
+              _journeyCarLabel(car),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
+            ),
+          ),
+        ),
+      );
 
   Widget _affectNote(String text) => Container(
         width: double.infinity,

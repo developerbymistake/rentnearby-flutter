@@ -16,12 +16,26 @@ class StayEnquiryBucket {
   static const String closed = 'closed';
   static const List<String> all = [newOnes, offered, confirmed, closed];
 
-  static String of(TripEnquiryModel e) => switch (e.status) {
-        TripEnquiryStatuses.asked || TripEnquiryStatuses.countered => newOnes,
-        TripEnquiryStatuses.offered => offered,
-        TripEnquiryStatuses.confirmedByTraveller || TripEnquiryStatuses.confirmedByBoth => confirmed,
-        _ => closed,
-      };
+  static bool hasEnded(TripEnquiryModel e) {
+    final out = e.checkOut;
+    if (out == null) return false;
+    final now = DateTime.now();
+    return DateTime(out.year, out.month, out.day).isBefore(DateTime(now.year, now.month, now.day));
+  }
+
+  static bool awaitingAnswer(TripEnquiryModel e) =>
+      e.status == TripEnquiryStatuses.confirmedByTraveller && e.hostConfirm.answeredAt == null;
+
+  static String of(TripEnquiryModel e) {
+    final bucket = switch (e.status) {
+      TripEnquiryStatuses.asked || TripEnquiryStatuses.countered => newOnes,
+      TripEnquiryStatuses.offered => offered,
+      TripEnquiryStatuses.confirmedByTraveller || TripEnquiryStatuses.confirmedByBoth => confirmed,
+      _ => closed,
+    };
+    if (bucket == confirmed && hasEnded(e)) return closed;
+    return awaitingAnswer(e) ? newOnes : bucket;
+  }
 }
 
 class StayEnquiriesController extends GetxController {
@@ -42,6 +56,7 @@ class StayEnquiriesController extends GetxController {
   final loadMoreFailed = false.obs;
   final hasMore = false.obs;
   final failed = false.obs;
+  final executionDisabled = false.obs;
   final busyIds = <String>{}.obs;
   final stay = Rxn<StayOwnerModel>();
 
@@ -58,6 +73,7 @@ class StayEnquiriesController extends GetxController {
     bucket.value = StayEnquiryBucket.newOnes;
     hasMore.value = false;
     failed.value = false;
+    executionDisabled.value = false;
     loading.value = false;
     loadingMore.value = false;
     busyIds.clear();
@@ -85,6 +101,7 @@ class StayEnquiriesController extends GetxController {
     _page = 1;
     loading.value = true;
     failed.value = false;
+    executionDisabled.value = false;
     loadMoreFailed.value = false;
     items.clear();
     hasMore.value = false;
@@ -94,9 +111,10 @@ class StayEnquiriesController extends GetxController {
       items.assignAll(page.items);
       hasMore.value = page.hasMore;
       _setCounts(page.counts);
-    } catch (_) {
+    } catch (e) {
       if (id != _requestId) return;
       failed.value = true;
+      executionDisabled.value = DioErrorMapper.errorType(e) == TripEnquiryErrorTypes.executionDisabled;
     } finally {
       if (id == _requestId) loading.value = false;
     }
@@ -112,11 +130,15 @@ class StayEnquiriesController extends GetxController {
       items.assignAll(page.items);
       hasMore.value = page.hasMore;
       failed.value = false;
+      executionDisabled.value = false;
       loadMoreFailed.value = false;
       _setCounts(page.counts);
-    } catch (_) {
+    } catch (e) {
       if (id != _requestId) return;
-      if (items.isEmpty) failed.value = true;
+      if (items.isEmpty) {
+        failed.value = true;
+        executionDisabled.value = DioErrorMapper.errorType(e) == TripEnquiryErrorTypes.executionDisabled;
+      }
     }
   }
 
@@ -168,6 +190,7 @@ class StayEnquiriesController extends GetxController {
       () => _repo.sendOffer(e.id, body),
       TripStrings.couldNotLoad,
       (r) => r.enquiry,
+      inline: true,
     );
     if (result != null) AppToast.success(TripStrings.offerSent);
     return result != null;
@@ -180,6 +203,7 @@ class StayEnquiriesController extends GetxController {
       TripStrings.couldNotLoad,
       (r) => r.enquiry,
       limitMessage: TripStrings.revisedLimit,
+      inline: true,
     );
     if (result != null) AppToast.success(TripStrings.revisedSent);
     return result != null;

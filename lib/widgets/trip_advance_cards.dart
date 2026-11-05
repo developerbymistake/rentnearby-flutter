@@ -77,6 +77,7 @@ class TripAdvanceCards {
   static const String _proofSent = 'proofSent';
   static const String _received = 'received';
   static const String _replaced = 'replaced';
+  static const String _cancelled = 'cancelled';
   static const String _holdExpired = 'holdExpired';
 
   static _AdvanceCard _read(Map<String, dynamic> p, TripAdvanceModel? live) {
@@ -84,7 +85,7 @@ class TripAdvanceCards {
     final holdUntil = DateTime.tryParse(_str(p, 'holdUntil') ?? '');
     final amount = _num(p, 'amount')?.toInt();
     var status = wire;
-    if (live != null && wire != _replaced && _sameRequest(live, holdUntil, amount)) {
+    if (live != null && wire != _replaced && wire != _cancelled && _sameRequest(live, holdUntil, amount)) {
       status = switch (live.status) {
         TripAdvanceStatuses.proofSent => _proofSent,
         TripAdvanceStatuses.received => _received,
@@ -129,7 +130,7 @@ class TripAdvanceCards {
     return switch (a.status) {
       _proofSent => _waiting(context, m, a, accent, callbacks),
       _received => _receivedCard(context, m, a, accent, callbacks),
-      _replaced => _replacedCard(context, m, a, accent),
+      _replaced || _cancelled => _replacedCard(context, m, a, accent),
       _holdExpired => _expiredGuest(context, m, a, accent, callbacks),
       _ => _payCard(context, m, a, accent, callbacks),
     };
@@ -353,7 +354,8 @@ class TripAdvanceCards {
           tone: AppColors.textLight,
           title: TripStrings.advancePending(a.money),
           subtitle: a.holdUntil == null ? null : TripStrings.holdTill(a.holdTime),
-          trailing: const TripStatusPill(TripDisplayStatus.closed, label: TripStrings.replacedByNewer),
+          trailing: TripStatusPill(TripDisplayStatus.closed,
+              label: a.status == _cancelled ? TripStrings.advanceCancelled : TripStrings.replacedByNewer),
           children: const [],
         ),
       );
@@ -361,7 +363,7 @@ class TripAdvanceCards {
   // host
 
   static Widget _hostRequest(BuildContext context, MessageModel m, _AdvanceCard a, Color accent, TripChatCallbacks cb) {
-    if (a.status == _replaced) return _replacedCard(context, m, a, accent);
+    if (a.status == _replaced || a.status == _cancelled) return _replacedCard(context, m, a, accent);
     if (a.status == _holdExpired) return _lateMark(context, m, a, accent, cb);
     final upi = a.upiId;
     final wa = a.whatsApp == null ? '' : ContactLauncher.tenDigits(a.whatsApp!);
@@ -424,7 +426,7 @@ class TripAdvanceCards {
   }
 
   static Widget _hostProof(BuildContext context, MessageModel m, _AdvanceCard a, Color accent, TripChatCallbacks cb) {
-    if (a.status == _replaced) {
+    if (a.status == _replaced || a.status == _cancelled) {
       return Opacity(
         opacity: 0.6,
         child: _frame(
@@ -433,7 +435,8 @@ class TripAdvanceCards {
           icon: Iconsax.camera,
           tone: AppColors.textLight,
           title: TripStrings.saysProofSent(cb.guestName ?? ''),
-          trailing: const TripStatusPill(TripDisplayStatus.closed, label: TripStrings.replacedByNewer),
+          trailing: TripStatusPill(TripDisplayStatus.closed,
+              label: a.status == _cancelled ? TripStrings.advanceCancelled : TripStrings.replacedByNewer),
           children: const [],
         ),
       );

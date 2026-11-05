@@ -152,6 +152,8 @@ class SavedJourneyLeg {
   final bool driverAvailable;
   final bool fareChanged;
   final int? previousFare;
+  final String? bookingStatus;
+  final int? agreedFare;
 
   const SavedJourneyLeg({
     required this.legIndex,
@@ -174,7 +176,13 @@ class SavedJourneyLeg {
     this.driverAvailable = true,
     this.fareChanged = false,
     this.previousFare,
+    this.bookingStatus,
+    this.agreedFare,
   });
+
+  bool get isBooked => bookingStatus != null && bookingStatus!.isNotEmpty;
+
+  bool get isConfirmedByBoth => bookingStatus == 'ConfirmedByBoth';
 
   factory SavedJourneyLeg.fromJson(Map<String, dynamic> j) {
     final driver = j['driver'];
@@ -202,6 +210,8 @@ class SavedJourneyLeg {
       driverAvailable: _bool(j['driverAvailable'], true),
       fareChanged: _bool(j['fareChanged'], false),
       previousFare: _int(j['previousFare']),
+      bookingStatus: _strN(j['bookingStatus']),
+      agreedFare: _int(j['agreedFare']),
     );
   }
 
@@ -226,6 +236,8 @@ class SavedJourneyLeg {
         'driverAvailable': driverAvailable,
         'fareChanged': fareChanged,
         'previousFare': ?previousFare,
+        'bookingStatus': ?bookingStatus,
+        'agreedFare': ?agreedFare,
       };
 
   SavedJourneyLeg copyWith({
@@ -259,6 +271,8 @@ class SavedJourneyLeg {
         driverAvailable: driverAvailable,
         fareChanged: fareChanged,
         previousFare: clearPreviousFare ? null : (previousFare ?? this.previousFare),
+        bookingStatus: bookingStatus,
+        agreedFare: agreedFare,
       );
 
   SavedJourneyLeg withContacts(JourneyPhones phones) {
@@ -288,6 +302,8 @@ class SavedJourneyLeg {
       driverAvailable: driverAvailable,
       fareChanged: fareChanged,
       previousFare: previousFare,
+      bookingStatus: bookingStatus,
+      agreedFare: agreedFare,
     );
   }
 

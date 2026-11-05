@@ -301,7 +301,10 @@ class TripEnquiryController extends GetxController {
         'replaceEnquiryId': ?replaceEnquiryId,
       }),
     );
-    if (res != null) _applyToPlan([res.enquiry]);
+    if (res != null) {
+      _applyToPlan([res.enquiry]);
+      if (closeOthers || replaceEnquiryId != null) unawaited(_plan?.refreshEnquiries());
+    }
     return res;
   }
 
@@ -362,7 +365,10 @@ class TripEnquiryController extends GetxController {
       enquiryId,
       () => _repo.acceptOffer(enquiryId, offerId, closeOthers: closeOthers, replaceEnquiryId: replaceEnquiryId),
     );
-    if (e != null) _applyToPlan([e]);
+    if (e != null) {
+      _applyToPlan([e]);
+      if (closeOthers || replaceEnquiryId != null) unawaited(_plan?.refreshEnquiries());
+    }
     return e;
   }
 

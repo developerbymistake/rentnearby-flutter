@@ -16,6 +16,7 @@ import '../../trip/widgets/trip_payment_line.dart';
 import '../../trip/widgets/trip_shimmers.dart';
 import '../../trip/widgets/trip_status.dart';
 import '../../trip/widgets/trip_status_card.dart';
+import '../../stay/stay_strings_fin_c1.dart';
 import '../setup/taxi_setup_controller.dart';
 import '../taxi_option_sets.dart';
 import 'journey_leg_tag.dart';
@@ -129,8 +130,11 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
                   Obx(() {
+                    final name = Get.find<AuthController>().user.value?.name;
                     final t = _taxi.taxi.value;
-                    final sub = [t?.plateDisplay ?? '', t?.vehicleTypeName ?? ''].where((s) => s.isNotEmpty).join(' · ');
+                    final sub = name != null && name.isNotEmpty
+                        ? StayFinStrings.taxiSubtitle(name)
+                        : [t?.plateDisplay ?? '', t?.vehicleTypeName ?? ''].where((s) => s.isNotEmpty).join(' · ');
                     if (sub.isEmpty) return const SizedBox.shrink();
                     return Text(sub,
                         maxLines: 1,
@@ -219,7 +223,14 @@ class _TripLeadsScreenState extends State<TripLeadsScreen> with WidgetsBindingOb
       ));
     }
     if (items.isEmpty) {
-      final empty = failed
+      final empty = failed && _ctrl.executionDisabled.value
+          ? EmptyStateView(
+              icon: Iconsax.pause_circle,
+              title: TripStrings.plannerOff,
+              subtitle: TripStrings.plannerOffSubtitle,
+              palette: TaxiColors.palette,
+            )
+          : failed
           ? EmptyStateView(
               icon: Iconsax.cloud_cross,
               title: TripStrings.couldNotLoad,
@@ -544,7 +555,9 @@ class _LeadCard extends StatelessWidget {
         buttons.add(btn(TripStrings.notMe, _LeadButtonKind.negative, () => _notMe(context)));
       case TripDisplayStatus.confirmedByBoth:
         call(_LeadButtonKind.plain);
-        buttons.add(btn(TripStrings.cancelBooking, _LeadButtonKind.negative, () => ctrl.cancel(context, e)));
+        if (!TripLeadBucket.hasEnded(e)) {
+          buttons.add(btn(TripStrings.cancelBooking, _LeadButtonKind.negative, () => ctrl.cancel(context, e)));
+        }
       default:
     }
     if (buttons.isEmpty) return const [];

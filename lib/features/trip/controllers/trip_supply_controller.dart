@@ -118,7 +118,7 @@ class TripSupplyController extends GetxController {
 
   Future<void> ensureTaxis() async {
     final districtId = dayDistrictId;
-    if (districtId == null) {
+    if (districtId == null || _plan.taxiTabOff.value) {
       _clearTaxis();
       return;
     }
@@ -151,6 +151,10 @@ class TripSupplyController extends GetxController {
     final p = _plan.plan.value;
     final districtId = p?.districtIdOf(day.value);
     if (p == null || districtId == null) return;
+    if (_plan.taxiTabOff.value) {
+      _clearTaxis();
+      return;
+    }
     if (!reset && (!taxiHasMore.value || taxiLoadingMore.value || taxiLoading.value)) return;
     if (!reset && districtId != _taxisDistrict) return;
     final seq = ++_taxiSeq;
@@ -182,8 +186,8 @@ class TripSupplyController extends GetxController {
       if (seq != _taxiSeq) return;
       if (_isTabInactive(e)) {
         _plan.taxiTabOff.value = true;
+        taxis.clear();
         AppToast.warning(TripStringsA2.taxisOff);
-        Get.back();
       } else if (reset && !_isUnauthorized(e)) {
         taxiFailed.value = true;
       }
@@ -218,7 +222,7 @@ class TripSupplyController extends GetxController {
   Future<void> loadStays() async {
     final p = _plan.plan.value;
     final districtId = p?.districtIdOf(day.value);
-    if (p == null || districtId == null) {
+    if (p == null || districtId == null || _plan.stayTabOff.value) {
       _staySeq++;
       _staysDay = day.value;
       _staysDistrict = null;
@@ -257,8 +261,8 @@ class TripSupplyController extends GetxController {
       if (seq != _staySeq) return;
       if (_isTabInactive(e)) {
         _plan.stayTabOff.value = true;
+        stays.clear();
         AppToast.warning(TripStringsA2.staysOff);
-        Get.back();
       } else if (!_isUnauthorized(e)) {
         stayFailed.value = true;
       }

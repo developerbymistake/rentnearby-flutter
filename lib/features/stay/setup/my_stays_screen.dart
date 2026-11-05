@@ -11,9 +11,12 @@ import '../../../services/listing_share_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/plan_cap_strip.dart';
+import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../trip/trip_strings.dart';
 import '../enquiries/stay_enquiries_controller.dart';
 import '../models/stay_owner_model.dart';
+import '../stay_strings_fin_c1.dart';
 import 'stay_option_sets.dart';
 import 'stay_owner_card.dart';
 import 'stay_setup_controller.dart';
@@ -95,6 +98,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
                   final loading = _ctrl.isLoading.value;
                   final loaded = _ctrl.hasLoaded.value;
                   final stay = _ctrl.stay.value;
+                  final failed = _ctrl.loadFailed.value;
                   if (!loaded && loading) return _shimmer();
                   return RefreshIndicator(
                     color: StayColors.accent,
@@ -103,7 +107,16 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + AppInsets.bottomViewPadding(context)),
                       children: [
-                        if (stay == null)
+                        if (failed && stay == null)
+                          EmptyStateView(
+                            icon: Iconsax.cloud_cross,
+                            title: TripStrings.couldNotLoad,
+                            subtitle: TripStrings.checkConnection,
+                            onRetry: _load,
+                            retryLabel: TripStrings.retry,
+                            palette: StayColors.palette,
+                          )
+                        else if (stay == null)
                           _empty()
                         else
                           Builder(builder: (ctx) => _card(ctx, stay)),
@@ -129,9 +142,9 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
                 icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
               ),
               const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('My Stays',
+                Text(StayFinStrings.myStays,
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                Text('Manage your listings',
+                Text(StayFinStrings.manageListings,
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
               ]),
             ]),
@@ -166,17 +179,17 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
             child: const Icon(Iconsax.building_4, size: 40, color: StayColors.accent),
           ),
           const SizedBox(height: 20),
-          const Text('No stay yet',
+          const Text(StayFinStrings.noStayYet,
               style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           const SizedBox(height: 8),
-          const Text('List your stay in 4 steps',
+          const Text(StayFinStrings.listStaySteps,
               style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textLight)),
           const SizedBox(height: 24),
           SizedBox(
             width: 220,
             child: GradientButton(
               onPressed: _openSetup,
-              label: 'Set up your stay',
+              label: StayFinStrings.setUpStay,
               gradient: StayColors.gradient,
               shadowColor: StayColors.accent,
             ),
@@ -273,12 +286,12 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete stay?', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-        content: const Text('Your stay and all its photos will be deleted.', style: TextStyle(fontFamily: 'Poppins')),
+        title: const Text(StayFinStrings.deleteStayTitle, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+        content: const Text(StayFinStrings.deleteStayBody, style: TextStyle(fontFamily: 'Poppins')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+            child: const Text(StayFinStrings.cancel, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -291,7 +304,7 @@ class _MyStaysScreenState extends State<MyStaysScreen> with WidgetsBindingObserv
               Navigator.pop(ctx);
               _ctrl.deleteStay();
             },
-            child: const Text('Delete', style: TextStyle(fontFamily: 'Poppins')),
+            child: const Text(StayFinStrings.delete, style: TextStyle(fontFamily: 'Poppins')),
           ),
         ],
       ),

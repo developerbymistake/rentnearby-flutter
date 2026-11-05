@@ -4,6 +4,7 @@ import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../widgets/trip_status.dart';
 
 class TripPreviewDay {
   final int day;
@@ -68,6 +69,15 @@ class TripEnquiryRules {
     final applied = expires.isBefore(floor);
     if (applied) expires = floor;
     return (expiresAt: expires, veryShortNotice: applied);
+  }
+
+  static bool hostRefused(TripEnquiryModel e) {
+    if (e.isOpen) return false;
+    final s = e.display;
+    final reason = e.failReason;
+    return s == TripDisplayStatus.notAvailable ||
+        (reason != null && reason.isNotEmpty) ||
+        (s == TripDisplayStatus.cancelled && e.cancelledBy == 'owner');
   }
 
   static bool nightsOverlap(DateTime aIn, DateTime aOut, DateTime bIn, DateTime bOut) =>

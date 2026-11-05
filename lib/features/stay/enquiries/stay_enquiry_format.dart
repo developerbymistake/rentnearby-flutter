@@ -5,6 +5,7 @@ import '../../../utils/contact_launcher.dart';
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_constants.dart';
 import '../../trip/trip_strings.dart';
+import '../stay_strings_fin_c1.dart';
 import 'stay_enquiry_strings.dart';
 
 class StayEnquiryFormat {
@@ -49,7 +50,7 @@ class StayEnquiryFormat {
     final c = e.context;
     final inDays = tripInDays(e);
     return [
-      if (c.city.isNotEmpty) '${c.city} trip',
+      if (c.city.isNotEmpty) StayFinStrings.cityTrip(c.city),
       if (e.datesLabel.isNotEmpty) e.datesLabel,
       c.peopleLabel,
       c.roomsLabel,

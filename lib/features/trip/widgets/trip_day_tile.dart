@@ -13,6 +13,7 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
+import '../trip_strings_fin_b1.dart';
 import '../trip_strings_mca_a3.dart';
 import '../utils/trip_format.dart';
 import 'trip_cancel_sheet.dart';
@@ -47,22 +48,24 @@ class TripDayTile extends StatelessWidget {
         final d = plan?.dayAt(day);
         if (plan == null || d == null) return const SizedBox.shrink();
         final readOnly = c.isReadOnly || c.needsUpdate.value || c.isDayPast(day);
-        final total = c.dayTotalMinutes(day);
-        final over = c.isOverLimit(day);
+        final legIndex = plan.legIndexOf(day);
+        final leg = plan.legOf(day);
+        final travel = plan.isTravelDay(day);
+        final prev = travel ? plan.legAt(legIndex - 1)?.cityName : null;
+        final road = travel ? c.roadMinutesOf(legIndex) : null;
+        final total = c.dayTotalMinutes(day) + (road ?? 0);
+        final over = c.isOverLimit(day) ||
+            (travel && (total > c.dayLimitMinutes || (c.resultDay(day)?.overLimit ?? false)));
         final closed = c
             .warningsFor(day)
             .where((w) => w.code == TripWarningCodes.closedDay)
             .map((w) => _closedText(plan, w))
             .toList();
-        final legIndex = plan.legIndexOf(day);
-        final leg = plan.legOf(day);
-        final travel = plan.isTravelDay(day);
-        final prev = travel ? plan.legAt(legIndex - 1)?.cityName : null;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _header(color, total, over, c.isEstimate(day), d.spots.isEmpty, plan.settings.dateOf(day), travel),
-            if (prev != null) _travelLine(prev, leg.cityName),
+            if (prev != null) _travelLine(prev, leg.cityName, road),
             for (final text in closed)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
@@ -80,16 +83,17 @@ class TripDayTile extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 8),
-            if (d.spots.isEmpty && leg.notReady && plan.isMultiCity)
-              _notReady()
-            else if (d.spots.isEmpty && plan.isMultiCity && plan.legSpotCount(legIndex) == 0 && !readOnly)
+            if (d.spots.isEmpty && leg.notReady && plan.isMultiCity) ...[
+              _notReady(),
+              if (!readOnly) ...[const SizedBox(height: 6), _addLegPlaces(legIndex)],
+            ] else if (d.spots.isEmpty && plan.isMultiCity && plan.legSpotCount(legIndex) == 0 && !readOnly)
               _addLegPlaces(legIndex)
             else if (d.spots.isEmpty && c.spotCount == 0 && !readOnly)
               _addPlaces(c)
             else if (d.spots.isEmpty)
-              const Text(
-                TripStrings.freeDay,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
+              Text(
+                travel ? TripStringsFinB1.driveDay : TripStrings.freeDay,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
               )
             else
               ReorderableListView.builder(
@@ -149,11 +153,12 @@ class TripDayTile extends StatelessWidget {
     return TripWrongCityStrip(enquiry: e, info: info, onCancel: cancel, onChangeDays: changeDays);
   }
 
-  Widget _travelLine(String from, String to) {
+  Widget _travelLine(String from, String to, int? road) {
+    final line = TripStringsMcaA3.fromTo(from, to);
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Text(
-        TripStringsMcaA3.fromTo(from, to),
+        road == null || road <= 0 ? line : '$line · ${TripStringsFinB1.onTheRoad(road)}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),

@@ -14,12 +14,17 @@ import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a2.dart';
 import '../trip_strings_a4.dart';
+import '../trip_strings_a5.dart';
+import '../trip_strings_fin_b1.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mcb_k2.dart';
 import '../trip_strings_mcc_a2.dart';
 import '../trip_strings_steps_a1.dart';
+import '../utils/trip_format.dart';
 import 'trip_cancel_sheet.dart';
+import 'trip_night_chooser.dart';
 import 'trip_own_booking_sheet.dart';
 import 'trip_sheet_frame.dart';
 import 'trip_status.dart';
@@ -293,11 +298,11 @@ class TripDayActions extends StatelessWidget {
           subtitle = total == null ? TripStrings.offerReceived : '${TripStrings.offerReceived} · ${BrowseItem.inr(total)}';
           status = TripTileStatus.offered;
         case TripDisplayStatus.confirmedByYou:
-          subtitle = '${TripStrings.confirmedByYou} · ${_price(e.agreedTotal)}';
+          subtitle = '${_nightPrefix(c, e)}${TripStrings.confirmedByYou} · ${_price(e.agreedTotal)}';
           status = TripTileStatus.confirmedByYou;
         case TripDisplayStatus.confirmedByBoth:
           final label = e.advanceLabel;
-          subtitle = label ?? '${TripStrings.both} · ${_price(e.agreedTotal)}';
+          subtitle = label ?? '${_nightPrefix(c, e)}${TripStrings.both} · ${_price(e.agreedTotal)}';
           if (e.hasPendingRevised) subtitle = '$subtitle · ${TripStrings.notAcceptedYet}';
           if (label != null) advance = e.advance;
           status = TripTileStatus.confirmedByBoth;
@@ -325,6 +330,7 @@ class TripDayActions extends StatelessWidget {
         status: status,
         display: display,
         advance: advance,
+        note: e.display.isConfirmed ? _checkOutLine(c, e.acceptedOffer?.checkOut ?? e.checkOut) : null,
         onTap: () => TripNavigation.openReplies(day),
         onLongPress: longPress,
         onMenu: menu,
@@ -358,6 +364,7 @@ class TripDayActions extends StatelessWidget {
         selected: true,
         status: TripTileStatus.own,
         display: TripDisplayStatus.own,
+        note: _checkOutLine(c, null),
         onTap: readOnly
             ? null
             : () => TripOwnBookingSheet.show(context, day: same ? stay.sameAsDay! : day, existingStay: own),
@@ -370,6 +377,24 @@ class TripDayActions extends StatelessWidget {
     final shortlist = d.stayShortlist;
     if (stay != null) {
       final sameStay = stay.isSameStay;
+      final change = sameStay ? c.sameStayNeedsChange(day) : null;
+      if (change != null) {
+        return _ActionTile(
+          icon: Iconsax.building_4,
+          accent: StayColors.accent,
+          surface: StayColors.surface,
+          title: stay.name,
+          subtitle: TripStringsFinB1.hostNotAsked,
+          selected: true,
+          status: TripTileStatus.asked,
+          display: TripDisplayStatus.asked,
+          onTap: readOnly ? null : () => TripNightChooser.askAddNight(context, c, day, change),
+          onLongPress: readOnly
+              ? null
+              : () => _confirmClear(context, TripStrings.removeFromPlan, stay.name, () => c.clearStay(day)),
+          onMenu: menu,
+        );
+      }
       return _ActionTile(
         icon: Iconsax.building_4,
         accent: StayColors.accent,
@@ -378,6 +403,7 @@ class TripDayActions extends StatelessWidget {
         subtitle: sameStay ? TripStrings.sameAsLastNight : '${_price(stay.pricePerNight)} / night',
         selected: true,
         status: TripTileStatus.selected,
+        note: _checkOutLine(c, null),
         onTap: readOnly ? null : () => TripNavigation.openStay(day),
         onLongPress: readOnly
             ? null
@@ -441,6 +467,20 @@ class TripDayActions extends StatelessWidget {
       onTap: () => TripOwnBookingSheet.show(context, day: day),
       onMenu: menu,
     );
+  }
+
+  String _nightPrefix(TripPlanController c, TripEnquiryModel e) {
+    if (e.nights <= 1) return '';
+    final first = c.dayOfDate(e.acceptedOffer?.checkIn ?? e.checkIn);
+    return first == null || first > day ? '' : '${TripStringsA2.nightChip(day - first + 1)} · ';
+  }
+
+  String? _checkOutLine(TripPlanController c, DateTime? out) {
+    final p = c.plan.value;
+    if (p == null || p.legEnd(p.legIndexOf(day)) != day) return null;
+    final date = out ?? c.dateOf(day + 1);
+    if (date == null) return null;
+    return TripStringsA5.checkOutOn('${TripFormat.shortDate(date)} ${TripStringsFinB1.morning}');
   }
 
   Future<void> _nightMenu(BuildContext context, TripPlanController c) async {
@@ -578,6 +618,7 @@ class _ActionTile extends StatelessWidget {
   final TripDisplayStatus? display;
   final TripAdvanceModel? advance;
   final VoidCallback? onMenu;
+  final String? note;
 
   const _ActionTile({
     required this.icon,
@@ -593,6 +634,7 @@ class _ActionTile extends StatelessWidget {
     this.display,
     this.advance,
     this.onMenu,
+    this.note,
   });
 
   @override
@@ -690,6 +732,14 @@ class _ActionTile extends StatelessWidget {
                                     fontSize: 10.5,
                                     color: active ? (booked ? tone : AppColors.textLight) : muted),
                               ),
+                              if (note != null)
+                                Text(
+                                  note!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      fontFamily: 'Poppins', fontSize: 10, color: active ? AppColors.textLight : muted),
+                                ),
                             ],
                           ),
                         ),

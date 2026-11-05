@@ -247,6 +247,7 @@ class NotificationService extends GetxService {
       // is a combined Notification+data payload — the OS auto-renders it while
       // backgrounded/killed, but NOT while foregrounded, and onMessage is the only delivery
       // path in that state. Without this branch the user gets zero signal at all.
+      if (_targetAlreadyOpen(message.data)) return;
       final title = message.notification?.title ?? message.data['title'] as String?;
       if (title == null) return;
       final body = message.notification?.body ?? message.data['body'] as String? ?? '';
@@ -489,6 +490,7 @@ class NotificationService extends GetxService {
     }
     final actionRoute = data['action_route'];
     final actionArgs = NotificationModel.parseArguments(data['action_args_json']);
+    if (actionRoute is String && _isOpenChat(actionRoute, actionArgs)) return;
     if (actionRoute is String && _isOpenScreen(actionRoute, actionArgs)) {
       TripPushSync.refreshNow(actionRoute, enquiryId: actionArgs?['enquiryId']?.toString());
       return;
@@ -581,6 +583,20 @@ class NotificationService extends GetxService {
     }
     if (route == AppRoutes.tripPlan) args = {...?args, 'fresh': true};
     Get.toNamed(route, arguments: args);
+  }
+
+  bool _isOpenChat(String route, Map<String, dynamic>? args) {
+    if (route != AppRoutes.chatConversation || Get.currentRoute != route) return false;
+    final id = args?['conversationId']?.toString();
+    final current = Get.arguments;
+    return id != null && current is Map && current['conversationId']?.toString() == id;
+  }
+
+  bool _targetAlreadyOpen(Map<String, dynamic> data) {
+    final route = data['action_route'];
+    if (route is! String) return false;
+    final args = NotificationModel.parseArguments(data['action_args_json']);
+    return _isOpenChat(route, args) || _isOpenScreen(route, args);
   }
 
   bool _isOpenScreen(String route, Map<String, dynamic>? args) {
@@ -775,11 +791,16 @@ class NotificationService extends GetxService {
   Future<void> clearToken({bool unregister = false}) async {
     var token = StorageService.getFcmToken();
     StorageService.clearFcmToken();
-    if (!unregister) return;
+    if (unregister) {
+      try {
+        token ??= await FirebaseMessaging.instance.getToken().timeout(const Duration(seconds: 2));
+        if (token != null) {
+          await ApiService.delete('${AppConstants.registerTokenPath}?token=${Uri.encodeQueryComponent(token)}');
+        }
+      } catch (_) {}
+    }
     try {
-      token ??= await FirebaseMessaging.instance.getToken().timeout(const Duration(seconds: 2));
-      if (token == null) return;
-      await ApiService.delete('${AppConstants.registerTokenPath}?token=${Uri.encodeQueryComponent(token)}');
+      await FirebaseMessaging.instance.deleteToken().timeout(const Duration(seconds: 2));
     } catch (_) {}
   }
 

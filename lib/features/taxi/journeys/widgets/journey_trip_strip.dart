@@ -78,7 +78,9 @@ class JourneyCarBookRow extends StatelessWidget {
       c.enquiryList.length;
       final cityLeg = c.plan.value?.segmentLegOf(journey.id);
       if (cityLeg == null) return const SizedBox.shrink();
-      return _row(context, c.carBooking(cityLeg, leg.legIndex) != null, cityLeg);
+      final booked = c.carBooking(cityLeg, leg.legIndex) != null;
+      if (booked && leg.isBooked) return const SizedBox.shrink();
+      return _row(context, booked, cityLeg);
     });
   }
 

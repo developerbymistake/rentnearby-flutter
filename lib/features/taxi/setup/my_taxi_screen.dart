@@ -12,6 +12,7 @@ import '../../../utils/app_toast.dart';
 import '../../../widgets/app_loading_overlay.dart';
 import '../../../widgets/plan_cap_strip.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../stay/stay_strings_fin_c1.dart';
 import '../leads/trip_leads_controller.dart';
 import '../models/taxi_owner_model.dart';
 import '../taxi_option_sets.dart';
@@ -110,7 +111,7 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
                               child: TextButton.icon(
                                 onPressed: _openSetup,
                                 icon: const Icon(Iconsax.edit_2, size: 16, color: TaxiColors.accentDark),
-                                label: const Text('Edit setup',
+                                label: const Text(StayFinStrings.editSetup,
                                     style: TextStyle(
                                         fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: TaxiColors.accentDark)),
                               ),
@@ -138,9 +139,9 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
                 icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
               ),
               const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('My Taxi',
+                Text(StayFinStrings.myTaxi,
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                Text('Manage your listing', style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
+                Text(StayFinStrings.manageListing, style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: Colors.white70)),
               ]),
             ]),
           ),
@@ -180,16 +181,16 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
             child: const Icon(Iconsax.car, size: 40, color: TaxiColors.accent),
           ),
           const SizedBox(height: 20),
-          const Text('No taxi yet',
+          const Text(StayFinStrings.noTaxiYet,
               style: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark)),
           const SizedBox(height: 8),
-          const Text('List your taxi in 3 steps', style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textLight)),
+          const Text(StayFinStrings.listTaxiSteps, style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textLight)),
           const SizedBox(height: 24),
           SizedBox(
             width: 220,
             child: GradientButton(
               onPressed: _openSetup,
-              label: 'Set up your taxi',
+              label: StayFinStrings.setUpTaxi,
               gradient: TaxiColors.gradient,
               shadowColor: TaxiColors.accent,
             ),
@@ -200,12 +201,12 @@ class _MyTaxiScreenState extends State<MyTaxiScreen> with WidgetsBindingObserver
   Widget _error() => Padding(
         padding: const EdgeInsets.only(top: 80),
         child: Column(children: [
-          const Text("Couldn't load your taxi",
+          const Text(StayFinStrings.couldNotLoadTaxi,
               style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textMedium)),
           const SizedBox(height: 10),
           TextButton(
             onPressed: _ctrl.load,
-            child: const Text('Try again',
+            child: const Text(StayFinStrings.tryAgain,
                 style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: TaxiColors.accentDark)),
           ),
         ]),
