@@ -245,8 +245,11 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
     TripPhoneBookingResult? result;
     final ex = _existing;
     if (ex != null) {
-      final nights = _nights;
-      result = await ctrl.editPhoneBooking(ex.id, {'allNights': nights > 1, 'nights': nights, ...fields});
+      final keep = _allNights == (ex.nights > 1);
+      result = await ctrl.editPhoneBooking(ex.id, {
+        if (!keep) ...{'allNights': _nights > 1, 'nights': _nights},
+        ...fields,
+      });
     } else {
       result = await ctrl.savePhoneBooking(
           stayId: widget.stayId, day: _day, allNights: _allNights, nights: _nights, fields: fields);

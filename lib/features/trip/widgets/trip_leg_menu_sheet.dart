@@ -182,12 +182,12 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
       );
       if (ok != true || !mounted) return;
     }
-    final b = _c.setLegDays(_leg, _days);
-    final text = TripLegMenuSheet.blockText(b, city);
+    final text = TripLegMenuSheet.blockText(_c.canSetLegDays(_leg, _days), city);
     if (text != null) {
       AppToast.warning(text);
       return;
     }
+    if (!await _c.setLegDays(_leg, _days)) return;
     if (mounted) _close();
   }
 
@@ -211,12 +211,12 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
     );
     if (choice == null || choice == TripLegImpactChoice.back || !mounted) return;
     if (choice == TripLegImpactChoice.cancelAndApply && !await _cancelRows(impact)) return;
-    final b = _c.setLegDays(_leg, days, keepBookings: true);
-    final text = TripLegMenuSheet.blockText(b, city);
+    final text = TripLegMenuSheet.blockText(_c.canSetLegDays(_leg, days, keepBookings: true), city);
     if (text != null) {
       AppToast.warning(text);
       return;
     }
+    if (!await _c.setLegDays(_leg, days, keepBookings: true)) return;
     if (choice == TripLegImpactChoice.keepBookings) AppToast.info(TripStringsMccA2.bookingsKept);
     if (mounted) _close();
   }
@@ -234,6 +234,15 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
     final names = [for (final k in legs.toList()..sort()) ?p.legAt(k)?.cityName];
     if (names.isNotEmpty) return names;
     return [for (var k = _leg + 1; k <= p.legCount; k++) ?p.legAt(k)?.cityName];
+  }
+
+  bool _laterDayRowsOpen(TripPlan p) {
+    for (var k = _leg + 1; k <= p.legCount; k++) {
+      for (final d in _c.legDays(k)) {
+        if (_c.enquiriesForNight(d).any((e) => e.isOpen) || _c.taxiEnquiriesForDay(d).any((e) => e.isOpen)) return true;
+      }
+    }
+    return false;
   }
 
   Future<void> _remove() async {
@@ -266,7 +275,8 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
     }
     final impact = _c.legRemoveImpact(_leg);
     if (!impact.isEmpty) {
-      await _removeWithImpact(impact, leg.cityName, mode == TripLegRemoveMode.shift ? null : body);
+      final carsOnly = mode == TripLegRemoveMode.keepLaterDates && !_laterDayRowsOpen(p);
+      await _removeWithImpact(impact, leg.cityName, mode == TripLegRemoveMode.shift || carsOnly ? null : body);
       return;
     }
     final ok = await showDialog<bool>(
@@ -312,7 +322,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
       body: body,
       impact: impact,
       applyLabel: TripStringsMccA2.cancelAndRemove,
-      keepLabel: TripStringsMccA2.removeKeepBookings,
+      keepLabel: impact.carsBlockKeep ? null : TripStringsMccA2.removeKeepBookings,
       backLabel: TripStringsMccA2.keepCity,
       offline: _c.offline.value,
     );

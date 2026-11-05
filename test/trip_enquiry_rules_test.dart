@@ -155,7 +155,8 @@ void main() {
         settings: TripSettings(startDate: DateTime(2030, 11, 1)),
         days: const [TripDay(day: 1), TripDay(day: 2)],
       );
-      expect(TripEnquiryRules.wrongCity(stay(2, 1, city: 'Badrinath'), one, one.settings), isNull);
+      expect(TripEnquiryRules.wrongCity(stay(2, 1), one, one.settings), isNull);
+      expect(TripEnquiryRules.wrongCity(stay(2, 1, city: '', lat: 30.7, lon: 79.4), one, one.settings), isNull);
       final seg = TripEnquiryModel(
         id: 'c1',
         tripId: 't1',
@@ -171,6 +172,38 @@ void main() {
       final noDates = legs(started: false);
       expect(TripEnquiryRules.wrongCity(stay(2, 1), noDates, noDates.settings), isNull);
       expect(TripEnquiryRules.isOutsideTrip(stay(9, 1), noDates.settings, 3), isFalse);
+    });
+
+    test('a named city that is no leg is a removed city, never the nearest leg', () {
+      final p = legs();
+      final e = stay(1, 2, city: 'Rishikesh', lat: 29.94, lon: 78.15);
+      expect(TripEnquiryRules.homeLegIndex(e, p), WrongCityInfo.removedCityLeg);
+      final w = TripEnquiryRules.wrongCity(e, p, p.settings)!;
+      expect(w.cityRemoved, isTrue);
+      expect(w.wrong, 2);
+      expect(w.total, 2);
+      expect(w.firstWrongDay, 1);
+      expect(w.dayCity, 'Haridwar');
+      expect(w.partial, isFalse);
+      final one = TripPlan.singleCity(
+        cityKey: 1,
+        cityName: 'Haridwar',
+        settings: TripSettings(startDate: DateTime(2030, 11, 1)),
+        days: const [TripDay(day: 1), TripDay(day: 2)],
+      );
+      final gone = TripEnquiryRules.wrongCity(stay(2, 1, city: 'Badrinath'), one, one.settings)!;
+      expect(gone.cityRemoved, isTrue);
+      expect(gone.firstWrongDay, 2);
+      expect(gone.dayCity, 'Haridwar');
+    });
+
+    test('phone booking edit keeps the stored nights when the length is unchanged', () {
+      final e = stay(1, 3);
+      expect(TripEnquiryRules.keepStoredNights(e, {'allNights': true, 'nights': 3, 'price': 100}), {'price': 100});
+      expect(TripEnquiryRules.keepStoredNights(e, {'allNights': false, 'nights': 1, 'price': 100}),
+          {'allNights': false, 'nights': 1, 'price': 100});
+      expect(TripEnquiryRules.keepStoredNights(null, {'nights': 3}), {'nights': 3});
+      expect(TripEnquiryRules.keepStoredNights(e, {'price': 100}), {'price': 100});
     });
 
     test('taxi dates follow the day gaps', () {

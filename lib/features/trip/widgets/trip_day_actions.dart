@@ -275,7 +275,8 @@ class TripDayActions extends StatelessWidget {
     final primary = c.primaryEnquiry(day);
     final display = primary?.display;
     final usable = display != null && display != TripDisplayStatus.closed && display != TripDisplayStatus.none;
-    if (usable) {
+    final skippedOver = stay != null && stay.isSkipped && (primary == null || primary.isRed);
+    if (usable && !skippedOver) {
       final e = primary!;
       String subtitle;
       TripTileStatus status;

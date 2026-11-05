@@ -1067,6 +1067,7 @@ class LegImpact {
   final List<int> travelLegs;
   final bool laterKeepDates;
   final List<String> laterCities;
+  final bool carsBlockKeep;
 
   const LegImpact({
     this.open = const [],
@@ -1075,6 +1076,7 @@ class LegImpact {
     this.travelLegs = const [],
     this.laterKeepDates = false,
     this.laterCities = const [],
+    this.carsBlockKeep = false,
   });
 
   const LegImpact.empty()
@@ -1083,7 +1085,8 @@ class LegImpact {
         cars = const [],
         travelLegs = const [],
         laterKeepDates = false,
-        laterCities = const [];
+        laterCities = const [],
+        carsBlockKeep = false;
 
   static bool _carBooked(TripEnquiryModel e) =>
       e.status == TripEnquiryStatuses.bookedByTraveller || e.status == TripEnquiryStatuses.confirmedByBoth;

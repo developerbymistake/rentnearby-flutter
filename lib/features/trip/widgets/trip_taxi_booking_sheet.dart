@@ -21,6 +21,7 @@ import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a3.dart';
 import '../trip_strings_mcb_a3.dart';
+import '../trip_strings_mcc_k2.dart';
 import '../utils/trip_format.dart';
 import 'trip_sheet_frame.dart';
 import 'trip_status.dart';
@@ -86,6 +87,7 @@ class _BookingBodyState extends State<_BookingBody> {
   late final TripPlanController _plan;
   late final Set<int> _days;
   late final Set<int> _pastDays;
+  late final int _leg;
   late TimeOfDay _time;
   late final TextEditingController _place;
   late final TextEditingController _fare;
@@ -120,6 +122,14 @@ class _BookingBodyState extends State<_BookingBody> {
     }
     final row = enq != null && enq.isBooked ? enq : _bookedRow();
     _pastDays = row == null ? <int>{} : _plan.planDaysOf(row).where(_plan.isDayPast).toSet();
+    final anchor = {..._pastDays, ..._days}.toList()..sort();
+    _leg = plan.legIndexOf(anchor.isEmpty ? widget.day : anchor.first);
+    _days.removeWhere((d) => plan.legIndexOf(d) != _leg);
+    _pastDays.removeWhere((d) => plan.legIndexOf(d) != _leg);
+    if (_days.isEmpty) {
+      final inLeg = [for (final d in plan.daysOf(_leg)) if (ahead.contains(d.day)) d.day]..sort();
+      if (inLeg.isNotEmpty) _days.add(inLeg.contains(widget.day) ? widget.day : inLeg.first);
+    }
     _time = _parseTime(server?.pickupTime ?? existing?.pickupTime ?? _plan.settings.pickupTime) ??
         _parseTime(TripConstants.defaultPickupTime)!;
     _place = TextEditingController(text: server?.pickupPlace ?? existing?.pickupPlace ?? _plan.settings.pickupPlace ?? '');
@@ -201,6 +211,10 @@ class _BookingBodyState extends State<_BookingBody> {
 
   void _toggleDay(int d) {
     if (_saving || _plan.isDayPast(d)) return;
+    if (_tripPlan.legIndexOf(d) != _leg) {
+      AppToast.warning(TripStringsMccK2.pickInOneCity);
+      return;
+    }
     if (_days.contains(d)) {
       if (_days.length == 1) {
         AppToast.warning(TripStrings.errPickDay);
@@ -556,13 +570,14 @@ class _BookingBodyState extends State<_BookingBody> {
 
   Widget _daysWrap() {
     final dayNumbers = _tripPlan.days.map((d) => d.day).toList();
-    return Wrap(
+    final multi = _tripPlan.isMultiCity;
+    final chips = Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
         for (final d in dayNumbers)
           Opacity(
-            opacity: _plan.isDayPast(d) ? 0.4 : 1,
+            opacity: _plan.isDayPast(d) || _tripPlan.legIndexOf(d) != _leg ? 0.4 : 1,
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 44),
               child: SelectableChip(
@@ -574,6 +589,16 @@ class _BookingBodyState extends State<_BookingBody> {
               ),
             ),
           ),
+      ],
+    );
+    if (!multi) return chips;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        chips,
+        const SizedBox(height: 6),
+        const Text(TripStringsMccK2.pickInOneCity,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
       ],
     );
   }

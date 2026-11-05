@@ -144,7 +144,7 @@ class TripDayTile extends StatelessWidget {
     final changeDays = readOnly || plan == null
         ? null
         : () => plan.isMultiCity
-            ? TripLegMenuSheet.changeDays(context, plan.legIndexOf(day))
+            ? TripLegMenuSheet.changeDays(context, c.wrongCityHomeLeg(info) ?? plan.legIndexOf(day))
             : TripDetailsSheet.edit(context);
     return TripWrongCityStrip(enquiry: e, info: info, onCancel: cancel, onChangeDays: changeDays);
   }
@@ -208,7 +208,9 @@ class TripDayTile extends StatelessWidget {
 
   Widget _redNote(TripPlanController c, TripDay d) {
     final e = c.primaryEnquiry(day);
-    if (e == null || !e.isRed || !c.showStayOption || c.isCompleted) return const SizedBox.shrink();
+    if (e == null || !e.isRed || !c.showStayOption || c.isCompleted || (d.stay?.isSkipped ?? false)) {
+      return const SizedBox.shrink();
+    }
     if (e.display == TripDisplayStatus.holdExpired) {
       final replied = c
           .enquiriesForNight(day)

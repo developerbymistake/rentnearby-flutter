@@ -489,10 +489,12 @@ void main() {
       expect(p.cityName, 'Badrinath');
     });
 
-    test('setLegDays refuses zero and beyond the trip cap', () {
+    test('setLegDays refuses zero and beyond the trip cap', () async {
       final c = withPlan(twoLegs());
-      expect(c.setLegDays(2, 0), isNot(TripLegEditBlock.none));
-      expect(c.setLegDays(2, 14), isNot(TripLegEditBlock.none));
+      expect(c.canSetLegDays(2, 0), isNot(TripLegEditBlock.none));
+      expect(c.canSetLegDays(2, 14), isNot(TripLegEditBlock.none));
+      expect(await c.setLegDays(2, 0), isFalse);
+      expect(await c.setLegDays(2, 14), isFalse);
     });
 
     test('moveSpot across legs does nothing', () {
@@ -1056,7 +1058,7 @@ void main() {
       expect(c.plan.value!.legs.first.cityName, 'Haridwar');
     });
 
-    test('shrink impact counts dropped days only; later legs join when they shift', () {
+    test('shrink impact counts dropped days only; later legs join when they shift', () async {
       final c = ctl(legsPlan(legOfDay: const [1, 2, 2, 2]), rows: [
         stayRow('kept', 2, TripEnquiryStatuses.confirmedByBoth, city: 'Badrinath'),
         stayRow('dropped', 4, TripEnquiryStatuses.asked, city: 'Badrinath'),
@@ -1066,7 +1068,8 @@ void main() {
       expect(last.booked, isEmpty);
       expect(last.laterKeepDates, isFalse);
       expect(c.legShrinkImpact(2, 3).isEmpty, isTrue);
-      expect(c.setLegDays(2, 2), TripLegEditBlock.bookings);
+      expect(c.canSetLegDays(2, 2), TripLegEditBlock.bookings);
+      expect(await c.setLegDays(2, 2), isFalse);
       expect(c.plan.value!.legDayCount(2), 3);
 
       final first = ctl(legsPlan(legOfDay: const [1, 1, 2]), rows: [
@@ -1090,7 +1093,7 @@ void main() {
       expect((await c.cancelLegRows(const LegImpact.empty())).ok, isTrue);
     });
 
-    test('a running leg cannot be removed, moved or shrunk past today; a later leg stays free', () {
+    test('a running leg cannot be removed, moved or shrunk past today; a later leg stays free', () async {
       final now = DateTime.now();
       final yesterday = DateTime(now.year, now.month, now.day - 1);
       final c = ctl(legsPlan(start: yesterday, legOfDay: const [1, 1, 2, 2]));
@@ -1100,7 +1103,8 @@ void main() {
       expect(c.canMoveLeg(1, false), TripLegEditBlock.running);
       expect(c.minDaysForLeg(1), 2);
       expect(c.minDaysForLeg(2), 1);
-      expect(c.setLegDays(1, 1), TripLegEditBlock.running);
+      expect(c.canSetLegDays(1, 1), TripLegEditBlock.running);
+      expect(await c.setLegDays(1, 1), isFalse);
       expect(c.canRemoveLeg(2), TripLegEditBlock.none);
     });
 
@@ -1147,11 +1151,100 @@ void main() {
       expect(c.wrongCityOf(c.enquiryList.firstWhere((e) => e.id == 'wrong'))?.dayCity, 'Badrinath');
     });
 
-    test('a one-city trip never flags a wrong city', () {
+    test('a one-city trip flags only a city that is not in the trip', () {
       final c = ctl(_plan(start: DateTime(2030, 11, 1)),
-          rows: [stayRow('s', 2, TripEnquiryStatuses.confirmedByBoth, city: 'Elsewhere')]);
+          rows: [stayRow('s', 2, TripEnquiryStatuses.confirmedByBoth, city: 'Nainital')]);
       expect(c.wrongCityRows, isEmpty);
       expect(c.wrongCityForDay(2), isNull);
+      final gone = ctl(_plan(start: DateTime(2030, 11, 1)),
+          rows: [stayRow('s', 2, TripEnquiryStatuses.confirmedByBoth, city: 'Elsewhere')]);
+      expect(gone.wrongCityForDay(2)?.id, 's');
+      expect(gone.wrongCityOf(gone.enquiryList.single)?.cityRemoved, isTrue);
+    });
+
+    test('remove with kept bookings down to one city: the removed city row is not the new night stay', () {
+      final c = ctl(legsPlan(legOfDay: const [1, 1, 2, 2]),
+          rows: [stayRow('h', 1, TripEnquiryStatuses.confirmedByBoth)]);
+      expect(c.removeLegMode(1), TripLegRemoveMode.shift);
+      expect(c.removeLeg(1, keepBookings: true), TripLegEditBlock.none);
+      final p = c.plan.value!;
+      expect(p.legCount, 1);
+      expect(p.dayAt(1)!.stay, isNull);
+      expect(c.wrongCityForDay(1)?.id, 'h');
+      final info = c.wrongCityOf(c.enquiryList.single)!;
+      expect(info.cityRemoved, isTrue);
+      expect(c.wrongCityHomeLeg(info), isNull);
+    });
+
+    test('a kept row of a removed middle city is unknown, never the nearest city', () {
+      final p = TripPlan.fromJson({
+        'version': 4,
+        'cityKey': 1,
+        'cityName': 'Rishikesh',
+        'legs': [
+          {'index': 1, 'cityKey': 1, 'cityName': 'Rishikesh', 'latitude': 30.08, 'longitude': 78.26},
+          {'index': 2, 'cityKey': 2, 'cityName': 'Haridwar', 'latitude': 29.95, 'longitude': 78.16},
+          {'index': 3, 'cityKey': 3, 'cityName': 'Mussoorie', 'latitude': 30.45, 'longitude': 78.07},
+        ],
+        'settings': {'startDate': iso(DateTime(2030, 11, 1))},
+        'days': [
+          {'day': 1, 'leg': 1},
+          {'day': 2, 'leg': 2},
+          {'day': 3, 'leg': 3},
+        ],
+      });
+      final c = ctl(p, rows: [
+        stayRow('h', 2, TripEnquiryStatuses.confirmedByBoth),
+        stayRow('m', 3, TripEnquiryStatuses.confirmedByBoth, city: 'Mussoorie'),
+      ]);
+      expect(c.removeLegMode(2), TripLegRemoveMode.keepLaterDates);
+      expect(c.removeLeg(2, keepBookings: true), TripLegEditBlock.none);
+      expect(c.plan.value!.dayAt(2)!.leg, 1);
+      expect(c.plan.value!.dayAt(2)!.stay, isNull);
+      expect(c.wrongCityForDay(2)?.id, 'h');
+    });
+
+    test('keep bookings is refused while journey cars would lose their travel', () {
+      final c = ctl(
+        legsPlan(arrival: journeyArrival),
+        journeys: [segJourney()],
+        rows: [carRow(TripEnquiryStatuses.bookedByTraveller)],
+      );
+      final i = c.legRemoveImpact(1);
+      expect(i.carsBlockKeep, isTrue);
+      expect(i.laterKeepDates, isFalse);
+      expect(c.removeLegMode(1), TripLegRemoveMode.shift);
+      expect(c.removeLeg(1, keepBookings: true), TripLegEditBlock.bookings);
+      expect(c.plan.value!.legCount, 2);
+      expect(c.plan.value!.legAt(2)!.arrival?.journeyId, 'j2');
+      expect(c.legShrinkImpact(1, 1).carsBlockKeep, isFalse);
+    });
+
+    test('a removed leg row reaching into the next leg does not switch to keep later dates', () {
+      final c = ctl(legsPlan(legOfDay: const [1, 2, 2]),
+          rows: [stayRow('span', 1, TripEnquiryStatuses.asked, nights: 2)]);
+      final i = c.legRemoveImpact(1);
+      expect(i.open.map((e) => e.id), ['span']);
+      expect(i.laterKeepDates, isFalse);
+      expect(c.removeLegMode(1), TripLegRemoveMode.shift);
+    });
+
+    test('growing a leg never pulls later bookings into the impact', () async {
+      final c = ctl(legsPlan(legOfDay: const [1, 2, 2]),
+          rows: [stayRow('later', 2, TripEnquiryStatuses.confirmedByBoth, city: 'Badrinath')]);
+      expect(c.legShrinkImpact(1, 2).isEmpty, isTrue);
+      expect(c.legShrinkImpact(1, 2).laterKeepDates, isFalse);
+      expect(c.canSetLegDays(1, 2), TripLegEditBlock.none);
+      expect(await c.setLegDays(1, 2), isTrue);
+      expect(c.plan.value!.legDayCount(1), 2);
+      expect(c.plan.value!.legDayCount(2), 2);
+    });
+
+    test('Change days on a wrong-city strip opens the home city', () {
+      final c = ctl(legsPlan(), rows: [stayRow('wrong', 2, TripEnquiryStatuses.confirmedByBoth)]);
+      final info = c.wrongCityOf(c.enquiryList.single)!;
+      expect(info.dayLegIndex, 2);
+      expect(c.wrongCityHomeLeg(info), 1);
     });
 
     test('without a plan the server flags are the fallback', () {

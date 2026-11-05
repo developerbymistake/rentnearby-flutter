@@ -7,6 +7,7 @@ import '../data/trip_enquiry_repository.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_offer_model.dart';
 import '../trip_strings.dart';
+import '../utils/trip_enquiry_rules.dart';
 import 'trip_plan_controller.dart';
 
 class TripEnquiryController extends GetxController {
@@ -305,7 +306,9 @@ class TripEnquiryController extends GetxController {
   }
 
   Future<TripPhoneBookingResult?> editPhoneBooking(String enquiryId, Map<String, dynamic> fields) async {
-    final res = await _guard(enquiryId, () => _repo.editPhoneBooking(enquiryId, fields));
+    final stored = _plan?.enquiryList.firstWhereOrNull((e) => e.id == enquiryId);
+    final body = TripEnquiryRules.keepStoredNights(stored, fields);
+    final res = await _guard(enquiryId, () => _repo.editPhoneBooking(enquiryId, body));
     if (res != null) _applyToPlan([res.enquiry]);
     return res;
   }
@@ -327,6 +330,31 @@ class TripEnquiryController extends GetxController {
     final e = await _guard(enquiryId, () => _repo.cancel(enquiryId, reason: trimmed == null || trimmed.isEmpty ? null : trimmed));
     if (e != null) _applyToPlan([e]);
     return e != null;
+  }
+
+  Future<bool> closeRow(TripEnquiryModel row) async {
+    if (!row.isOpen) return true;
+    const quiet = {TripEnquiryErrorTypes.enquiryClosed, TripEnquiryErrorTypes.concurrent};
+    Future<bool> run(TripEnquiryModel e) async {
+      final res = await _guard(e.id, () => e.isBooked ? _repo.cancel(e.id) : _repo.withdraw(e.id), silent: quiet);
+      if (res != null) _applyToPlan([res]);
+      return res != null;
+    }
+
+    if (await run(row)) return true;
+    if (!quiet.contains(lastErrorType)) return false;
+    final said = lastErrorMessage;
+    final fresh = await refreshOne(row.id);
+    if (fresh == null) {
+      AppToast.error(TripStrings.noNetwork);
+      return false;
+    }
+    if (!fresh.isOpen) return true;
+    if (fresh.isBooked == row.isBooked) {
+      AppToast.warning(said ?? TripStrings.justChanged);
+      return false;
+    }
+    return fresh.isBooked ? cancel(fresh.id) : withdraw(fresh.id);
   }
 
   Future<TripEnquiryModel?> accept(String enquiryId, String offerId, {bool closeOthers = true, String? replaceEnquiryId}) async {

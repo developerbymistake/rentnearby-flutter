@@ -13,6 +13,9 @@ class TripPreviewDay {
 }
 
 class WrongCityInfo {
+  static const int removedCityLeg = 0;
+  static const int serverOnlyLeg = -1;
+
   final int wrong;
   final int total;
   final int firstWrongDay;
@@ -30,6 +33,8 @@ class WrongCityInfo {
   });
 
   bool get partial => wrong < total;
+
+  bool get cityRemoved => homeLegIndex == removedCityLeg;
 }
 
 class TripEnquiryRules {
@@ -171,11 +176,13 @@ class TripEnquiryRules {
   }
 
   static int? homeLegIndex(TripEnquiryModel e, TripPlan plan) {
+    if (plan.legs.isEmpty) return null;
     final city = SearchFold.fold(e.context.city);
     if (city.isNotEmpty) {
       for (final l in plan.legs) {
         if (SearchFold.fold(l.cityName) == city) return l.index;
       }
+      return WrongCityInfo.removedCityLeg;
     }
     final lat = e.listingLatitude;
     final lon = e.listingLongitude;
@@ -195,9 +202,9 @@ class TripEnquiryRules {
 
   static WrongCityInfo? wrongCity(TripEnquiryModel e, TripPlan plan, TripSettings settings) {
     final start = settings.startDate;
-    if (e.isSegment || !plan.isMultiCity || start == null) return null;
+    if (e.isSegment || start == null) return null;
     final home = homeLegIndex(e, plan);
-    if (home == null) return null;
+    if (home == null || (!plan.isMultiCity && home != WrongCityInfo.removedCityLeg)) return null;
     final dates = [...datesOf(e)]..sort();
     var total = 0;
     var wrong = 0;
@@ -219,6 +226,15 @@ class TripEnquiryRules {
       homeLegIndex: home,
       dayLegIndex: plan.legIndexOf(first),
     );
+  }
+
+  static Map<String, dynamic> keepStoredNights(TripEnquiryModel? stored, Map<String, dynamic> fields) {
+    final n = fields['nights'];
+    if (stored == null || n is! int || n != stored.nights) return fields;
+    return {
+      for (final f in fields.entries)
+        if (f.key != 'nights' && f.key != 'allNights') f.key: f.value,
+    };
   }
 
   static bool isOutsideTrip(TripEnquiryModel e, TripSettings settings, int dayCount) {

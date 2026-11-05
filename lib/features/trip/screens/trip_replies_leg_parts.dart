@@ -38,7 +38,7 @@ class TripRepliesLegParts {
             : null,
         onChangeDays: live
             ? () => c.isMultiCity
-                ? TripLegMenuSheet.changeDays(context, c.legIndexOf(info.firstWrongDay))
+                ? TripLegMenuSheet.changeDays(context, c.wrongCityHomeLeg(info) ?? c.legIndexOf(info.firstWrongDay))
                 : TripDetailsSheet.edit(context)
             : null,
       ),

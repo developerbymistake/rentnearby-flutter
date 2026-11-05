@@ -234,18 +234,19 @@ class TripPlanController extends GetxController {
 
   bool get _hasUnavailableLeg => plan.value?.legs.any((l) => unavailableCities.contains(l.cityKey)) ?? false;
 
-  bool _legHasBookings(int legIndex) {
+  bool _legHasBookings(int legIndex, [Set<String> except = const {}]) {
+    bool live(TripEnquiryModel e) => e.isOpen && !except.contains(e.id);
     for (final d in legDays(legIndex)) {
-      if (enquiriesForNight(d).any((e) => e.isOpen) || taxiEnquiriesForDay(d).any((e) => e.isOpen)) return true;
+      if (enquiriesForNight(d).any(live) || taxiEnquiriesForDay(d).any(live)) return true;
     }
-    return _hasOpenSegmentRows(legIndex);
+    return segmentRows(legIndex).any(live);
   }
 
   bool _hasOpenSegmentRows(int legIndex) => segmentRows(legIndex).any((e) => e.isOpen);
 
-  bool _laterLegsHaveBookings(int legIndex) {
+  bool _laterLegsHaveBookings(int legIndex, [Set<String> except = const {}]) {
     for (var k = legIndex + 1; k <= legCount; k++) {
-      if (_legHasBookings(k)) return true;
+      if (_legHasBookings(k, except)) return true;
     }
     return false;
   }
@@ -260,9 +261,14 @@ class TripPlanController extends GetxController {
       total: e.wrongTotal < e.wrongNights ? e.wrongNights : e.wrongTotal,
       firstWrongDay: e.wrongFirstDay ?? e.day ?? 1,
       dayCity: e.wrongDayCity ?? '',
-      homeLegIndex: 0,
+      homeLegIndex: WrongCityInfo.serverOnlyLeg,
       dayLegIndex: 0,
     );
+  }
+
+  int? wrongCityHomeLeg(WrongCityInfo info) {
+    final k = info.homeLegIndex;
+    return k >= 1 && plan.value?.legAt(k) != null ? k : null;
   }
 
   bool isOutsideTrip(TripEnquiryModel e) {
@@ -300,7 +306,13 @@ class TripPlanController extends GetxController {
 
   List<TripEnquiryModel> _openCars(int legIndex) => [for (final e in segmentRows(legIndex)) if (e.isOpen) e];
 
-  LegImpact _impactOf(List<TripEnquiryModel> rows, List<int> travelLegs, {required bool later, required List<String> cities}) {
+  LegImpact _impactOf(
+    List<TripEnquiryModel> rows,
+    List<int> travelLegs, {
+    required bool later,
+    required List<String> cities,
+    bool carsOrphaned = false,
+  }) {
     final booked = <TripEnquiryModel>[];
     final open = <TripEnquiryModel>[];
     for (final e in rows) {
@@ -321,15 +333,16 @@ class TripPlanController extends GetxController {
       travelLegs: travelLegs,
       laterKeepDates: later,
       laterCities: cities,
+      carsBlockKeep: carsOrphaned && cars.isNotEmpty,
     );
   }
 
-  List<String> _laterCitiesWithRows(int legIndex) {
+  List<String> _laterCitiesWithRows(int legIndex, [Set<String> except = const {}]) {
     final p = plan.value;
     if (p == null) return const [];
     return [
       for (var k = legIndex + 1; k <= p.legCount; k++)
-        if (_legHasBookings(k)) ?p.legAt(k)?.cityName,
+        if (_legHasBookings(k, except)) ?p.legAt(k)?.cityName,
     ];
   }
 
@@ -341,8 +354,14 @@ class TripPlanController extends GetxController {
       for (final k in [legIndex, legIndex + 1])
         if (p.legAt(k) != null && _openCars(k).isNotEmpty) k,
     ];
-    final later = _laterLegsHaveBookings(legIndex);
-    return _impactOf(rows, travel, later: later, cities: later ? _laterCitiesWithRows(legIndex) : const []);
+    final leaving = {
+      for (final e in rows) e.id,
+      for (final k in travel)
+        for (final e in _openCars(k)) e.id,
+    };
+    final later = _laterLegsHaveBookings(legIndex, leaving);
+    return _impactOf(rows, travel,
+        later: later, cities: later ? _laterCitiesWithRows(legIndex, leaving) : const [], carsOrphaned: true);
   }
 
   LegImpact legShrinkImpact(int legIndex, int days) {
@@ -350,8 +369,9 @@ class TripPlanController extends GetxController {
     if (p == null || p.legAt(legIndex) == null) return const LegImpact.empty();
     final current = legDays(legIndex);
     final cut = days < 1 ? 1 : days;
-    final dropped = cut < current.length ? current.sublist(cut) : const <int>[];
-    final shifts = cut != current.length && legIndex < p.legCount;
+    if (cut >= current.length) return const LegImpact.empty();
+    final dropped = current.sublist(cut);
+    final shifts = legIndex < p.legCount;
     final later = shifts && _laterLegsHaveBookings(legIndex);
     final rows = _openRowsOnDays([
       ...dropped,
@@ -367,22 +387,33 @@ class TripPlanController extends GetxController {
   }
 
   Future<LegCancelResult> cancelLegRows(LegImpact impact) async {
-    final total = impact.open.length + impact.booked.length + impact.cars.length;
+    final rows = [...impact.booked, ...impact.open, ...impact.cars];
+    final total = rows.length;
     if (total == 0) return const LegCancelResult();
-    if (offline.value || isReadOnly) return LegCancelResult(failed: total);
+    if (offline.value || isReadOnly || impact.travelLegs.any(travelBusy.contains)) {
+      return LegCancelResult(failed: total);
+    }
     final enq = TripEnquiryController.to;
     var closed = 0;
-    for (final e in [...impact.booked, ...impact.open]) {
-      final ok = e.isBooked ? await enq.cancel(e.id) : await enq.withdraw(e.id);
-      if (!ok) return LegCancelResult(closed: closed, failed: total - closed);
+    for (final e in rows) {
+      if (!await enq.closeRow(e)) return LegCancelResult(closed: closed, failed: total - closed);
       closed++;
     }
     for (final k in impact.travelLegs) {
-      final n = impact.cars.where((e) => segmentRows(k).any((x) => x.id == e.id)).length;
-      if (!await removeTravel(k, cancelBooked: true)) return LegCancelResult(closed: closed, failed: total - closed);
-      closed += n;
+      _dropClosedJourney(k);
     }
-    return LegCancelResult(closed: closed, failed: closed >= total ? 0 : total - closed);
+    return LegCancelResult(closed: closed);
+  }
+
+  void _dropClosedJourney(int legIndex) {
+    final a = _journeyArrival(legIndex);
+    if (a == null || segmentRows(legIndex).any((e) => e.isOpen)) return;
+    final id = a.journeyId!;
+    final never = _mayDeleteJourney(id, segmentJourney(legIndex));
+    _setArrival(legIndex, null);
+    _dropLocalJourney(id);
+    travelGaps.remove(legIndex);
+    if (never) unawaited(_deleteJourney(id));
   }
 
   Future<TripLegEditBlock> cancelAndRemoveLeg(int legIndex) async {
@@ -393,14 +424,10 @@ class TripPlanController extends GetxController {
     return removeLeg(legIndex, keepBookings: true);
   }
 
-  Future<TripLegEditBlock> cancelAndSetLegDays(int legIndex, int days) async {
-    final p = plan.value;
-    if (p == null || isReadOnly || _saveBlocked) return TripLegEditBlock.readOnly;
-    if (p.legAt(legIndex) == null || days < 1) return TripLegEditBlock.edge;
-    if (days > maxDaysForLeg(legIndex)) return TripLegEditBlock.noDays;
-    if (days < minDaysForLeg(legIndex)) return TripLegEditBlock.running;
+  Future<bool> cancelAndSetLegDays(int legIndex, int days) async {
+    if (canSetLegDays(legIndex, days, keepBookings: true) != TripLegEditBlock.none) return false;
     final res = await cancelLegRows(legShrinkImpact(legIndex, days));
-    if (!res.ok) return TripLegEditBlock.bookings;
+    if (!res.ok) return false;
     return setLegDays(legIndex, days, keepBookings: true);
   }
 
@@ -1662,12 +1689,25 @@ class TripPlanController extends GetxController {
   Future<void> _planLegByCity(int cityKey, {int? maxDays, int? exactDays, bool keepDays = false}) =>
       _enqueue(() => _runPlanLeg(cityKey, maxDays: maxDays, exactDays: exactDays, keepDays: keepDays));
 
-  Future<void> _runPlanLeg(int cityKey, {int? maxDays, int? exactDays, bool keepDays = false}) async {
+  Future<bool> _planLegToDays(int cityKey, int days) async {
+    var ok = false;
+    await _enqueue(() async {
+      ok = await _runPlanLeg(cityKey, exactDays: days);
+    });
+    return ok;
+  }
+
+  Future<bool> _runPlanLeg(int cityKey, {int? maxDays, int? exactDays, bool keepDays = false}) async {
     final p = plan.value;
     final k = p?.legIndexOfCity(cityKey);
-    if (p == null || k == null || p.legSpotCount(k) == 0) return;
+    if (p == null || k == null) return false;
+    if (p.legSpotCount(k) == 0) {
+      if (exactDays == null) return false;
+      _sizeLeg(k, exactDays);
+      return true;
+    }
     _lastPlanWasAuto = true;
-    _retryLeg = (cityKey: cityKey, maxDays: maxDays, exactDays: exactDays, keepDays: keepDays);
+    _retryLeg = (cityKey: cityKey, maxDays: maxDays, exactDays: null, keepDays: keepDays || exactDays != null);
     final seq = ++_planSeq;
     final edit = _editSeq;
     final hold = keepDays || (k < p.legCount && _laterLegsHaveBookings(k));
@@ -1676,16 +1716,25 @@ class TripPlanController extends GetxController {
     _clearPlanError();
     try {
       final r = await _repo.plan(_planBody(p, k, 'auto', maxDays: exactDays ?? maxDays));
-      if (seq != _planSeq) return;
+      final edited = plan.value?.legIndexOfCity(cityKey);
+      if (seq != _planSeq) {
+        if (exactDays == null || edited == null) return false;
+        _sizeLeg(edited, exactDays);
+        return true;
+      }
       _lastPlanWasAuto = false;
       _retryLeg = null;
       if (edit != _editSeq || plan.value == null) {
+        if (exactDays != null && edited != null) {
+          _sizeLeg(edited, exactDays);
+          return true;
+        }
         unawaited(_runRecalculate());
-        return;
+        return exactDays == null;
       }
       final before = plan.value!;
-      final k2 = before.legIndexOfCity(cityKey);
-      if (k2 == null) return;
+      final k2 = edited;
+      if (k2 == null) return false;
       final after = _applyAutoLeg(before, k2, r, minDays: keep);
       plan.value = after;
       final merged = _mergeLegResult(before, after, k2, r);
@@ -1693,14 +1742,16 @@ class TripPlanController extends GetxController {
       _cacheResult(merged);
       reconcilePlan();
       scheduleSave();
+      return true;
     } catch (e) {
-      if (seq != _planSeq) return;
+      if (seq != _planSeq) return false;
       if (_isPlannerOff(e)) {
         plannerOff.value = true;
       } else if (!_isUnauthorized(e)) {
         _markLegUnavailable(e, cityKey);
         _onPlanError(e);
       }
+      return false;
     } finally {
       if (seq == _planSeq) isPlanning.value = false;
     }
@@ -2355,15 +2406,17 @@ class TripPlanController extends GetxController {
   }
 
   TripLegRemoveMode removeLegMode(int legIndex) =>
-      _laterLegsHaveBookings(legIndex) ? TripLegRemoveMode.keepLaterDates : TripLegRemoveMode.shift;
+      legRemoveImpact(legIndex).laterKeepDates ? TripLegRemoveMode.keepLaterDates : TripLegRemoveMode.shift;
 
   TripLegEditBlock removeLeg(int legIndex, {bool keepBookings = false}) {
     final block = canRemoveLeg(legIndex);
     if (block != TripLegEditBlock.none) return block;
-    if (!keepBookings && !legRemoveImpact(legIndex).isEmpty) return TripLegEditBlock.bookings;
+    final impact = legRemoveImpact(legIndex);
+    if (!impact.isEmpty && (!keepBookings || impact.carsBlockKeep)) return TripLegEditBlock.bookings;
     final p = plan.value!;
     final name = p.legAt(legIndex)!.cityName;
-    _applyLegChange(_removeLegPlan(p, legIndex, removeLegMode(legIndex)));
+    final mode = impact.laterKeepDates ? TripLegRemoveMode.keepLaterDates : TripLegRemoveMode.shift;
+    _applyLegChange(_removeLegPlan(p, legIndex, mode));
     reconcilePlan();
     AppToast.success(TripStringsMcaA1.cityRemoved(name));
     return TripLegEditBlock.none;
@@ -2481,21 +2534,32 @@ class TripPlanController extends GetxController {
     ]);
   }
 
-  TripLegEditBlock setLegDays(int legIndex, int days, {bool keepBookings = false}) {
+  TripLegEditBlock canSetLegDays(int legIndex, int days, {bool keepBookings = false}) {
     final p = plan.value;
     if (p == null || isReadOnly || _saveBlocked) return TripLegEditBlock.readOnly;
-    final leg = p.legAt(legIndex);
-    if (leg == null || days < 1) return TripLegEditBlock.edge;
-    final current = p.legDayCount(legIndex);
-    if (days == current) return TripLegEditBlock.none;
+    if (p.legAt(legIndex) == null || days < 1) return TripLegEditBlock.edge;
+    if (days == p.legDayCount(legIndex)) return TripLegEditBlock.none;
     if (days > maxDaysForLeg(legIndex)) return TripLegEditBlock.noDays;
-    final running = legRunning(legIndex);
     if (days < minDaysForLeg(legIndex)) return TripLegEditBlock.running;
     if (!keepBookings && !legShrinkImpact(legIndex, days).isEmpty) return TripLegEditBlock.bookings;
-    if (p.legSpotCount(legIndex) > 0 && !running) {
-      unawaited(_planLegByCity(leg.cityKey, exactDays: days));
-      return TripLegEditBlock.none;
+    return TripLegEditBlock.none;
+  }
+
+  Future<bool> setLegDays(int legIndex, int days, {bool keepBookings = false}) async {
+    if (canSetLegDays(legIndex, days, keepBookings: keepBookings) != TripLegEditBlock.none) return false;
+    final p = plan.value!;
+    final leg = p.legAt(legIndex)!;
+    if (days == p.legDayCount(legIndex)) return true;
+    if (p.legSpotCount(legIndex) > 0 && !legRunning(legIndex) && !offline.value) {
+      return _planLegToDays(leg.cityKey, days);
     }
+    _sizeLeg(legIndex, days);
+    return true;
+  }
+
+  void _sizeLeg(int legIndex, int days) {
+    final p = plan.value;
+    if (p == null || p.legAt(legIndex) == null || days < 1 || days == p.legDayCount(legIndex)) return;
     final block = p.daysOf(legIndex);
     final List<TripDay> sized;
     if (days < block.length) {
@@ -2521,7 +2585,6 @@ class TripPlanController extends GetxController {
     reconcilePlan();
     recalculate();
     scheduleSave();
-    return TripLegEditBlock.none;
   }
 
   static final RegExp _timePattern = RegExp(r'^([01]\d|2[0-3]):[0-5]\d$');
@@ -3707,7 +3770,7 @@ class TripPlanController extends GetxController {
       final nights = e.nights;
       final total = e.agreedTotal;
       final price = total == null ? null : (total / nights).ceil();
-      final home = p == null || !p.isMultiCity ? null : TripEnquiryRules.homeLegIndex(e, p);
+      final home = p == null ? null : TripEnquiryRules.homeLegIndex(e, p);
       int? firstDay;
       int? firstLeg;
       for (var k = 0; k < nights; k++) {
