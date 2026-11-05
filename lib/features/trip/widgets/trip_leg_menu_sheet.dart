@@ -10,6 +10,7 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_mca_a3.dart';
+import '../trip_strings_mca_n2.dart';
 import 'trip_sheet_frame.dart';
 
 class TripLegMenuSheet {
@@ -37,9 +38,25 @@ class TripLegMenuSheet {
   static void addPlaces(int legIndex) {
     final c = TripPlanController.to;
     final plan = c.plan.value;
-    final city = cityOf(legIndex);
-    if (plan == null || city == null) return;
-    TripNavigation.openSpots(city, tripId: c.trip.value?.id, existingIds: plan.spotIds, legIndex: legIndex);
+    if (plan == null) return;
+    var target = legIndex;
+    if (plan.legAt(target)?.notReady ?? true) {
+      target = 0;
+      for (var k = plan.legCount; k >= 1; k--) {
+        final l = plan.legAt(k);
+        if (l != null && !l.notReady) {
+          target = k;
+          break;
+        }
+      }
+      if (target == 0) {
+        AppToast.warning(TripStringsMcaN2.noReadyCity);
+        return;
+      }
+    }
+    final city = cityOf(target);
+    if (city == null) return;
+    TripNavigation.openSpots(city, tripId: c.trip.value?.id, existingIds: plan.spotIds, legIndex: target);
   }
 
   static String? blockText(TripLegEditBlock b, String city, {bool? up}) => switch (b) {
@@ -326,14 +343,15 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
         title: leg.cityName,
         description: TripStringsMcaA3.dayRangeWithDates(a, b, _c.dateOf(a), _c.dateOf(b)),
         children: [
-          _row(
-            icon: Iconsax.add_circle,
-            label: TripStringsMcaA3.addPlaces,
-            onTap: () {
-              _close();
-              TripLegMenuSheet.addPlaces(_leg);
-            },
-          ),
+          if (!leg.notReady)
+            _row(
+              icon: Iconsax.add_circle,
+              label: TripStringsMcaA3.addPlaces,
+              onTap: () {
+                _close();
+                TripLegMenuSheet.addPlaces(_leg);
+              },
+            ),
           _row(
             icon: Iconsax.calendar_edit,
             label: TripStringsMcaA3.changeDays,

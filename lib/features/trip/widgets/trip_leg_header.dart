@@ -4,6 +4,7 @@ import '../../../config/app_colors.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../trip_colors.dart';
 import '../trip_strings_mca_a3.dart';
+import '../trip_strings_mca_n2.dart';
 import 'trip_leg_menu_sheet.dart';
 
 class TripLegHeader extends StatelessWidget {
@@ -26,6 +27,7 @@ class TripLegHeader extends StatelessWidget {
       final range = TripStringsMcaA3.dayRangeWithDates(a, b, c.dateOf(a), c.dateOf(b));
       final line = spots > 0 ? '$range · ${TripStringsMcaA3.spots(spots)}' : range;
       final menu = !c.isReadOnly && !c.needsUpdate.value;
+      final unavailable = c.legUnavailable(legIndex);
       return Padding(
         key: anchorKey,
         padding: const EdgeInsets.only(top: 4, bottom: 10),
@@ -62,6 +64,27 @@ class TripLegHeader extends StatelessWidget {
                     style: const TextStyle(
                         fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
                   ),
+                  if (unavailable) ...[
+                    Text(
+                      TripStringsMcaN2.cityUnavailable,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error),
+                    ),
+                    if (menu)
+                      TextButton(
+                        onPressed: () => TripLegMenuSheet.show(context, legIndex),
+                        style: TextButton.styleFrom(
+                            minimumSize: const Size(44, 44), padding: EdgeInsets.zero, alignment: Alignment.centerLeft),
+                        child: const Text(
+                          TripStringsMcaA3.removeCity,
+                          maxLines: 1,
+                          style: TextStyle(
+                              fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.error),
+                        ),
+                      ),
+                  ],
                 ],
               ),
             ),

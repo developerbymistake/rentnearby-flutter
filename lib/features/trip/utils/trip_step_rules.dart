@@ -32,12 +32,29 @@ class TripStepRules {
 
   static bool _hasPoint(double lat, double lon) => !(lat == 0 && lon == 0);
 
-  static bool startChanged(TripStepRole role, TripStartFrom? start, TripJourney j) {
+  static bool startChanged(
+    TripStepRole role,
+    TripStartFrom? start,
+    TripJourney j, {
+    double? cityLat,
+    double? cityLon,
+  }) =>
+      _startMoved(role, start, j) || cityChanged(role, j, cityLat, cityLon);
+
+  static bool _startMoved(TripStepRole role, TripStartFrom? start, TripJourney j) {
     if (start == null) return false;
     final lat = role == TripStepRole.gettingThere ? j.fromLat : j.toLat;
     final lon = role == TripStepRole.gettingThere ? j.fromLng : j.toLng;
     if (!_hasPoint(lat, lon)) return false;
     return TaxiOptionSets.distanceMeters(start.lat, start.lon, lat, lon) > TripConstants.sameCityMeters;
+  }
+
+  static bool cityChanged(TripStepRole role, TripJourney j, double? cityLat, double? cityLon) {
+    if (cityLat == null || cityLon == null || !_hasPoint(cityLat, cityLon)) return false;
+    final lat = role == TripStepRole.gettingThere ? j.toLat : j.fromLat;
+    final lon = role == TripStepRole.gettingThere ? j.toLng : j.fromLng;
+    if (!_hasPoint(lat, lon)) return false;
+    return TaxiOptionSets.distanceMeters(cityLat, cityLon, lat, lon) > TripConstants.sameCityMeters;
   }
 
   static bool insideCity(TripStartFrom? start, double? lat, double? lon) {

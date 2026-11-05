@@ -499,6 +499,136 @@ void main() {
       expect(c.plan.value!.days.first.spots.single.id, 'a');
     });
 
+    TripPlan paddedSecondLeg() => TripPlan.fromJson({
+          'version': 4,
+          'cityKey': 1,
+          'cityName': 'Haridwar',
+          'legs': [
+            {'index': 1, 'cityKey': 1, 'cityName': 'Haridwar', 'latitude': 29.95, 'longitude': 78.16},
+            {'index': 2, 'cityKey': 2, 'cityName': 'Badrinath', 'latitude': 30.74, 'longitude': 79.49, 'notReady': true},
+          ],
+          'settings': {'startDate': '2030-11-01'},
+          'days': [
+            {'day': 1, 'leg': 1, 'spots': [_spot('a').toJson(), _spot('b').toJson()]},
+            {'day': 2, 'leg': 1, 'spots': [_spot('c').toJson()]},
+            {'day': 3, 'leg': 2, 'spots': []},
+            {'day': 4, 'leg': 2, 'spots': []},
+            {'day': 5, 'leg': 2, 'spots': []},
+          ],
+        });
+
+    test('a reorder in one city keeps the other city\'s empty days (#MCA1, #MCA5)', () {
+      final c = withPlan(paddedSecondLeg());
+      c.reorder(1, 0, 2);
+      final p = c.plan.value!;
+      expect(p.days.length, 5);
+      expect(p.legDayCount(2), 3);
+      expect(p.dayAt(1)!.spots.map((s) => s.id).toList(), ['b', 'a']);
+    });
+
+    test('a spot edit trims only the edited city (#MCA1, #MCA5)', () {
+      final c = withPlan(paddedSecondLeg());
+      c.removeSpot('c');
+      final p = c.plan.value!;
+      expect(p.legDayCount(1), 1);
+      expect(p.legDayCount(2), 3);
+      expect(p.days.length, 4);
+      expect(c.trimmedLegsForTest(paddedSecondLeg(), [
+        for (final d in paddedSecondLeg().days) d.day == 1 ? d.copyWith(spots: d.spots.reversed.toList()) : d,
+      ]), isEmpty);
+    });
+
+    test('a NotReady city cannot take places', () {
+      final c = withPlan(paddedSecondLeg());
+      expect(c.canAddPlaces(1), isTrue);
+      expect(c.canAddPlaces(2), isFalse);
+      expect(c.legUnavailable(2), isFalse);
+      c.unavailableCities.add(1);
+      expect(c.legUnavailable(1), isTrue);
+      expect(c.canAddPlaces(1), isFalse);
+    });
+
+    TripPlan stayAcrossLegs() => TripPlan.fromJson({
+          'version': 4,
+          'cityKey': 1,
+          'cityName': 'Haridwar',
+          'legs': [
+            {'index': 1, 'cityKey': 1, 'cityName': 'Haridwar', 'latitude': 29.95, 'longitude': 78.16},
+            {'index': 2, 'cityKey': 2, 'cityName': 'Badrinath', 'latitude': 30.74, 'longitude': 79.49},
+          ],
+          'settings': {'startDate': '2030-11-01'},
+          'days': [
+            {'day': 1, 'leg': 1, 'spots': [_spot('a').toJson()]},
+            {'day': 2, 'leg': 1, 'spots': []},
+            {'day': 3, 'leg': 2, 'spots': []},
+          ],
+        });
+
+    test('a booked stay running into the next city starts a new first night there (#MCA6)', () {
+      final c = withPlan(stayAcrossLegs());
+      c.enquiryList.assignAll([
+        TripEnquiryModel(
+          id: 'e1',
+          listingId: 's1',
+          listingName: 'Ganga View',
+          status: TripEnquiryStatuses.confirmedByBoth,
+          displayStatusWire: 'confirmedByBoth',
+          checkIn: DateTime(2030, 11, 1),
+          checkOut: DateTime(2030, 11, 4),
+          agreedTotal: 3000,
+        ),
+      ]);
+      c.reconcilePlan();
+      final p = c.plan.value!;
+      expect(p.dayAt(1)!.stay?.sameAsDay, isNull);
+      expect(p.dayAt(2)!.stay?.sameAsDay, 1);
+      expect(p.dayAt(3)!.stay?.stayId, 's1');
+      expect(p.dayAt(3)!.stay?.sameAsDay, isNull);
+    });
+
+    test('a booked taxi covering two cities stays inside the first one (#MCA6)', () {
+      final c = withPlan(stayAcrossLegs());
+      c.enquiryList.assignAll([
+        TripEnquiryModel(
+          id: 't1',
+          kind: TripEnquiryKinds.taxi,
+          listingId: 'x1',
+          listingName: 'Ravi',
+          status: TripEnquiryStatuses.bookedByTraveller,
+          displayStatusWire: 'bookedByYou',
+          checkIn: DateTime(2030, 11, 2),
+          days: const [2, 3],
+          taxi: const TripTaxiModel(agreedFare: 4000),
+        ),
+      ]);
+      c.reconcilePlan();
+      final p = c.plan.value!;
+      expect(p.dayAt(2)!.taxi?.booking?.days, [2]);
+      expect(p.dayAt(3)!.taxi, isNull);
+    });
+
+    test('a journey to the old first city needs attention after a city move (#MCA7)', () {
+      final c = withPlan(twoLegs().copyWith(
+        steps: const TripSteps(gettingThere: TripStep(status: TripStepStatus.booked, journeyId: 'j1')),
+      ));
+      c.trip.value = c.trip.value!.copyWith(journeys: [
+        TripJourney(
+          id: 'j1',
+          fromName: 'Delhi',
+          fromLat: 28.6139,
+          fromLng: 77.2090,
+          toName: 'Haridwar',
+          toLat: 29.95,
+          toLng: 78.16,
+          date: DateTime(2030, 11, 1),
+        ),
+      ], journeysKnown: true);
+      expect(c.journeyFor(TripStepRole.gettingThere)?.needsAttention, isFalse);
+      expect(c.moveLeg(1, false), TripLegEditBlock.none);
+      expect(c.journeyFor(TripStepRole.gettingThere)?.startChanged, isTrue);
+      expect(c.journeyCityChanged(TripStepRole.gettingThere), isTrue);
+    });
+
     test('default title lists the cities like the server', () {
       expect(TripStringsMcaA1.defaultTitle(['Haridwar']), 'Haridwar trip');
       expect(TripStringsMcaA1.defaultTitle(['Haridwar', 'Badrinath']), 'Haridwar, Badrinath trip');

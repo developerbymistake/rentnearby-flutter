@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show listEquals, visibleForTesting;
 import 'package:get/get.dart';
@@ -81,8 +82,10 @@ class TripPlanController extends GetxController {
   final _supplyByDistrict = <String, bool>{};
   final _supplyInFlight = <String, Future<bool?>>{};
   final _supplyTried = <String>{};
+  final unavailableCities = <int>{}.obs;
+  final _legResults = <int, ({String body, TripPlanResult result})>{};
   Future<void> _legChain = Future<void>.value();
-  int? _retryLegCity;
+  ({int cityKey, int? maxDays, int? exactDays, bool keepDays})? _retryLeg;
   bool lastProblemQueued = false;
   TripCityModel? picked;
   int openPages = 0;
@@ -208,6 +211,18 @@ class TripPlanController extends GetxController {
   }
 
   bool canEditLeg(int legIndex) => !isReadOnly && !_legRunning(legIndex);
+
+  bool legUnavailable(int legIndex) {
+    final leg = plan.value?.legAt(legIndex);
+    return leg != null && unavailableCities.contains(leg.cityKey);
+  }
+
+  bool canAddPlaces(int legIndex) {
+    final leg = plan.value?.legAt(legIndex);
+    return leg != null && !leg.notReady && !isReadOnly && !legUnavailable(legIndex);
+  }
+
+  bool get _hasUnavailableLeg => plan.value?.legs.any((l) => unavailableCities.contains(l.cityKey)) ?? false;
 
   bool _legHasBookings(int legIndex) {
     for (final d in legDays(legIndex)) {
@@ -413,12 +428,24 @@ class TripPlanController extends GetxController {
     final j = trip.value?.journeyById(s.journeyId);
     if (j == null) return null;
     final expected = stepDate(role);
+    final city = _stepCityPoint(role);
     return j.withFlags(
       role: role,
       expectedDate: expected,
       dateChanged: TripStepRules.dateChanged(expected, j.date),
-      startChanged: TripStepRules.startChanged(role, startFrom, j),
+      startChanged: TripStepRules.startChanged(role, startFrom, j, cityLat: city?.lat, cityLon: city?.lon),
     );
+  }
+
+  ({double lat, double lon})? _stepCityPoint(TripStepRole role) =>
+      role == TripStepRole.gettingThere ? _cityPoint : _lastPoint;
+
+  bool journeyCityChanged(TripStepRole role) {
+    final s = stepOf(role);
+    if (!s.hasJourney) return false;
+    final j = trip.value?.journeyById(s.journeyId);
+    final city = _stepCityPoint(role);
+    return j != null && TripStepRules.cityChanged(role, j, city?.lat, city?.lon);
   }
 
   TripStepDisplay stepDisplay(TripStepRole role) => TripStepRules.display(stepOf(role), journeyFor(role));
@@ -921,6 +948,10 @@ class TripPlanController extends GetxController {
     if (id != null) TripTodayCache.saveResult(id, r);
   }
 
+  static TripCityModel _firstCity(TripModel t) => t.plan.legs.isNotEmpty
+      ? t.plan.legs.first.city
+      : TripCityModel(cityKey: t.cityKey, name: t.cityName, latitude: t.cityLatitude, longitude: t.cityLongitude);
+
   bool _openFromCache(String tripId, Object e) {
     if (!DioErrorMapper.isNetworkError(e)) return false;
     final cached = TripTodayCache.trip(tripId);
@@ -929,12 +960,7 @@ class TripPlanController extends GetxController {
     plan.value = cached.plan;
     enquiryList.assignAll(cached.enquiries);
     result.value = TripTodayCache.result(tripId);
-    picked = TripCityModel(
-      cityKey: cached.cityKey,
-      name: cached.cityName,
-      latitude: cached.cityLatitude,
-      longitude: cached.cityLongitude,
-    );
+    picked = _firstCity(cached);
     offline.value = true;
     openFailed.value = false;
     return true;
@@ -1034,7 +1060,9 @@ class TripPlanController extends GetxController {
     lastAddedLeg.value = null;
     pendingNextCity.value = null;
     _legChain = Future<void>.value();
-    _retryLegCity = null;
+    _retryLeg = null;
+    _legResults.clear();
+    unavailableCities.clear();
     _startFromTried = false;
     _pendingJourneyIds.clear();
     if (Get.isRegistered<TripSupplyController>()) Get.delete<TripSupplyController>(force: true);
@@ -1085,6 +1113,12 @@ class TripPlanController extends GetxController {
     planFailed.value = true;
   }
 
+  void _markLegUnavailable(Object e, int cityKey) {
+    final p = plan.value;
+    if (p == null || !p.isMultiCity || DioErrorMapper.errorType(e) != TripErrorTypes.cityNotFound) return;
+    if (p.legIndexOfCity(cityKey) != null) unavailableCities.add(cityKey);
+  }
+
   Duration? get _planWait {
     final until = _planBlockedUntil;
     if (until == null) return null;
@@ -1095,9 +1129,16 @@ class TripPlanController extends GetxController {
   void _onSaveError(Object e, TripPlan p) {
     final type = DioErrorMapper.errorType(e);
     if (type == TripErrorTypes.cityNotFound) {
-      AppToast.error(p.isMultiCity
-          ? DioErrorMapper.toMessage(e, TripStrings.cityUnavailable)
-          : TripStrings.cityUnavailable);
+      final leg = p.isMultiCity ? p.legAt(_errorLegIndex(e) ?? 0) : null;
+      if (leg != null) {
+        if (unavailableCities.add(leg.cityKey)) {
+          AppToast.error(DioErrorMapper.toMessage(e, TripStrings.cityUnavailable));
+        }
+      } else {
+        AppToast.error(p.isMultiCity
+            ? DioErrorMapper.toMessage(e, TripStrings.cityUnavailable)
+            : TripStrings.cityUnavailable);
+      }
     } else if (type == TripErrorTypes.citiesUnavailable) {
       AppToast.error(TripStrings.citiesFailed);
     } else if (_status(e) == 400) {
@@ -1108,6 +1149,14 @@ class TripPlanController extends GetxController {
       AppToast.error(TripStrings.saveFailed);
     }
     saveFailed.value = true;
+  }
+
+  static int? _errorLegIndex(Object e) {
+    if (e is! DioException) return null;
+    final body = e.response?.data;
+    final data = body is Map ? body['data'] : null;
+    final v = data is Map ? data['legIndex'] : null;
+    return v is num ? v.toInt() : null;
   }
 
   Future<void> Function()? _detachPendingSave() {
@@ -1243,12 +1292,7 @@ class TripPlanController extends GetxController {
       trip.value = t;
       enquiryList.assignAll(t.enquiries);
       plan.value = t.plan;
-      picked = TripCityModel(
-        cityKey: t.cityKey,
-        name: t.cityName,
-        latitude: t.cityLatitude,
-        longitude: t.cityLongitude,
-      );
+      picked = _firstCity(t);
       checkSupply();
       _adoptDistrict(t);
       reconcilePlan();
@@ -1297,9 +1341,9 @@ class TripPlanController extends GetxController {
       AppToast.warning(planError.value ?? TripStrings.checkConnection);
       return;
     }
-    final legCity = _retryLegCity;
-    if (legCity != null && _lastPlanWasAuto) {
-      await _planLegByCity(legCity);
+    final job = _retryLeg;
+    if (job != null && _lastPlanWasAuto) {
+      await _planLegByCity(job.cityKey, maxDays: job.maxDays, exactDays: job.exactDays, keepDays: job.keepDays);
       return;
     }
     await (_lastPlanWasAuto ? autoPlan() : _runRecalculate());
@@ -1380,11 +1424,12 @@ class TripPlanController extends GetxController {
     final p = plan.value;
     if (p == null || p.spotCount == 0) return;
     _lastPlanWasAuto = true;
-    _retryLegCity = null;
+    _retryLeg = null;
     final seq = ++_planSeq;
     final edit = _editSeq;
     isPlanning.value = true;
     _clearPlanError();
+    int? inFlight;
     try {
       final targets = [
         for (final l in p.legs)
@@ -1397,7 +1442,9 @@ class TripPlanController extends GetxController {
         if (cur == null) return;
         final k = cur.legIndexOfCity(cityKey) ?? 1;
         final keep = cur.isMultiCity ? cur.legDayCount(k) : null;
+        inFlight = cityKey;
         final r = await _repo.plan(_planBody(cur, k, 'auto'));
+        inFlight = null;
         if (seq != _planSeq) return;
         if (edit != _editSeq || plan.value == null) {
           _lastPlanWasAuto = false;
@@ -1422,6 +1469,7 @@ class TripPlanController extends GetxController {
       if (_isPlannerOff(e)) {
         plannerOff.value = true;
       } else if (!_isUnauthorized(e)) {
+        if (inFlight != null) _markLegUnavailable(e, inFlight);
         _onPlanError(e);
       }
     } finally {
@@ -1437,17 +1485,18 @@ class TripPlanController extends GetxController {
     final k = p?.legIndexOfCity(cityKey);
     if (p == null || k == null || p.legSpotCount(k) == 0) return;
     _lastPlanWasAuto = true;
-    _retryLegCity = cityKey;
+    _retryLeg = (cityKey: cityKey, maxDays: maxDays, exactDays: exactDays, keepDays: keepDays);
     final seq = ++_planSeq;
     final edit = _editSeq;
-    final keep = exactDays ?? (keepDays ? p.legDayCount(k) : null);
+    final hold = keepDays || (k < p.legCount && _laterLegsHaveBookings(k));
+    final keep = exactDays ?? (hold ? p.legDayCount(k) : null);
     isPlanning.value = true;
     _clearPlanError();
     try {
       final r = await _repo.plan(_planBody(p, k, 'auto', maxDays: exactDays ?? maxDays));
       if (seq != _planSeq) return;
       _lastPlanWasAuto = false;
-      _retryLegCity = null;
+      _retryLeg = null;
       if (edit != _editSeq || plan.value == null) {
         unawaited(_runRecalculate());
         return;
@@ -1466,6 +1515,7 @@ class TripPlanController extends GetxController {
       if (_isPlannerOff(e)) {
         plannerOff.value = true;
       } else if (!_isUnauthorized(e)) {
+        _markLegUnavailable(e, cityKey);
         _onPlanError(e);
       }
     } finally {
@@ -1632,6 +1682,7 @@ class TripPlanController extends GetxController {
     final seq = ++_planSeq;
     isPlanning.value = true;
     _clearPlanError();
+    int? inFlight;
     try {
       if (!p.isMultiCity) {
         final r = await _repo.plan(_planBody(p, 1, 'recalculate'));
@@ -1651,8 +1702,14 @@ class TripPlanController extends GetxController {
       var limit = p.settings.dayLimitMinutes;
       for (final l in p.legs) {
         if (p.legSpotCount(l.index) == 0) continue;
-        final r = await _repo.plan(_planBody(p, l.index, 'recalculate'));
+        final body = _planBody(p, l.index, 'recalculate');
+        final sig = jsonEncode({...body}..remove('legIndex'));
+        final hit = _legResults[l.cityKey];
+        inFlight = l.cityKey;
+        final r = hit != null && hit.body == sig ? hit.result : await _repo.plan(body);
+        inFlight = null;
         if (seq != _planSeq) return;
+        _legResults[l.cityKey] = (body: sig, result: r);
         final off = p.legStart(l.index) - 1;
         days.addAll(r.days.map((d) => _shiftDay(d, off)));
         for (final w in r.warnings) {
@@ -1681,6 +1738,7 @@ class TripPlanController extends GetxController {
       if (_isPlannerOff(e)) {
         plannerOff.value = true;
       } else if (!_isUnauthorized(e)) {
+        if (inFlight != null) _markLegUnavailable(e, inFlight);
         _onPlanError(e);
       }
     } finally {
@@ -1805,12 +1863,37 @@ class TripPlanController extends GetxController {
     final p = plan.value;
     if (p == null) return;
     _editSeq++;
+    final trim = _trimmedLegs(p, days);
     plan.value = p.copyWith(
-      days: _renumber(days, keepEmptyDays: keepEmptyDays, keepLegs: _anchoredLegs(p), legCount: p.legCount),
+      days: _renumber(
+        days,
+        keepEmptyDays: keepEmptyDays,
+        keepLegs: {for (var k = 1; k <= p.legCount; k++) if (!trim.contains(k)) k},
+        legCount: p.legCount,
+      ),
     );
     recalculate();
     scheduleSave();
   }
+
+  // Only a leg whose own spots moved between days may lose trailing empty days.
+  Set<int> _trimmedLegs(TripPlan p, List<TripDay> next) {
+    if (!p.isMultiCity) return const {};
+    final anchored = _anchoredLegs(p);
+    return {
+      for (final d in next)
+        if (!anchored.contains(d.leg) && !_sameSpotSet(p.dayAt(d.day)?.spots, d.spots)) d.leg,
+    };
+  }
+
+  static bool _sameSpotSet(List<TripSpotRef>? a, List<TripSpotRef> b) {
+    if (a == null || a.length != b.length) return false;
+    final ids = {for (final s in a) s.id};
+    return b.every((s) => ids.contains(s.id));
+  }
+
+  @visibleForTesting
+  Set<int> trimmedLegsForTest(TripPlan p, List<TripDay> next) => _trimmedLegs(p, next);
 
   // Earlier legs keep their day count while a later leg has a dated booking, so its dates never move.
   Set<int> _anchoredLegs(TripPlan p) {
@@ -1840,10 +1923,10 @@ class TripPlanController extends GetxController {
       ];
       return EditImpact(droppedDaysWithBookings: dropped);
     }
-    final anchored = _anchoredLegs(p);
+    final trim = _trimmedLegs(p, next);
     final dropped = <int>[];
     for (var k = 1; k <= p.legCount; k++) {
-      if (anchored.contains(k)) continue;
+      if (!trim.contains(k)) continue;
       final group = next.where((d) => d.leg == k).toList();
       final lastFull = group.lastIndexWhere((d) => d.spots.isNotEmpty);
       final keep = lastFull < 0 ? 1 : lastFull + 1;
@@ -2843,7 +2926,7 @@ class TripPlanController extends GetxController {
     for (final e in booked) {
       final fare = e.taxi?.agreedFare;
       if (fare == null || e.days.isEmpty) continue;
-      final covered = planDaysOf(e, days);
+      final covered = _oneLeg(planDaysOf(e, days), days);
       for (final day in covered) {
         final i = indexOf(day);
         if (i == null || claimed.contains(i)) continue;
@@ -2907,6 +2990,13 @@ class TripPlanController extends GetxController {
     return changed;
   }
 
+  static List<int> _oneLeg(List<int> covered, List<TripDay> days) {
+    if (covered.isEmpty) return covered;
+    final legOf = {for (final d in days) d.day: d.leg};
+    final first = covered.reduce((a, b) => a < b ? a : b);
+    return [for (final d in covered) if (legOf[d] == legOf[first]) d];
+  }
+
   static bool _taxiTerminal(TripDisplayStatus s) =>
       s == TripDisplayStatus.cancelled ||
       s == TripDisplayStatus.notMe ||
@@ -2934,11 +3024,16 @@ class TripPlanController extends GetxController {
       final total = e.agreedTotal;
       final price = total == null ? null : (total / nights).ceil();
       int? firstDay;
+      int? firstLeg;
       for (var k = 0; k < nights; k++) {
         final i = indexFor(DateTime(ci.year, ci.month, ci.day + k));
         if (i == null || claimed.contains(i)) continue;
         claimed.add(i);
         final d = days[i];
+        if (firstLeg != d.leg) {
+          firstDay = null;
+          firstLeg = d.leg;
+        }
         final want = TripStayChoice(
           stayId: e.listingId,
           name: e.listingName,
@@ -2976,8 +3071,9 @@ class TripPlanController extends GetxController {
       final s = days[i].stay;
       final same = s?.sameAsDay;
       if (s == null || same == null) continue;
-      final target = days.where((d) => d.day == same).firstOrNull?.stay;
-      if (target == null || target.stayId != s.stayId) {
+      final targetDay = days.where((d) => d.day == same).firstOrNull;
+      final target = targetDay?.stay;
+      if (target == null || target.stayId != s.stayId || targetDay!.leg != days[i].leg) {
         days[i] = days[i].copyWith(stay: s.copyWith(clearSameAsDay: true));
         changed = true;
       }
@@ -3378,6 +3474,10 @@ class TripPlanController extends GetxController {
   void scheduleSave() {
     if (_saveBlocked || plan.value == null) return;
     if (identical(plan.value, _rejectedPlan) && _title == _rejectedTitle) return;
+    if (_hasUnavailableLeg) {
+      _saveTimer?.cancel();
+      return;
+    }
     if (_creating != null) {
       _dirtyDuringCreate = true;
       return;
@@ -3458,6 +3558,7 @@ class TripPlanController extends GetxController {
       );
       _adoptServerSteps(p, saved);
       _adoptDistrict(saved);
+      unavailableCities.clear();
       saveFailed.value = false;
       lastSavedAt.value = DateTime.now();
       final latest = plan.value;

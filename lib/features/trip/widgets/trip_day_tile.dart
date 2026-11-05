@@ -76,7 +76,7 @@ class TripDayTile extends StatelessWidget {
               ),
             const SizedBox(height: 8),
             if (d.spots.isEmpty && leg.notReady && plan.isMultiCity)
-              _notReady(readOnly, legIndex)
+              _notReady()
             else if (d.spots.isEmpty && plan.isMultiCity && plan.legSpotCount(legIndex) == 0 && !readOnly)
               _addLegPlaces(legIndex)
             else if (d.spots.isEmpty && c.spotCount == 0 && !readOnly)
@@ -134,7 +134,7 @@ class TripDayTile extends StatelessWidget {
     );
   }
 
-  Widget _notReady(bool readOnly, int legIndex) {
+  Widget _notReady() {
     return Row(
       children: [
         const Icon(Iconsax.info_circle, size: 15, color: AppColors.textLight),
@@ -147,16 +147,6 @@ class TripDayTile extends StatelessWidget {
             style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
           ),
         ),
-        if (!readOnly)
-          TextButton(
-            onPressed: () => TripLegMenuSheet.addPlaces(legIndex),
-            style: TextButton.styleFrom(minimumSize: const Size(44, 44), padding: const EdgeInsets.symmetric(horizontal: 8)),
-            child: const Text(
-              TripStringsMcaA3.addPlaces,
-              maxLines: 1,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: TripColors.accentDark),
-            ),
-          ),
       ],
     );
   }

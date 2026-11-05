@@ -119,6 +119,24 @@ void main() {
       expect(TripStepRules.startChanged(TripStepRole.comingBack, null, wrong), isFalse);
     });
 
+    test('city changed: getting there reads the journey to, coming back the journey from', () {
+      const nainital = (lat: 29.3919, lon: 79.4542);
+      final j = _journey();
+      expect(TripStepRules.cityChanged(TripStepRole.gettingThere, j, nainital.lat, nainital.lon), isFalse);
+      expect(TripStepRules.cityChanged(TripStepRole.gettingThere, j, 30.74, 79.49), isTrue);
+      final back = _journey(fromLat: nainital.lat, fromLng: nainital.lon, toLat: _delhi.lat, toLng: _delhi.lon);
+      expect(TripStepRules.cityChanged(TripStepRole.comingBack, back, _northOf(nainital.lat, 4900), nainital.lon), isFalse);
+      expect(TripStepRules.cityChanged(TripStepRole.comingBack, back, _northOf(nainital.lat, 5100), nainital.lon), isTrue);
+      expect(TripStepRules.cityChanged(TripStepRole.gettingThere, j, null, null), isFalse);
+    });
+
+    test('start changed also flags a journey to another trip city', () {
+      final j = _journey();
+      expect(TripStepRules.startChanged(TripStepRole.gettingThere, _delhi, j, cityLat: 29.3919, cityLon: 79.4542), isFalse);
+      expect(TripStepRules.startChanged(TripStepRole.gettingThere, _delhi, j, cityLat: 30.74, cityLon: 79.49), isTrue);
+      expect(TripStepRules.startChanged(TripStepRole.gettingThere, null, j, cityLat: 30.74, cityLon: 79.49), isTrue);
+    });
+
     test('auto not needed both ways', () {
       const inside = TripSteps(startFrom: _delhi);
       final on = TripStepRules.withAutoNotNeeded(inside, _delhi.lat, _delhi.lon, _delhi.lat, _delhi.lon);

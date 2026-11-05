@@ -249,7 +249,7 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
           decoration: _decoration(
             TripStringsMcaA3.phoneOptional,
             prefix: '+91 ',
-            error: _phone.text.length == 10 && !_phoneOk ? TripStringsMcaA3.phoneInvalid : null,
+            error: !_phoneOk ? TripStringsMcaA3.phoneInvalid : null,
           ),
         ),
         const SizedBox(height: 14),
