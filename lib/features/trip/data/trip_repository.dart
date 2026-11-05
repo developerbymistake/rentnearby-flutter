@@ -20,6 +20,11 @@ class TripErrorTypes {
   static const String tripNotEnded = 'TripNotEnded';
   static const String tripNeedsUpdate = 'TripNeedsUpdate';
   static const String tripCompleted = 'TripCompleted';
+  static const String travelDateChanged = 'TravelDateChanged';
+  static const String journeyInTrip = 'JourneyInTrip';
+  static const String journeyNotInPlan = 'JourneyNotInPlan';
+  static const String routeMismatch = 'RouteMismatch';
+  static const String journeyNotFound = 'JourneyNotFound';
 }
 
 class TripCitySupply {

@@ -105,4 +105,30 @@ void main() {
     expect(line('Free', at: asked), 'Free · asked 3 h ago');
     expect(line('NoAnswer', at: asked), 'No answer yet · asked 3 h ago');
   });
+
+  test('parses the trip fields of a segment journey', () {
+    final j = SavedJourney.fromJson({
+      ...journey(),
+      'tripId': 't1',
+      'tripTitle': 'Haridwar, Badrinath trip',
+      'tripRole': 'segment',
+      'tripLegIndex': 2,
+      'tripTravelDay': 3,
+    });
+    expect(j.isSegment, isTrue);
+    expect(j.tripTitle, 'Haridwar, Badrinath trip');
+    expect(j.tripLegIndex, 2);
+    expect(j.tripTravelDay, 3);
+    final back = SavedJourney.fromJson(j.toJson());
+    expect(back.tripRole, 'segment');
+    expect(back.tripTravelDay, 3);
+    expect(j.copyWith(clearTripId: true).tripRole, isNull);
+  });
+
+  test('a step journey or a free journey is not a segment', () {
+    expect(SavedJourney.fromJson({...journey(), 'tripId': 't1', 'tripRole': 'gettingThere'}).isSegment, isFalse);
+    final plain = SavedJourney.fromJson(journey());
+    expect(plain.isSegment, isFalse);
+    expect(plain.tripTravelDay, isNull);
+  });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../config/app_colors.dart';
 import '../../../trip/trip_colors.dart';
+import '../../../trip/trip_strings_mcb_a3.dart';
 import '../../../trip/trip_strings_steps_a3.dart';
 import '../../taxi_option_sets.dart';
 import '../../ways/taxi_ways_strings.dart';
@@ -40,6 +41,11 @@ class JourneyListCard extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
       );
+
+  static String _tripChip(SavedJourney j) {
+    final day = j.tripTravelDay;
+    return j.isSegment && day != null ? TripStringsMcbA3.inYourTrip(day) : TripStringsStepsA3.inYourTrip;
+  }
 
   Widget _text(String s) => Text(s, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis);
 
@@ -120,8 +126,8 @@ class JourneyListCard extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(999)),
-                            child: const Text(
-                              TripStringsStepsA3.inYourTrip,
+                            child: Text(
+                              _tripChip(j),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: TripColors.accentDark),

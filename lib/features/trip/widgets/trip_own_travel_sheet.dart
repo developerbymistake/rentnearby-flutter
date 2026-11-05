@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../taxi/ways/widgets/travel_confirm_sheet.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
@@ -14,10 +15,13 @@ import 'trip_filter_chips.dart';
 import 'trip_sheet_frame.dart';
 
 class TripOwnTravelSheet {
-  static Future<bool> show(BuildContext context, int legIndex) async {
+  static Future<bool> show(BuildContext context, int legIndex, {TripTravelHow? initialHow, String? hubName}) async {
     final c = TripPlanController.to;
     if (legIndex < 2 || c.isReadOnly || c.plan.value?.legAt(legIndex) == null) return false;
-    final ok = await TripSheetFrame.show<bool>(context, _OwnTravelBody(legIndex: legIndex));
+    final ok = await TripSheetFrame.show<bool>(
+      context,
+      _OwnTravelBody(legIndex: legIndex, initialHow: initialHow, hubName: hubName),
+    );
     return ok == true;
   }
 
@@ -37,9 +41,11 @@ class TripOwnTravelSheet {
 }
 
 class _OwnTravelBody extends StatefulWidget {
-  const _OwnTravelBody({required this.legIndex});
+  const _OwnTravelBody({required this.legIndex, this.initialHow, this.hubName});
 
   final int legIndex;
+  final TripTravelHow? initialHow;
+  final String? hubName;
 
   @override
   State<_OwnTravelBody> createState() => _OwnTravelBodyState();
@@ -54,12 +60,16 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
   TripTravelHow? _how;
   String? _leavesAt;
   int? _roadMinutes;
+  String? _hubName;
+  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    final a = _c.plan.value?.legAt(widget.legIndex)?.arrival;
-    _how = a?.how;
+    final current = _c.plan.value?.legAt(widget.legIndex)?.arrival;
+    final a = current != null && current.isOwn ? current : null;
+    _how = a?.how ?? widget.initialHow;
+    _hubName = widget.hubName ?? a?.hubName;
     _leavesAt = a?.leavesAt;
     _roadMinutes = a?.roadMinutes;
     _name = TextEditingController(text: a?.ownName ?? '');
@@ -94,13 +104,23 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
     if (t != null && mounted) setState(() => _leavesAt = TripFormat.hhmm(t));
   }
 
-  void _save() {
-    if (!_phoneOk) return;
+  Future<void> _save() async {
+    if (!_phoneOk || _saving) return;
+    final k = widget.legIndex;
+    if (_c.plan.value?.legAt(k)?.arrival?.isJourney ?? false) {
+      final impact = _c.travelImpact(k);
+      if (impact.hasBooked && !await TravelConfirmSheet.replaceTravel(context, impact.bookedRows)) return;
+      setState(() => _saving = true);
+      final removed = await _c.removeTravel(k, cancelBooked: impact.hasBooked);
+      if (!mounted) return;
+      setState(() => _saving = false);
+      if (!removed) return;
+    }
     final p = _c.plan.value;
-    final prev = p?.legAt(widget.legIndex - 1)?.cityName ?? '';
+    final prev = p?.legAt(k - 1)?.cityName ?? '';
     String? text(TextEditingController t) => t.text.trim().isEmpty ? null : t.text.trim();
     _c.setOwnTravel(
-      widget.legIndex,
+      k,
       TripTravel.own(
         fromName: prev,
         how: _how,
@@ -109,8 +129,10 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
         leavesAt: _leavesAt,
         roadMinutes: _roadMinutes,
         note: text(_note),
+        hubName: _hubName,
       ),
     );
+    _c.clearTravelGap(k);
     Navigator.pop(context, true);
   }
 
@@ -176,7 +198,7 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
     final travelDay = p.legStart(widget.legIndex);
     final date = _c.dateOf(travelDay);
     final route = TripStringsMcaA3.fromTo(prev, leg.cityName);
-    final editing = leg.arrival != null;
+    final editing = leg.arrival?.isOwn ?? false;
     return TripSheetFrame(
       title: TripStringsMcaA3.yourOwnTravel,
       description: date == null ? route : '$route · ${TripFormat.shortDate(date)}',
@@ -280,7 +302,7 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
           height: 52,
           gradient: TripColors.gradient,
           shadowColor: TripColors.accent,
-          onPressed: _phoneOk ? _save : null,
+          onPressed: _phoneOk && !_saving ? _save : null,
         ),
         if (editing) ...[
           const SizedBox(height: 6),

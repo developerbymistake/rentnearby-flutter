@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
+import '../../trip/trip_strings_mcb_a3.dart';
 import '../../trip/trip_strings_steps_a3.dart';
 import '../ways/ask_drivers_sheet.dart';
 import '../ways/change_driver_sheet.dart';
@@ -50,7 +51,7 @@ class JourneyActions {
         content: Text(
           j.tripId == null
               ? JourneyStrings.deleteBody
-              : '${JourneyStrings.deleteBody} ${TripStringsStepsA3.alsoRemovedFromTrip}',
+              : '${JourneyStrings.deleteBody} ${j.isSegment ? TripStringsMcbA3.alsoRemovedFromTravel(j.toName) : TripStringsStepsA3.alsoRemovedFromTrip}',
         ),
         actions: [
           TextButton(

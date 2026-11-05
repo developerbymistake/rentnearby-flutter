@@ -62,6 +62,12 @@ class TripConstants {
   static const double sameCityMeters = 5000;
   static const int stepNudgeDays = 7;
   static const int startFromNameMax = 80;
+  static const int maxTravelPeople = 12;
+  static const int maxJourneyCars = 3;
+  static const int defaultTravelPeople = 2;
+  static const int travelHubNameMax = 120;
+  static const int journeyRoadMinutesMax = 900;
+  static const int journeyMaxDaysAhead = 365;
   static final RegExp upiPattern = RegExp(r'^[A-Za-z0-9._-]{2,50}@[A-Za-z]{2,64}$');
 }
 

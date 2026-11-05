@@ -6,6 +6,7 @@ import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_result_model.dart';
 import 'package:bakhli/features/trip/trip_strings_mca_a1.dart';
+import 'package:bakhli/features/trip/utils/trip_travel_rules.dart';
 import 'package:get/get.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -635,6 +636,236 @@ void main() {
       final long = TripStringsMcaA1.defaultTitle(['A' * 30, 'B' * 30, 'C' * 30]);
       expect(long.length, lessThanOrEqualTo(80));
       expect(long.endsWith('more trip'), isTrue);
+    });
+  });
+
+  group('travel between cities (MC-B)', () {
+    String iso(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    const journeyArrival = {'mode': 'journey', 'fromName': 'Haridwar', 'journeyId': 'j2', 'cars': 1};
+
+    TripPlan legsPlan({DateTime? start, Map<String, dynamic>? arrival, int? adults, int? kids}) => TripPlan.fromJson({
+          'version': 4,
+          'cityKey': 1,
+          'cityName': 'Haridwar',
+          'legs': [
+            {'index': 1, 'cityKey': 1, 'cityName': 'Haridwar', 'latitude': 29.95, 'longitude': 78.16},
+            {'index': 2, 'cityKey': 2, 'cityName': 'Badrinath', 'latitude': 30.74, 'longitude': 79.49, 'arrival': ?arrival},
+          ],
+          'settings': {'startDate': ?(start == null ? null : iso(start)), 'adults': ?adults, 'kids': ?kids},
+          'days': [
+            {'day': 1, 'leg': 1},
+            {'day': 2, 'leg': 2},
+            {'day': 3, 'leg': 2},
+          ],
+        });
+
+    TripJourney segJourney(String id, {bool asked = false}) => TripJourney(
+          id: id,
+          fromName: 'Haridwar',
+          toName: 'Badrinath',
+          date: DateTime(2030, 11, 2),
+          anyAsked: asked,
+          legs: [
+            TripJourneyLeg(legIndex: 1, fromName: 'Haridwar', toName: 'Badrinath', lastEnquiryId: asked ? 'x' : null),
+          ],
+        );
+
+    TripEnquiryModel segRow(String journeyId, String status) => TripEnquiryModel(
+          id: 'r-$journeyId-$status',
+          tripId: 't1',
+          kind: TripEnquiryKinds.taxi,
+          listingId: 'taxi1',
+          day: 2,
+          checkIn: DateTime(2030, 11, 2),
+          days: const [2],
+          status: status,
+          context: TripEnquiryContext(journeyId: journeyId, journeyLegIndex: 1),
+        );
+
+    SavedJourney saved(String id) => SavedJourney(
+          id: id,
+          fromName: 'Haridwar',
+          toName: 'Badrinath',
+          date: DateTime(2030, 11, 2),
+          people: 2,
+          planKey: 'k1',
+          cars: 1,
+          status: JourneyStatus.notAsked,
+          listedTotal: 7000,
+          createdAt: DateTime(2030, 1, 1),
+          updatedAt: DateTime(2030, 1, 1),
+        );
+
+    TripPlanController ctl(TripPlan p, {List<TripJourney> journeys = const [], List<TripEnquiryModel> rows = const []}) {
+      final c = TripPlanController();
+      addTearDown(c.onClose);
+      c.plan.value = p;
+      c.trip.value = _trip(p).copyWith(journeys: journeys, journeysKnown: true, enquiries: rows);
+      c.enquiryList.assignAll(rows);
+      c.needsUpdate.value = true;
+      return c;
+    }
+
+    test('linkSegmentJourney writes the arrival and inserts the local journey', () async {
+      final c = ctl(legsPlan(start: DateTime(2030, 11, 1)));
+      expect(await c.linkSegmentJourney(2, saved('j3')), TripLinkResult.notSaved);
+      final a = c.plan.value!.legAt(2)!.arrival!;
+      expect(a.isJourney, isTrue);
+      expect(a.journeyId, 'j3');
+      expect(a.fromName, 'Haridwar');
+      expect(a.listedTotal, 7000);
+      final j = c.segmentJourney(2);
+      expect(j?.isSegment, isTrue);
+      expect(j?.travelDay, 2);
+      expect(c.travelDateOf(2), DateTime(2030, 11, 2));
+      expect(c.travelStateOf(2), TripTravelState.saved);
+      expect(c.plan.value!.segmentLegOf('j3'), 2);
+    });
+
+    test('replacing a journey with booked cars needs a confirm, then swaps it', () async {
+      final c = ctl(
+        legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival),
+        journeys: [segJourney('j2', asked: true)],
+        rows: [segRow('j2', TripEnquiryStatuses.bookedByTraveller)],
+      );
+      expect(await c.linkSegmentJourney(2, saved('j3')), TripLinkResult.needsConfirm);
+      expect(c.plan.value!.legAt(2)!.arrival!.journeyId, 'j2');
+      c.enquiryList.clear();
+      await c.linkSegmentJourney(2, saved('j3'));
+      expect(c.plan.value!.legAt(2)!.arrival!.journeyId, 'j3');
+      expect(c.journeys.map((j) => j.id), ['j3']);
+    });
+
+    test('a journey linked to a step is moved, never linked twice', () async {
+      final p = legsPlan(start: DateTime(2030, 11, 1))
+          .copyWith(steps: const TripSteps(gettingThere: TripStep(status: TripStepStatus.chosen, journeyId: 'j3')));
+      final c = ctl(p);
+      await c.linkSegmentJourney(2, saved('j3'));
+      expect(c.stepOf(TripStepRole.gettingThere).journeyId, isNull);
+      expect(c.plan.value!.segmentLegOf('j3'), 2);
+    });
+
+    test('removeTravel refuses with booked cars unless told, then clears the arrival', () async {
+      final c = ctl(
+        legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival),
+        journeys: [segJourney('j2', asked: true)],
+        rows: [segRow('j2', TripEnquiryStatuses.bookedByTraveller)],
+      );
+      expect(c.travelImpact(2).bookedRows, 1);
+      expect(await c.removeTravel(2), isFalse);
+      expect(c.plan.value!.legAt(2)!.arrival?.journeyId, 'j2');
+      c.enquiryList.clear();
+      expect(await c.removeTravel(2), isTrue);
+      expect(c.plan.value!.legAt(2)!.arrival, isNull);
+      expect(c.journeys, isEmpty);
+    });
+
+    test('unlinkSegmentJourney clears only the matching leg', () {
+      final c = ctl(legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival), journeys: [segJourney('j2')]);
+      c.unlinkSegmentJourney('other');
+      expect(c.plan.value!.legAt(2)!.arrival?.journeyId, 'j2');
+      c.unlinkSegmentJourney('j2');
+      expect(c.plan.value!.legAt(2)!.arrival, isNull);
+    });
+
+    test('travel people default 2 and clamp 12', () {
+      expect(ctl(legsPlan()).travelPeople, 2);
+      expect(ctl(legsPlan(adults: 3, kids: 1)).travelPeople, 4);
+      final big = ctl(legsPlan(adults: 14));
+      expect(big.travelPeople, 12);
+      expect(big.travelPeopleCapped, isTrue);
+    });
+
+    test('findWayBlock matrix', () {
+      final now = DateTime.now();
+      final soon = DateTime(now.year, now.month, now.day + 10);
+      final c = ctl(legsPlan(start: soon));
+      c.needsUpdate.value = false;
+      expect(c.findWayBlock(2), TravelFindBlock.none);
+      expect(c.findWayBlock(1), TravelFindBlock.readOnly);
+      c.offline.value = true;
+      expect(c.findWayBlock(2), TravelFindBlock.offline);
+      c.offline.value = false;
+      c.taxiTabOff.value = true;
+      expect(c.findWayBlock(2), TravelFindBlock.taxiOff);
+      c.taxiTabOff.value = false;
+      c.needsUpdate.value = true;
+      expect(c.findWayBlock(2), TravelFindBlock.readOnly);
+
+      final noDates = ctl(legsPlan());
+      noDates.needsUpdate.value = false;
+      expect(noDates.findWayBlock(2), TravelFindBlock.noDates);
+
+      final far = ctl(legsPlan(start: DateTime(now.year + 2, now.month, now.day)));
+      far.needsUpdate.value = false;
+      expect(far.findWayBlock(2), TravelFindBlock.tooFarAhead);
+    });
+
+    test('reconcileTravel clears a missing journey only online and keeps a pending one', () async {
+      final c = ctl(legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival));
+      c.offline.value = true;
+      c.reconcileTravel();
+      expect(c.plan.value!.legAt(2)!.arrival?.journeyId, 'j2');
+      c.offline.value = false;
+      c.reconcileTravel();
+      expect(c.plan.value!.legAt(2)!.arrival, isNull);
+
+      await c.linkSegmentJourney(2, saved('j4'));
+      c.trip.value = c.trip.value!.copyWith(journeys: const []);
+      c.reconcileTravel();
+      expect(c.plan.value!.legAt(2)!.arrival?.journeyId, 'j4');
+    });
+
+    test('server-dropped arrival is adopted only while the leg still holds it', () {
+      final c = ctl(legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival), journeys: [segJourney('j2')]);
+      final sent = c.plan.value!;
+      final serverPlan = sent.withArrival(2, null);
+      final saved = TripModel.fromJson({'id': 't1', 'cityKey': 1, 'plan': serverPlan.toJson(), 'journeys': const []});
+      c.adoptServerArrivalsForTest(sent, saved);
+      expect(c.plan.value!.legAt(2)!.arrival, isNull);
+    });
+
+    test('segment rows stay out of the day taxi surfaces but count as dated bookings', () {
+      final c = ctl(
+        legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival),
+        journeys: [segJourney('j2', asked: true)],
+        rows: [segRow('j2', TripEnquiryStatuses.bookedByTraveller)],
+      );
+      expect(c.taxiEnquiriesForDay(2), isEmpty);
+      expect(c.hasTaxiActivity(2), isFalse);
+      expect(c.bookedTaxiEnquiryFor(2), isNull);
+      expect(c.taxiStep.sorted, 0);
+      expect(c.segmentRows(2).length, 1);
+      expect(c.carBooking(2, 1), isNotNull);
+      expect(c.travelStateOf(2), TripTravelState.booked);
+      expect(c.bookingsOutsideDates(DateTime(2030, 12, 1)).length, 1);
+      c.reconcilePlan();
+      expect(c.plan.value!.dayAt(2)!.taxi, isNull);
+    });
+
+    test('a journey travel day hides the local taxi; own travel keeps it', () {
+      final c = ctl(legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival), journeys: [segJourney('j2')]);
+      expect(c.hidesLocalTaxi(2), isTrue);
+      expect(c.hidesLocalTaxi(3), isFalse);
+      expect(c.hasLocalTaxiOn(2), isFalse);
+      final own = ctl(legsPlan(
+        start: DateTime(2030, 11, 1),
+        arrival: {'mode': 'own', 'fromName': 'Haridwar', 'how': 'bus'},
+      ));
+      expect(own.hidesLocalTaxi(2), isFalse);
+      expect(own.travelStateOf(2), TripTravelState.own);
+    });
+
+    test('a session gap shows until travel is saved', () {
+      final c = ctl(legsPlan(start: DateTime(2030, 11, 1)));
+      expect(c.travelStateOf(2), TripTravelState.notPlanned);
+      c.markTravelGap(2, 'Rishikesh');
+      expect(c.travelStateOf(2), TripTravelState.gap);
+      expect(c.travelGaps[2], 'Rishikesh');
+      c.clearTravelGap(2);
+      expect(c.travelStateOf(2), TripTravelState.notPlanned);
     });
   });
 }

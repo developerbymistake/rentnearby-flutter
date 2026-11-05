@@ -83,6 +83,30 @@ class TripEnquiryRepository {
   Future<TripEnquiryModel> taxiBooking(String tripId, Map<String, dynamic> body) async =>
       _one(await ApiService.post('/trips/$tripId/taxi-bookings', body));
 
+  Future<TripEnquiryModel> journeyCarBooking(
+    String tripId, {
+    required String journeyId,
+    required int journeyLegIndex,
+    required String taxiId,
+    required int agreedFare,
+    required bool tollExtra,
+    required String pickupTime,
+    required String pickupPlace,
+    List<String> replaceEnquiryIds = const [],
+  }) =>
+      taxiBooking(tripId, {
+        'taxiId': taxiId,
+        'days': const <int>[],
+        'agreedFare': agreedFare,
+        'tollExtra': tollExtra,
+        'pickupTime': pickupTime,
+        'pickupPlace': pickupPlace,
+        'closeOthers': true,
+        if (replaceEnquiryIds.isNotEmpty) 'replaceEnquiryIds': replaceEnquiryIds,
+        'journeyId': journeyId,
+        'journeyLegIndex': journeyLegIndex,
+      });
+
   Future<TripEnquiryModel> askAdvance(String enquiryId,
           {required int amount, required DateTime holdUntil, required String upiId, required String whatsAppNumber}) async =>
       _one(await ApiService.post('/trips/enquiries/$enquiryId/advance/ask', {

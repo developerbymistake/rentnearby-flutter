@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../../config/app_routes.dart';
@@ -8,12 +9,16 @@ import '../../trip/controllers/trip_plan_controller.dart';
 import '../../trip/models/trip_plan_model.dart';
 import '../../trip/trip_strings_steps_a1.dart';
 import '../../trip/trip_strings_steps_k3.dart';
+import '../../trip/utils/trip_travel_rules.dart';
 import '../journeys/journey_models.dart';
 import '../journeys/journeys_controller.dart';
 import 'ask_drivers_sheet.dart';
 import 'models/taxi_ways_models.dart';
 import 'taxi_ways_navigation.dart';
 import 'taxi_ways_repository.dart';
+import 'widgets/travel_confirm_sheet.dart';
+
+enum _SegmentLink { linked, plain, failed }
 
 class TaxiWaysController extends GetxController {
   static const maxPeople = 12;
@@ -27,9 +32,10 @@ class TaxiWaysController extends GetxController {
     int? people,
     this.tripId,
     this.tripRole,
+    this.tripLegIndex,
   })  : from = Rx<PlaceResult>(from),
         to = Rx<PlaceResult>(to),
-        fromMyLocation = fromMyLocation.obs,
+        fromMyLocation = (tripLegIndex == null && fromMyLocation).obs,
         date = Rx<DateTime>(_clampDate(date ?? _today().add(const Duration(days: 1)))),
         people = (people ?? 2).clamp(1, maxPeople).toInt().obs;
 
@@ -40,8 +46,24 @@ class TaxiWaysController extends GetxController {
   final RxBool fromMyLocation;
   final String? tripId;
   final String? tripRole;
+  final int? tripLegIndex;
 
   bool get forTrip => tripId != null && TripStepRole.values.any((r) => r.name == tripRole);
+
+  bool get forSegment => tripId != null && tripLegIndex != null;
+
+  bool get lockedEnds => forSegment;
+
+  bool get lockedDate => forSegment;
+
+  TripPlanController? get _tripController =>
+      Get.isRegistered<TripPlanController>() && TripPlanController.to.trip.value?.id == tripId ? TripPlanController.to : null;
+
+  int? get segmentDay {
+    final k = tripLegIndex;
+    if (!forSegment || k == null) return null;
+    return _tripController?.plan.value?.legStart(k);
+  }
 
   final result = Rxn<TaxiWaysResult>();
   final isLoading = false.obs;
@@ -108,6 +130,7 @@ class TaxiWaysController extends GetxController {
       _synthetic.clear();
       chosen.clear();
       result.value = r;
+      _syncGap(r);
     } catch (e) {
       if (myGen != _gen) return;
       if (DioErrorMapper.isNetworkError(e)) {
@@ -118,6 +141,25 @@ class TaxiWaysController extends GetxController {
       if (result.value == null) loadFailed.value = true;
     } finally {
       if (myGen == _gen) isLoading.value = false;
+    }
+  }
+
+  String get gapHub {
+    final r = result.value;
+    final hub = r?.reachFirstPlace?.name;
+    if (hub != null && hub.isNotEmpty) return hub;
+    final to = r?.to.name;
+    return to != null && to.isNotEmpty ? to : this.to.value.name;
+  }
+
+  void _syncGap(TaxiWaysResult r) {
+    final t = forSegment ? _tripController : null;
+    final k = tripLegIndex;
+    if (t == null || k == null) return;
+    if (r.hasWays) {
+      t.clearTravelGap(k);
+    } else {
+      t.markTravelGap(k, gapHub);
     }
   }
 
@@ -132,6 +174,7 @@ class TaxiWaysController extends GetxController {
   Future<void> pullRefresh() => load();
 
   void setDate(DateTime d) {
+    if (lockedDate) return;
     final v = _clampDate(d);
     if (v == date.value) return;
     date.value = v;
@@ -233,7 +276,8 @@ class TaxiWaysController extends GetxController {
         toName: plan.to.name,
         toLat: plan.to.lat,
         toLng: plan.to.lng,
-        forTripId: forTrip ? tripId : null,
+        forTripId: forTrip || forSegment ? tripId : null,
+        forTripLegIndex: forSegment ? tripLegIndex : null,
       );
 
   Future<void> saveJourney(WayPlan plan) async {
@@ -265,6 +309,32 @@ class TaxiWaysController extends GetxController {
     return false;
   }
 
+  Future<_SegmentLink> _linkSegment(BuildContext? context, SavedJourney saved) async {
+    final c = _tripController;
+    final k = tripLegIndex;
+    if (c == null || k == null) {
+      AppToast.success(TripStringsStepsA1.savedToJourneys);
+      return _SegmentLink.plain;
+    }
+    var r = await c.linkSegmentJourney(k, saved);
+    if (r == TripLinkResult.needsConfirm) {
+      if (context == null || !context.mounted) return _SegmentLink.failed;
+      final booked = c.travelImpact(k).bookedRows;
+      if (!await TravelConfirmSheet.replaceTravel(context, booked)) return _SegmentLink.failed;
+      r = await c.linkSegmentJourney(k, saved, replaceBooked: true);
+    }
+    switch (r) {
+      case TripLinkResult.saved:
+        AppToast.success(TripStringsStepsA1.savedToTrip);
+        return _SegmentLink.linked;
+      case TripLinkResult.notSaved:
+        AppToast.warning(TripStringsStepsK3.notSavedToTrip);
+        return _SegmentLink.failed;
+      case TripLinkResult.needsConfirm:
+        return _SegmentLink.failed;
+    }
+  }
+
   Future<void> arrangedMyself() async {
     if (Get.isRegistered<TripPlanController>()) await TripPlanController.to.flushPendingSave();
     backToPlan();
@@ -272,12 +342,21 @@ class TaxiWaysController extends GetxController {
 
   void backToPlan() => Get.until((r) => r.settings.name == AppRoutes.tripPlan || r.isFirst);
 
-  Future<void> useForTrip(WayPlan plan) async {
+  Future<void> useForTrip(WayPlan plan, {BuildContext? context}) async {
     if (busyPlans.contains(plan.planKey)) return;
     busyPlans.add(plan.planKey);
     try {
       final saved = await saveIfNeeded(plan, quiet: true);
       if (saved == null) return;
+      if (forSegment) {
+        final link = await _linkSegment(context, saved);
+        if (link == _SegmentLink.linked) {
+          backToPlan();
+        } else if (link == _SegmentLink.plain) {
+          TaxiWaysNavigation.openSavedJourney(saved.id);
+        }
+        return;
+      }
       if (await _linkToTrip(saved)) {
         backToPlan();
       } else {
@@ -292,9 +371,17 @@ class TaxiWaysController extends GetxController {
     if (busyPlans.contains(plan.planKey)) return;
     busyPlans.add(plan.planKey);
     try {
-      final journey = await saveIfNeeded(plan, quiet: forTrip);
+      final journey = await saveIfNeeded(plan, quiet: forTrip || forSegment);
       if (journey == null) return;
-      final linked = forTrip && await _linkToTrip(journey);
+      final bool linked;
+      if (forSegment) {
+        if (!context.mounted) return;
+        final link = await _linkSegment(context, journey);
+        if (link == _SegmentLink.failed) return;
+        linked = link == _SegmentLink.linked;
+      } else {
+        linked = forTrip && await _linkToTrip(journey);
+      }
       if (!context.mounted) return;
       final res = await AskDriversSheet.show(
         context,
@@ -309,6 +396,8 @@ class TaxiWaysController extends GetxController {
       if (res == null) return;
       JourneysController.ensure().recordAsk(journey.id, res);
       if (linked) {
+        final t = forSegment ? _tripController : null;
+        if (t != null) unawaited(t.refreshEnquiries());
         backToPlan();
       } else {
         TaxiWaysNavigation.openSavedJourney(journey.id);

@@ -7,6 +7,7 @@ import '../../../controllers/tab_config_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../../taxi/taxi_option_sets.dart';
+import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
@@ -151,6 +152,16 @@ class TripDayActions extends StatelessWidget {
       );
     }
     final title = _taxiTitle(c);
+    if (c.hidesLocalTaxi(day)) {
+      return _emptyTile(
+        icon: Iconsax.car,
+        accent: TaxiColors.accent,
+        surface: TaxiColors.surface,
+        title: title,
+        subtitle: TripStringsMcbA2.journeyDriversBring,
+        state: TripTileState.disabled,
+      );
+    }
     if (readOnly) {
       return _emptyTile(
         icon: Iconsax.car,

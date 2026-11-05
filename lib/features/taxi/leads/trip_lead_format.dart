@@ -1,5 +1,6 @@
 import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/trip_strings.dart';
+import '../../trip/trip_strings_mcb_a3.dart';
 import '../../trip/utils/trip_format.dart';
 
 class TripLeadFormat {
@@ -70,6 +71,21 @@ class TripLeadFormat {
     if (time != null && place.isNotEmpty) return TripStrings.pickupLine(TripFormat.time12(time), place);
     return '${TripStrings.pickup} ${time != null ? TripFormat.time12(time) : place}';
   }
+
+  static final RegExp _journeyText =
+      RegExp(r'^(?:Car (\d) of (\d): )?(.+?) to (.+?), (\d{2} [A-Za-z]{3}),');
+
+  static String? journeyLineOfText(String text, {required bool segment, int? car}) {
+    final m = _journeyText.firstMatch(text.trim());
+    if (m == null || (!segment && m.group(1) == null)) return null;
+    final i = int.tryParse(m.group(1) ?? '') ?? car ?? 1;
+    final n = int.tryParse(m.group(2) ?? '') ?? 1;
+    return TripStringsMcbA3.journeyLine(
+        TripStringsMcbA3.journeyCarOf(i, n), m.group(3)!.trim(), m.group(4)!.trim(), m.group(5)!);
+  }
+
+  static String? journeyLine(TripEnquiryModel e) =>
+      journeyLineOfText(e.context.text, segment: e.isSegment, car: e.context.journeyLegIndex);
 
   static String summary(TripEnquiryModel e) => [
         TripStrings.tripMapSubtitle(e.context.city),

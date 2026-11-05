@@ -323,6 +323,10 @@ class SavedJourney {
   final List<SavedJourneyLeg> legs;
   final DateTime? savedLocallyAt;
   final String? tripId;
+  final String? tripTitle;
+  final String? tripRole;
+  final int? tripLegIndex;
+  final int? tripTravelDay;
 
   const SavedJourney({
     required this.id,
@@ -344,6 +348,10 @@ class SavedJourney {
     this.legs = const [],
     this.savedLocallyAt,
     this.tripId,
+    this.tripTitle,
+    this.tripRole,
+    this.tripLegIndex,
+    this.tripTravelDay,
   });
 
   factory SavedJourney.fromJson(Map<String, dynamic> j) {
@@ -372,6 +380,10 @@ class SavedJourney {
       legs: legs,
       savedLocallyAt: _time(j['savedLocallyAt']),
       tripId: _strN(j['tripId']),
+      tripTitle: _strN(j['tripTitle']),
+      tripRole: _strN(j['tripRole']),
+      tripLegIndex: _int(j['tripLegIndex']),
+      tripTravelDay: _int(j['tripTravelDay']),
     );
   }
 
@@ -395,6 +407,10 @@ class SavedJourney {
         'legs': legs.map((l) => l.toJson(includeContacts: includeContacts)).toList(),
         'savedLocallyAt': ?savedLocallyAt?.toUtc().toIso8601String(),
         'tripId': ?tripId,
+        'tripTitle': ?tripTitle,
+        'tripRole': ?tripRole,
+        'tripLegIndex': ?tripLegIndex,
+        'tripTravelDay': ?tripTravelDay,
       };
 
   SavedJourney copyWith({
@@ -424,11 +440,16 @@ class SavedJourney {
         legs: legs ?? this.legs,
         savedLocallyAt: savedLocallyAt ?? this.savedLocallyAt,
         tripId: clearTripId ? null : (tripId ?? this.tripId),
+        tripTitle: clearTripId ? null : tripTitle,
+        tripRole: clearTripId ? null : tripRole,
+        tripLegIndex: clearTripId ? null : tripLegIndex,
+        tripTravelDay: clearTripId ? null : tripTravelDay,
       );
 
   SavedJourney withContacts(JourneyPhones phones) => copyWith(legs: legs.map((l) => l.withContacts(phones)).toList());
 
   bool get isCompleted => status == JourneyStatus.completed;
+  bool get isSegment => tripRole == 'segment';
   int get unavailableCount => legs.where((l) => !l.driverAvailable).length;
   bool get hasUnavailable => unavailableCount > 0;
   bool get anyAsked => legs.any((l) => l.isAsked);

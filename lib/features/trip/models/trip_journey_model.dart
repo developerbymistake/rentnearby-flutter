@@ -1,5 +1,6 @@
 import '../../taxi/journeys/journey_models.dart';
 import '../utils/trip_step_rules.dart';
+import '../utils/trip_travel_rules.dart';
 import 'trip_plan_model.dart';
 
 String _s(Object? v, [String d = '']) => v is String ? v : d;
@@ -35,6 +36,7 @@ class TripJourneyLeg {
   final String? whatsApp;
   final String? backupTaxiId;
   final String? backupName;
+  final int? lastQuotedFare;
 
   const TripJourneyLeg({
     required this.legIndex,
@@ -56,7 +58,31 @@ class TripJourneyLeg {
     this.whatsApp,
     this.backupTaxiId,
     this.backupName,
+    this.lastQuotedFare,
   });
+
+  TripJourneyLeg copyWith({String? lastKnownStatus, String? lastEnquiryId, int? lastQuotedFare}) => TripJourneyLeg(
+        legIndex: legIndex,
+        fromName: fromName,
+        toName: toName,
+        meetingPlace: meetingPlace,
+        listedFare: listedFare,
+        carsNeeded: carsNeeded,
+        partial: partial,
+        driverAvailable: driverAvailable,
+        lastKnownStatus: lastKnownStatus ?? this.lastKnownStatus,
+        lastEnquiryId: lastEnquiryId ?? this.lastEnquiryId,
+        taxiId: taxiId,
+        driverName: driverName,
+        vehicleTypeName: vehicleTypeName,
+        seats: seats,
+        plateDisplay: plateDisplay,
+        phone: phone,
+        whatsApp: whatsApp,
+        backupTaxiId: backupTaxiId,
+        backupName: backupName,
+        lastQuotedFare: lastQuotedFare ?? this.lastQuotedFare,
+      );
 
   bool get hasPhone => phone != null && phone!.isNotEmpty;
 
@@ -86,6 +112,7 @@ class TripJourneyLeg {
         whatsApp: _sn(j['whatsApp']),
         backupTaxiId: _sn(j['backupTaxiId']),
         backupName: _sn(j['backupName']),
+        lastQuotedFare: _i(j['lastQuotedFare']),
       );
 
   factory TripJourneyLeg.fromSaved(SavedJourneyLeg l) {
@@ -109,6 +136,7 @@ class TripJourneyLeg {
       whatsApp: l.driver.whatsApp,
       backupTaxiId: backup?.taxiId,
       backupName: backup?.driverName,
+      lastQuotedFare: l.lastQuotedFare,
     );
   }
 
@@ -132,6 +160,7 @@ class TripJourneyLeg {
         'whatsApp': ?whatsApp,
         'backupTaxiId': ?backupTaxiId,
         'backupName': ?backupName,
+        'lastQuotedFare': ?lastQuotedFare,
       };
 }
 
@@ -155,6 +184,9 @@ class TripJourney {
   final bool anyAsked;
   final DateTime? lastRefreshedAt;
   final List<TripJourneyLeg> legs;
+  final int? legIndex;
+  final int? travelDay;
+  final TripTravelState? travelState;
 
   const TripJourney({
     required this.id,
@@ -176,7 +208,12 @@ class TripJourney {
     this.anyAsked = false,
     this.lastRefreshedAt,
     this.legs = const [],
+    this.legIndex,
+    this.travelDay,
+    this.travelState,
   });
+
+  bool get isSegment => legIndex != null;
 
   bool get hasUnavailable => status == JourneyStatus.driverUnavailable || legs.any((l) => !l.driverAvailable);
 
@@ -213,6 +250,57 @@ class TripJourney {
         anyAsked: anyAsked,
         lastRefreshedAt: lastRefreshedAt,
         legs: legs,
+        legIndex: legIndex,
+        travelDay: travelDay,
+        travelState: travelState,
+      );
+
+  TripJourney asSegment(int legIndex, int? travelDay, DateTime? expectedDate) => TripJourney(
+        id: id,
+        fromName: fromName,
+        fromLat: fromLat,
+        fromLng: fromLng,
+        toName: toName,
+        toLat: toLat,
+        toLng: toLng,
+        date: date,
+        expectedDate: expectedDate,
+        dateChanged: TripStepRules.dateChanged(expectedDate, date),
+        people: people,
+        cars: cars,
+        status: status,
+        listedTotal: listedTotal,
+        anyAsked: anyAsked,
+        lastRefreshedAt: lastRefreshedAt,
+        legs: legs,
+        legIndex: legIndex,
+        travelDay: travelDay,
+        travelState: travelState,
+      );
+
+  TripJourney withLegs(List<TripJourneyLeg> next) => TripJourney(
+        id: id,
+        role: role,
+        fromName: fromName,
+        fromLat: fromLat,
+        fromLng: fromLng,
+        toName: toName,
+        toLat: toLat,
+        toLng: toLng,
+        date: date,
+        expectedDate: expectedDate,
+        dateChanged: dateChanged,
+        startChanged: startChanged,
+        people: people,
+        cars: cars,
+        status: status,
+        listedTotal: listedTotal,
+        anyAsked: anyAsked || next.any((l) => l.isAsked),
+        lastRefreshedAt: lastRefreshedAt,
+        legs: next,
+        legIndex: legIndex,
+        travelDay: travelDay,
+        travelState: travelState,
       );
 
   factory TripJourney.fromJson(Map<String, dynamic> j) {
@@ -222,9 +310,13 @@ class TripJourney {
         .toList()
       ..sort((a, b) => a.legIndex.compareTo(b.legIndex));
     final now = DateTime.now();
+    final segment = j['role'] == segmentRole;
     return TripJourney(
       id: _s(j['id']),
       role: TripStepRole.parse(j['role']),
+      legIndex: segment ? _i(j['legIndex']) : null,
+      travelDay: segment ? _i(j['travelDay']) : null,
+      travelState: segment ? TripTravelState.parse(j['travelState']) : null,
       fromName: _s(j['fromName']),
       fromLat: _d(j['fromLat']),
       fromLng: _d(j['fromLng']),
@@ -272,9 +364,33 @@ class TripJourney {
     );
   }
 
+  factory TripJourney.fromSavedSegment(SavedJourney j, int legIndex, int travelDay, DateTime? expectedDate) =>
+      TripJourney(
+        id: j.id,
+        fromName: j.fromName,
+        fromLat: j.fromLat,
+        fromLng: j.fromLng,
+        toName: j.toName,
+        toLat: j.toLat,
+        toLng: j.toLng,
+        date: j.date,
+        people: j.people,
+        cars: j.cars,
+        status: j.status,
+        listedTotal: j.listedTotal,
+        anyAsked: j.anyAsked,
+        lastRefreshedAt: j.lastRefreshedAt,
+        legs: j.legs.map(TripJourneyLeg.fromSaved).toList(),
+      ).asSegment(legIndex, travelDay, expectedDate);
+
+  static const String segmentRole = 'segment';
+
   Map<String, dynamic> toJson() => {
         'id': id,
-        'role': ?role?.name,
+        'role': ?(isSegment ? segmentRole : role?.name),
+        'legIndex': ?legIndex,
+        'travelDay': ?travelDay,
+        'travelState': ?travelState?.name,
         'fromName': fromName,
         'fromLat': fromLat,
         'fromLng': fromLng,

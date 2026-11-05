@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../widgets/empty_state_view.dart';
+import '../../trip/trip_strings_mcb_a3.dart';
 import '../../trip/trip_strings_steps_a3.dart';
 import '../../trip/utils/trip_format.dart';
 import '../../trip/widgets/trip_payment_line.dart';
@@ -18,6 +19,7 @@ import 'widgets/journey_header.dart';
 import 'widgets/journey_leg_card.dart';
 import 'widgets/journey_rail_row.dart';
 import 'widgets/journey_status_banner.dart';
+import 'widgets/journey_trip_strip.dart';
 
 class SavedJourneyScreen extends StatefulWidget {
   final String? journeyId;
@@ -128,8 +130,8 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
             constraints: const BoxConstraints(minHeight: 32),
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
             decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(999)),
-            child: const Text(
-              TripStringsStepsA3.inYourTrip,
+            child: Text(
+              _tripChip(j!),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
@@ -162,6 +164,11 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
           ),
       ],
     );
+  }
+
+  static String _tripChip(SavedJourney j) {
+    final day = j.tripTravelDay;
+    return j.isSegment && day != null ? TripStringsMcbA3.inYourTrip(day) : TripStringsStepsA3.inYourTrip;
   }
 
   Widget _missing(bool loading) {
@@ -211,15 +218,18 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
           bottomColor: c,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
-            child: JourneyLegCard(
-              leg: leg,
-              people: j.people,
-              color: c,
-              busy: busy,
-              canChange: canChange,
-              onChangeDriver: () => JourneyActions.changeDriver(context, j, leg),
-              onReplace: (backup) => _ctrl.replaceDriver(j.id, leg.legIndex, backup.taxiId),
-            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              JourneyLegCard(
+                leg: leg,
+                people: j.people,
+                color: c,
+                busy: busy,
+                canChange: canChange,
+                onChangeDriver: () => JourneyActions.changeDriver(context, j, leg),
+                onReplace: (backup) => _ctrl.replaceDriver(j.id, leg.legIndex, backup.taxiId),
+              ),
+              if (j.isSegment) JourneyCarBookRow(journey: j, leg: leg),
+            ]),
           ),
         ));
         if (i < legs.length - 1) {
@@ -252,6 +262,10 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(_pad(c.maxWidth), 12, _pad(c.maxWidth), 24 + AppInsets.bottomViewPadding(context)),
           children: [
+            if (j.isSegment) ...[
+              JourneyTripStrip(journey: j),
+              const SizedBox(height: 12),
+            ],
             if (j.hasUnavailable && !j.isCompleted) ...[
               JourneyStatusBanner(
                 journey: j,

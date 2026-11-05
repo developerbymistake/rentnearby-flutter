@@ -591,6 +591,7 @@ enum TripTravelHow {
 
 class TripTravelModes {
   static const String own = 'own';
+  static const String journey = 'journey';
 }
 
 class TripTravel {
@@ -602,6 +603,11 @@ class TripTravel {
   final String? leavesAt;
   final int? roadMinutes;
   final String? note;
+  final String? journeyId;
+  final String? planKey;
+  final int? cars;
+  final int? listedTotal;
+  final String? hubName;
 
   const TripTravel.own({
     required this.fromName,
@@ -611,7 +617,31 @@ class TripTravel {
     this.leavesAt,
     this.roadMinutes,
     this.note,
-  }) : mode = TripTravelModes.own;
+    this.hubName,
+  })  : mode = TripTravelModes.own,
+        journeyId = null,
+        planKey = null,
+        cars = null,
+        listedTotal = null;
+
+  const TripTravel.journey({
+    required this.fromName,
+    required String this.journeyId,
+    this.planKey,
+    this.cars,
+    this.listedTotal,
+    this.roadMinutes,
+  })  : mode = TripTravelModes.journey,
+        how = null,
+        ownName = null,
+        ownPhone = null,
+        leavesAt = null,
+        note = null,
+        hubName = null;
+
+  bool get isJourney => mode == TripTravelModes.journey;
+
+  bool get isOwn => !isJourney;
 
   bool get hasPhone => ownPhone != null && ownPhone!.isNotEmpty;
 
@@ -623,42 +653,82 @@ class TripTravel {
     String? leavesAt,
     int? roadMinutes,
     String? note,
+    String? hubName,
+    String? journeyId,
+    String? planKey,
+    int? cars,
+    int? listedTotal,
   }) =>
-      TripTravel.own(
-        fromName: fromName ?? this.fromName,
-        how: how ?? this.how,
-        ownName: ownName ?? this.ownName,
-        ownPhone: ownPhone ?? this.ownPhone,
-        leavesAt: leavesAt ?? this.leavesAt,
-        roadMinutes: roadMinutes ?? this.roadMinutes,
-        note: note ?? this.note,
-      );
+      isJourney
+          ? TripTravel.journey(
+              fromName: fromName ?? this.fromName,
+              journeyId: journeyId ?? this.journeyId!,
+              planKey: planKey ?? this.planKey,
+              cars: cars ?? this.cars,
+              listedTotal: listedTotal ?? this.listedTotal,
+              roadMinutes: roadMinutes ?? this.roadMinutes,
+            )
+          : TripTravel.own(
+              fromName: fromName ?? this.fromName,
+              how: how ?? this.how,
+              ownName: ownName ?? this.ownName,
+              ownPhone: ownPhone ?? this.ownPhone,
+              leavesAt: leavesAt ?? this.leavesAt,
+              roadMinutes: roadMinutes ?? this.roadMinutes,
+              note: note ?? this.note,
+              hubName: hubName ?? this.hubName,
+            );
 
   static String? _text(Object? raw) {
     final s = raw is String ? raw.trim() : null;
     return s == null || s.isEmpty ? null : s;
   }
 
-  factory TripTravel.fromJson(Map<String, dynamic> json) => TripTravel.own(
+  factory TripTravel.fromJson(Map<String, dynamic> json) {
+    final id = _text(json['journeyId']);
+    if (json['mode'] == TripTravelModes.journey && id != null) {
+      return TripTravel.journey(
         fromName: _text(json['fromName']) ?? '',
-        how: TripTravelHow.parse(json['how']),
-        ownName: _text(json['ownName']),
-        ownPhone: _text(json['ownPhone']),
-        leavesAt: _text(json['leavesAt']),
+        journeyId: id,
+        planKey: _text(json['planKey']),
+        cars: (json['cars'] as num?)?.toInt(),
+        listedTotal: (json['listedTotal'] as num?)?.toInt(),
         roadMinutes: (json['roadMinutes'] as num?)?.toInt(),
-        note: _text(json['note']),
       );
+    }
+    return TripTravel.own(
+      fromName: _text(json['fromName']) ?? '',
+      how: TripTravelHow.parse(json['how']),
+      ownName: _text(json['ownName']),
+      ownPhone: _text(json['ownPhone']),
+      leavesAt: _text(json['leavesAt']),
+      roadMinutes: (json['roadMinutes'] as num?)?.toInt(),
+      note: _text(json['note']),
+      hubName: _text(json['hubName']),
+    );
+  }
 
-  Map<String, dynamic> toJson() => {
-        'mode': mode,
-        'fromName': fromName,
-        'how': ?how?.wire,
-        'ownName': ?ownName,
-        'ownPhone': ?ownPhone,
-        'leavesAt': ?leavesAt,
-        'roadMinutes': ?roadMinutes,
-        'note': ?note,
-      };
+  Map<String, dynamic> toJson() => isJourney
+      ? {
+          'mode': mode,
+          'fromName': fromName,
+          'journeyId': journeyId,
+          'planKey': ?planKey,
+          'cars': ?cars,
+          'listedTotal': ?listedTotal,
+          'roadMinutes': ?roadMinutes,
+        }
+      : {
+          'mode': mode,
+          'fromName': fromName,
+          'how': ?how?.wire,
+          'ownName': ?ownName,
+          'ownPhone': ?ownPhone,
+          'leavesAt': ?leavesAt,
+          'roadMinutes': ?roadMinutes,
+          'note': ?note,
+          'hubName': ?hubName,
+        };
 }
 
 class TripCityLeg {
@@ -1126,6 +1196,20 @@ class TripPlan {
         l.index == legIndex ? l.copyWith(arrival: arrival, clearArrival: arrival == null) : l,
     ]);
   }
+
+  int? segmentLegOf(String journeyId) {
+    if (journeyId.isEmpty) return null;
+    for (final l in legs) {
+      final a = l.arrival;
+      if (l.index >= 2 && a != null && a.isJourney && a.journeyId == journeyId) return l.index;
+    }
+    return null;
+  }
+
+  List<String> get segmentJourneyIds => [
+        for (final l in legs)
+          if (l.index >= 2 && (l.arrival?.isJourney ?? false)) l.arrival!.journeyId!,
+      ];
 
   List<TripSpotRef> get allSpots => [for (final d in days) ...d.spots];
 

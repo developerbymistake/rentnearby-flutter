@@ -17,6 +17,7 @@ import 'journey_strings.dart';
 class JourneyErrorTypes {
   static const String notFound = 'JourneyNotFound';
   static const String limitReached = 'JourneyLimitReached';
+  static const String journeyInTrip = 'JourneyInTrip';
 }
 
 class JourneysController extends GetxController {
@@ -175,6 +176,8 @@ class JourneysController extends GetxController {
     required String toName,
     required double toLat,
     required double toLng,
+    String? tripId,
+    int? legIndex,
   }) {
     if (plan.legs.isEmpty) return null;
     final legs = <Map<String, dynamic>>[];
@@ -211,6 +214,8 @@ class JourneysController extends GetxController {
       'people': people,
       'planKey': plan.planKey,
       'legs': legs,
+      'tripId': ?tripId,
+      'legIndex': ?(tripId == null ? null : legIndex),
     };
   }
 
@@ -226,6 +231,8 @@ class JourneysController extends GetxController {
     required double toLat,
     required double toLng,
     bool quiet = false,
+    String? tripId,
+    int? legIndex,
   }) async {
     if (_saving) return null;
     final body = _saveBody(
@@ -239,6 +246,8 @@ class JourneysController extends GetxController {
       toName: toName,
       toLat: toLat,
       toLng: toLng,
+      tripId: tripId,
+      legIndex: legIndex,
     );
     if (body == null) return null;
     _saving = true;
@@ -268,6 +277,7 @@ class JourneysController extends GetxController {
     required double toLng,
     bool quiet = false,
     String? forTripId,
+    int? forTripLegIndex,
   }) async {
     if (journeys.isEmpty) _assign(await JourneyLocalStore.read());
     final existing = findByPlan(plan.planKey, date, people: people, forTripId: forTripId);
@@ -284,6 +294,8 @@ class JourneysController extends GetxController {
       toLat: toLat,
       toLng: toLng,
       quiet: quiet,
+      tripId: forTripLegIndex == null ? null : forTripId,
+      legIndex: forTripLegIndex,
     );
     return saved == null ? null : _syncDrivers(saved, plan, chosen);
   }
@@ -389,6 +401,7 @@ class JourneysController extends GetxController {
     for (final role in TripStepRole.values) {
       if (c.stepOf(role).journeyId == journeyId) c.unlinkJourney(role);
     }
+    c.unlinkSegmentJourney(journeyId);
   }
 
   void recordAsk(String journeyId, AskResult result) {
@@ -416,6 +429,8 @@ class JourneysController extends GetxController {
     final type = DioErrorMapper.errorType(e);
     if (type == JourneyErrorTypes.limitReached) {
       AppToast.warning(TaxiWaysStrings.journeyLimit);
+    } else if (type == JourneyErrorTypes.journeyInTrip) {
+      AppToast.warning(DioErrorMapper.toMessage(e, TaxiWaysStrings.offlineBody, showRawMessageForStatusCodes: {409}));
     } else if (DioErrorMapper.isNetworkError(e)) {
       AppToast.error(TaxiWaysStrings.offlineTitle);
     } else if (type == ApiService.tabInactiveType) {
@@ -437,7 +452,9 @@ class JourneysController extends GetxController {
       return;
     }
     if (silent) return;
-    if (type == ApiService.tabInactiveType) {
+    if (type == JourneyErrorTypes.journeyInTrip) {
+      AppToast.warning(DioErrorMapper.toMessage(e, TaxiWaysStrings.offlineBody, showRawMessageForStatusCodes: {409}));
+    } else if (type == ApiService.tabInactiveType) {
       AppToast.warning(TaxiWaysStrings.taxisOff);
     } else {
       AppToast.error(DioErrorMapper.toMessage(e, TaxiWaysStrings.offlineBody, showRawMessageForStatusCodes: {400, 403, 409, 429}));

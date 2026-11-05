@@ -6,8 +6,11 @@ import '../../../config/module_palette.dart';
 import '../../../models/place_result_model.dart';
 import '../../../config/app_insets.dart';
 import '../../../widgets/empty_state_view.dart';
+import '../../trip/controllers/trip_plan_controller.dart';
 import '../../trip/models/trip_plan_model.dart';
+import '../../trip/trip_colors.dart';
 import '../../trip/trip_strings_steps_a3.dart';
+import '../../trip/widgets/trip_own_travel_sheet.dart';
 import '../../trip/widgets/trip_step_skip_sheet.dart';
 import '../../trip/widgets/trip_shimmers.dart';
 import '../journeys/journey_models.dart';
@@ -19,6 +22,7 @@ import 'taxi_ways_controller.dart';
 import 'taxi_ways_navigation.dart';
 import 'taxi_ways_strings.dart';
 import 'trip_strings_a6.dart';
+import 'trip_strings_mcb_a2.dart';
 import 'widgets/journey_total_bar.dart';
 import 'widgets/way_driver_row.dart';
 import 'widgets/way_plan_ribbon_card.dart';
@@ -48,6 +52,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
       final people = args['people'];
       final tripId = args['tripId'];
       final tripRole = args['tripRole'];
+      final tripLegIndex = args['tripLegIndex'];
       _fromTrip = args['fromTrip'] == true || tripId is String;
       _c = Get.put(
         TaxiWaysController(
@@ -58,6 +63,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
           people: people is int ? people : null,
           tripId: tripId is String ? tripId : null,
           tripRole: tripRole is String ? tripRole : null,
+          tripLegIndex: tripLegIndex is int && tripLegIndex >= 2 ? tripLegIndex : null,
         ),
         tag: _tag,
       );
@@ -96,7 +102,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     }
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
-      bottomNavigationBar: c.forTrip ? _arrangeBar(context, c) : null,
+      bottomNavigationBar: c.forTrip || c.forSegment ? _arrangeBar(context, c) : null,
       body: RefreshIndicator(
         color: TaxiColors.accent,
         onRefresh: c.pullRefresh,
@@ -122,7 +128,11 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
           constraints: const BoxConstraints(maxWidth: _maxWidth),
           child: TextButton(
             onPressed: () async {
-              if (await TripStepSkipSheet.show(context, step: kind)) await c.arrangedMyself();
+              final leg = c.tripLegIndex;
+              final done = c.forSegment && leg != null
+                  ? await TripOwnTravelSheet.show(context, leg)
+                  : await TripStepSkipSheet.show(context, step: kind);
+              if (done) await c.arrangedMyself();
             },
             style: TextButton.styleFrom(
               foregroundColor: TaxiColors.accentDark,
@@ -186,6 +196,16 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
                   _dateChip(context, c),
                   _peopleStepper(c),
                 ])),
+            if (c.lockedDate)
+              Padding(
+                padding: const EdgeInsets.only(top: 6, left: 4),
+                child: Text(
+                  TripStringsMcbA2.travelDayOfTrip,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: Colors.white.withValues(alpha: 0.85)),
+                ),
+              ),
             const SizedBox(height: 12),
             Obx(() => _routeCard(c)),
           ]),
@@ -237,20 +257,27 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
       );
 
   Widget _dateChip(BuildContext context, TaxiWaysController c) {
-    return _pill(
-      onTap: () => _pickDate(context, c),
+    final locked = c.lockedDate;
+    final chip = _pill(
+      onTap: locked ? null : () => _pickDate(context, c),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Iconsax.calendar_1, size: 16, color: Colors.white),
+          Icon(locked ? Iconsax.lock : Iconsax.calendar_1, size: 16, color: Colors.white),
           const SizedBox(width: 6),
-          Text(
-            _dateText(c.date.value),
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: Colors.white),
+          Flexible(
+            child: Text(
+              _dateText(c.date.value),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: Colors.white),
+            ),
           ),
         ]),
       ),
     );
+    if (!locked) return chip;
+    return Tooltip(message: TripStringsMcbA2.travelDayOfTrip, child: chip);
   }
 
   static String _dateText(DateTime d) {
@@ -306,16 +333,25 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     final r = c.result.value;
     final fromName = r != null && r.from.name.isNotEmpty ? r.from.name : c.from.value.name;
     final toName = r != null && r.to.name.isNotEmpty ? r.to.name : c.to.value.name;
+    final locked = c.lockedEnds;
     Widget end(String label, String name, CrossAxisAlignment align) => Column(
           crossAxisAlignment: align,
           children: [
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight),
-            ),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.textLight),
+                ),
+              ),
+              if (locked) ...[
+                const SizedBox(width: 4),
+                const Icon(Iconsax.lock, size: 11, color: AppColors.textLight),
+              ],
+            ]),
             Text(
               name,
               maxLines: 1,
@@ -325,16 +361,39 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
           ],
         );
     final fromLabel = c.fromMyLocation.value ? TaxiWaysStrings.fromMyLocationLabel : TaxiWaysStrings.fromLabel;
+    final day = c.segmentDay;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-      child: Row(children: [
-        Expanded(child: end(fromLabel, fromName, CrossAxisAlignment.start)),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8),
-          child: Icon(Icons.arrow_forward_rounded, size: 18, color: TaxiColors.accent),
-        ),
-        Expanded(child: end(TaxiWaysStrings.toLabel, toName, CrossAxisAlignment.end)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        Row(children: [
+          Expanded(child: end(fromLabel, fromName, CrossAxisAlignment.start)),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Icon(Icons.arrow_forward_rounded, size: 18, color: TaxiColors.accent),
+          ),
+          Expanded(child: end(TaxiWaysStrings.toLabel, toName, CrossAxisAlignment.end)),
+        ]),
+        if (locked && day != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(color: TaxiColors.surface, borderRadius: BorderRadius.circular(10)),
+            child: Row(children: [
+              const Icon(Iconsax.routing, size: 14, color: TaxiColors.accentDark),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  TripStringsMcbA2.fromYourTrip(day),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: TaxiColors.accentDark),
+                ),
+              ),
+            ]),
+          ),
+        ],
       ]),
     );
   }
@@ -367,7 +426,9 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
         child: WaysSortChips(value: sort, onChanged: c.setSort),
       ));
     }
-    if (!r.hasWays) {
+    if (!r.hasWays && c.forSegment) {
+      children.add(Padding(padding: const EdgeInsets.only(top: 16), child: _gapCard(context, c, r)));
+    } else if (!r.hasWays) {
       children.add(EmptyStateView(
         icon: Iconsax.routing_2,
         title: TaxiWaysStrings.noWays,
@@ -389,7 +450,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
       people: c.people.value,
       localTaxis: r.localTaxis,
       stays: r.stays,
-      reachFirstPlace: r.reachFirstPlace,
+      reachFirstPlace: c.forSegment ? null : r.reachFirstPlace,
       hasWays: r.hasWays,
     ));
     children.add(Padding(
@@ -409,6 +470,102 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+    );
+  }
+
+  Future<void> _getThereMyself(BuildContext context, TaxiWaysController c) async {
+    final k = c.tripLegIndex;
+    if (k == null) return;
+    final hub = c.gapHub;
+    if (Get.isRegistered<TripPlanController>()) TripPlanController.to.markTravelGap(k, hub);
+    if (await TripOwnTravelSheet.show(context, k, initialHow: TripTravelHow.train, hubName: hub)) {
+      await c.arrangedMyself();
+    }
+  }
+
+  Widget _gapCard(BuildContext context, TaxiWaysController c, TaxiWaysResult r) {
+    final from = r.from.name.isNotEmpty ? r.from.name : c.from.value.name;
+    final to = r.to.name.isNotEmpty ? r.to.name : c.to.value.name;
+    final hub = c.gapHub;
+    final busy = c.isLoading.value;
+    final mine = ElevatedButton(
+      onPressed: busy ? null : () => _getThereMyself(context, c),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: TaxiColors.accentDark,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        minimumSize: const Size(0, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      child: const Text(TripStringsMcbA2.getThereMyself,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700)),
+    );
+    final again = OutlinedButton(
+      onPressed: busy ? null : c.retry,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: TaxiColors.accentDark,
+        minimumSize: const Size(0, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        side: BorderSide(color: TaxiColors.accent.withValues(alpha: 0.5)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      child: const Text(TripStringsMcbA2.searchAgain,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700)),
+    );
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: TripColors.accent.withValues(alpha: 0.45)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Iconsax.driving, size: 20, color: TripColors.accentDark),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                TripStringsMcbA2.noDriverGoes(from, to),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                TripStringsMcbA2.nobodyListed,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: TripColors.accentDark),
+              ),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 10),
+        Text(
+          TripStringsMcbA2.reachHubThen(hub, to),
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textMedium, height: 1.35),
+        ),
+        const SizedBox(height: 14),
+        LayoutBuilder(builder: (context, box) {
+          if (box.maxWidth < 340) {
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [again, const SizedBox(height: 8), mine]);
+          }
+          return Row(children: [Expanded(child: mine), const SizedBox(width: 10), Expanded(child: again)]);
+        }),
+      ]),
     );
   }
 

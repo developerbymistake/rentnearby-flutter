@@ -81,6 +81,8 @@ class TripEnquiryContext {
   final String? pickupTime;
   final String? pickupPlace;
   final String text;
+  final String? journeyId;
+  final int? journeyLegIndex;
 
   const TripEnquiryContext({
     this.city = '',
@@ -93,6 +95,8 @@ class TripEnquiryContext {
     this.pickupTime,
     this.pickupPlace,
     this.text = '',
+    this.journeyId,
+    this.journeyLegIndex,
   });
 
   String? get peopleLabel {
@@ -124,6 +128,8 @@ class TripEnquiryContext {
       pickupTime: json['pickupTime'] as String?,
       pickupPlace: json['pickupPlace'] as String?,
       text: json['text'] as String? ?? '',
+      journeyId: (json['journeyId'] as String?)?.isEmpty ?? true ? null : json['journeyId'] as String,
+      journeyLegIndex: (json['journeyLegIndex'] as num?)?.toInt(),
     );
   }
 }
@@ -372,6 +378,7 @@ class TripEnquiryModel {
   final TripOfferModel? pendingChange;
   final int counterCount;
   final int revisedCount;
+  final bool? _isSegment;
 
   const TripEnquiryModel({
     required this.id,
@@ -414,7 +421,10 @@ class TripEnquiryModel {
     this.pendingChange,
     this.counterCount = 0,
     this.revisedCount = 0,
-  });
+    bool? isSegment,
+  }) : _isSegment = isSegment;
+
+  bool get isSegment => _isSegment ?? (isTaxi && day != null && tripId != null && context.journeyId != null);
 
   TripDisplayStatus get display => TripDisplayStatus.parse(displayStatusWire);
 
@@ -569,6 +579,7 @@ class TripEnquiryModel {
       pendingChange: offer('pendingChange'),
       counterCount: (json['counterCount'] as num?)?.toInt() ?? 0,
       revisedCount: (json['revisedCount'] as num?)?.toInt() ?? 0,
+      isSegment: json['isSegment'] is bool ? json['isSegment'] as bool : null,
     );
   }
 }

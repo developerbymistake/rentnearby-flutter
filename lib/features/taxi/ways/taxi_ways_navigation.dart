@@ -12,16 +12,18 @@ class TaxiWaysNavigation {
     bool fromTrip = false,
     String? tripId,
     String? tripRole,
+    int? tripLegIndex,
   }) =>
       Get.toNamed(AppRoutes.taxiWays, arguments: {
         'from': from,
         'to': to,
-        'fromMyLocation': fromMyLocation,
+        'fromMyLocation': tripLegIndex == null && fromMyLocation,
         'date': ?date,
         'people': ?people,
-        'fromTrip': fromTrip,
+        'fromTrip': fromTrip || tripLegIndex != null,
         'tripId': ?tripId,
         'tripRole': ?tripRole,
+        'tripLegIndex': ?tripLegIndex,
       });
 
   static Future<void>? openPlan({required String planKey, required String controllerTag}) =>

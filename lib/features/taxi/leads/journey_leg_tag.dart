@@ -22,7 +22,7 @@ class JourneyLegTag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(999)),
       child: Text(text,
-          maxLines: 1,
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
               fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.warningText)),

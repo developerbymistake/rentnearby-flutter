@@ -348,7 +348,7 @@ class _LeadCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final e = lead;
     final spots = TripLeadFormat.spots(e);
-    final leg = JourneyLegTag.fromLead(e);
+    final leg = TripLeadFormat.journeyLine(e) ?? JourneyLegTag.fromLead(e);
     final legText = e.context.text.startsWith('Car ') ? e.context.text.trim() : '';
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -373,8 +373,11 @@ class _LeadCard extends StatelessWidget {
           Wrap(spacing: 8, runSpacing: 6, children: [
             if (e.isUrgent && e.isUnconfirmed) const TripStatusPill(TripDisplayStatus.asked, label: TripStrings.urgent),
             TripStatusPill(e.display, ownerSide: true, taxi: true),
-            if (leg != null) JourneyLegTag(text: leg),
           ]),
+          if (leg != null) ...[
+            const SizedBox(height: 6),
+            Row(children: [Flexible(child: JourneyLegTag(text: leg))]),
+          ],
           if (legText.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(legText,

@@ -7,7 +7,10 @@ import 'controllers/trip_plan_controller.dart';
 import 'models/trip_city_model.dart';
 import 'models/trip_enquiry_model.dart';
 import 'models/trip_plan_model.dart';
+import 'screens/trip_details_sheet.dart';
+import 'trip_strings_mcb_a1.dart';
 import 'trip_strings_steps_a1.dart';
+import 'utils/trip_travel_rules.dart';
 import 'widgets/trip_city_sheet.dart';
 
 class TripNavigation {
@@ -130,6 +133,44 @@ class TripNavigation {
       fromTrip: true,
       tripId: c.trip.value?.id,
       tripRole: role.name,
+    );
+  }
+
+  static Future<void>? openSegmentWays(int legIndex) {
+    final c = TripPlanController.to;
+    switch (c.findWayBlock(legIndex)) {
+      case TravelFindBlock.none:
+        break;
+      case TravelFindBlock.noDates:
+        final ctx = Get.context;
+        if (ctx == null) {
+          AppToast.warning(TripStringsMcbA1.addDatesFirst);
+          return null;
+        }
+        return TripDetailsSheet.edit(ctx, heading: TripStringsMcbA1.addDatesFirst);
+      case TravelFindBlock.tooFarAhead:
+        AppToast.warning(TripStringsMcbA1.pickDateWithinYear);
+        return null;
+      case TravelFindBlock.taxiOff:
+        AppToast.warning(TripStringsMcbA1.taxiOffHere);
+        return null;
+      case TravelFindBlock.offline:
+        AppToast.warning(TripStringsMcbA1.connectToFindWay);
+        return null;
+      case TravelFindBlock.readOnly:
+        return null;
+    }
+    final from = c.prevCityPlace(legIndex);
+    final to = c.cityPlaceOf(legIndex);
+    if (from == null || to == null) return null;
+    return TaxiWaysNavigation.openFeed(
+      from: from,
+      to: to,
+      fromMyLocation: false,
+      date: c.travelDateOf(legIndex),
+      people: c.travelPeople,
+      tripId: c.trip.value?.id,
+      tripLegIndex: legIndex,
     );
   }
 

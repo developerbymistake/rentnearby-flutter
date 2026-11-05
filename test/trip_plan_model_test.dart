@@ -1,3 +1,4 @@
+import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -270,6 +271,83 @@ void main() {
       };
       final back = TripPlan.fromJson(TripPlan.fromJson(json).toJson());
       expect(back.steps.startFrom?.name, 'Delhi');
+    });
+  });
+
+  group('travel between cities (MC-B)', () {
+    test('journey arrival round trip writes mode journey and no own fields', () {
+      const t = TripTravel.journey(fromName: 'Haridwar', journeyId: 'j1', planKey: 'k1', cars: 2, listedTotal: 14000, roadMinutes: 600);
+      final json = t.toJson();
+      expect(json['mode'], 'journey');
+      expect(json['journeyId'], 'j1');
+      expect(json.containsKey('how'), isFalse);
+      expect(json.containsKey('hubName'), isFalse);
+      final back = TripTravel.fromJson(json);
+      expect(back.isJourney, isTrue);
+      expect(back.isOwn, isFalse);
+      expect(back.cars, 2);
+      expect(back.listedTotal, 14000);
+      expect(back.roadMinutes, 600);
+    });
+
+    test('journey mode without an id reads as own; own keeps the hub and never writes journeyId', () {
+      expect(TripTravel.fromJson({'mode': 'journey', 'fromName': 'Haridwar', 'journeyId': ''}).isOwn, isTrue);
+      const own = TripTravel.own(fromName: 'Haridwar', how: TripTravelHow.train, hubName: 'Rishikesh');
+      final json = own.toJson();
+      expect(json.containsKey('journeyId'), isFalse);
+      expect(TripTravel.fromJson(json).hubName, 'Rishikesh');
+    });
+
+    test('segmentLegOf finds the leg of a journey, steps never count', () {
+      final p = TripPlan.fromJson({
+        'version': 4,
+        'cityKey': 1,
+        'cityName': 'Haridwar',
+        'legs': [
+          {'index': 1, 'cityKey': 1, 'cityName': 'Haridwar', 'latitude': 29.95, 'longitude': 78.16},
+          {
+            'index': 2,
+            'cityKey': 2,
+            'cityName': 'Badrinath',
+            'latitude': 30.74,
+            'longitude': 79.49,
+            'arrival': {'mode': 'journey', 'fromName': 'Haridwar', 'journeyId': 'j2', 'cars': 2},
+          },
+        ],
+        'steps': {
+          'gettingThere': {'status': 'chosen', 'journeyId': 'j1'},
+        },
+        'days': [
+          {'day': 1, 'leg': 1},
+          {'day': 2, 'leg': 2},
+        ],
+      });
+      expect(p.segmentLegOf('j2'), 2);
+      expect(p.segmentLegOf('j1'), isNull);
+      expect(p.segmentLegOf(''), isNull);
+      expect(p.segmentJourneyIds, ['j2']);
+      expect(TripPlan.fromJson(p.toJson()).legs[1].arrival?.journeyId, 'j2');
+    });
+
+    test('a segment row is a dated taxi row of the trip that carries a journey', () {
+      const seg = TripEnquiryModel(
+        id: 'e1',
+        tripId: 't1',
+        kind: TripEnquiryKinds.taxi,
+        day: 2,
+        context: TripEnquiryContext(journeyId: 'j2', journeyLegIndex: 1),
+      );
+      const local = TripEnquiryModel(id: 'e2', tripId: 't1', kind: TripEnquiryKinds.taxi, days: [2]);
+      expect(seg.isSegment, isTrue);
+      expect(local.isSegment, isFalse);
+      expect(TripEnquiryModel.fromJson({'id': 'e3', 'kind': 'Taxi', 'isSegment': true}).isSegment, isTrue);
+      final parsed = TripEnquiryModel.fromJson({
+        'id': 'e4',
+        'kind': 'Taxi',
+        'context': {'journeyId': 'j2', 'journeyLegIndex': 2},
+      });
+      expect(parsed.context.journeyId, 'j2');
+      expect(parsed.context.journeyLegIndex, 2);
     });
   });
 }
