@@ -14,6 +14,7 @@ import '../../trip/trip_constants.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/trip_strings_g3.dart';
 import '../../trip/trip_strings_h4.dart';
+import '../../trip/trip_strings_i5.dart';
 import '../../trip/utils/trip_format.dart';
 import '../../trip/widgets/trip_payment_line.dart';
 import '../../trip/widgets/trip_sheet_frame.dart';
@@ -91,6 +92,7 @@ class _OfferBodyState extends State<_OfferBody> {
   final _needs = <String>{};
   bool _gst = false;
   bool _saving = false;
+  bool _clamped = false;
 
   @override
   void initState() {
@@ -101,6 +103,7 @@ class _OfferBodyState extends State<_OfferBody> {
     final dates = src ?? widget.counter;
     _checkIn = dates?.checkIn ?? e.checkIn ?? today;
     _checkOut = dates?.checkOut ?? e.checkOut ?? _checkIn.add(const Duration(days: 1));
+    _clampIntoTrip();
     // A change request carries only dates, people and lines; terms come from the accepted offer.
     final terms = widget.revised ? (e.acceptedOffer ?? src) : null;
     _cancel.text = terms?.cancellationText ?? widget.stay.rules?.cancellationPolicy ?? '';
@@ -137,6 +140,40 @@ class _OfferBodyState extends State<_OfferBody> {
   }
 
   static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  DateTime? get _tripStart {
+    final s = widget.enquiry.tripStartDate;
+    return s == null ? null : _dateOnly(s);
+  }
+
+  DateTime? get _tripLimit {
+    final l = widget.enquiry.tripCheckOutLimit;
+    return l == null ? null : _dateOnly(l);
+  }
+
+  bool _outsideTrip(DateTime checkIn, DateTime checkOut) {
+    final start = _tripStart;
+    final limit = _tripLimit;
+    if (start == null || limit == null || !start.isBefore(limit)) return false;
+    return checkIn.isBefore(start) || checkOut.isAfter(limit);
+  }
+
+  void _clampIntoTrip() {
+    final start = _tripStart;
+    final limit = _tripLimit;
+    _checkIn = _dateOnly(_checkIn);
+    _checkOut = _dateOnly(_checkOut);
+    if (start == null || limit == null || !_outsideTrip(_checkIn, _checkOut)) return;
+    final nights = _checkOut.difference(_checkIn).inDays.clamp(1, limit.difference(start).inDays);
+    final lastIn = limit.subtract(const Duration(days: 1));
+    var checkIn = _checkIn.isBefore(start) ? start : _checkIn;
+    if (checkIn.isAfter(lastIn)) checkIn = lastIn;
+    var checkOut = checkIn.add(Duration(days: nights));
+    if (checkOut.isAfter(limit)) checkOut = limit;
+    _checkIn = checkIn;
+    _checkOut = checkOut;
+    _clamped = true;
+  }
 
   void _refresh() {
     if (mounted) setState(() {});
@@ -198,9 +235,10 @@ class _OfferBodyState extends State<_OfferBody> {
 
   DateTime get _firstCheckIn {
     final today = _dateOnly(DateTime.now());
-    final start = widget.enquiry.tripStartDate;
+    final start = _tripStart;
     final lower = start != null && start.isAfter(today) ? start : today;
-    return _checkIn.isBefore(lower) ? _checkIn : lower;
+    final first = _checkIn.isBefore(lower) ? _checkIn : lower;
+    return start != null && first.isBefore(start) ? start : first;
   }
 
   String? get _tripHint {
@@ -243,6 +281,7 @@ class _OfferBodyState extends State<_OfferBody> {
   String? _validate() {
     if (_nights < 1) return StayEnquiryStrings.datesInvalid;
     if (_nights > TripConstants.maxDaysCap) return StayEnquiryStrings.datesInvalid;
+    if (_outsideTrip(_checkIn, _checkOut)) return _tripHint ?? StayEnquiryStrings.datesInvalid;
     for (final l in _lines) {
       if (l.price < 1) return StayEnquiryStrings.enterPrice;
       if (l.price > TripConstants.maxAmount) return TripStringsAD.priceTooHigh(TripConstants.maxAmount);
@@ -334,6 +373,11 @@ class _OfferBodyState extends State<_OfferBody> {
         if (_tripHint != null) ...[
           const SizedBox(height: 6),
           Text(_tripHint!, style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+        ],
+        if (_clamped) ...[
+          const SizedBox(height: 4),
+          const Text(TripStringsI5.datesMovedInside,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText)),
         ],
         const SizedBox(height: 16),
         _heading(TripStrings.roomLines),

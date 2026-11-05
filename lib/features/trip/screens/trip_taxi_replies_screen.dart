@@ -36,7 +36,8 @@ class TripTaxiRepliesScreen extends StatefulWidget {
 
 class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
   late final TripPlanController _c;
-  late final int _day;
+  late int _day;
+  String? _date;
   String? _tripId;
   String? _enquiryId;
   bool _started = false;
@@ -48,9 +49,11 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
     _c.openPages++;
     final args = Get.arguments;
     final map = args is Map ? args : const {};
-    _day = (map['day'] as int?) ?? 1;
-    _tripId = map['tripId'] as String?;
-    _enquiryId = map['enquiryId'] as String?;
+    final day = map['day'];
+    _day = (day is num ? day.toInt() : int.tryParse('${day ?? ''}')) ?? 1;
+    _date = map['date']?.toString();
+    _tripId = map['tripId']?.toString();
+    _enquiryId = map['enquiryId']?.toString();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -71,7 +74,21 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
     } else {
       await _c.refreshEnquiries();
     }
-    if (mounted) setState(() => _started = true);
+    if (!mounted) return;
+    final day = _c.dayOfDate(DateTime.tryParse(_date ?? '')) ?? _focusDay();
+    setState(() {
+      if (day != null) _day = day;
+      _started = true;
+    });
+  }
+
+  int? _focusDay() {
+    final id = _enquiryId;
+    if (id == null) return null;
+    for (final e in _c.enquiries) {
+      if (e.id == id && e.isTaxi) return _c.planDaysOf(e).contains(_day) ? _day : _c.firstPlanDayOf(e);
+    }
+    return null;
   }
 
   static int _rank(TripDisplayStatus s) => switch (s) {
@@ -117,7 +134,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
 
   Future<void> _book(TripEnquiryModel e) async {
     if (!await _datesGate() || !mounted) return;
-    await TripTaxiBookingSheet.show(context, taxi: null, day: e.days.isNotEmpty ? e.days.first : _day, enquiry: e, initialFare: e.taxi?.driverFare);
+    await TripTaxiBookingSheet.show(context, taxi: null, day: _c.firstPlanDayOf(e) ?? _day, enquiry: e, initialFare: e.taxi?.driverFare);
   }
 
   Future<void> _report(TripEnquiryModel e) async {
@@ -420,7 +437,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
     final canCall = phone != null && ContactLauncher.tenDigits(phone).isNotEmpty;
     final whatsApp = e.owner.whatsApp ?? phone;
     final canChat = whatsApp != null && ContactLauncher.tenDigits(whatsApp).isNotEmpty;
-    final day = e.days.isNotEmpty ? e.days.first : _day;
+    final day = _c.firstPlanDayOf(e) ?? _day;
     final buttons = <Widget>[];
     void add(IconData icon, String label, VoidCallback? onTap, {Color color = TripColors.accentDark}) =>
         buttons.add(_ActionButton(icon: icon, label: label, color: color, onTap: busy ? null : onTap));

@@ -67,6 +67,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
   final _enquiry = Rxn<TripEnquiryModel>();
   bool _enquiryBusy = false;
   bool _enquiryDirty = false;
+  String? _focusEnquiryId;
   bool _movedOn = false;
   final _status = ''.obs;
   // Only meaningful when _status.value == 'Blocked' — true if the CURRENT user did the
@@ -137,8 +138,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     _area = text('area') ?? known?.area;
     _isOwner = flag('isOwner') ?? known?.isOwner ?? false;
     _argListingId = text('listingId') ?? known?.listingId;
-    _status.value = text('status') ?? known?.status ?? 'Active';
-    _isBlockedByMe.value = flag('isBlockedByMe') ?? known?.isBlockedByMe ?? false;
+    _status.value = known?.status ?? text('status') ?? 'Active';
+    _isBlockedByMe.value = known?.isBlockedByMe ?? flag('isBlockedByMe') ?? false;
+    _focusEnquiryId = text('enquiryId');
     if (_invalidArgs) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -234,13 +236,29 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     try {
       do {
         _enquiryDirty = false;
-        final e = await TripEnquiryController.to.forConversation(_conversationId);
+        final e = await _loadEnquiry();
         if (!mounted) return;
         if (e != null) _enquiry.value = e;
       } while (_enquiryDirty);
     } finally {
       _enquiryBusy = false;
     }
+  }
+
+  Future<TripEnquiryModel?> _loadEnquiry() async {
+    final ctrl = TripEnquiryController.to;
+    final focus = _focusEnquiryId;
+    if (focus != null) {
+      final e = await ctrl.refreshOne(focus);
+      if (e != null && e.conversationId == _conversationId) {
+        if (e.isOpen) return e;
+        final latest = await ctrl.forConversation(_conversationId);
+        if (latest == null || !latest.isOpen) return e;
+        _focusEnquiryId = null;
+        return latest;
+      }
+    }
+    return ctrl.forConversation(_conversationId);
   }
 
   String? get _listingId {
@@ -268,7 +286,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     final plan = TripPlanController.to;
     if (plan.trip.value?.id != tripId) await plan.open(tripId);
     if (!mounted) return;
-    TripNavigation.openReplies(e.day ?? 1, enquiryId: e.id);
+    TripNavigation.openReplies(plan.dayOfDate(e.checkIn) ?? e.day ?? 1, enquiryId: e.id);
   }
 
   Future<void> _onStripAction(String id, TripEnquiryModel e) async {

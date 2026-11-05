@@ -115,7 +115,7 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
     _plan = TripPlanController.to;
     final ex = _existing;
     final pb = ex?.phoneBooking;
-    _day = ex?.day ?? widget.day;
+    _day = ex == null ? widget.day : (_plan.dayOfDate(ex.checkIn) ?? ex.day ?? widget.day);
     _allNights = ex != null && ex.nights > 1;
     _hostName = TextEditingController(text: pb?.hostName ?? widget.hostName ?? '');
     _hostPhone = TextEditingController(text: _phoneText(pb?.hostPhone ?? widget.hostPhone));
@@ -149,11 +149,11 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
 
   int get _runNights => _plan.enquiryNightsRun(_day, ignoreEnquiryId: _existing?.id).length;
 
-  bool get _canPickAllNights => _runNights > 1;
+  bool get _canPickAllNights => _runNights > 1 || (_existing?.nights ?? 0) > 1;
 
   int get _nights {
     final ex = _existing;
-    if (ex != null && _plan.dayCount < 1) return ex.nights;
+    if (ex != null && (_allNights == (ex.nights > 1) || _plan.dayCount < 1)) return ex.nights;
     final run = _runNights;
     return _allNights && run > 1 ? run : 1;
   }
@@ -245,7 +245,8 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
     TripPhoneBookingResult? result;
     final ex = _existing;
     if (ex != null) {
-      result = await ctrl.editPhoneBooking(ex.id, {'allNights': _allNights, 'nights': _nights, ...fields});
+      final nights = _nights;
+      result = await ctrl.editPhoneBooking(ex.id, {'allNights': nights > 1, 'nights': nights, ...fields});
     } else {
       result = await ctrl.savePhoneBooking(
           stayId: widget.stayId, day: _day, allNights: _allNights, nights: _nights, fields: fields);

@@ -169,6 +169,16 @@ class TripPlanController extends GetxController {
 
   DateTime? dateOf(int day) => settings.dateOf(day);
 
+  int? dayOfDate(DateTime? date) {
+    final start = settings.startDate;
+    if (date == null || start == null) return null;
+    final n = DateTime.utc(date.year, date.month, date.day)
+            .difference(DateTime.utc(start.year, start.month, start.day))
+            .inDays +
+        1;
+    return n >= 1 && n <= dayCount ? n : null;
+  }
+
   int get defaultMapDay {
     final start = settings.startDate;
     final n = dayCount;
@@ -1400,7 +1410,8 @@ class TripPlanController extends GetxController {
       ..sort(_newestFirst);
   }
 
-  List<int> _planDaysOf(TripEnquiryModel e, List<TripDay> days) {
+  List<int> planDaysOf(TripEnquiryModel e, [List<TripDay>? within]) {
+    final days = within ?? plan.value?.days ?? const <TripDay>[];
     if (settings.hasDates && e.checkIn != null) {
       return [
         for (final d in days)
@@ -1411,6 +1422,11 @@ class TripPlanController extends GetxController {
       for (final d in days)
         if (e.days.contains(d.day)) d.day,
     ];
+  }
+
+  int? firstPlanDayOf(TripEnquiryModel e) {
+    final days = planDaysOf(e);
+    return days.isEmpty ? null : days.reduce((a, b) => a < b ? a : b);
   }
 
   static int _taxiRank(TripDisplayStatus s) => switch (s) {
@@ -1545,7 +1561,7 @@ class TripPlanController extends GetxController {
     for (final e in booked) {
       final fare = e.taxi?.agreedFare;
       if (fare == null || e.days.isEmpty) continue;
-      final covered = _planDaysOf(e, days);
+      final covered = planDaysOf(e, days);
       for (final day in covered) {
         final i = indexOf(day);
         if (i == null || claimed.contains(i)) continue;
@@ -1584,7 +1600,7 @@ class TripPlanController extends GetxController {
     }
     for (final e in enquiryList) {
       if (!e.isTaxi || !_taxiTerminal(e.display)) continue;
-      for (final day in _planDaysOf(e, days)) {
+      for (final day in planDaysOf(e, days)) {
         final i = indexOf(day);
         if (i == null || claimed.contains(i)) continue;
         final cur = days[i].taxi;

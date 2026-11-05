@@ -64,9 +64,10 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     _c.openPages++;
     final args = Get.arguments;
     final map = args is Map ? args : const {};
-    _day = (map['day'] as int?) ?? 1;
-    _tripId = map['tripId'] as String?;
-    _enquiryId = map['enquiryId'] as String?;
+    final day = map['day'];
+    _day = (day is num ? day.toInt() : int.tryParse('${day ?? ''}')) ?? 1;
+    _tripId = map['tripId']?.toString();
+    _enquiryId = map['enquiryId']?.toString();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -94,7 +95,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     final id = _enquiryId;
     if (id == null) return _day;
     for (final e in _c.enquiries) {
-      if (e.id == id) return e.day ?? _day;
+      if (e.id == id) return _c.dayOfDate(e.checkIn) ?? e.day ?? _day;
     }
     return _day;
   }
@@ -221,7 +222,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
       stayName: x.name,
       hostName: existing?.phoneBooking?.hostName ?? x.enquiry?.owner.name,
       hostPhone: existing?.phoneBooking?.hostPhone ?? _phone(x),
-      day: existing?.day ?? x.enquiry?.day ?? _day,
+      day: existing == null ? _day : (_c.dayOfDate(existing.checkIn) ?? existing.day ?? _day),
       existing: existing,
     );
     if (r == null || !mounted) return;

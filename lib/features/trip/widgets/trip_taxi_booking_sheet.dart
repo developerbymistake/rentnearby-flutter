@@ -89,11 +89,12 @@ class _BookingBodyState extends State<_BookingBody> {
     final existing = _existingBooking(plan);
     final server = enq?.taxi;
     final ahead = plan.days.map((d) => d.day).where((d) => !_plan.isDayPast(d)).toSet();
-    final base = (enq != null && enq.days.isNotEmpty) ? enq.days.toSet() : existing?.days.toSet();
+    final enqDays = enq == null ? const <int>[] : _plan.planDaysOf(enq);
+    final base = enqDays.isNotEmpty ? enqDays.toSet() : existing?.days.toSet();
     _days = base == null ? ahead : base.where(ahead.contains).toSet();
     if (_days.isEmpty) _days.addAll(ahead);
     final row = enq != null && enq.isBooked ? enq : _bookedRow();
-    _pastDays = row == null ? <int>{} : row.days.where(_plan.isDayPast).toSet();
+    _pastDays = row == null ? <int>{} : _plan.planDaysOf(row).where(_plan.isDayPast).toSet();
     _time = _parseTime(server?.pickupTime ?? existing?.pickupTime ?? _plan.settings.pickupTime) ??
         _parseTime(TripConstants.defaultPickupTime)!;
     _place = TextEditingController(text: server?.pickupPlace ?? existing?.pickupPlace ?? _plan.settings.pickupPlace ?? '');
