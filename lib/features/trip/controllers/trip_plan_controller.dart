@@ -42,8 +42,11 @@ import '../trip_strings_mcb_a1.dart';
 import '../trip_strings_mcb_k1.dart';
 import '../trip_strings_steps_a3.dart';
 import '../trip_strings_steps_k3.dart';
+import '../utils/trip_clock.dart';
+import '../utils/trip_day_load.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_map_rules.dart';
+import '../utils/trip_money.dart';
 import '../utils/trip_step_rules.dart';
 import '../utils/trip_travel_rules.dart';
 import '../utils/trip_whatsapp_text.dart';
@@ -583,9 +586,7 @@ class TripPlanController extends GetxController {
     final n = dayCount;
     final fallback = isMultiCity ? mapAll : 1;
     if (start == null || n < 1) return fallback;
-    final now = DateTime.now();
-    final offset = DateTime.utc(now.year, now.month, now.day).difference(DateTime.utc(start.year, start.month, start.day)).inDays;
-    return offset >= 0 && offset < n ? offset + 1 : fallback;
+    return TripClock.dayIndex(start, n, TripClock.today()) ?? fallback;
   }
 
   TripMapFocus get mapFocus {
@@ -759,19 +760,12 @@ class TripPlanController extends GetxController {
 
   bool get isCompleted => trip.value?.status == TripStatuses.completed;
 
-  static DateTime get _today {
-    final n = DateTime.now();
-    return DateTime(n.year, n.month, n.day);
-  }
+  static DateTime get _today => TripClock.today();
 
   int? get todayDay {
     final start = settings.startDate;
-    final n = dayCount;
-    if (start == null || n < 1) return null;
-    final offset = DateTime.utc(_today.year, _today.month, _today.day)
-        .difference(DateTime.utc(start.year, start.month, start.day))
-        .inDays;
-    return offset >= 0 && offset < n ? offset + 1 : null;
+    if (start == null) return null;
+    return TripClock.dayIndex(start, dayCount, _today);
   }
 
   bool get isRunning => todayDay != null;
@@ -1427,16 +1421,64 @@ class TripPlanController extends GetxController {
     return r;
   }
 
-  int dayTotalMinutes(int day) => resultDay(day)?.totalMinutes ?? plan.value?.dayAt(day)?.visitMinutes ?? 0;
+  int dayTotalMinutes(int day) =>
+      TripDayLoad.route(serverTotal: resultDay(day)?.totalMinutes, visitMinutes: plan.value?.dayAt(day)?.visitMinutes ?? 0);
 
   int? roadDayMinutes(int day, List<String> spotNames) {
     final d = plan.value?.dayAt(day);
     final r = resultDay(day);
     if (d == null || r == null || !listEquals([for (final s in d.spots) s.name], spotNames)) return null;
-    return r.totalMinutes;
+    return TripDayLoad.route(serverTotal: r.totalMinutes, visitMinutes: d.visitMinutes);
   }
 
-  bool isOverLimit(int day) => dayTotalMinutes(day) > dayLimitMinutes;
+  int dayReservedMinutes(int day) {
+    final p = plan.value;
+    if (p == null || p.dayAt(day) == null || !p.isTravelDay(day)) return 0;
+    return roadMinutesOf(p.legIndexOf(day)) ?? 0;
+  }
+
+  int dayLoadMinutes(int day) => TripDayLoad.load(reserved: dayReservedMinutes(day), route: dayTotalMinutes(day));
+
+  bool isOverLimit(int day) => TripDayLoad.isOver(dayLoadMinutes(day), dayLimitMinutes);
+
+  int _legMinutes(TripPlanDay? r, TripSpotRef a, TripSpotRef b) {
+    if (r != null) {
+      for (final l in r.legs) {
+        if (l.fromId == a.id && l.toId == b.id) return l.minutes;
+      }
+    }
+    return TripDayLoad.estimateMinutes((lat: a.latitude, lng: a.longitude), (lat: b.latitude, lng: b.longitude));
+  }
+
+  ({int index, int deltaMinutes})? _insertion(String id, int toDay) {
+    final p = plan.value;
+    final x = p?.spotById(id);
+    final d = p?.dayAt(toDay);
+    if (x == null || d == null) return null;
+    final r = resultDay(toDay);
+    final s = [for (final y in d.spots) if (y.id != id) y];
+    return TripDayLoad.cheapestInsertion(
+      count: s.length,
+      toNew: (i) => _legMinutes(r, s[i], x),
+      fromNew: (i) => _legMinutes(r, x, s[i]),
+      legAfter: (i) => _legMinutes(r, s[i], s[i + 1]),
+    );
+  }
+
+  int moveLoadMinutes(String id, int toDay) {
+    final p = plan.value;
+    final x = p?.spotById(id);
+    final d = p?.dayAt(toDay);
+    if (x == null || d == null || d.spots.any((s) => s.id == id)) return dayLoadMinutes(toDay);
+    final ins = _insertion(id, toDay);
+    var base = dayLoadMinutes(toDay);
+    if (resultDay(toDay) == null) {
+      for (var i = 0; i + 1 < d.spots.length; i++) {
+        base += _legMinutes(null, d.spots[i], d.spots[i + 1]);
+      }
+    }
+    return base + x.visitMinutes + (ins?.deltaMinutes ?? 0);
+  }
 
   bool isEstimate(int day) => resultDay(day)?.isEstimate ?? false;
 
@@ -2278,7 +2320,7 @@ class TripPlanController extends GetxController {
         return [
           TripDay(
             day: 1,
-            taxi: _remapBooking(first?.taxi, map: const {1: 1}),
+            taxi: _remapBooking(first?.taxi, map: const {1: 1}, day: 1),
             stay: first?.stay?.copyWith(clearSameAsDay: true),
           ),
         ];
@@ -2331,7 +2373,7 @@ class TripPlanController extends GetxController {
         day: i + 1,
         leg: d.leg,
         spots: d.spots,
-        taxi: _remapBooking(d.taxi, map: legMap),
+        taxi: _remapBooking(d.taxi, map: legMap, day: i + 1),
         stay: stay,
         stayShortlist: [
           for (final s in d.stayShortlist)
@@ -2348,14 +2390,15 @@ class TripPlanController extends GetxController {
     return _fixSameStay(out);
   }
 
-  TripTaxiChoice? _remapBooking(TripTaxiChoice? taxi, {required Map<int, int> map}) {
+  TripTaxiChoice? _remapBooking(TripTaxiChoice? taxi, {required Map<int, int> map, required int day}) {
     final b = taxi?.booking;
     if (taxi == null || b == null) return taxi;
     final days = {for (final d in b.days) ?map[d]}.toList()..sort();
     if (days.isEmpty) return taxi.copyWith(clearBooking: true);
+    final at = days.indexOf(day);
     return taxi.copyWith(
       booking: b.copyWith(days: days),
-      fare: (b.agreedFare / days.length).round(),
+      fare: TripMoney.shareOf(b.agreedFare, days.length, at < 0 ? 0 : at),
     );
   }
 
@@ -2459,12 +2502,13 @@ class TripPlanController extends GetxController {
     final spot = p.spotById(id);
     if (fromDay == null || spot == null || fromDay == toDay || p.dayAt(toDay) == null) return null;
     if (p.legIndexOf(fromDay) != p.legIndexOf(toDay)) return null;
+    final at = _insertion(id, toDay)?.index;
     return [
       for (final d in p.days)
         if (d.day == fromDay)
           d.copyWith(spots: d.spots.where((s) => s.id != id).toList())
         else if (d.day == toDay)
-          d.copyWith(spots: [...d.spots, spot])
+          d.copyWith(spots: [...d.spots]..insert((at ?? d.spots.length).clamp(0, d.spots.length).toInt(), spot))
         else
           d,
     ];
@@ -3069,7 +3113,10 @@ class TripPlanController extends GetxController {
     final booking = _localBookingOf(e.listingId);
     final fare = t?.agreedFare ?? booking?.agreedFare;
     if (fare == null) return false;
-    final kept = (fare * rest.length ~/ days.length).clamp(TaxiOptionSets.minFare, TaxiOptionSets.maxFare).toInt();
+    final sorted = [...days]..sort();
+    final kept = TripMoney.keptOf(fare, sorted.length, [for (final d in rest) sorted.indexOf(d)])
+        .clamp(TaxiOptionSets.minFare, TaxiOptionSets.maxFare)
+        .toInt();
     final place = t?.pickupPlace ?? booking?.pickupPlace ?? settings.pickupPlace;
     final saved = await TripEnquiryController.to.bookTaxi(
       taxiId: e.listingId,
@@ -3101,17 +3148,23 @@ class TripPlanController extends GetxController {
         if (d.day == day)
           d.copyWith(clearTaxi: true)
         else if (all.isNotEmpty && d.taxi?.taxiId == t.taxiId && (d.taxi?.booking?.days.contains(day) ?? false))
-          d.copyWith(taxi: _withoutTravelDay(d.taxi!, day))
+          d.copyWith(taxi: _withoutTravelDay(d.taxi!, day, d.day))
         else
           d,
     ]);
   }
 
-  TripTaxiChoice _withoutTravelDay(TripTaxiChoice t, int day) {
+  TripTaxiChoice _withoutTravelDay(TripTaxiChoice t, int day, int self) {
     final b = t.booking!;
     final rest = b.days.where((x) => x != day).toList();
-    final fare = b.days.isEmpty ? b.agreedFare : b.agreedFare * rest.length ~/ b.days.length;
-    return t.copyWith(booking: b.copyWith(days: rest, agreedFare: fare));
+    if (b.days.isEmpty) return t.copyWith(booking: b.copyWith(days: rest));
+    final sorted = [...b.days]..sort();
+    final shares = TripMoney.even(b.agreedFare, sorted.length);
+    final at = sorted.indexOf(self);
+    return t.copyWith(
+      booking: b.copyWith(days: rest, agreedFare: TripMoney.keptOf(b.agreedFare, sorted.length, [for (final d in rest) sorted.indexOf(d)])),
+      fare: at < 0 ? t.fare : shares[at],
+    );
   }
 
   TravelImpact travelImpact(int legIndex) {
@@ -3443,10 +3496,11 @@ class TripPlanController extends GetxController {
   void selectTaxi(int day, TaxiBrowseItem t) {
     final p = plan.value;
     if (p == null || !canEditDay(day) || bookedTaxiEnquiryFor(day) != null) return;
+    final fit = Get.isRegistered<TripSupplyController>() ? Get.find<TripSupplyController>().taxiFitOf(t.id) : null;
     final choice = TripTaxiChoice(
       taxiId: t.id,
       name: t.driverName,
-      fare: t.localDayRate,
+      fare: fit == null ? t.localDayRate : fit.costFor(t.localDayRate),
       vehicleTypeName: t.vehicleTypeName.isEmpty ? null : t.vehicleTypeName,
     );
     _applyChoice([for (final d in p.days) d.day == day ? d.copyWith(taxi: choice) : d]);
@@ -3640,17 +3694,20 @@ class TripPlanController extends GetxController {
   void selectStay(int day, StayNearbyModel s) {
     final p = plan.value;
     if (p == null || !canEditDay(day)) return;
+    final price = Get.isRegistered<TripSupplyController>()
+        ? Get.find<TripSupplyController>().stayPriceOf(s)
+        : s.minPricePerNight;
     final choice = TripStayChoice(
       stayId: s.id,
       name: s.title,
-      pricePerNight: s.minPricePerNight,
+      pricePerNight: price,
       latitude: s.latitude,
       longitude: s.longitude,
     );
     final copy = TripStayChoice(
       stayId: s.id,
       name: s.title,
-      pricePerNight: s.minPricePerNight,
+      pricePerNight: price,
       sameAsDay: day,
       latitude: s.latitude,
       longitude: s.longitude,
@@ -3697,17 +3754,18 @@ class TripPlanController extends GetxController {
     if (known.isEmpty) return;
     final valid = known.where((d) => _sameLeg(p, d, known.first)).toList();
     final b = booking.copyWith(days: valid);
-    final choice = TripTaxiChoice(
-      taxiId: taxi.id,
-      name: taxi.driverName,
-      fare: (b.agreedFare / valid.length).round(),
-      vehicleTypeName: taxi.vehicleTypeName.isEmpty ? null : taxi.vehicleTypeName,
-      booking: b,
-    );
+    final shares = TripMoney.even(b.agreedFare, valid.length);
+    TripTaxiChoice choice(int day) => TripTaxiChoice(
+          taxiId: taxi.id,
+          name: taxi.driverName,
+          fare: shares[valid.indexOf(day)],
+          vehicleTypeName: taxi.vehicleTypeName.isEmpty ? null : taxi.vehicleTypeName,
+          booking: b,
+        );
     final days = [
       for (final d in p.days)
         if (valid.contains(d.day))
-          d.copyWith(taxi: choice)
+          d.copyWith(taxi: choice(d.day))
         else if (d.taxi?.isBooked == true && d.taxi!.taxiId == taxi.id)
           d.copyWith(clearTaxi: true)
         else if (_overlapsBooking(d, valid))
@@ -3944,8 +4002,7 @@ class TripPlanController extends GetxController {
     final p = plan.value;
     if (tripId == null || p == null || !p.settings.hasDates || _legacySynced.contains(tripId)) return;
     _legacySynced.add(tripId);
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    final today = TripClock.today();
     final seen = <String>{};
     for (final d in p.days) {
       final t = d.taxi;
@@ -4078,8 +4135,10 @@ class TripPlanController extends GetxController {
         final same = cur != null && !cur.isOwn && cur.taxiId == e.listingId;
         final b = cur?.booking;
         final t = e.taxi!;
+        final share = TripMoney.shareOf(fare, e.days.length, covered.indexOf(day));
         final upToDate = same &&
             b != null &&
+            cur.fare == share &&
             b.agreedFare == fare &&
             b.tollExtra == t.tollExtra &&
             b.pickupTime == t.pickupTime &&
@@ -4090,7 +4149,7 @@ class TripPlanController extends GetxController {
           taxi: TripTaxiChoice(
             taxiId: e.listingId,
             name: e.listingName,
-            fare: (fare / e.days.length).ceil(),
+            fare: share,
             vehicleTypeName: same ? cur.vehicleTypeName : null,
             booking: TripTaxiBooking(
               agreedFare: fare,
@@ -4164,7 +4223,7 @@ class TripPlanController extends GetxController {
       final ci = e.checkIn!;
       final nights = e.nights;
       final total = e.agreedTotal;
-      final price = total == null ? null : (total / nights).ceil();
+      final shares = total == null ? null : TripMoney.even(total, nights < 1 ? 1 : nights);
       final home = p == null ? null : TripEnquiryRules.homeLegIndex(e, p);
       int? firstDay;
       int? firstLeg;
@@ -4188,7 +4247,7 @@ class TripPlanController extends GetxController {
         final want = TripStayChoice(
           stayId: e.listingId,
           name: e.listingName,
-          pricePerNight: price,
+          pricePerNight: shares?[k],
           sameAsDay: firstDay,
           latitude: e.listingLatitude != null && e.listingLongitude != null ? e.listingLatitude : null,
           longitude: e.listingLatitude != null && e.listingLongitude != null ? e.listingLongitude : null,
@@ -4310,13 +4369,15 @@ class TripPlanController extends GetxController {
       return true;
     }
     if (d.stayShortlist.length >= TripConstants.maxShortlist) return false;
+    final supply = Get.isRegistered<TripSupplyController>() ? Get.find<TripSupplyController>() : null;
+    final fit = supply?.stayFitOf(s.id);
     final item = TripStayShortlistItem(
       stayId: s.id,
       name: s.title,
-      pricePerNight: s.minPricePerNight,
+      pricePerNight: supply?.stayPriceOf(s) ?? s.minPricePerNight,
       latitude: s.latitude,
       longitude: s.longitude,
-      distanceKm: s.distanceKm,
+      distanceKm: fit != null && fit.nearestKm.isFinite ? fit.nearestKm : s.distanceKm,
     );
     final copy = item.copyWith(sameAsDay: day);
     final end = _legEndOf(p, day);
@@ -4486,7 +4547,7 @@ class TripPlanController extends GetxController {
       prev = TripStayChoice(
         stayId: e.listingId,
         name: e.listingName,
-        pricePerNight: total == null ? null : (total / e.nights).ceil(),
+        pricePerNight: total == null ? null : TripMoney.shareOf(total, e.nights, e.nights - 1),
         latitude: e.listingLatitude != null && e.listingLongitude != null ? e.listingLatitude : null,
         longitude: e.listingLatitude != null && e.listingLongitude != null ? e.listingLongitude : null,
       );

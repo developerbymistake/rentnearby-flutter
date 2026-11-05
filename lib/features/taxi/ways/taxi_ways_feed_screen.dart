@@ -622,10 +622,11 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     final out = <Widget>[];
     var lastCars = 0;
     var bestShown = false;
+    final people = c.people.value;
     for (final row in rows) {
-      final cars = row is WayPlan ? row.cars : 1;
+      final cars = rowCars(row, people);
       if (sort == WaysSort.fewestCars && lastCars != 0 && cars != lastCars) {
-        out.add(_groupHeader(r, cars));
+        out.add(_groupHeader(r, cars, people));
       }
       lastCars = cars;
       String? reason;
@@ -638,6 +639,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
         out.add(WayDriverRow(
           key: ValueKey('d-${row.taxiId}'),
           driver: row,
+          people: people,
           bestReason: reason,
           onTap: () => _openDriver(c, r, row),
         ));
@@ -654,11 +656,11 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     return out;
   }
 
-  Widget _groupHeader(TaxiWaysResult r, int cars) {
+  Widget _groupHeader(TaxiWaysResult r, int cars, int people) {
     String? sub;
     if (cars == 2 && r.allTheWay.isNotEmpty) {
       final twoCar = r.plans.where((p) => p.cars == 2).toList();
-      final cheapestDriver = r.allTheWay.map((d) => d.listedFare).reduce((a, b) => a < b ? a : b);
+      final cheapestDriver = r.allTheWay.map((d) => d.groupFare(people)).reduce((a, b) => a < b ? a : b);
       if (twoCar.isNotEmpty && twoCar.map((p) => p.total).reduce((a, b) => a < b ? a : b) < cheapestDriver) {
         final names = <String>[];
         for (final p in twoCar) {

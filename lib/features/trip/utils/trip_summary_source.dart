@@ -9,6 +9,7 @@ import '../controllers/trip_plan_controller.dart';
 import '../data/trip_repository.dart';
 import '../data/trip_today_cache.dart';
 import '../models/trip_summary_model.dart';
+import 'trip_day_load.dart';
 
 class TripSummarySnapshot {
   final TripSummaryRecord record;
@@ -50,10 +51,12 @@ class TripSummarySource {
     for (final d in r.days) {
       final pd = plan.dayAt(d.day);
       final rd = result.dayAt(d.day);
-      if (pd == null || rd == null || rd.totalMinutes <= 0) continue;
+      if (pd == null || rd == null) continue;
+      final minutes = TripDayLoad.route(serverTotal: rd.totalMinutes, visitMinutes: pd.visitMinutes);
+      if (minutes <= 0) continue;
       if (!listEquals([for (final s in pd.spots) s.id], rd.spotIds)) continue;
       if (!listEquals([for (final s in pd.spots) s.name], d.spots)) continue;
-      byDay[d.day] = rd.totalMinutes;
+      byDay[d.day] = minutes;
     }
     return r.withDayMinutes(byDay);
   }

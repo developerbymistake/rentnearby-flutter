@@ -18,6 +18,7 @@ import '../trip_strings_a4.dart';
 import '../trip_strings_g3.dart';
 import '../trip_strings_steps_a2.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_clock.dart';
 import '../widgets/trip_change_request_sheet.dart';
 import '../widgets/trip_step_card.dart';
 import '../widgets/trip_status.dart';
@@ -334,10 +335,7 @@ class _DetailsBodyState extends State<_DetailsBody> {
 
   bool get _datesRequired => widget.heading != null;
 
-  DateTime get _today {
-    final n = DateTime.now();
-    return DateTime(n.year, n.month, n.day);
-  }
+  DateTime get _today => TripClock.today();
 
   Future<void> _pickStart() async {
     FocusScope.of(context).unfocus();

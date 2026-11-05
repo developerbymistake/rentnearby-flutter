@@ -1,5 +1,6 @@
 import '../../../config/app_constants.dart';
 import '../../../models/browse_item.dart';
+import '../../../utils/money_format.dart';
 
 String? jobPhotoUrl(Object? raw) {
   final u = raw as String?;
@@ -10,24 +11,10 @@ String? jobPhotoUrl(Object? raw) {
 String jobSalaryLabel(int min, int max) =>
     min == max ? BrowseItem.inr(min) : '${BrowseItem.inr(min)} - ${BrowseItem.inr(max).substring(1)}';
 
-String _thousands(int v) {
-  final k = v / 1000;
-  return k == k.roundToDouble() ? '${k.round()}k' : '${k.toStringAsFixed(1)}k';
-}
-
 String jobSalaryCompact(int min, int max) {
   if (min <= 0 && max <= 0) return 'Negotiable';
-  if (min == max || min <= 0 || max <= 0) {
-    final v = max > 0 ? max : min;
-    return v >= 1000 ? '₹${_thousands(v)}' : BrowseItem.inr(v);
-  }
-  if (min >= 1000 && max >= 1000) {
-    final a = _thousands(min);
-    return '₹${a.substring(0, a.length - 1)}-${_thousands(max)}';
-  }
-  final a = min >= 1000 ? _thousands(min) : '$min';
-  final b = max >= 1000 ? _thousands(max) : '$max';
-  return '₹$a - $b';
+  if (min == max || min <= 0 || max <= 0) return Money.short(max > 0 ? max : min);
+  return Money.shortRange(min, max);
 }
 
 String jobExperienceLabel(int years) => years == 0 ? 'Fresher' : '$years+ yrs';

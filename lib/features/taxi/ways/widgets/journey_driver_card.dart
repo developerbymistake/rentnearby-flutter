@@ -7,6 +7,7 @@ import '../../guest/taxi_navigation.dart';
 import '../../taxi_option_sets.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
+import '../../../trip/trip_strings_algo_aa.dart';
 
 class JourneyDriverCard extends StatelessWidget {
   final WayDriver driver;
@@ -112,7 +113,7 @@ class JourneyDriverCard extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                BrowseItem.inr(d.listedFare),
+                d.isEstimate ? TripStringsAlgoAa.about(BrowseItem.inr(d.fare)) : BrowseItem.inr(d.fare),
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textDark),
               ),
             ),

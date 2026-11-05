@@ -30,6 +30,7 @@ import '../features/trip/widgets/trip_home_card.dart';
 import '../features/trip/widgets/trip_popular_rail.dart';
 import '../services/add_listing_flow.dart';
 import '../utils/app_toast.dart';
+import '../utils/area_format.dart';
 import '../widgets/home_owner_carousel.dart';
 import '../widgets/home_stay_rail_card.dart';
 import '../widgets/home_taxi_rail_card.dart';
@@ -1015,16 +1016,13 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     final p = item.plot!;
-    final area = p.areaValue == p.areaValue.roundToDouble()
-        ? p.areaValue.toStringAsFixed(0)
-        : p.areaValue.toStringAsFixed(1);
     return NearbyItemRow(
       thumbnailUrl: p.thumbnailUrl,
       tag: 'FOR SALE',
       title: '${p.plotTypeName ?? 'Plot'} Plot',
       subtitle: p.districtName,
       caption: 'PLOT AREA',
-      value: '$area ${p.areaUnit}'.trim(),
+      value: AreaFormat.label(p.areaValue, p.areaUnit),
       palette: ModulePalette.plots,
       placeholderIcon: Icons.landscape_rounded,
       onTap: () => Get.toNamed(AppRoutes.plotDetail, arguments: {'id': p.id}),

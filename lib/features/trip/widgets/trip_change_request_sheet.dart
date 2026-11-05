@@ -14,6 +14,7 @@ import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_clock.dart';
 import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
 
@@ -103,10 +104,7 @@ class _ChangeBodyState extends State<_ChangeBody> {
 
   static DateTime? _day(DateTime? d) => d == null ? null : DateTime(d.year, d.month, d.day);
 
-  DateTime get _today {
-    final n = DateTime.now();
-    return DateTime(n.year, n.month, n.day);
-  }
+  DateTime get _today => TripClock.today();
 
   bool get _changed =>
       _checkIn != _origIn || _checkOut != _origOut || _adults != _origAdults || _kids != _origKids || _rooms != _origRooms;

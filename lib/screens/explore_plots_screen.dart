@@ -18,6 +18,7 @@ import '../controllers/location_controller.dart';
 import '../controllers/plot_controller.dart';
 import '../models/plot_model.dart';
 import '../navigation/tour_keys.dart';
+import '../utils/map_clustering.dart';
 import '../widgets/add_listing_shortcut_button.dart';
 import '../widgets/empty_radius_hint.dart';
 import '../widgets/location_pill.dart';
@@ -581,13 +582,7 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     final userMarker = _buildUserMarkerData();
     if (userMarker != null) data.add(userMarker);
 
-    final plots = _filteredPlots
-      ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-
-    final filtered = plots.take(AppConstants.maxMapMarkers).toList();
-    final clusters = _mapReady
-        ? _computeClusters(filtered)
-        : filtered.map((p) => _PlotCluster(p)).toList();
+    final clusters = _computeClusters(_filteredPlots);
 
     for (final cluster in clusters) {
       final count = cluster.plots.length;
@@ -746,44 +741,14 @@ class _ExplorePlotsScreenState extends State<ExplorePlotsScreen>
     _animateTo(cluster.center, targetZoom);
   }
 
-  List<_PlotCluster> _computeClusters(List<NearbyPlotModel> plots) {
-    if (plots.isEmpty) return [];
-    const cellSize = 48.0;
-    final zoom = _currentZoom;
-    final scale = 512.0 * pow(2.0, zoom);
-    final grid = <(int, int), List<_PlotCluster>>{};
-    final anchors = <_PlotCluster, (double, double)>{};
-    final result = <_PlotCluster>[];
-    for (final plot in plots) {
-      final sinLat = sin(plot.latitude * pi / 180);
-      final mpy = 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
-      final spx = (plot.longitude + 180) / 360 * scale;
-      final spy = mpy * scale;
-      final gi = (spx / cellSize).floor();
-      final gj = (spy / cellSize).floor();
-      _PlotCluster? target;
-      double bestDist = double.infinity;
-      for (var di = -1; di <= 1; di++) {
-        for (var dj = -1; dj <= 1; dj++) {
-          for (final c in grid[(gi + di, gj + dj)] ?? const []) {
-            final (ax, ay) = anchors[c]!;
-            final dx = spx - ax, dy = spy - ay;
-            final d = sqrt(dx * dx + dy * dy);
-            if (d <= cellSize && d < bestDist) { bestDist = d; target = c; }
-          }
-        }
-      }
-      if (target != null) {
-        target.plots.add(plot);
-      } else {
-        final c = _PlotCluster(plot);
-        anchors[c] = (spx, spy);
-        grid.putIfAbsent((gi, gj), () => []).add(c);
-        result.add(c);
-      }
-    }
-    return result;
-  }
+  List<_PlotCluster> _computeClusters(List<NearbyPlotModel> plots) => MapClustering.cluster<NearbyPlotModel>(
+        plots,
+        lat: (p) => p.latitude,
+        lon: (p) => p.longitude,
+        zoom: _currentZoom,
+        radiusPx: AppConstants.clusterCellPx,
+        maxClusters: AppConstants.maxMapMarkers,
+      ).map(_PlotCluster.new).toList();
 
   static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
     const steps = 64;
@@ -1583,15 +1548,12 @@ class _MapMarkerData {
 }
 
 class _PlotCluster {
-  final List<NearbyPlotModel> plots;
-  _PlotCluster(NearbyPlotModel first) : plots = [first];
+  final MapCluster<NearbyPlotModel> group;
+  _PlotCluster(this.group);
 
-  LatLng get center => LatLng(
-        plots.map((p) => p.latitude).reduce((a, b) => a + b) / plots.length,
-        plots.map((p) => p.longitude).reduce((a, b) => a + b) / plots.length,
-      );
-
-  NearbyPlotModel get representative => plots.reduce((a, b) => a.areaSqft <= b.areaSqft ? a : b);
+  List<NearbyPlotModel> get plots => group.items;
+  LatLng get center => LatLng(group.latitude, group.longitude);
+  NearbyPlotModel get representative => group.first;
 }
 
 // ── Animation widgets ─────────────────────────────────────────────────────────

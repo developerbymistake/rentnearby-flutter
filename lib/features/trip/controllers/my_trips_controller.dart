@@ -6,6 +6,7 @@ import '../../../utils/dio_error_mapper.dart';
 import '../data/trip_repository.dart';
 import '../models/trip_model.dart';
 import '../trip_strings.dart';
+import '../utils/trip_clock.dart';
 
 class MyTripsController extends GetxController {
   static MyTripsController get to => Get.isRegistered<MyTripsController>()
@@ -46,10 +47,7 @@ class MyTripsController extends GetxController {
     super.onClose();
   }
 
-  static DateTime get _today {
-    final n = DateTime.now();
-    return DateTime(n.year, n.month, n.day);
-  }
+  static DateTime get _today => TripClock.today();
 
   Future<void> refreshIfStale() {
     if (!_loadedOnce || isLoading.value) return Future.value();
@@ -90,7 +88,7 @@ class MyTripsController extends GetxController {
   }
 
   TripSummaryModel? get runningTrip {
-    final now = DateTime.now();
+    final now = TripClock.today();
     final source = upcoming.isNotEmpty || _loadedDay != null
         ? upcoming
         : (_repo.cachedList(_upcoming)?.value.items ?? const <TripSummaryModel>[]);

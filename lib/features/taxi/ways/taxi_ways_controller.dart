@@ -103,7 +103,7 @@ class TaxiWaysController extends GetxController {
 
   List<Object> get rows {
     final r = result.value;
-    return r == null ? const [] : sortedRows(r, sort.value);
+    return r == null ? const [] : sortedRows(r, sort.value, people: people.value);
   }
 
   Future<void> load() async {

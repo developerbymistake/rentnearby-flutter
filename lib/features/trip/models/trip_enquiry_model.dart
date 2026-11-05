@@ -1,4 +1,6 @@
 import '../trip_constants.dart';
+import '../trip_strings.dart';
+import '../trip_strings_algo_aa.dart';
 import '../utils/trip_format.dart';
 import '../widgets/trip_status.dart';
 import 'trip_offer_model.dart';
@@ -523,8 +525,22 @@ class TripEnquiryModel {
     final a = checkIn;
     final b = checkOut;
     if (a == null) return '';
+    if (isTaxi) {
+      final dates = taxiDates;
+      if (dates.isNotEmpty) return TripFormat.dateSet(dates);
+      final last = b == null ? a : DateTime(b.year, b.month, b.day - 1);
+      return TripFormat.dateRange(a, last.isBefore(a) ? a : last);
+    }
     return TripFormat.dateRange(a, b ?? a);
   }
+
+  int get serviceDays {
+    if (!isTaxi) return nights;
+    final n = days.isNotEmpty ? days.toSet().length : nights;
+    return n < 1 ? 1 : n;
+  }
+
+  String get countLabel => isTaxi ? TripStringsAlgoAa.days(serviceDays) : TripStrings.nights(nights);
 
   bool coversDate(DateTime d) {
     final a = checkIn;

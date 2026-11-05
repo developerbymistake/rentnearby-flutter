@@ -21,6 +21,7 @@ import '../trip_strings_a2.dart';
 import '../trip_strings_fin_b1.dart';
 import '../trip_strings_mca_a3.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_clock.dart';
 import '../widgets/trip_filter_chips.dart';
 import '../widgets/trip_night_chooser.dart';
 import '../widgets/trip_page_header.dart';
@@ -125,8 +126,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
   String _title(int d) {
     if (_plan.isMultiCity) return TripStringsMcaA3.stayIn(_plan.cityNameOf(d));
     final date = _plan.dateOf(d);
-    final now = DateTime.now();
-    final today = date != null && date.year == now.year && date.month == now.month && date.day == now.day;
+    final today = date != null && TripClock.daysBetween(date, TripClock.today()) == 0;
     return TripStrings.nightTitle(d, today: today);
   }
 
@@ -539,6 +539,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
     return TripStayRow(
       key: ValueKey(s.id),
       stay: s,
+      fit: _supply.stayFitOf(s.id),
       shortlisted: shortlisted,
       status: asked?.display,
       statusLine: _askedLine(asked),

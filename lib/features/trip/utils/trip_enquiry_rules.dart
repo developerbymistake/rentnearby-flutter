@@ -4,7 +4,9 @@ import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../trip_strings_algo_aa.dart';
 import '../widgets/trip_status.dart';
+import 'trip_clock.dart';
 
 class TripPreviewDay {
   final int day;
@@ -93,6 +95,18 @@ class TripEnquiryRules {
     final today = todayIst(nowUtc);
     final d = DateTime.utc(start.year, start.month, start.day).difference(DateTime.utc(today.year, today.month, today.day)).inDays;
     return d < 0 ? 0 : d;
+  }
+
+  // One 'Tonight / Tomorrow / In N days' rule on this stay's own check-in, IST; null for no date or a past check-in.
+  static String? checkInLabel(DateTime? checkIn, DateTime nowUtc) {
+    if (checkIn == null) return null;
+    final r = TripClock.checkInRelative(checkIn, nowUtc);
+    return switch (r.when) {
+      TripCheckInWhen.past => null,
+      TripCheckInWhen.tonight => TripStrings.tonight,
+      TripCheckInWhen.tomorrow => TripStringsAlgoAa.tomorrow,
+      TripCheckInWhen.later => TripStringsAlgoAa.inDays(r.days),
+    };
   }
 
   static String clean(String? s, [int max = maxTextLen]) {

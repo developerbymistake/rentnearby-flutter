@@ -153,6 +153,7 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> {
                   child: Obx(() => RoadView(
                         plan: plan,
                         chosen: c.chosenOf(plan.planKey),
+                        people: c.people.value,
                         selectedLeg: _selected,
                         onSelectLeg: _select,
                       )),

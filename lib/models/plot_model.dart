@@ -1,10 +1,7 @@
 import '../config/app_constants.dart';
+import '../utils/area_format.dart';
 
-String _formatArea(double value, String unit) {
-  final display = value == value.truncate() ? value.toInt().toString() : value.toString();
-  return '$display $unit';
-}
-
+String _formatArea(double value, String unit) => AreaFormat.label(value, unit);
 
 class NearbyPlotModel {
   final String id;
@@ -56,13 +53,6 @@ class NearbyPlotModel {
         priorityRank: (json['priorityRank'] as num?)?.toInt() ?? 0,
         isFeatured: json['isFeatured'] == true,
       );
-
-  double get areaSqft => switch (areaUnit) {
-    'bigha' => areaValue * 27000,
-    'acre'  => areaValue * 43560,
-    'nali'  => areaValue * 2152.78,
-    _       => areaValue,
-  };
 
   String get areaDisplay => _formatArea(areaValue, areaUnit);
 }

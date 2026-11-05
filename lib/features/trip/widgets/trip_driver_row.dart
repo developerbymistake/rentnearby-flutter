@@ -8,6 +8,8 @@ import '../../taxi/taxi_option_sets.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a3.dart';
+import '../trip_strings_algo_aa.dart';
+import '../utils/trip_taxi_fit.dart';
 import 'trip_status.dart';
 
 class TripDriverRow extends StatelessWidget {
@@ -26,11 +28,13 @@ class TripDriverRow extends StatelessWidget {
     this.selected = false,
     this.contactBusy = false,
     this.menuItems = const [],
+    this.fit,
   });
 
   static const double height = 172;
 
   final TaxiBrowseItem item;
+  final TripTaxiFit? fit;
   final TripDisplayStatus? status;
   final bool shortlisted;
   final bool shortlistFull;
@@ -148,7 +152,10 @@ class TripDriverRow extends StatelessWidget {
   }
 
   Widget _price() {
-    final rate = item.localDayRate;
+    final f = fit;
+    final rate = f == null ? item.localDayRate : f.costFor(item.localDayRate);
+    final cars = f?.carCount ?? 1;
+    final extra = f?.extraKm;
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 96),
       child: Column(
@@ -166,10 +173,15 @@ class TripDriverRow extends StatelessWidget {
                     color: AppColors.textDark)),
           ),
           if (rate != null)
-            const Text(TripStringsA3.perDayLocal,
+            Text(cars > 1 ? TripStringsAlgoAa.carsPerDay(cars) : TripStringsA3.perDayLocal,
                 maxLines: 2,
                 textAlign: TextAlign.end,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, color: AppColors.textLight)),
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, color: AppColors.textLight)),
+          if (extra != null && extra > 0)
+            Text(TripStringsAlgoAa.extraKm(extra),
+                maxLines: 2,
+                textAlign: TextAlign.end,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, color: AppColors.warningText)),
         ],
       ),
     );

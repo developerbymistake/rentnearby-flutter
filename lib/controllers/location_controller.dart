@@ -9,6 +9,7 @@ import '../models/city_model.dart';
 import '../models/location_context.dart';
 import '../repositories/locations_repository.dart';
 import '../services/api_service.dart';
+import '../utils/city_pick.dart';
 
 /// Result shape for the GPS-flow resolver ([LocationController._loadContext])
 /// — deliberately distinct from the public [LocationContext] (which also
@@ -16,7 +17,9 @@ import '../services/api_service.dart';
 class _LoadContextResult {
   final DistrictModel district;
   final CityModel? nearestCity;
-  const _LoadContextResult({required this.district, this.nearestCity});
+  final double lat;
+  final double lng;
+  const _LoadContextResult({required this.district, this.nearestCity, required this.lat, required this.lng});
 }
 
 class LocationController extends GetxController {
@@ -320,11 +323,7 @@ class LocationController extends GetxController {
       final ctx = await _loadContext(pos.latitude, pos.longitude);
       if (ctx == null) return;
       if (myVersion != _loadContextVersion) return;
-      if (selectedDistrict.value == null ||
-          selectedDistrict.value!.id != ctx.district.id) {
-        autoCity.value = ctx.nearestCity;
-        selectedDistrict.value = ctx.district;
-      }
+      _applyGpsContext(ctx);
     } catch (_) {
     } finally {
       _refreshing = false;
@@ -426,11 +425,7 @@ class LocationController extends GetxController {
       final ctx = await _loadContext(pos.latitude, pos.longitude);
       if (ctx == null) return;
       if (myVersion != _loadContextVersion) return;
-      if (selectedDistrict.value == null ||
-          selectedDistrict.value!.id != ctx.district.id) {
-        autoCity.value = ctx.nearestCity;
-        selectedDistrict.value = ctx.district;  // fires screen worker after autoCity is set
-      }
+      _applyGpsContext(ctx);
     } catch (_) {
       locationLoading.value = false;
       _tryAutoLoad();
@@ -511,7 +506,7 @@ class LocationController extends GetxController {
       final ctx = await _fetchLocationContext(lat, lng);
       nearbyCities.value = ctx.citiesInDistrict;
       districtUnavailable.value = false;
-      return _LoadContextResult(district: ctx.district, nearestCity: ctx.nearestCity);
+      return _LoadContextResult(district: ctx.district, nearestCity: ctx.nearestCity, lat: lat, lng: lng);
     } on DistrictNotFoundException {
       districtUnavailable.value = true;
       return null;
@@ -547,13 +542,20 @@ class LocationController extends GetxController {
   // (avoiding a duplicate /locations/context hit), which only stays correct
   // if those fields are already current by the time the trigger fires.
   void _publishResolvedContext(_LoadContextResult ctx) {
-    // Only update if user moved to a different district.
+    _applyGpsContext(ctx);
+    resumeLocationRefreshedTrigger.value++;
+  }
+
+  // District changes reload screens; within the same district only the GPS city moves.
+  void _applyGpsContext(_LoadContextResult ctx) {
     if (selectedDistrict.value == null ||
         selectedDistrict.value!.id != ctx.district.id) {
       autoCity.value = ctx.nearestCity;
       selectedDistrict.value = ctx.district;  // fires screen worker after autoCity is set
+      return;
     }
-    resumeLocationRefreshedTrigger.value++;
+    final next = CityPick.next(autoCity.value, ctx.nearestCity, ctx.lat, ctx.lng);
+    if (next?.id != autoCity.value?.id) autoCity.value = next;
   }
 
   // ── Pause/resume handlers (called from MainScreen on every lifecycle change) ──

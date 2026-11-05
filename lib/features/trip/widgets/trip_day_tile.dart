@@ -53,9 +53,8 @@ class TripDayTile extends StatelessWidget {
         final travel = plan.isTravelDay(day);
         final prev = travel ? plan.legAt(legIndex - 1)?.cityName : null;
         final road = travel ? c.roadMinutesOf(legIndex) : null;
-        final total = c.dayTotalMinutes(day) + (road ?? 0);
-        final over = c.isOverLimit(day) ||
-            (travel && (total > c.dayLimitMinutes || (c.resultDay(day)?.overLimit ?? false)));
+        final total = c.dayLoadMinutes(day);
+        final over = c.isOverLimit(day);
         final closed = c
             .warningsFor(day)
             .where((w) => w.code == TripWarningCodes.closedDay)

@@ -18,6 +18,8 @@ import '../controllers/location_controller.dart';
 import '../models/browse_item.dart';
 import '../models/listing_model.dart';
 import '../navigation/tour_keys.dart';
+import '../utils/map_clustering.dart';
+import '../utils/money_format.dart';
 import '../widgets/add_listing_shortcut_button.dart';
 import '../widgets/empty_radius_hint.dart';
 import '../widgets/listing_bottom_sheet.dart';
@@ -594,13 +596,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     final userMarker = _buildUserMarkerData();
     if (userMarker != null) data.add(userMarker);
 
-    final listings = _filteredListings
-      ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-
-    final filtered = listings.take(AppConstants.maxMapMarkers).toList();
-    final clusters = _mapReady
-        ? _computeClusters(filtered)
-        : filtered.map(_Cluster.new).toList();
+    final clusters = _computeClusters(_filteredListings);
 
     for (final cluster in clusters) {
       final count = cluster.listings.length;
@@ -771,44 +767,14 @@ class _ExploreScreenState extends State<ExploreScreen>
     _animateTo(cluster.center, targetZoom);
   }
 
-  List<_Cluster> _computeClusters(List<NearbyListingModel> listings) {
-    if (listings.isEmpty) return [];
-    const cellSize = 48.0;
-    final zoom = _currentZoom;
-    final scale = 512.0 * pow(2.0, zoom);
-    final grid = <(int, int), List<_Cluster>>{};
-    final anchors = <_Cluster, (double, double)>{};
-    final result = <_Cluster>[];
-    for (final listing in listings) {
-      final sinLat = sin(listing.latitude * pi / 180);
-      final mpy = 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
-      final spx = (listing.longitude + 180) / 360 * scale;
-      final spy = mpy * scale;
-      final gi = (spx / cellSize).floor();
-      final gj = (spy / cellSize).floor();
-      _Cluster? target;
-      double bestDist = double.infinity;
-      for (var di = -1; di <= 1; di++) {
-        for (var dj = -1; dj <= 1; dj++) {
-          for (final c in grid[(gi + di, gj + dj)] ?? const []) {
-            final (ax, ay) = anchors[c]!;
-            final dx = spx - ax, dy = spy - ay;
-            final d = sqrt(dx * dx + dy * dy);
-            if (d <= cellSize && d < bestDist) { bestDist = d; target = c; }
-          }
-        }
-      }
-      if (target != null) {
-        target.listings.add(listing);
-      } else {
-        final c = _Cluster(listing);
-        anchors[c] = (spx, spy);
-        grid.putIfAbsent((gi, gj), () => []).add(c);
-        result.add(c);
-      }
-    }
-    return result;
-  }
+  List<_Cluster> _computeClusters(List<NearbyListingModel> listings) => MapClustering.cluster<NearbyListingModel>(
+        listings,
+        lat: (l) => l.latitude,
+        lon: (l) => l.longitude,
+        zoom: _currentZoom,
+        radiusPx: AppConstants.clusterCellPx,
+        maxClusters: AppConstants.maxMapMarkers,
+      ).map(_Cluster.new).toList();
 
   static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
     const steps = 64;
@@ -895,20 +861,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   double _chipWidth(String text) => (text.length * 9.0 + 26).clamp(52.0, 90.0);
 
-  String _pinPrice(int price) {
-    if (price >= 100000) {
-      final l = price / 100000;
-      return l == l.truncateToDouble()
-          ? '₹${l.toInt()}L'
-          : '₹${l.toStringAsFixed(1)}L';
-    }
-    if (price >= 1000) {
-      final t = price ~/ 1000;
-      final h = price % 1000;
-      return h == 0 ? '₹${t}k' : '₹$t,${h.toString().padLeft(3, '0')}';
-    }
-    return '₹$price';
-  }
+  String _pinPrice(int price) => Money.short(price);
 
   void _showDetail(String id) {
     final listing =
@@ -1660,18 +1613,12 @@ class _MapMarkerData {
 }
 
 class _Cluster {
-  final List<NearbyListingModel> listings;
-  _Cluster(NearbyListingModel first) : listings = [first];
+  final MapCluster<NearbyListingModel> group;
+  _Cluster(this.group);
 
-  LatLng get center => LatLng(
-        listings.map((l) => l.latitude).reduce((a, b) => a + b) /
-            listings.length,
-        listings.map((l) => l.longitude).reduce((a, b) => a + b) /
-            listings.length,
-      );
-
-  NearbyListingModel get representative => listings.reduce((a, b) =>
-      (a.priceMonthly ?? 999999999) <= (b.priceMonthly ?? 999999999) ? a : b);
+  List<NearbyListingModel> get listings => group.items;
+  LatLng get center => LatLng(group.latitude, group.longitude);
+  NearbyListingModel get representative => group.first;
 }
 
 // ── Animation widgets ────────────────────────────────────────────────────────

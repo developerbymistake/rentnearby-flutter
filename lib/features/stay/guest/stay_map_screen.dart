@@ -16,6 +16,8 @@ import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../models/browse_item.dart';
 import '../../../screens/explore_location_search_mixin.dart';
+import '../../../utils/map_clustering.dart';
+import '../../../utils/money_format.dart';
 import '../../../widgets/add_listing_shortcut_button.dart';
 import '../../../widgets/empty_radius_hint.dart';
 import '../../../widgets/location_pill.dart';
@@ -478,9 +480,7 @@ class _StayMapScreenState extends State<StayMapScreen>
     final userMarker = _buildUserMarkerData();
     if (userMarker != null) data.add(userMarker);
 
-    final stays = _guest.nearbyStays.toList()..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-    final filtered = stays.take(AppConstants.maxMapMarkers).toList();
-    final clusters = _mapReady ? _computeClusters(filtered) : filtered.map(_Cluster.new).toList();
+    final clusters = _computeClusters(_guest.nearbyStays.toList());
 
     for (final cluster in clusters) {
       final count = cluster.stays.length;
@@ -616,46 +616,14 @@ class _StayMapScreenState extends State<StayMapScreen>
     _animateTo(cluster.center, targetZoom);
   }
 
-  List<_Cluster> _computeClusters(List<StayNearbyModel> stays) {
-    if (stays.isEmpty) return [];
-    const cellSize = 48.0;
-    final scale = 512.0 * pow(2.0, _currentZoom);
-    final grid = <(int, int), List<_Cluster>>{};
-    final anchors = <_Cluster, (double, double)>{};
-    final result = <_Cluster>[];
-    for (final stay in stays) {
-      final sinLat = sin(stay.latitude * pi / 180);
-      final mpy = 0.5 - log((1 + sinLat) / (1 - sinLat)) / (4 * pi);
-      final spx = (stay.longitude + 180) / 360 * scale;
-      final spy = mpy * scale;
-      final gi = (spx / cellSize).floor();
-      final gj = (spy / cellSize).floor();
-      _Cluster? target;
-      double bestDist = double.infinity;
-      for (var di = -1; di <= 1; di++) {
-        for (var dj = -1; dj <= 1; dj++) {
-          for (final c in grid[(gi + di, gj + dj)] ?? const []) {
-            final (ax, ay) = anchors[c]!;
-            final dx = spx - ax, dy = spy - ay;
-            final d = sqrt(dx * dx + dy * dy);
-            if (d <= cellSize && d < bestDist) {
-              bestDist = d;
-              target = c;
-            }
-          }
-        }
-      }
-      if (target != null) {
-        target.stays.add(stay);
-      } else {
-        final c = _Cluster(stay);
-        anchors[c] = (spx, spy);
-        grid.putIfAbsent((gi, gj), () => []).add(c);
-        result.add(c);
-      }
-    }
-    return result;
-  }
+  List<_Cluster> _computeClusters(List<StayNearbyModel> stays) => MapClustering.cluster<StayNearbyModel>(
+        stays,
+        lat: (s) => s.latitude,
+        lon: (s) => s.longitude,
+        zoom: _currentZoom,
+        radiusPx: AppConstants.clusterCellPx,
+        maxClusters: AppConstants.maxMapMarkers,
+      ).map(_Cluster.new).toList();
 
   static List<LatLng> _circlePolygonPoints(LatLng center, double radiusKm) {
     const steps = 64;
@@ -727,18 +695,7 @@ class _StayMapScreenState extends State<StayMapScreen>
 
   double _chipWidth(String text) => (text.length * 9.0 + 26).clamp(52.0, 90.0);
 
-  String _pinPrice(int price) {
-    if (price >= 100000) {
-      final l = price / 100000;
-      return l == l.truncateToDouble() ? '₹${l.toInt()}L' : '₹${l.toStringAsFixed(1)}L';
-    }
-    if (price >= 1000) {
-      final t = price ~/ 1000;
-      final h = price % 1000;
-      return h == 0 ? '₹${t}k' : '₹$t,${h.toString().padLeft(3, '0')}';
-    }
-    return '₹$price';
-  }
+  String _pinPrice(int price) => Money.short(price);
 
   void _showDetail(String id) {
     final stay = _guest.nearbyStays.firstWhereOrNull((l) => l.id == id);
@@ -1230,16 +1187,12 @@ class _MapMarkerData {
 }
 
 class _Cluster {
-  final List<StayNearbyModel> stays;
-  _Cluster(StayNearbyModel first) : stays = [first];
+  final MapCluster<StayNearbyModel> group;
+  _Cluster(this.group);
 
-  LatLng get center => LatLng(
-        stays.map((l) => l.latitude).reduce((a, b) => a + b) / stays.length,
-        stays.map((l) => l.longitude).reduce((a, b) => a + b) / stays.length,
-      );
-
-  StayNearbyModel get representative =>
-      stays.reduce((a, b) => (a.minPricePerNight ?? 999999999) <= (b.minPricePerNight ?? 999999999) ? a : b);
+  List<StayNearbyModel> get stays => group.items;
+  LatLng get center => LatLng(group.latitude, group.longitude);
+  StayNearbyModel get representative => group.first;
 }
 
 class _AnimatedPin extends StatefulWidget {

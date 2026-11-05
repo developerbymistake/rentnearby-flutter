@@ -81,6 +81,7 @@ class WayDriver {
   final String fromName;
   final String toName;
   final int listedFare;
+  final int? estimatedFare;
   final String tripType;
   final bool partial;
   final bool reversed;
@@ -106,6 +107,7 @@ class WayDriver {
     required this.fromName,
     required this.toName,
     required this.listedFare,
+    this.estimatedFare,
     this.tripType = 'OneWay',
     this.partial = false,
     this.reversed = false,
@@ -132,6 +134,7 @@ class WayDriver {
         fromName: _s(json['fromName']),
         toName: _s(json['toName']),
         listedFare: _i(json['listedFare']),
+        estimatedFare: _in(json['estimatedFare']),
         tripType: _s(json['tripType'], 'OneWay'),
         partial: json['partial'] == true,
         reversed: json['reversed'] == true,
@@ -143,6 +146,15 @@ class WayDriver {
       );
 
   bool get repliesInApp => tripReplyLabel == 'app';
+
+  // Per car for this stretch: the road-share estimate of a partial route, else the driver's quote.
+  int get fare => estimatedFare ?? listedFare;
+
+  bool get isEstimate => estimatedFare != null;
+
+  int carsFor(int people) => WayCars.needed(people, seats);
+
+  int groupFare(int people) => fare * carsFor(people);
 
   bool get hasContact => phone != null || whatsApp != null;
 
@@ -172,6 +184,8 @@ class WayLeg {
   final List<LatLngPair>? geometry;
   final int carsNeeded;
   final String? seatsNote;
+  final List<String> coverTaxiIds;
+  final bool fareEstimated;
 
   const WayLeg({
     required this.legKey,
@@ -190,6 +204,8 @@ class WayLeg {
     this.geometry,
     this.carsNeeded = 1,
     this.seatsNote,
+    this.coverTaxiIds = const [],
+    this.fareEstimated = false,
   });
 
   factory WayLeg.fromJson(Map<String, dynamic> json) => WayLeg(
@@ -209,6 +225,8 @@ class WayLeg {
         geometry: _geometry(json['geometry']),
         carsNeeded: _i(json['carsNeeded']) < 1 ? 1 : _i(json['carsNeeded']),
         seatsNote: _sn(json['seatsNote']),
+        coverTaxiIds: json['coverTaxiIds'] is List ? (json['coverTaxiIds'] as List).whereType<String>().toList() : const [],
+        fareEstimated: json['fareEstimated'] == true,
       );
 
   static List<LatLngPair>? _geometry(Object? v) {
@@ -265,7 +283,7 @@ class WayPlan {
   }
 
   factory WayPlan.single(WayPlace from, WayPlace to, List<WayDriver> drivers) {
-    final fare = drivers.isEmpty ? 0 : drivers.first.listedFare;
+    final fare = drivers.isEmpty ? 0 : drivers.first.fare;
     return WayPlan(
       planKey: 'p1~${from.key}~${to.key}',
       cars: 1,
@@ -294,11 +312,12 @@ class WayPlan {
 
   int get maxCarsNeeded => legs.fold(1, (m, l) => l.carsNeeded > m ? l.carsNeeded : m);
 
-  int totalWith(Map<int, WayDriver> chosen) {
+  // The server's seat cover for a leg left as is; a chosen driver carries the whole group in his own cars.
+  int totalWith(Map<int, WayDriver> chosen, {int people = 1}) {
     var sum = 0;
     for (final leg in legs) {
       final d = chosen[leg.index];
-      sum += d == null ? leg.listedFare : d.listedFare * leg.carsNeeded;
+      sum += d == null ? leg.listedFare : d.groupFare(people);
     }
     return sum;
   }
@@ -353,17 +372,30 @@ class TaxiWaysResult {
   bool get hasWays => allTheWay.isNotEmpty || plans.isNotEmpty;
 }
 
-List<Object> sortedRows(TaxiWaysResult r, WaysSort s) {
-  final rows = <Object>[...r.allTheWay];
-  final plans = [...r.plans];
-  _stableSort(plans, (a, b) {
-    final c = a.cars.compareTo(b.cars);
-    return c != 0 ? c : a.total.compareTo(b.total);
+int rowCars(Object o, int people) => o is WayDriver ? o.carsFor(people) : (o as WayPlan).cars;
+
+// The whole group's price for a row: a driver's fare x his cars, a plan's total.
+int rowPrice(Object o, int people) => o is WayDriver ? o.groupFare(people) : (o as WayPlan).total;
+
+// Fewest cars: by cars, plans by total inside a car count, drivers keep the server order. Lowest price: by group
+// price, then cars. Both stable.
+List<Object> sortedRows(TaxiWaysResult r, WaysSort s, {int people = 1}) {
+  final rows = <Object>[...r.allTheWay, ...r.plans];
+  if (s == WaysSort.fewestCars) {
+    _stableSort(rows, (a, b) {
+      final c = rowCars(a, people).compareTo(rowCars(b, people));
+      if (c != 0) return c;
+      if (a is WayPlan && b is WayPlan) return a.total.compareTo(b.total);
+      if (a is WayDriver && b is WayPlan) return -1;
+      if (a is WayPlan && b is WayDriver) return 1;
+      return 0;
+    });
+    return rows;
+  }
+  _stableSort(rows, (a, b) {
+    final c = rowPrice(a, people).compareTo(rowPrice(b, people));
+    return c != 0 ? c : rowCars(a, people).compareTo(rowCars(b, people));
   });
-  rows.addAll(plans);
-  if (s == WaysSort.fewestCars) return rows;
-  int price(Object o) => o is WayDriver ? o.listedFare : (o as WayPlan).total;
-  _stableSort(rows, (a, b) => price(a).compareTo(price(b)));
   return rows;
 }
 

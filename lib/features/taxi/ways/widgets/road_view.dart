@@ -10,6 +10,7 @@ class RoadView extends StatelessWidget {
   final WayPlan plan;
   final Map<int, WayDriver> chosen;
   final int? selectedLeg;
+  final int people;
   final ValueChanged<int> onSelectLeg;
 
   const RoadView({
@@ -17,6 +18,7 @@ class RoadView extends StatelessWidget {
     required this.plan,
     required this.chosen,
     required this.onSelectLeg,
+    this.people = 1,
     this.selectedLeg,
   });
 
@@ -156,7 +158,7 @@ class RoadView extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                BrowseItem.inr(d?.listedFare ?? leg.listedFare),
+                BrowseItem.inr(chosen[leg.index]?.groupFare(people) ?? leg.listedFare),
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textDark),
               ),
             ]),

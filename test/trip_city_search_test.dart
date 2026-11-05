@@ -23,10 +23,24 @@ void main() {
     expect(r.map((c) => c.cityKey), [1, 3, 4]);
   });
 
-  test('place line matches by state', () {
-    final r = TripCitySearch.filter(all, 'uttara');
-    expect(r.map((c) => c.name), contains('Rishikesh'));
-    expect(r.map((c) => c.name), isNot(contains('Manali')));
+  test('district matches, state is never free text', () {
+    expect(TripCitySearch.filter(all, 'uttara'), isEmpty);
+    expect(TripCitySearch.filter(all, 'dehra').single.name, 'Rishikesh');
+  });
+
+  test('prefix before word prefix before contains, popular first on a tie', () {
+    final kullu = [
+      city(1, 'Kamand', district: 'Kullu'),
+      city(2, 'Manali', district: 'Kullu'),
+      city(3, 'Manihar', district: 'Kullu'),
+      city(4, 'Manikaran', district: 'Kullu'),
+      city(5, 'Mansari', district: 'Kullu'),
+      city(6, 'Nirmand', district: 'Kullu'),
+      city(7, 'Old Manali', district: 'Kullu'),
+      city(8, 'Raman', district: 'Kullu'),
+    ];
+    expect(TripCitySearch.filter(kullu, 'man').map((c) => c.name),
+        ['Manali', 'Manihar', 'Manikaran', 'Mansari', 'Old Manali', 'Kamand', 'Nirmand', 'Raman']);
   });
 
   test('search is case-insensitive', () {

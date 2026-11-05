@@ -43,6 +43,23 @@ class TripFormat {
     return '${dayMonth(a)} - ${dayMonth(b)}';
   }
 
+  // A set of service days: sorted, deduped, consecutive days joined into runs.
+  static String dateSet(Iterable<DateTime> dates) {
+    final list = {for (final d in dates) DateTime(d.year, d.month, d.day)}.toList()..sort();
+    if (list.isEmpty) return '';
+    final runs = <List<DateTime>>[];
+    for (final d in list) {
+      final last = runs.isEmpty ? null : runs.last.last;
+      if (last != null && DateTime(last.year, last.month, last.day + 1) == d) {
+        runs.last.add(d);
+      } else {
+        runs.add([d]);
+      }
+    }
+    if (runs.length == 1) return dateRange(list.first, list.last);
+    return runs.map((r) => dayMonthRange(r.first, r.last)).join(', ');
+  }
+
   static String time12(String hhmm) {
     final m = RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$').firstMatch(hhmm);
     if (m == null) return hhmm;

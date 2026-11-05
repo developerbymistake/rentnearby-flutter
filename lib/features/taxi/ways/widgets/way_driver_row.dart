@@ -6,14 +6,16 @@ import '../../../../models/browse_item.dart';
 import '../../taxi_option_sets.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
+import '../../../trip/trip_strings_algo_aa.dart';
 import 'best_way_mark.dart';
 
 class WayDriverRow extends StatelessWidget {
   final WayDriver driver;
+  final int people;
   final String? bestReason;
   final VoidCallback onTap;
 
-  const WayDriverRow({super.key, required this.driver, required this.onTap, this.bestReason});
+  const WayDriverRow({super.key, required this.driver, required this.onTap, this.people = 1, this.bestReason});
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +29,8 @@ class WayDriverRow extends StatelessWidget {
       if (d.repliesInApp) TaxiWaysStrings.repliesInApp,
     ].join(' · ');
     final best = bestReason != null;
+    final cars = d.carsFor(people);
+    final price = BrowseItem.inr(d.groupFare(people));
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -63,7 +67,9 @@ class WayDriverRow extends StatelessWidget {
                       style: const TextStyle(
                           fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
                     ),
-                    _tag(d.basedHere ? TaxiWaysStrings.basedHere : TaxiWaysStrings.oneCar),
+                    _tag(cars > 1
+                        ? TripStringsAlgoAa.cars(cars)
+                        : (d.basedHere ? TaxiWaysStrings.basedHere : TaxiWaysStrings.oneCar)),
                   ]),
                   const SizedBox(height: 2),
                   Text(
@@ -81,7 +87,7 @@ class WayDriverRow extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
                   child: Text(
-                    BrowseItem.inr(d.listedFare),
+                    d.isEstimate ? TripStringsAlgoAa.about(price) : price,
                     style: const TextStyle(
                         fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w800, color: TaxiColors.accentDark),
                   ),

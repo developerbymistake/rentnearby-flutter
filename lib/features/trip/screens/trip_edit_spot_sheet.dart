@@ -130,7 +130,7 @@ class TripEditSpotSheet extends StatelessWidget {
                 context,
                 day: d.day,
                 current: d.day == currentDay,
-                total: d.day == currentDay ? c.dayTotalMinutes(d.day) : c.dayTotalMinutes(d.day) + spot.visitMinutes,
+                total: d.day == currentDay ? c.dayLoadMinutes(d.day) : c.moveLoadMinutes(spotId, d.day),
                 limit: c.dayLimitMinutes,
                 onTap: () async {
                   if (d.day == currentDay) {

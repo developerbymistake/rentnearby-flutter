@@ -1,4 +1,5 @@
 import '../config/app_constants.dart';
+import '../utils/money_format.dart';
 
 class ListingModel {
   final String id;
@@ -115,17 +116,10 @@ class ListingModel {
   bool get canGoLive => !isActive && !isPendingReview && !isRejected && !isPausedByAdmin && !isSuspended;
 
   String get priceDisplay =>
-      priceMonthly != null ? '₹${_formatPrice(priceMonthly!)}/mo' : 'Price on request';
+      priceMonthly != null ? '${Money.exact(priceMonthly!)}/mo' : 'Price on request';
 
   String get shortPrice =>
-      priceMonthly != null ? '₹${_formatPrice(priceMonthly!)}' : 'N/A';
-
-  String _formatPrice(int price) {
-    if (price >= 1000) {
-      return '${(price / 1000).toStringAsFixed(price % 1000 == 0 ? 0 : 1)}k';
-    }
-    return price.toString();
-  }
+      priceMonthly != null ? Money.exact(priceMonthly!) : 'N/A';
 }
 
 class NearbyListingModel {
@@ -183,12 +177,5 @@ class NearbyListingModel {
       );
 
   String get shortPrice =>
-      priceMonthly != null ? '₹${_formatPrice(priceMonthly!)}' : 'N/A';
-
-  String _formatPrice(int price) {
-    if (price >= 1000) {
-      return '${(price / 1000).toStringAsFixed(price % 1000 == 0 ? 0 : 1)}k';
-    }
-    return price.toString();
-  }
+      priceMonthly != null ? Money.exact(priceMonthly!) : 'N/A';
 }

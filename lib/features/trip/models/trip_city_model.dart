@@ -1,4 +1,4 @@
-import '../../../utils/search_fold.dart';
+import '../../../utils/city_search_rank.dart';
 
 class TripCityStatus {
   static const String ready = 'Ready';
@@ -102,21 +102,14 @@ class TripCityVersion {
 }
 
 class TripCitySearch {
-  static List<TripCityModel> filter(List<TripCityModel> all, String q) {
-    final query = SearchFold.fold(q);
-    if (query.isEmpty) return List.of(all);
-    final prefix = <TripCityModel>[];
-    final contains = <TripCityModel>[];
-    for (final c in all) {
-      final name = SearchFold.fold(c.name);
-      if (name.startsWith(query)) {
-        prefix.add(c);
-      } else if (name.contains(query) || SearchFold.contains(c.placeLine, query)) {
-        contains.add(c);
-      }
-    }
-    return [...prefix, ...contains];
-  }
+  static List<TripCityModel> filter(List<TripCityModel> all, String q) => CitySearchRank.rank<TripCityModel>(
+        all,
+        q,
+        name: (c) => c.name,
+        districtOf: (c) => c.districtName,
+        popular: (c) => c.isPopularDestination,
+        weight: (c) => c.spotCount,
+      );
 
   static List<TripCityModel> popularFirst(List<TripCityModel> items) => [
         ...items.where((c) => c.isPopularDestination),

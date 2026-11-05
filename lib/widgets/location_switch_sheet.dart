@@ -5,6 +5,7 @@ import '../config/app_colors.dart';
 import '../config/module_palette.dart';
 import '../controllers/location_controller.dart';
 import '../models/city_model.dart';
+import '../utils/city_search_rank.dart';
 import '../utils/input_formatters.dart';
 import '../utils/search_fold.dart';
 
@@ -506,9 +507,7 @@ class _LocationSwitchSheetState extends State<LocationSwitchSheet> {
     final activeCityId = pickOnly ? null : _locationCtrl.browsingCity.value?.id;
 
     final q = SearchFold.fold(_query);
-    final filtered = _cities
-        .where((c) => q.isEmpty || SearchFold.contains(c.name, q))
-        .toList();
+    final filtered = CitySearchRank.rank<CityModel>(_cities, q, name: (c) => c.name);
 
     final items = <Widget>[];
     if (isOwnDistrict && (q.isEmpty || 'current'.contains(q))) {

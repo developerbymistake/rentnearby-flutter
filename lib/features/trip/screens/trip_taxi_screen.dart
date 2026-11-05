@@ -559,6 +559,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
             return _narrow(Obx(() => TripDriverRow(
                   key: ValueKey('${t.id}-$d'),
                   item: t,
+                  fit: _supply.taxiFitOf(t.id),
                   status: status,
                   shortlisted: _plan.isTaxiShortlisted(d, t.id),
                   shortlistFull: full,

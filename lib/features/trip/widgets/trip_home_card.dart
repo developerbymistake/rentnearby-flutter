@@ -8,6 +8,7 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
+import '../utils/trip_clock.dart';
 
 class TripHomeCard extends StatefulWidget {
   const TripHomeCard({super.key});
@@ -53,8 +54,7 @@ class _TripHomeCardState extends State<TripHomeCard> {
   static String _runningTitle(TripSummaryModel t) {
     final start = t.startDate;
     if (start == null) return TripStringsA4.tomorrowTitle(t.routeLine);
-    final now = DateTime.now();
-    final n = DateTime.utc(now.year, now.month, now.day).difference(DateTime.utc(start.year, start.month, start.day)).inDays + 1;
+    final n = TripClock.daysBetween(start, TripClock.today()) + 1;
     if (n < 1) return TripStringsA4.tomorrowTitle(t.routeLine);
     return TripStringsA4.runningTitle(n, t.dayCount, t.routeLine);
   }

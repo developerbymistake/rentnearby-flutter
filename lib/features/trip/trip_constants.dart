@@ -3,6 +3,10 @@ import 'trip_strings.dart';
 class TripConstants {
   static const int dayLimitMinutes = 450;
   static const double stayRadiusKm = 5;
+  static const double stayQueryRadiusMinKm = 1;
+  static const double stayQueryRadiusMaxKm = 50;
+  static const int stayGuestsMax = 100;
+  static const int stayRoomsMax = 20;
   static const double stayRadiusWideKm = 12;
   static const int spotsPageSize = 20;
   static const int maxSpots = 60;

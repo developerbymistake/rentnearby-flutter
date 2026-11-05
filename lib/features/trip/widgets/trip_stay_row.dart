@@ -8,8 +8,10 @@ import '../../stay/models/stay_nearby_model.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
+import '../trip_strings_algo_aa.dart';
 import '../trip_strings_fin_b1.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_stay_rank.dart';
 import 'trip_status.dart';
 
 class TripStayRow extends StatelessWidget {
@@ -26,9 +28,11 @@ class TripStayRow extends StatelessWidget {
     this.onWhatsApp,
     this.onShortlist,
     this.onRemove,
+    this.fit,
   });
 
   final StayNearbyModel stay;
+  final TripStayFit? fit;
   final bool shortlisted;
   final TripDisplayStatus? status;
   final String? statusLine;
@@ -42,6 +46,15 @@ class TripStayRow extends StatelessWidget {
 
   static const double thumb = 56;
   static const double actionHeight = 46;
+
+  static String? quoteLine(StayNearbyModel s, TripStayFit? f) {
+    final lines = f == null || f.fits != true ? const <TripStayQuoteLine>[] : f.quoteLines;
+    if (lines.isEmpty) return typeLine(s);
+    final rooms = [for (final l in lines) if (l.units > 0 && l.roomName.trim().isNotEmpty) TripStringsAlgoAa.quoteLine(l.roomName.trim(), l.units)];
+    if (rooms.isEmpty) return typeLine(s);
+    final type = s.stayTypeName?.trim() ?? '';
+    return [if (type.isNotEmpty) type, rooms.join(' + ')].join(' · ');
+  }
 
   static String? typeLine(StayNearbyModel s) {
     final room = s.bestRoomName?.trim() ?? '';
@@ -159,9 +172,12 @@ class TripStayRow extends StatelessWidget {
       );
 
   Widget _body() {
-    final type = typeLine(stay);
+    final type = quoteLine(stay, fit);
     final facts = statusLine ?? factsLine(stay);
-    final price = stay.minPricePerNight;
+    final quote = fit?.fits == true ? fit?.quotePerNight : null;
+    final price = quote ?? stay.minPricePerNight;
+    final nearKm = fit != null && fit!.nearestKm.isFinite ? fit!.nearestKm : stay.distanceKm;
+    final noFit = fit?.fits == false && !_paused;
     final st = status;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,13 +198,13 @@ class TripStayRow extends StatelessWidget {
                         style: const TextStyle(
                             fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                   ),
-                  if (stay.distanceKm > 0) ...[
+                  if (nearKm > 0) ...[
                     const SizedBox(width: 8),
-                    _pill(TripFormat.km(stay.distanceKm), StayColors.accentDark, StayColors.surface),
+                    _pill(TripFormat.km(nearKm), StayColors.accentDark, StayColors.surface),
                   ],
                 ],
               ),
-              if (_paused || st != null || stay.isFeatured) ...[
+              if (_paused || st != null || stay.isFeatured || noFit) ...[
                 const SizedBox(height: 4),
                 Wrap(
                   spacing: 6,
@@ -202,6 +218,7 @@ class TripStayRow extends StatelessWidget {
                         TripStatusVisuals.surface(st),
                       ),
                     if (stay.isFeatured && !_paused) _pill(TripStringsA2.featured, AppColors.gold, AppColors.surfaceWarm),
+                    if (noFit) _pill(TripStringsAlgoAa.doesNotFit, AppColors.warningText, AppColors.warningSurface),
                   ],
                 ),
               ],
@@ -232,9 +249,9 @@ class TripStayRow extends StatelessWidget {
                             text: BrowseItem.inr(price),
                             style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.gold),
                           ),
-                          const TextSpan(
-                            text: ' ${TripStringsA2.perNightListed}',
-                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
+                          TextSpan(
+                            text: ' ${quote != null ? TripStringsAlgoAa.perNightGroup : TripStringsA2.perNightListed}',
+                            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.textLight),
                           ),
                         ]),
                         maxLines: 1,

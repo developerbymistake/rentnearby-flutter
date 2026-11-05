@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../config/app_colors.dart';
+import '../../../models/browse_item.dart';
 import '../../../utils/input_formatters.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../models/trip_enquiry_model.dart';
@@ -129,8 +130,8 @@ class _CancelBodyState extends State<_CancelBody> {
     final total = e.agreedTotal;
     final line = [
       if (e.datesLabel.isNotEmpty) e.datesLabel,
-      TripStrings.nights(e.nights),
-      if (total != null) '₹$total',
+      e.countLabel,
+      if (total != null) BrowseItem.inr(total),
     ].join(' · ');
     return Container(
       padding: const EdgeInsets.all(12),

@@ -14,6 +14,7 @@ import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_money.dart';
 import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
 
@@ -62,11 +63,11 @@ class _CounterBodyState extends State<_CounterBody> {
       return TripStringsA5.roomsNightsTotal(units, nights, BrowseItem.inr(price * units * nights));
     }
     final units = lines.fold<int>(0, (s, l) => s + l.units);
-    final offered = lines.fold<int>(0, (s, l) => s + l.units * l.pricePerNight);
-    final perNight = lines.fold<int>(0, (s, l) {
-      final p = (l.pricePerNight * price * units / offered).round();
-      return s + l.units * (p < 1 ? 1 : p);
-    });
+    final perNight = TripMoney.counterPerNight(
+      price,
+      [for (final l in lines) l.units],
+      [for (final l in lines) l.pricePerNight],
+    );
     return TripStringsA5.roomsNightsTotal(units, nights, BrowseItem.inr(perNight * nights));
   }
 

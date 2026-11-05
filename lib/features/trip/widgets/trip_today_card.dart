@@ -22,6 +22,7 @@ import '../trip_strings_mcd_a3.dart';
 import '../trip_strings_steps_a3.dart';
 import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_clock.dart';
 import '../utils/trip_travel_rules.dart';
 import 'trip_own_travel_sheet.dart';
 import 'trip_problem_sheet.dart';
@@ -185,10 +186,7 @@ class TripTodayCard extends StatelessWidget {
     ];
   }
 
-  static DateTime get _todayDate {
-    final d = DateTime.now();
-    return DateTime(d.year, d.month, d.day);
-  }
+  static DateTime get _todayDate => TripClock.today();
 
   static String _checkOutLine(DateTime checkOut) {
     final t = _todayDate;
@@ -200,7 +198,7 @@ class TripTodayCard extends StatelessWidget {
     final today = _todayDate;
     final inDate = e.checkIn == null ? null : DateTime(e.checkIn!.year, e.checkIn!.month, e.checkIn!.day);
     final total = inDate == null ? 1 : e.nights.clamp(1, 1 << 20);
-    final k = inDate == null ? 1 : (today.difference(inDate).inDays + 1).clamp(1, total);
+    final k = inDate == null ? 1 : TripClock.nightOf(inDate, total, today);
     final out = e.checkOut == null
         ? DateTime(today.year, today.month, today.day + total - k + 1)
         : DateTime(e.checkOut!.year, e.checkOut!.month, e.checkOut!.day);

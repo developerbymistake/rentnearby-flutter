@@ -1,4 +1,6 @@
 import '../config/app_constants.dart';
+import '../utils/area_format.dart';
+import '../utils/money_format.dart';
 import 'card_fact.dart';
 
 class BrowseItem {
@@ -104,7 +106,7 @@ class BrowseItem {
         if (type != null && type.isNotEmpty) CardFact(type),
       ],
       priceCaption: 'PLOT AREA',
-      priceValue: '${areaValue.toStringAsFixed(areaValue.truncateToDouble() == areaValue ? 0 : 1)} $areaUnit'.trim(),
+      priceValue: AreaFormat.label(areaValue, areaUnit),
       priceUnit: '',
       isFeatured: isFeatured,
     );
@@ -124,19 +126,7 @@ class BrowseItem {
 
   static String depositLabel(int v) => v == 0 ? 'None' : inr(v);
 
-  static String inr(num v) {
-    final s = v.toInt().toString();
-    if (s.length <= 3) return '₹$s';
-    final last3 = s.substring(s.length - 3);
-    var rest = s.substring(0, s.length - 3);
-    final parts = <String>[];
-    while (rest.length > 2) {
-      parts.insert(0, rest.substring(rest.length - 2));
-      rest = rest.substring(0, rest.length - 2);
-    }
-    if (rest.isNotEmpty) parts.insert(0, rest);
-    return '₹${parts.join(',')},$last3';
-  }
+  static String inr(num v) => Money.exact(v);
 }
 
 class BrowsePage {

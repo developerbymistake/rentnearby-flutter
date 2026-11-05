@@ -192,9 +192,10 @@ class _LegTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final backups = leg.taxiIds.length - 1;
-    final fare = leg.listedFare;
     final seats = driver?.seats;
     final cars = seats != null ? WayCars.needed(people, seats) : carsNeeded;
+    final perCar = driver != null && driver!.fare > 0 ? driver!.fare : leg.listedFare;
+    final fare = perCar == null ? null : perCar * cars;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(

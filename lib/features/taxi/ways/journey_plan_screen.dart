@@ -62,8 +62,8 @@ class JourneyPlanLoader {
     }
   }
 
-  static String carsChip(WayPlan p, Map<int, WayDriver> chosen) {
-    final total = p.totalWith(chosen);
+  static String carsChip(WayPlan p, Map<int, WayDriver> chosen, int people) {
+    final total = p.totalWith(chosen, people: people);
     return p.cars <= 1 ? TaxiWaysStrings.oneCarTotal(total) : TaxiWaysStrings.carsAbout(p.cars, total);
   }
 
@@ -119,7 +119,7 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
           Obx(() {
             final chosen = c.chosenOf(plan.planKey);
             return JourneyTotalBar(
-              total: plan.totalWith(chosen),
+              total: plan.totalWith(chosen, people: c.people.value),
               askLabel: JourneyAskButton.labelFor(plan.legs.length),
               busy: c.busyPlans.contains(plan.planKey),
               onAsk: () => c.askDrivers(context, plan),
@@ -179,7 +179,7 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
               Padding(
                 padding: const EdgeInsets.only(left: 10),
                 child: Obx(() => Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                      _chip(JourneyPlanLoader.carsChip(plan, c.chosenOf(plan.planKey))),
+                      _chip(JourneyPlanLoader.carsChip(plan, c.chosenOf(plan.planKey), c.people.value)),
                       _chip(
                         '${TaxiWaysStrings.viewOnRoad} ›',
                         onTap: () => TaxiWaysNavigation.openRoad(planKey: l.planKey, controllerTag: l.tag),

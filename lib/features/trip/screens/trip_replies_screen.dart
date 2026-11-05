@@ -340,9 +340,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
   String _subtitle() {
     final date = _c.dateOf(_rankDay);
     if (date == null) return _c.cityName;
-    final start = _c.settings.startDate ?? date;
-    final d = TripEnquiryRules.daysUntil(start, DateTime.now().toUtc());
-    final when = _rankDay == 1 ? (d <= 0 ? TripStrings.tonight : TripStrings.tonightIn(d)) : TripStrings.night(_rankDay);
+    final when = TripEnquiryRules.checkInLabel(date, DateTime.now().toUtc()) ?? TripStrings.night(_rankDay);
     return '${TripFormat.shortDate(date)} · $when';
   }
 

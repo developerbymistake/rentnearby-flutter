@@ -144,6 +144,7 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> {
       for (final d in _ctrl.items) ...[
         _DriverRow(
           driver: d,
+          people: widget.people,
           isCurrent: widget.current?.taxiId == d.taxiId,
           isLowest: _ctrl.isLowest(d),
           onTap: () => _pick(d),
@@ -181,11 +182,18 @@ class _ChangeDriverBodyState extends State<_ChangeDriverBody> {
 
 class _DriverRow extends StatelessWidget {
   final WayDriver driver;
+  final int people;
   final bool isCurrent;
   final bool isLowest;
   final VoidCallback onTap;
 
-  const _DriverRow({required this.driver, required this.isCurrent, required this.isLowest, required this.onTap});
+  const _DriverRow({
+    required this.driver,
+    required this.people,
+    required this.isCurrent,
+    required this.isLowest,
+    required this.onTap,
+  });
 
   String _subtitle() {
     final vehicle = driver.vehicleTypeName;
@@ -200,7 +208,7 @@ class _DriverRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fare = driver.listedFare > 0 ? driver.listedFare : null;
+    final fare = driver.fare > 0 ? driver.groupFare(people) : null;
     final subtitle = _subtitle();
     return Semantics(
       button: true,

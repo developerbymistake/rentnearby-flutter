@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../config/app_constants.dart';
 import '../models/place_result_model.dart';
+import '../utils/place_search_rank.dart';
 
 /// Self-hosted Photon (autocomplete geocoder) client. Deliberately isolated
 /// from [ApiService] — its own Dio instance, no auth, no shared bootstrap
@@ -49,26 +50,6 @@ class PhotonService {
     '!tourism:camp_site',
   ];
 
-  static int _typeRank(String? osmValue) => switch (osmValue) {
-        'city' => 0,
-        'town' => 1,
-        'suburb' => 2,
-        'village' => 3,
-        _ => 4,
-      };
-
-  static List<PlaceResult> _rank(List<PlaceResult> results, String? preferState) {
-    final prefer = preferState?.trim().toLowerCase();
-    int stateRank(PlaceResult r) =>
-        prefer == null || prefer.isEmpty || r.state?.toLowerCase() == prefer ? 0 : 1;
-    final indexed = results.indexed.toList()
-      ..sort((a, b) {
-        var c = stateRank(a.$2).compareTo(stateRank(b.$2));
-        if (c == 0) c = _typeRank(a.$2.osmValue).compareTo(_typeRank(b.$2.osmValue));
-        return c != 0 ? c : a.$1.compareTo(b.$1);
-      });
-    return [for (final e in indexed) e.$2];
-  }
 
   static Future<List<PlaceResult>> search(String query,
       {LatLng? bias, int limit = 8, String? preferState}) async {
@@ -89,6 +70,13 @@ class PhotonService {
     final features = (res.data?['features'] as List?) ?? [];
 
     final results = features.cast<Map<String, dynamic>>().map(PlaceResult.fromFeature).toList();
-    return _rank(results, preferState);
+    return PlaceSearchRank.rank<PlaceResult>(
+      results,
+      trimmed,
+      name: (r) => r.name,
+      state: (r) => r.state,
+      type: (r) => r.osmValue,
+      preferState: preferState,
+    );
   }
 }

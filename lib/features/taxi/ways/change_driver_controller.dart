@@ -69,7 +69,7 @@ class ChangeDriverController extends GetxController {
     int? best;
     String? bestId;
     for (final x in items) {
-      final f = x.listedFare;
+      final f = x.fare > 0 ? x.groupFare(people) : 0;
       if (f <= 0) continue;
       if (best == null || f < best) {
         best = f;
