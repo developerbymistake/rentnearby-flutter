@@ -52,6 +52,7 @@ class TripLeadsController extends GetxController {
   final hasMore = false.obs;
   final failed = false.obs;
   final busyIds = <String>{}.obs;
+  final focusId = RxnString();
 
   String? _userId;
   int _page = 1;
@@ -72,6 +73,7 @@ class TripLeadsController extends GetxController {
     loadingMore.value = false;
     loadMoreFailed.value = false;
     busyIds.clear();
+    focusId.value = null;
     _page = 1;
     _badgeLoaded = false;
   }
@@ -151,6 +153,17 @@ class TripLeadsController extends GetxController {
     } finally {
       if (id == _requestId) loadingMore.value = false;
     }
+  }
+
+  Future<void> focus(String enquiryId) async {
+    final target = await bucketFor(enquiryId);
+    if (target != null && target != bucket.value) {
+      bucket.value = target;
+      await load();
+    } else {
+      await refreshList();
+    }
+    focusId.value = enquiryId;
   }
 
   Future<String?> bucketFor(String enquiryId) async {

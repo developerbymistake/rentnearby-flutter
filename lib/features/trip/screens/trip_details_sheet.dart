@@ -13,6 +13,7 @@ import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
+import '../trip_strings_g3.dart';
 import '../utils/trip_format.dart';
 import '../widgets/trip_change_request_sheet.dart';
 import '../widgets/trip_status.dart';
@@ -49,7 +50,7 @@ class TripDetailsSheet {
       final impact = c.dateChangeImpact(newStart, days: c.daysAfterLimit(result.maxDays));
       if (!impact.isEmpty) {
         if (!context.mounted) return false;
-        final change = await _confirmDates(context, impact.all);
+        final change = await _confirmDates(context, impact);
         if (change != true) return false;
       }
     }
@@ -128,13 +129,13 @@ class TripDetailsSheet {
     await TripChangeRequestSheet.show(context, enquiry: target, prefill: next);
   }
 
-  static Future<bool?> _confirmDates(BuildContext context, List<TripEnquiryModel> items) => showDialog<bool>(
+  static Future<bool?> _confirmDates(BuildContext context, DateChangeImpact impact) => showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text(
-            TripStringsA4.datesTitle,
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17),
+          title: Text(
+            impact.booked.isEmpty ? TripStringsG3.asksCloseTitle : TripStringsA4.datesTitle,
+            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17),
           ),
           content: ConstrainedBox(
             constraints: BoxConstraints(
@@ -147,16 +148,25 @@ class TripDetailsSheet {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    TripStringsA4.datesBody(items.length),
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
-                  ),
-                  const SizedBox(height: 4),
-                  for (final e in items)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: _BookingLine(e),
-                    ),
+                  for (final group in [
+                    (impact.booked, TripStringsG3.bookedKeep(impact.booked.length)),
+                    (impact.open, TripStringsG3.asksClose(impact.open.length)),
+                  ])
+                    if (group.$1.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          group.$2,
+                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium),
+                        ),
+                      ),
+                      for (final e in group.$1)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: _BookingLine(e),
+                        ),
+                      const SizedBox(height: 8),
+                    ],
                 ],
               ),
             ),

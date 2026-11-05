@@ -1815,15 +1815,18 @@ class TripPlanController extends GetxController {
     final p = plan.value;
     if (p == null || p.dayAt(day) == null) return const [];
     if (!allNights) return [day];
-    return [
-      day,
-      for (final x in p.days)
-        if (x.day > day &&
-            canEditDay(x.day) &&
-            (x.stay == null || x.stay!.isSameStay) &&
-            !enquiriesForNight(x.day).any((e) => e.isBooked))
-          x.day,
-    ];
+    final run = [day];
+    for (var d = day + 1; d <= dayCount; d++) {
+      final x = p.dayAt(d);
+      if (x == null ||
+          !canEditDay(d) ||
+          (x.stay != null && !x.stay!.isSameStay) ||
+          enquiriesForNight(d).any((e) => e.isBooked)) {
+        break;
+      }
+      run.add(d);
+    }
+    return run;
   }
 
   OwnSaveResult setOwnStay(int day, {required String name, String? phone, String? note, bool allNights = false}) {
@@ -2047,10 +2050,12 @@ class TripPlanController extends GetxController {
           ? await _repo.create(title: _title, status: _statusFor(markPlanned, p), plan: p, clientTripId: _clientTripId)
           : await _update(current.id, _title, _statusFor(markPlanned, p), p);
       if (flow != _flow) return false;
+      final datesMoved = current != null && (current.startDate != saved.startDate || current.endDate != saved.endDate);
       trip.value = saved.copyWith(enquiries: enquiryList.toList());
       _adoptDistrict(saved);
       saveFailed.value = false;
       lastSavedAt.value = DateTime.now();
+      if (datesMoved && enquiryList.isNotEmpty) unawaited(refreshEnquiries());
       return true;
     } catch (e) {
       if (flow != _flow) return false;

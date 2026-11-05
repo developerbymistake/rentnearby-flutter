@@ -12,6 +12,7 @@ import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/models/trip_offer_model.dart';
 import '../../trip/trip_constants.dart';
 import '../../trip/trip_strings.dart';
+import '../../trip/trip_strings_g3.dart';
 import '../../trip/utils/trip_format.dart';
 import '../../trip/widgets/trip_payment_line.dart';
 import '../../trip/widgets/trip_sheet_frame.dart';
@@ -144,11 +145,13 @@ class _OfferBodyState extends State<_OfferBody> {
     final used = _lines.map((l) => l.roomName).toSet();
     final room = rooms.firstWhereOrNull((r) => !used.contains(r.label)) ?? (rooms.isNotEmpty ? rooms.first : null);
     final c = widget.enquiry.context;
+    final units = _lines.isEmpty ? (c.rooms ?? 1).clamp(1, 10) : 1;
     final party = (c.adults ?? 0) + (c.kids ?? 0);
-    final guests = (party > 0 ? party : (room?.maxGuests ?? 2)).clamp(1, 40);
+    final guests = (party > 0 ? (party / units).ceil() : (room?.maxGuests ?? 2)).clamp(1, 40);
     final line = _Line(
       roomName: room?.label,
       isOther: room == null,
+      units: units,
       guests: guests,
       price: room == null ? '' : '${room.pricePerNight}',
     );
@@ -183,7 +186,25 @@ class _OfferBodyState extends State<_OfferBody> {
     for (final d in [e.checkOut, widget.changeRequest?.checkOut, e.acceptedOffer?.checkOut]) {
       if (d != null && _dateOnly(d).isAfter(last)) last = _dateOnly(d);
     }
+    final limit = e.tripCheckOutLimit;
+    if (limit != null && last.isAfter(limit)) {
+      final floor = _checkIn.add(const Duration(days: 1));
+      last = limit.isAfter(floor) ? limit : floor;
+    }
     return last;
+  }
+
+  DateTime get _firstCheckIn {
+    final today = _dateOnly(DateTime.now());
+    final start = widget.enquiry.tripStartDate;
+    final lower = start != null && start.isAfter(today) ? start : today;
+    return _checkIn.isBefore(lower) ? _checkIn : lower;
+  }
+
+  String? get _tripHint {
+    final a = widget.enquiry.tripStartDate;
+    final b = widget.enquiry.tripCheckOutLimit;
+    return a == null || b == null ? null : TripStringsG3.insideTrip(TripFormat.dayMonthRange(a, b));
   }
 
   int get _perNight => _lines.fold(0, (sum, l) => sum + l.units * l.price);
@@ -191,10 +212,9 @@ class _OfferBodyState extends State<_OfferBody> {
   int get _total => _nights > 0 ? _nights * _perNight : 0;
 
   Future<void> _pickDate({required bool isCheckIn}) async {
-    final today = _dateOnly(DateTime.now());
     final initial = isCheckIn ? _checkIn : _checkOut;
     final lastOut = _lastCheckOut;
-    final firstIn = _checkIn.isBefore(today) ? _checkIn : today;
+    final firstIn = _firstCheckIn;
     final lastDate = isCheckIn ? lastOut.subtract(const Duration(days: 1)) : lastOut;
     final firstDate = isCheckIn ? firstIn : _checkIn.add(const Duration(days: 1));
     final picked = await showDatePicker(
@@ -308,6 +328,10 @@ class _OfferBodyState extends State<_OfferBody> {
           _dateField(TripStrings.checkIn, _checkIn, () => _pickDate(isCheckIn: true)),
           _dateField(TripStrings.checkOut, _checkOut, () => _pickDate(isCheckIn: false)),
         ),
+        if (_tripHint != null) ...[
+          const SizedBox(height: 6),
+          Text(_tripHint!, style: const TextStyle(fontSize: 12, color: AppColors.textLight)),
+        ],
         const SizedBox(height: 16),
         _heading(TripStrings.roomLines),
         const SizedBox(height: 8),

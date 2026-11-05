@@ -70,7 +70,9 @@ class _ChangeBodyState extends State<_ChangeBody> {
     _adults = (want?.adults ?? _origAdults).clamp(1, TripConstants.maxAdults);
     _kids = (want?.kids ?? _origKids).clamp(0, TripConstants.maxKids);
     _rooms = (want?.rooms ?? _origRooms).clamp(1, TripConstants.maxRooms);
-    if (Get.isRegistered<TripPlanController>()) {
+    _tripFirst = _day(e.tripStartDate);
+    _tripCheckOut = _day(e.tripCheckOutLimit);
+    if ((_tripFirst == null || _tripCheckOut == null) && Get.isRegistered<TripPlanController>()) {
       final plan = Get.find<TripPlanController>();
       if (plan.trip.value?.id != null && plan.trip.value?.id == e.tripId) {
         _tripFirst = _day(plan.dateOf(1));

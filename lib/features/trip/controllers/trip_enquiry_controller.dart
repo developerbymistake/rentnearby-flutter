@@ -124,10 +124,10 @@ class TripEnquiryController extends GetxController {
     if (batch != null) lastAsksLeft = batch.asksLeft ?? lastAsksLeft;
   }
 
-  Future<TripEnquiryBatch?> sendEnquiry({required int day, required List<String> stayIds, required bool allNights}) async {
+  Future<TripEnquiryBatch?> sendEnquiry({required int day, required List<String> stayIds, required int nights}) async {
     final tripId = await _tripId();
     if (tripId == null) return null;
-    final batch = await _guard(null, () => _repo.create(tripId, day: day, stayIds: stayIds, allNights: allNights),
+    final batch = await _guard(null, () => _repo.create(tripId, day: day, stayIds: stayIds, nights: nights),
         silent: const {TripEnquiryErrorTypes.enquiryLimit});
     _readBatch(batch);
     if (batch != null) _applyToPlan(batch.items);

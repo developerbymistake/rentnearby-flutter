@@ -342,6 +342,8 @@ class TripEnquiryModel {
   final int? day;
   final DateTime? checkIn;
   final DateTime? checkOut;
+  final DateTime? tripStartDate;
+  final DateTime? tripCheckOutLimit;
   final int? serverNights;
   final String? conversationId;
   final String status;
@@ -382,6 +384,8 @@ class TripEnquiryModel {
     this.day,
     this.checkIn,
     this.checkOut,
+    this.tripStartDate,
+    this.tripCheckOutLimit,
     this.serverNights,
     this.conversationId,
     this.status = TripEnquiryStatuses.asked,
@@ -535,6 +539,8 @@ class TripEnquiryModel {
       day: (json['day'] as num?)?.toInt(),
       checkIn: tripDate(json['checkIn']),
       checkOut: tripDate(json['checkOut']),
+      tripStartDate: tripDate(json['tripStartDate']),
+      tripCheckOutLimit: tripDate(json['tripCheckOutLimit']),
       serverNights: (json['nights'] as num?)?.toInt(),
       conversationId: json['conversationId'] as String?,
       status: json['status'] as String? ?? TripEnquiryStatuses.asked,

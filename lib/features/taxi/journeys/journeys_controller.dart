@@ -247,7 +247,7 @@ class JourneysController extends GetxController {
     if (journeys.isEmpty) _assign(await JourneyLocalStore.read());
     final existing = findByPlan(plan.planKey, date, people: people);
     if (existing != null) return _syncDrivers(existing, plan, chosen);
-    return save(
+    final saved = await save(
       plan: plan,
       chosen: chosen,
       date: date,
@@ -259,6 +259,7 @@ class JourneysController extends GetxController {
       toLat: toLat,
       toLng: toLng,
     );
+    return saved == null ? null : _syncDrivers(saved, plan, chosen);
   }
 
   Future<SavedJourney?> _syncDrivers(SavedJourney journey, WayPlan plan, Map<int, WayDriver> chosen) async {
@@ -358,12 +359,10 @@ class JourneysController extends GetxController {
     if (j == null) return;
     final now = DateTime.now();
     final legs = j.legs.map((l) {
-      for (final item in result.items) {
-        if (item.legIndex == l.legIndex && item.enquiryId.isNotEmpty) {
-          return l.copyWith(lastEnquiryId: item.enquiryId, lastKnownStatus: _legStatusOf(item.status), lastKnownAt: now);
-        }
-      }
-      return l;
+      final mine = result.items.where((i) => i.legIndex == l.legIndex && i.enquiryId.isNotEmpty);
+      final item = mine.where((i) => i.taxiId == l.driver.taxiId).firstOrNull ?? mine.firstOrNull;
+      if (item == null) return l;
+      return l.copyWith(lastEnquiryId: item.enquiryId, lastKnownStatus: _legStatusOf(item.status), lastKnownAt: now);
     }).toList();
     final status = j.status == JourneyStatus.notAsked ? JourneyStatus.ready : j.status;
     unawaited(_commit(j.copyWith(legs: legs, status: status)));

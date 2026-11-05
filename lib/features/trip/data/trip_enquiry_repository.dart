@@ -61,12 +61,13 @@ class TripEnquiryRepository {
     return TripEnquiryBatch.fromJson(_data(map), asksLeft: asksLeftOf(res));
   }
 
-  Future<TripEnquiryBatch> create(String tripId, {required int day, required List<String> stayIds, required bool allNights}) =>
+  Future<TripEnquiryBatch> create(String tripId, {required int day, required List<String> stayIds, required int nights}) =>
       _batch('/trips/$tripId/enquiries', {
         'kind': TripEnquiryKinds.stay,
         'day': day,
         'listingIds': stayIds,
-        'allNights': allNights,
+        'allNights': nights > 1,
+        'nights': nights,
       });
 
   Future<TripEnquiryBatch> createLead(String tripId,

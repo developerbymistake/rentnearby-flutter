@@ -487,8 +487,9 @@ class NotificationService extends GetxService {
       return;
     }
     final actionRoute = data['action_route'];
-    if (actionRoute is String && _isOpenScreen(actionRoute, NotificationModel.parseArguments(data['action_args_json']))) {
-      TripPushSync.refreshNow(actionRoute);
+    final actionArgs = NotificationModel.parseArguments(data['action_args_json']);
+    if (actionRoute is String && _isOpenScreen(actionRoute, actionArgs)) {
+      TripPushSync.refreshNow(actionRoute, enquiryId: actionArgs?['enquiryId']?.toString());
       return;
     }
     final currentRoute = Get.currentRoute;

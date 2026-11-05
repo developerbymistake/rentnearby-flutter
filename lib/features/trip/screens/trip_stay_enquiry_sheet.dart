@@ -69,14 +69,14 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
 
   int get _day => widget.day;
 
-  Future<void> _send(List<String> ids, bool allNights) async {
+  Future<void> _send(List<String> ids, int nights) async {
     if (_sending || ids.isEmpty) return;
     setState(() {
       _sending = true;
       _limitMinutes = null;
     });
     final enquiries = TripEnquiryController.to;
-    final batch = await enquiries.sendEnquiry(day: _day, stayIds: ids, allNights: allNights);
+    final batch = await enquiries.sendEnquiry(day: _day, stayIds: ids, nights: nights);
     if (!mounted) return;
     setState(() {
       _sending = false;
@@ -113,8 +113,8 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
         ),
       );
 
-  Widget _row(String label, String value) => InkWell(
-        onTap: () => TripDetailsSheet.edit(context),
+  Widget _row(String label, String value, {bool editable = true}) => InkWell(
+        onTap: editable ? () => TripDetailsSheet.edit(context) : null,
         borderRadius: BorderRadius.circular(10),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
@@ -136,7 +136,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
                       style: const TextStyle(
                           fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                 ),
-                const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textHint),
+                if (editable) const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textHint),
               ],
             ),
           ),
@@ -204,8 +204,8 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           ],
         ),
         children: [
-          _row(TripStrings.checkIn, TripFormat.shortDate(checkIn)),
-          _row(TripStrings.checkOut, TripFormat.shortDate(checkOut)),
+          _row(TripStrings.checkIn, TripFormat.shortDate(checkIn), editable: false),
+          _row(TripStrings.checkOut, TripFormat.shortDate(checkOut), editable: false),
           _row(TripStrings.people, s.peopleSummary ?? TripStrings.addPeople),
           if (s.roomsSummary != null) _row(TripStrings.rooms, s.roomsSummary!),
           if (s.needs.isNotEmpty) _row(TripStrings.needs, s.needs.map(TripNeeds.label).join(' · ')),
@@ -268,7 +268,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
             isLoading: _sending,
             gradient: StayColors.gradient,
             shadowColor: StayColors.accent,
-            onPressed: ids.isEmpty || limit != null ? null : () => _send(ids, allNights),
+            onPressed: ids.isEmpty || limit != null ? null : () => _send(ids, nights),
           ),
         ],
       );

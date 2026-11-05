@@ -74,6 +74,8 @@ class _OwnBodyState extends State<_OwnBody> {
 
   int get _laterNights => _c.dayCount - _day;
 
+  int get _runNights => _c.ownStayNights(_day, allNights: true).length;
+
   @override
   void initState() {
     super.initState();
@@ -131,8 +133,7 @@ class _OwnBodyState extends State<_OwnBody> {
   }
 
   TripEnquiryModel? _confirmedOnCoveredNights() {
-    final last = _allNights ? _c.dayCount : _day;
-    for (var d = _day; d <= last; d++) {
+    for (final d in _c.ownStayNights(_day, allNights: _allNights)) {
       for (final e in _c.enquiriesForNight(d)) {
         if (e.isConfirmed) return e;
       }
@@ -141,7 +142,7 @@ class _OwnBodyState extends State<_OwnBody> {
   }
 
   Future<void> _saveStay() async {
-    final allNights = _allNights && _laterNights > 0;
+    final allNights = _allNights && _runNights > 1;
     var r = _c.setOwnStay(_day, name: _name.text, phone: _phone.text, note: _note.text, allNights: allNights);
     if (r is OwnNeedsWithdraw) {
       if (!await TripWithdrawSheet.showForRemove(context, open: r.open)) return;
@@ -330,7 +331,7 @@ class _OwnBodyState extends State<_OwnBody> {
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
           decoration: _decoration(TripStrings.note),
         ),
-        if (!_isTaxi && _laterNights > 0)
+        if (!_isTaxi && _runNights > 1)
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             value: _allNights,
@@ -342,7 +343,7 @@ class _OwnBodyState extends State<_OwnBody> {
                       _blockedBy = null;
                     }),
             secondary: const Icon(Iconsax.moon, size: 20, color: TripColors.accentDark),
-            title: Text(TripStringsA2.allNightsOwn(_laterNights + 1),
+            title: Text(TripStringsA2.allNightsOwn(_runNights),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(

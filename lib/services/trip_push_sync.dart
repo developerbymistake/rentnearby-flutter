@@ -26,6 +26,8 @@ class TripPushSync {
 
   static Timer? _debounce;
   static bool _journeys = false;
+  static String? _focusRoute;
+  static String? _focusId;
 
   static bool isTripType(String? type) =>
       type != null &&
@@ -39,20 +41,39 @@ class TripPushSync {
     _debounce = Timer(const Duration(milliseconds: 600), _run);
   }
 
-  static void refreshNow(String route) {
+  static void refreshNow(String route, {String? enquiryId}) {
     if (_journeyRoutes.contains(route)) _journeys = true;
+    if (enquiryId != null && enquiryId.isNotEmpty) {
+      _focusRoute = route;
+      _focusId = enquiryId;
+    }
     _debounce?.cancel();
     _run();
+  }
+
+  static Future<void> _focusStay(StayEnquiriesController c, String enquiryId) async {
+    final target = await c.bucketFor(enquiryId);
+    if (target != null && target != c.bucket.value) {
+      await c.selectBucket(target);
+    } else {
+      await c.refreshList();
+    }
   }
 
   static void _run() {
     _debounce = null;
     final journeys = _journeys;
     _journeys = false;
+    final focusRoute = _focusRoute;
+    final focusId = _focusId;
+    _focusRoute = null;
+    _focusId = null;
     final route = Get.currentRoute;
     if (Get.isRegistered<StayEnquiriesController>()) {
       final c = Get.find<StayEnquiriesController>();
-      if (route == AppRoutes.stayEnquiries || c.items.isNotEmpty) {
+      if (focusId != null && focusRoute == AppRoutes.stayEnquiries && route == AppRoutes.stayEnquiries) {
+        unawaited(_focusStay(c, focusId));
+      } else if (route == AppRoutes.stayEnquiries || c.items.isNotEmpty) {
         if (!c.loading.value) c.refreshList();
       } else {
         c.loadBadge();
@@ -60,7 +81,9 @@ class TripPushSync {
     }
     if (Get.isRegistered<TripLeadsController>()) {
       final c = Get.find<TripLeadsController>();
-      if (route == AppRoutes.tripLeads || c.items.isNotEmpty) {
+      if (focusId != null && focusRoute == AppRoutes.tripLeads && route == AppRoutes.tripLeads) {
+        unawaited(c.focus(focusId));
+      } else if (route == AppRoutes.tripLeads || c.items.isNotEmpty) {
         if (!c.loading.value) c.refreshList();
       } else {
         c.loadBadge(force: true);
