@@ -69,25 +69,41 @@ void main() {
             findsNothing,
           );
           expect(find.textContaining('Discover'), findsNothing);
+          expect(
+            find.descendant(
+              of: find.byType(SplashHero),
+              matching: find.byType(Text),
+            ),
+            findsNothing,
+          );
+          expect(find.textContaining('Bakhli'), findsNothing);
 
           for (var i = 0; i < 16; i++) {
             await tester.pump(const Duration(milliseconds: 100));
             expect(tester.takeException(), isNull);
           }
-          expect(find.text('Bakhli'), findsOneWidget);
-          expect(hits, reduce ? 0 : 1);
-
-          final rect = tester.getRect(find.text('Bakhli'));
           expect(
-            (Offset.zero & size).inflate(0.5).contains(rect.topLeft) &&
-                (Offset.zero & size).inflate(0.5).contains(rect.bottomRight),
-            isTrue,
+            find.descendant(
+              of: find.byType(SplashHero),
+              matching: find.byType(Text),
+            ),
+            findsNothing,
           );
+          expect(find.textContaining('Bakhli'), findsNothing);
+          expect(hits, reduce ? 0 : 1);
 
           await tester.pump(const Duration(milliseconds: 3000));
           expect(tester.takeException(), isNull);
           expect(hits, reduce ? 0 : 1);
           expect(tester.hasRunningAnimations, !reduce);
+          expect(
+            find.descendant(
+              of: find.byType(SplashHero),
+              matching: find.byType(Text),
+            ),
+            findsNothing,
+          );
+          expect(find.textContaining('Bakhli'), findsNothing);
 
           await tester.pumpWidget(const SizedBox());
           expect(tester.takeException(), isNull);

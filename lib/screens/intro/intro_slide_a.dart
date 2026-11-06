@@ -135,8 +135,12 @@ enum _PickLayer { sun, back, mid, front }
 class _PickGeo {
   _PickGeo._();
 
-  static const List<Offset> pins = [Offset(118, 172), Offset(70, 110), Offset(214, 120), Offset(172, 150)];
-  static const List<bool> defaults = [true, true, false, true];
+  static const List<Offset> pins = [
+    Offset(48, 66), Offset(140, 66), Offset(232, 66),
+    Offset(48, 118), Offset(140, 118), Offset(232, 118),
+    Offset(94, 170), Offset(186, 170),
+  ];
+  static const List<bool> defaults = [false, true, false, false, true, false, true, false];
 
   static Path _ridge(List<Offset> pts) {
     final p = Path()..moveTo(0, IntroSlideCanvas.size.height)..lineTo(pts.first.dx, pts.first.dy);
@@ -151,37 +155,24 @@ class _PickGeo {
   }
 
   static final Path back = _ridge(const [
-    Offset(0, 128), Offset(46, 106), Offset(84, 92), Offset(122, 110), Offset(162, 98),
-    Offset(204, 84), Offset(242, 104), Offset(280, 96),
+    Offset(0, 124), Offset(46, 118), Offset(92, 126), Offset(140, 119), Offset(190, 127),
+    Offset(240, 120), Offset(280, 124),
   ]);
   static final Path mid = _ridge(const [
-    Offset(0, 150), Offset(36, 132), Offset(72, 122), Offset(110, 140), Offset(150, 124),
-    Offset(192, 138), Offset(234, 120), Offset(280, 136),
+    Offset(0, 148), Offset(50, 141), Offset(100, 150), Offset(150, 142), Offset(200, 150),
+    Offset(250, 143), Offset(280, 147),
   ]);
   static final Path front = _ridge(const [
-    Offset(0, 170), Offset(50, 154), Offset(96, 166), Offset(140, 150), Offset(186, 164),
-    Offset(232, 148), Offset(280, 162),
+    Offset(0, 168), Offset(60, 160), Offset(120, 168), Offset(180, 160), Offset(240, 168),
+    Offset(280, 162),
   ]);
-  static final Path snow = Path()
-    ..moveTo(190, 93)
-    ..quadraticBezierTo(197, 86, 204, 84)
-    ..quadraticBezierTo(210, 87, 217, 94);
-  static final Rect lake = Rect.fromCenter(center: const Offset(140, 196), width: 150, height: 34);
-  static final Path pin = Path()
-    ..moveTo(9, 22)
-    ..cubicTo(4, 16, 0, 13, 0, 9)
-    ..arcToPoint(const Offset(18, 9), radius: const Radius.circular(9))
-    ..cubicTo(18, 13, 14, 16, 9, 22)
-    ..close();
 }
 
 class _PickScenePainter extends CustomPainter {
-  _PickScenePainter({required this.layer, required this.entrance, required this.loop})
-      : super(repaint: layer == _PickLayer.front ? Listenable.merge([entrance, loop]) : entrance);
+  _PickScenePainter({required this.layer, required this.entrance}) : super(repaint: entrance);
 
   final _PickLayer layer;
   final Animation<double> entrance;
-  final Animation<double> loop;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -203,14 +194,6 @@ class _PickScenePainter extends CustomPainter {
         canvas.translate(0, 24 * (1 - a));
         paint.color = Colors.white.withValues(alpha: 0.14 * a);
         canvas.drawPath(_PickGeo.back, paint);
-        canvas.drawPath(
-          _PickGeo.snow,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5
-            ..strokeCap = StrokeCap.round
-            ..color = Colors.white.withValues(alpha: 0.6 * a),
-        );
         canvas.restore();
       case _PickLayer.mid:
         final a = _seg(e, 0.07, 0.39, Curves.easeOutCubic);
@@ -227,36 +210,13 @@ class _PickScenePainter extends CustomPainter {
         canvas.translate(0, 24 * (1 - a));
         paint.color = Colors.white.withValues(alpha: 0.34 * a);
         canvas.drawPath(_PickGeo.front, paint);
-        paint.color = Colors.white.withValues(alpha: 0.18 * a);
-        canvas.drawOval(_PickGeo.lake, paint);
-        final d = 6 * math.sin(2 * math.pi * loop.value);
-        final line = Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5
-          ..strokeCap = StrokeCap.round
-          ..color = Colors.white.withValues(alpha: 0.4 * a);
-        canvas.drawLine(Offset(100 + d, 190), Offset(126 + d, 190), line);
-        canvas.drawLine(Offset(150 - d, 203), Offset(168 - d, 203), line);
         canvas.restore();
     }
   }
 
   @override
   bool shouldRepaint(covariant _PickScenePainter old) =>
-      old.layer != layer || old.entrance != entrance || old.loop != loop;
-}
-
-class _TeardropPainter extends CustomPainter {
-  const _TeardropPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawPath(_PickGeo.pin, Paint()..color = Colors.white);
-    canvas.drawCircle(const Offset(9, 9), 3.5, Paint()..color = AppColors.trip);
-  }
-
-  @override
-  bool shouldRepaint(covariant _TeardropPainter old) => false;
+      old.layer != layer || old.entrance != entrance;
 }
 
 class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
@@ -294,8 +254,8 @@ class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
   }
 
   double _dropRaw(int i) {
-    final begin = 0.50 + 0.086 * i;
-    return _seg(entrance.value, begin, begin + 0.30);
+    final begin = 0.36 + 0.05 * i;
+    return _seg(entrance.value, begin, begin + 0.28);
   }
 
   bool _landed(int i) => _dropRaw(i) >= 0.37;
@@ -307,42 +267,6 @@ class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
     _tapIndex = i;
     if (!reduce) tap.forward(from: 0);
     interacted();
-  }
-
-  Widget _cityChip() {
-    final chip = Container(
-      height: 24,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Iconsax.location, size: 13, color: AppColors.primary),
-          const SizedBox(width: 4),
-          Text(IntroStrings.city, maxLines: 1, style: _poppins(11, FontWeight.w700, AppColors.primary)),
-        ],
-      ),
-    );
-    return Positioned(
-      left: 0,
-      right: 0,
-      top: 6,
-      height: 24,
-      child: Center(
-        child: AnimatedBuilder(
-          animation: entrance,
-          child: chip,
-          builder: (context, child) {
-            final e = entrance.value;
-            final s = _seg(e, 0.32, 0.54, Curves.easeOutBack);
-            return Opacity(
-              opacity: _seg(e, 0.32, 0.42),
-              child: Transform.scale(scale: 0.6 + 0.4 * s, child: child),
-            );
-          },
-        ),
-      ),
-    );
   }
 
   Widget _counter() {
@@ -381,7 +305,7 @@ class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
                         child: ScaleTransition(scale: Tween(begin: 0.8, end: 1.0).animate(a), child: child),
                       ),
                       child: Text(
-                        IntroStrings.spotsPicked(n),
+                        IntroStrings.stylesPicked(n),
                         key: ValueKey<int>(n),
                         maxLines: 1,
                         style: _poppins(10.5, FontWeight.w700, Colors.white),
@@ -399,43 +323,12 @@ class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
 
   Widget _pin(int i) {
     final at = _PickGeo.pins[i];
-    final label = Container(
-      height: 14,
-      padding: const EdgeInsets.symmetric(horizontal: 5),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(7)),
-      child: Text(
-        IntroStrings.pickSpots[i],
-        maxLines: 1,
-        softWrap: false,
-        style: _poppins(9, FontWeight.w700, AppColors.textDark),
-      ),
-    );
-    const body = SizedBox(width: 18, height: 22, child: CustomPaint(painter: _TeardropPainter()));
-    final tick = Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        color: AppColors.success,
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 1),
-      ),
-      child: const Icon(Icons.check_rounded, size: 7, color: Colors.white),
-    );
-    final shadow = Container(
-      width: 14,
-      height: 4,
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.15),
-        borderRadius: const BorderRadius.all(Radius.elliptical(7, 2)),
-      ),
-    );
-
+    final label = IntroStrings.travelStyles[i];
     return Positioned(
       left: at.dx - 40,
-      top: at.dy - 34,
+      top: at.dy - 22,
       width: 80,
-      height: 56,
+      height: 44,
       child: AnimatedBuilder(
         animation: Listenable.merge([entrance, loop, tap, _selected]),
         builder: (context, _) {
@@ -444,61 +337,67 @@ class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
           final sel = _selected.value[i];
           final pop = _tapIndex == i ? _pop.transform(tap.value) : 1.0;
           final t = loop.value;
+          final pill = Container(
+            height: 26,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: sel ? Colors.white : Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: Colors.white, width: 1.2),
+              boxShadow: sel
+                  ? [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 6, offset: const Offset(0, 2))]
+                  : null,
+            ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (sel) ...[
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
+                      child: const Icon(Icons.check_rounded, size: 9, color: Colors.white),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  Text(
+                    label,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: _poppins(10, FontWeight.w700, sel ? AppColors.textDark : Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          );
           return Stack(
             clipBehavior: Clip.none,
             children: [
               if (sel && !reduce && _landed(i)) ...[
-                Positioned(left: 31, top: 25, width: 18, height: 18, child: IntroPingRing(phase: t)),
-                Positioned(left: 31, top: 25, width: 18, height: 18, child: IntroPingRing(phase: (t + 0.5) % 1)),
+                Positioned(left: 6, top: 13, width: 18, height: 18, child: IntroPingRing(phase: t)),
+                Positioned(left: 6, top: 13, width: 18, height: 18, child: IntroPingRing(phase: (t + 0.5) % 1)),
               ],
-              if (raw > 0) ...[
+              if (raw > 0)
                 Positioned(
-                  left: 33,
-                  top: 32,
-                  width: 14,
-                  height: 4,
-                  child: Transform.scale(scale: drop.clamp(0.0, 1.0), child: shadow),
-                ),
-                Positioned(
-                  left: 31,
-                  top: 12,
-                  width: 18,
-                  height: 22,
+                  left: 1,
+                  right: 1,
+                  top: 9,
+                  height: 26,
                   child: Opacity(
                     opacity: (raw * 4).clamp(0.0, 1.0),
                     child: Transform.translate(
                       offset: Offset(0, -40 * (1 - drop)),
-                      child: Transform.scale(
-                        scale: pop,
-                        alignment: Alignment.bottomCenter,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            body,
-                            if (sel) Positioned(right: -5, top: -3, child: tick),
-                          ],
-                        ),
-                      ),
+                      child: Transform.scale(scale: pop, child: pill),
                     ),
                   ),
                 ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 37,
-                  height: 15,
-                  child: Opacity(opacity: raw, child: Center(child: label)),
-                ),
-              ],
-              Positioned(
-                left: 18,
-                top: 0,
-                width: 44,
-                height: 44,
+              Positioned.fill(
                 child: Semantics(
                   button: true,
                   selected: sel,
-                  label: IntroStrings.pickSpots[i],
+                  label: label,
                   child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => _toggle(i)),
                 ),
               ),
@@ -513,7 +412,7 @@ class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
   Widget build(BuildContext context) {
     final size = IntroSlideCanvas.size;
     CustomPaint scene(_PickLayer layer) =>
-        CustomPaint(size: size, painter: _PickScenePainter(layer: layer, entrance: entrance, loop: loop));
+        CustomPaint(size: size, painter: _PickScenePainter(layer: layer, entrance: entrance));
 
     return MediaQuery.withNoTextScaling(
       child: SizedBox.fromSize(
@@ -535,7 +434,7 @@ class _IntroSlidePickState extends _IntroSlideState<IntroSlidePick> {
               0.70,
               Stack(
                 clipBehavior: Clip.none,
-                children: [_cityChip(), for (var i = 0; i < _PickGeo.pins.length; i++) _pin(i)],
+                children: [for (var i = 0; i < _PickGeo.pins.length; i++) _pin(i)],
               ),
             ),
           ],
@@ -824,7 +723,7 @@ class _IntroSlidePlanState extends _IntroSlideState<IntroSlidePlan> {
         children: [
           const Icon(Iconsax.car, size: 10, color: AppColors.taxi),
           const SizedBox(width: 3),
-          Text(IntroStrings.changeCar, maxLines: 1, style: _poppins(8.5, FontWeight.w700, AppColors.taxiDark)),
+          Text(IntroStrings.yourRide, maxLines: 1, style: _poppins(8.5, FontWeight.w700, AppColors.taxiDark)),
         ],
       ),
     );
@@ -1045,6 +944,304 @@ class _IntroSlidePlanState extends _IntroSlideState<IntroSlidePlan> {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class IntroSlideTaxi extends StatefulWidget {
+  const IntroSlideTaxi({super.key, required this.isActive, required this.progress});
+
+  final bool isActive;
+  final ValueListenable<double> progress;
+
+  @override
+  State<IntroSlideTaxi> createState() => _IntroSlideTaxiState();
+}
+
+class _IntroSlideTaxiState extends _IntroSlideState<IntroSlideTaxi> {
+  final ValueNotifier<int> _car = ValueNotifier<int>(0);
+  int _tapIndex = -1;
+
+  static final Animatable<double> _pop = TweenSequence<double>([
+    TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.12).chain(CurveTween(curve: Curves.easeOut)), weight: 40),
+    TweenSequenceItem(tween: Tween(begin: 1.12, end: 1.0).chain(CurveTween(curve: Curves.easeOutBack)), weight: 60),
+  ]);
+
+  static const double _rowTop = 42;
+  static const double _rowStep = 30;
+
+  @override
+  Duration get entranceDuration => const Duration(milliseconds: 1800);
+  @override
+  Duration get loopDuration => const Duration(milliseconds: 3000);
+  @override
+  Duration get tapDuration => const Duration(milliseconds: 260);
+  @override
+  int get pageIndex => 3;
+  @override
+  bool activeOf(IntroSlideTaxi w) => w.isActive;
+  @override
+  ValueListenable<double> progressOf(IntroSlideTaxi w) => w.progress;
+
+  @override
+  void resetInteractions() {
+    _car.value = 0;
+    _tapIndex = -1;
+  }
+
+  @override
+  void dispose() {
+    _car.dispose();
+    super.dispose();
+  }
+
+  void _select(int i) {
+    _tapIndex = i;
+    _car.value = i;
+    if (!reduce) tap.forward(from: 0);
+    interacted();
+  }
+
+  Widget _appear(double begin, double end, Widget child, {double dy = 10}) {
+    return AnimatedBuilder(
+      animation: entrance,
+      child: child,
+      builder: (context, child) {
+        final e = entrance.value;
+        final rise = _seg(e, begin, end, Curves.easeOutCubic);
+        return Opacity(
+          opacity: _seg(e, begin, end),
+          child: Transform.translate(offset: Offset(0, dy * (1 - rise)), child: child),
+        );
+      },
+    );
+  }
+
+  Widget _title() {
+    return Positioned(
+      left: 20,
+      top: 15,
+      height: 18,
+      child: _appear(
+        0.06,
+        0.22,
+        Text(IntroStrings.ridesTitle, maxLines: 1, style: _poppins(12, FontWeight.w700, AppColors.textDark)),
+        dy: 6,
+      ),
+    );
+  }
+
+  Widget _row(int i) {
+    final b = 0.14 + 0.17 * i;
+    final dot = Container(
+      width: 24,
+      height: 24,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(color: AppColors.taxi, shape: BoxShape.circle),
+      child: const Icon(Iconsax.car, size: 14, color: Colors.white),
+    );
+    return Positioned(
+      left: 20,
+      right: 20,
+      top: _rowTop + _rowStep * i,
+      height: 26,
+      child: AnimatedBuilder(
+        animation: entrance,
+        builder: (context, _) {
+          final e = entrance.value;
+          final rise = _seg(e, b, b + 0.14, Curves.easeOutCubic);
+          final tick = _seg(e, b + 0.20, b + 0.32, Curves.easeOutBack);
+          return Opacity(
+            opacity: _seg(e, b, b + 0.14),
+            child: Transform.translate(
+              offset: Offset(-14 * (1 - rise), 0),
+              child: Row(
+                children: [
+                  dot,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      IntroStrings.rideRows[i],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _poppins(11, FontWeight.w600, AppColors.textDark),
+                    ),
+                  ),
+                  Transform.scale(
+                    scale: tick.clamp(0.0, 1.2),
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
+                      child: const Icon(Icons.check_rounded, size: 11, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _track() {
+    const top = _rowTop + 13;
+    const length = _rowStep * 2;
+    return Positioned(
+      left: 31,
+      top: top,
+      width: 2,
+      height: length,
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: Listenable.merge([entrance, loop]),
+          builder: (context, _) {
+            final show = reduce ? 0.0 : _seg(entrance.value, 0.85, 1.0);
+            final u = Curves.easeInOut.transform(_seg(loop.value, 0.0, 0.8));
+            final fade = loop.value < 0.1 ? loop.value / 0.1 : (loop.value > 0.8 ? 0.0 : 1.0);
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: ColoredBox(color: AppColors.taxi.withValues(alpha: 0.18 * _seg(entrance.value, 0.3, 0.6))),
+                ),
+                if (show > 0)
+                  Positioned(
+                    left: -3,
+                    top: length * u - 4,
+                    width: 8,
+                    height: 8,
+                    child: Opacity(
+                      opacity: (show * fade).clamp(0.0, 1.0),
+                      child: const DecoratedBox(
+                        decoration: BoxDecoration(color: AppColors.taxiDark, shape: BoxShape.circle),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _carChip(int i) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_car, tap]),
+      builder: (context, _) {
+        final sel = _car.value == i;
+        final pop = _tapIndex == i ? _pop.transform(tap.value) : 1.0;
+        return Semantics(
+          button: true,
+          selected: sel,
+          label: IntroStrings.carTypes[i],
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _select(i),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Transform.scale(
+                scale: pop,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  height: 28,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: sel ? AppColors.taxi : AppColors.taxiSurface,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: AppColors.taxi.withValues(alpha: sel ? 1 : 0.35), width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Iconsax.car, size: 13, color: sel ? Colors.white : AppColors.taxi),
+                      const SizedBox(width: 5),
+                      Text(
+                        IntroStrings.carTypes[i],
+                        maxLines: 1,
+                        style: _poppins(10.5, FontWeight.w700, sel ? Colors.white : AppColors.taxiDark),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _card(Rect rect) {
+    return Positioned.fromRect(
+      rect: rect,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 14, offset: const Offset(0, 6))],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ridesCard = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        _card(const Rect.fromLTWH(8, 8, 264, 132)),
+        _title(),
+        _track(),
+        for (var i = 0; i < 3; i++) _row(i),
+      ],
+    );
+    final carsCard = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        _card(const Rect.fromLTWH(8, 150, 264, 52)),
+        Positioned(
+          left: 8,
+          top: 150,
+          width: 264,
+          height: 52,
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [for (var i = 0; i < 3; i++) ...[if (i > 0) const SizedBox(width: 8), _carChip(i)]],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    return MediaQuery.withNoTextScaling(
+      child: SizedBox.fromSize(
+        size: IntroSlideCanvas.size,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            parallax(
+              0.35,
+              AnimatedBuilder(
+                animation: entrance,
+                child: ridesCard,
+                builder: (context, child) {
+                  final v = _seg(entrance.value, 0.0, 0.16, Curves.easeOutCubic);
+                  return Opacity(opacity: v, child: Transform.scale(scale: 0.94 + 0.06 * v, child: child));
+                },
+              ),
+            ),
+            parallax(0.60, _appear(0.70, 0.90, carsCard, dy: 14)),
           ],
         ),
       ),

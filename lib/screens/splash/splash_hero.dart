@@ -25,8 +25,6 @@ abstract final class _T {
   static const ripple2A = 0.7467, ripple2B = 1.000;
   static const haloA = 0.6667, haloB = 0.8667;
   static const settleA = 0.700, settleB = 0.8667;
-  static const wordA = 0.6933, wordB = 0.8933;
-  static const sweepA = 0.800, sweepB = 1.000;
 }
 
 const Duration _introDuration = Duration(milliseconds: 1500);
@@ -58,9 +56,9 @@ const List<double> _starRadii = [
   1.2, 1.6, 1.1, 1.0, 1.4, 1.2, 1.0, 1.5, 1.1,
 ];
 
-const List<double> _farTop = [0.50, 0.43, 0.47, 0.37, 0.45, 0.38, 0.46, 0.41, 0.49];
-const List<double> _midTop = [0.62, 0.57, 0.60, 0.55, 0.59, 0.56, 0.61, 0.58, 0.63];
-const List<double> _nearTop = [0.74, 0.70, 0.72, 0.68, 0.71, 0.66, 0.69, 0.67, 0.72];
+const List<double> _farTop = [0.56, 0.54, 0.555, 0.535, 0.55, 0.535, 0.55, 0.54, 0.56];
+const List<double> _midTop = [0.66, 0.65, 0.665, 0.65, 0.66, 0.65, 0.665, 0.655, 0.67];
+const List<double> _nearTop = [0.77, 0.76, 0.775, 0.765, 0.77, 0.76, 0.775, 0.77, 0.78];
 
 double _iv(double t, double a, double b, [Curve curve = Curves.linear]) {
   final x = ((t - a) / (b - a)).clamp(0.0, 1.0);
@@ -80,8 +78,6 @@ class _SplashHeroState extends State<SplashHero> with TickerProviderStateMixin {
   late final AnimationController _intro;
   late final AnimationController _hold;
   late final CurvedAnimation _holdCurve;
-  late final CurvedAnimation _wordFade;
-  late final Animation<Offset> _wordSlide;
   bool _reduceMotion = false;
   bool _started = false;
   bool _hapticDone = false;
@@ -93,12 +89,6 @@ class _SplashHeroState extends State<SplashHero> with TickerProviderStateMixin {
     _intro = AnimationController(vsync: this, duration: _introDuration);
     _hold = AnimationController(vsync: this, duration: _holdDuration);
     _holdCurve = CurvedAnimation(parent: _hold, curve: Curves.easeInOutSine);
-    _wordFade = CurvedAnimation(
-      parent: _intro,
-      curve: const Interval(_T.wordA, _T.wordB, curve: Curves.easeOutCubic),
-    );
-    _wordSlide = Tween<Offset>(begin: const Offset(0, 14 / 56), end: Offset.zero)
-        .animate(_wordFade);
     _intro.addListener(_onIntroTick);
     _intro.addStatusListener(_onIntroStatus);
   }
@@ -143,7 +133,6 @@ class _SplashHeroState extends State<SplashHero> with TickerProviderStateMixin {
   void dispose() {
     _intro.removeListener(_onIntroTick);
     _intro.removeStatusListener(_onIntroStatus);
-    _wordFade.dispose();
     _holdCurve.dispose();
     _hold.dispose();
     _intro.dispose();
@@ -170,12 +159,6 @@ class _SplashHeroState extends State<SplashHero> with TickerProviderStateMixin {
                 painter: _PinPainter(geo, _intro, _holdCurve, _reduceMotion),
               ),
             ),
-            Positioned.fromRect(
-              rect: geo.wordRect,
-              child: RepaintBoundary(
-                child: _Wordmark(intro: _intro, fade: _wordFade, slide: _wordSlide),
-              ),
-            ),
           ],
         );
       },
@@ -193,33 +176,13 @@ class _SplashGeometry {
 
     markW = (s * 0.22).clamp(64.0, 120.0);
     markH = markW * 1.3;
-    markRect = Rect.fromCenter(center: Offset(cx, 0.40 * h), width: markW, height: markH);
+    markRect = Rect.fromCenter(center: Offset(cx, 0.42 * h), width: markW, height: markH);
     hc = Offset(cx, markRect.top + 0.38 * markH);
     hr = 0.36 * markW;
     tip = Offset(cx, markRect.top + 0.96 * markH);
 
-    final wordW = math.min(0.70 * w, 280.0);
-    wordRect = Rect.fromLTWH(cx - wordW / 2, markRect.bottom + 14, wordW, 56);
-
-    final farPts = _points(_farTop);
-    farTop = Path()..moveTo(farPts.first.dx, farPts.first.dy);
-    for (var i = 1; i < farPts.length; i++) {
-      farTop.lineTo(farPts[i].dx, farPts[i].dy);
-    }
+    farTop = _smooth(_points(_farTop));
     farPath = _closeDown(Path()..addPath(farTop, Offset.zero));
-
-    snowPath = Path();
-    for (final i in const [3, 5, 7]) {
-      final p = farPts[i];
-      snowPath
-        ..moveTo(p.dx, p.dy)
-        ..lineTo(p.dx + 0.035 * w, p.dy + 0.028 * h)
-        ..lineTo(p.dx + 0.012 * w, p.dy + 0.020 * h)
-        ..lineTo(p.dx, p.dy + 0.030 * h)
-        ..lineTo(p.dx - 0.012 * w, p.dy + 0.020 * h)
-        ..lineTo(p.dx - 0.035 * w, p.dy + 0.028 * h)
-        ..close();
-    }
 
     midPath = _closeDown(_smooth(_points(_midTop)));
     nearPath = _closeDown(_smooth(_points(_nearTop)));
@@ -249,27 +212,15 @@ class _SplashGeometry {
     pinShader = TripColors.gradient.createShader(pinPath.getBounds());
 
     rr = 0.46 * hr;
-    mountainPath = _glyph(const [
-      Offset(-0.75, 0.45),
-      Offset(-0.25, -0.45),
-      Offset(0.05, 0.05),
-      Offset(0.30, -0.25),
-      Offset(0.75, 0.45),
-    ]);
-    snowNotchPath = _glyph(const [
-      Offset(-0.25, -0.45),
-      Offset(-0.38, -0.22),
-      Offset(-0.12, -0.22),
-    ]);
   }
 
   final Size size;
   late final double w, h, s, cx, u;
   late final double markW, markH, hr, rr;
-  late final Rect markRect, wordRect;
+  late final Rect markRect;
   late final Offset hc, tip, routeStart;
-  late final Path farTop, farPath, snowPath, midPath, nearPath;
-  late final Path pinPath, mountainPath, snowNotchPath;
+  late final Path farTop, farPath, midPath, nearPath;
+  late final Path pinPath;
   late final Shader nearShader, pinShader;
   late final PathMetric routeMetric;
   late final double routeLen;
@@ -293,14 +244,6 @@ class _SplashGeometry {
     ..lineTo(w, h + 120)
     ..lineTo(0, h + 120)
     ..close();
-
-  Path _glyph(List<Offset> pts) {
-    final path = Path()..moveTo(hc.dx + pts.first.dx * rr, hc.dy + pts.first.dy * rr);
-    for (var i = 1; i < pts.length; i++) {
-      path.lineTo(hc.dx + pts[i].dx * rr, hc.dy + pts[i].dy * rr);
-    }
-    return path..close();
-  }
 }
 
 class _ScenePainter extends CustomPainter {
@@ -371,8 +314,6 @@ class _ScenePainter extends CustomPainter {
     canvas.translate(0, (1 - farT) * 40);
     _fill.color = _farColor;
     canvas.drawPath(g.farPath, _fill);
-    _fill.color = AppColors.textWhite.withValues(alpha: 0.85);
-    canvas.drawPath(g.snowPath, _fill);
     if (dawn > 0) {
       _stroke
         ..strokeWidth = 1
@@ -526,11 +467,7 @@ class _PinPainter extends CustomPainter {
     canvas.drawPath(g.pinPath, _stroke);
 
     _fill.color = AppColors.textWhite.withValues(alpha: pinA);
-    canvas.drawCircle(g.hc, g.rr, _fill);
-    _fill.color = AppColors.primary.withValues(alpha: pinA);
-    canvas.drawPath(g.mountainPath, _fill);
-    _fill.color = AppColors.textWhite.withValues(alpha: pinA);
-    canvas.drawPath(g.snowNotchPath, _fill);
+    canvas.drawCircle(g.hc, g.rr * 0.6, _fill);
     canvas.restore();
   }
 
@@ -546,64 +483,4 @@ class _PinPainter extends CustomPainter {
   @override
   bool shouldRepaint(_PinPainter oldDelegate) =>
       oldDelegate.geo != geo || oldDelegate.reduceMotion != reduceMotion;
-}
-
-class _Wordmark extends StatelessWidget {
-  const _Wordmark({required this.intro, required this.fade, required this.slide});
-
-  final Animation<double> intro;
-  final Animation<double> fade;
-  final Animation<Offset> slide;
-
-  static final Color _glint = Color.lerp(AppColors.textWhite, AppColors.tripLight, 0.55)!;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Center(
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          'Bakhli',
-          maxLines: 1,
-          textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.3),
-          style: const TextStyle(
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.w700,
-            fontSize: 34,
-            letterSpacing: 0.6,
-            height: 1.2,
-            color: AppColors.textWhite,
-          ),
-        ),
-      ),
-    );
-
-    return FadeTransition(
-      opacity: fade,
-      child: SlideTransition(
-        position: slide,
-        child: AnimatedBuilder(
-          animation: intro,
-          child: text,
-          builder: (_, child) {
-            final v = intro.value;
-            if (v <= _T.sweepA || v >= 1.0) return child!;
-            final p = _lerp(-0.3, 1.3, _iv(v, _T.sweepA, _T.sweepB, Curves.easeInOutSine));
-            return ShaderMask(
-              blendMode: BlendMode.srcIn,
-              shaderCallback: (bounds) => LinearGradient(
-                colors: [AppColors.textWhite, _glint, AppColors.textWhite],
-                stops: [
-                  (p - 0.18).clamp(0.0, 1.0),
-                  p.clamp(0.0, 1.0),
-                  (p + 0.18).clamp(0.0, 1.0),
-                ],
-              ).createShader(bounds),
-              child: child,
-            );
-          },
-        ),
-      ),
-    );
-  }
 }

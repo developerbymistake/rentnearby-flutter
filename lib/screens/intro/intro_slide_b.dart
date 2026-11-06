@@ -155,23 +155,6 @@ class _Overlay extends StatelessWidget {
   }
 }
 
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.icon, required this.fill, required this.color});
-  final IconData icon;
-  final Color fill;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: fill, border: Border.all(color: Colors.white, width: 1.2)),
-      child: Icon(icon, size: 12, color: color),
-    );
-  }
-}
-
 class _Chip extends StatelessWidget {
   const _Chip({super.key, required this.label, required this.fill, required this.color, this.icon, this.size = 10, this.weight = FontWeight.w800});
   final String label;
@@ -198,7 +181,7 @@ class _Chip extends StatelessWidget {
 }
 
 // ============================================================
-// Slide 3: Ask
+// Slide 3: Stay
 // ============================================================
 
 class IntroSlideAsk extends StatefulWidget {
@@ -213,21 +196,6 @@ class IntroSlideAsk extends StatefulWidget {
 class _AskState extends _SlideState<IntroSlideAsk> {
   static const int _index = 2;
   final _accepted = ValueNotifier<bool>(false);
-
-  static final _strikeOpacity = TweenSequence<double>([
-    TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 22),
-    TweenSequenceItem(tween: ConstantTween(1.0), weight: 38),
-    TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 40),
-  ]);
-  static final _strikeScale = TweenSequence<double>([
-    TweenSequenceItem(tween: Tween(begin: 0.7, end: 1.0), weight: 22),
-    TweenSequenceItem(tween: ConstantTween(1.0), weight: 38),
-    TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.6), weight: 40),
-  ]);
-  static final _strikeRotation = TweenSequence<double>([
-    TweenSequenceItem(tween: ConstantTween(0.0), weight: 60),
-    TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.24), weight: 40),
-  ]);
 
   @override
   Duration get entranceDuration => const Duration(milliseconds: 2600);
@@ -271,18 +239,16 @@ class _AskState extends _SlideState<IntroSlideAsk> {
           clipBehavior: Clip.none,
           children: [
             Positioned(
-              left: 0,
-              right: 0,
-              top: 1,
-              height: 28,
-              child: _Parallax(progress: progress, index: _index, factor: 0.20, enabled: !reduce, child: _strikeRow()),
+              left: 16,
+              top: 8,
+              width: 248,
+              child: _Parallax(progress: progress, index: _index, factor: 0.55, enabled: !reduce, child: _slideIn(_stayCard(), 0.0, 0.35)),
             ),
             Positioned(
               left: 16,
-              top: 46,
+              top: 178,
               width: 248,
-              height: 190,
-              child: _Parallax(progress: progress, index: _index, factor: 0.55, enabled: !reduce, child: _chat()),
+              child: _Parallax(progress: progress, index: _index, factor: 0.40, enabled: !reduce, child: _confirmed()),
             ),
           ],
         ),
@@ -290,182 +256,89 @@ class _AskState extends _SlideState<IntroSlideAsk> {
     );
   }
 
-  Widget _strikeRow() {
-    final commission = _Chip(
-      label: IntroStrings.commission,
-      fill: Colors.white.withValues(alpha: 0.2),
-      color: Colors.white,
-      size: 11,
-      weight: FontWeight.w700,
-    );
-    final noCommission = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Iconsax.tick_circle, size: 12, color: AppColors.successDark),
-          const SizedBox(width: 5),
-          Text(IntroStrings.noCommission, maxLines: 1, softWrap: false, style: _ts(11, FontWeight.w800, AppColors.successDark)),
-        ],
-      ),
-    );
-    return AnimatedBuilder(
-      animation: entrance,
-      builder: (context, _) {
-        final e = entrance.value;
-        final s = _iv(e, 0.46, 0.88);
-        final slash = _iv(s, 0.25, 0.5, Curves.easeOut);
-        final u = _iv(e, 0.86, 1.0);
-        final bounce = const ElasticOutCurve(0.6).transform(u);
-        return Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            if (s > 0 && s < 1)
-              Opacity(
-                opacity: _strikeOpacity.transform(s).clamp(0.0, 1.0),
-                child: Transform.rotate(
-                  angle: _strikeRotation.transform(s),
-                  child: Transform.scale(
-                    scale: _strikeScale.transform(s),
-                    child: CustomPaint(
-                      foregroundPainter: IntroSlashPainter(t: slash, color: AppColors.error),
-                      child: commission,
-                    ),
-                  ),
-                ),
-              ),
-            if (u > 0)
-              Opacity(
-                opacity: (u * 5).clamp(0.0, 1.0),
-                child: Transform.scale(scale: bounce.clamp(0.0, 1.4), child: noCommission),
-              ),
-            if (u > 0 && u < 1)
-              _Overlay(
-                extent: 120,
-                child: IntroSparkBurst(t: u, count: 8, radius: 46, colors: const [Colors.white, AppColors.tripLight]),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _chat() {
-    final traveller = GestureDetector(
+  Widget _stayCard() {
+    final image = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _onReplay,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-        decoration: const BoxDecoration(
-          color: AppColors.tripSurface,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(14),
-            topRight: Radius.circular(14),
-            bottomLeft: Radius.circular(14),
-            bottomRight: Radius.circular(4),
+        height: 62,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.stayLight, AppColors.staySurface],
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Iconsax.message_text, size: 12, color: AppColors.tripDark),
-            const SizedBox(width: 6),
-            Text(IntroStrings.ask, maxLines: 1, softWrap: false, style: _ts(10.5, FontWeight.w700, AppColors.textDark)),
-          ],
+        child: _bob(
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 6, offset: const Offset(0, 2))],
+            ),
+            child: const Icon(Iconsax.house_2, size: 18, color: AppColors.stay),
+          ),
+          1,
         ),
       ),
     );
 
-    final hostAvatar = _bob(const _Avatar(icon: Iconsax.house_2, fill: AppColors.staySurface, color: AppColors.stay), 1);
-    final driverAvatar = _bob(const _Avatar(icon: Iconsax.car, fill: AppColors.taxiSurface, color: AppColors.taxi), -1);
-
-    final hostBubble = Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        hostAvatar,
-        const SizedBox(width: 6),
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(4),
-              topRight: Radius.circular(14),
-              bottomLeft: Radius.circular(14),
-              bottomRight: Radius.circular(14),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final chips = AnimatedBuilder(
+      animation: entrance,
+      builder: (context, _) {
+        final v = _iv(entrance.value, 0.35, 0.55, Curves.easeOut);
+        return Opacity(
+          opacity: v,
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 4,
             children: [
-              _statusPill(),
-              const SizedBox(height: 6),
-              _acceptChip(),
+              for (final s in IntroStrings.stayStyles)
+                _Chip(label: s, fill: AppColors.staySurface, color: AppColors.stayDark, size: 9, weight: FontWeight.w700),
             ],
           ),
-        ),
-      ],
+        );
+      },
     );
 
-    final driverBubble = Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        driverAvatar,
-        const SizedBox(width: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(4),
-              topRight: Radius.circular(14),
-              bottomLeft: Radius.circular(14),
-              bottomRight: Radius.circular(14),
-            ),
-          ),
-          child: Text(IntroStrings.fareSent, maxLines: 1, softWrap: false, style: _ts(10.5, FontWeight.w700, AppColors.textDark)),
-        ),
-      ],
-    );
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned(
-          right: 0,
-          top: 0,
-          child: AnimatedBuilder(
-            animation: entrance,
-            child: traveller,
-            builder: (context, c) {
-              final v = _iv(entrance.value, 0.19, 0.31, Curves.easeOutBack);
-              return IgnorePointer(
-                ignoring: v < 0.5,
-                child: Opacity(
-                  opacity: v.clamp(0.0, 1.0),
-                  child: Transform.scale(scale: 0.7 + 0.3 * v, alignment: Alignment.centerRight, child: c),
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.22), blurRadius: 16, offset: const Offset(0, 6))],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          image,
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(IntroStrings.stayTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: _ts(12, FontWeight.w800, AppColors.textDark)),
+                    const SizedBox(height: 2),
+                    Text(IntroStrings.stayTimes, maxLines: 1, overflow: TextOverflow.ellipsis, style: _ts(8.5, FontWeight.w500, AppColors.textLight)),
+                  ],
                 ),
-              );
-            },
+              ),
+              const SizedBox(width: 6),
+              _reserveChip(),
+            ],
           ),
-        ),
-        Positioned(left: 28, top: 48, child: _typing()),
-        Positioned(
-          left: 0,
-          top: 44,
-          child: _slideIn(hostBubble, 0.50, 0.62),
-        ),
-        Positioned(
-          left: 0,
-          top: 124,
-          child: _slideIn(driverBubble, 0.73, 0.85),
-        ),
-      ],
+          const SizedBox(height: 8),
+          chips,
+        ],
+      ),
     );
   }
 
@@ -494,80 +367,48 @@ class _AskState extends _SlideState<IntroSlideAsk> {
     );
   }
 
-  Widget _typing() {
-    return AnimatedBuilder(
-      animation: Listenable.merge([entrance, loop]),
-      builder: (context, _) {
-        final e = entrance.value;
-        if (e < 0.31 || e >= 0.50) return const SizedBox(width: 44, height: 22);
-        final fade = math.min(_iv(e, 0.31, 0.34), 1 - _iv(e, 0.47, 0.50));
-        return Opacity(
-          opacity: fade,
-          child: Container(
-            width: 44,
-            height: 22,
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(11)),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var i = 0; i < 3; i++)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: Transform.translate(
-                      offset: Offset(0, -4 * _dotBounce(loop.value, i)),
-                      child: Container(
-                        width: 5,
-                        height: 5,
-                        decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: 0.9)),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
+  Widget _confirmed() {
+    final bubble = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(4),
+          topRight: Radius.circular(14),
+          bottomLeft: Radius.circular(14),
+          bottomRight: Radius.circular(14),
+        ),
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Iconsax.tick_circle, size: 13, color: AppColors.successDark),
+            const SizedBox(width: 6),
+            Text(IntroStrings.stayConfirmed, maxLines: 1, softWrap: false, style: _ts(10.5, FontWeight.w700, AppColors.textDark)),
+          ],
+        ),
+      ),
+    );
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([entrance, tap, _accepted]),
+        child: bubble,
+        builder: (context, c) {
+          final shown = _accepted.value || (reduce && entrance.value >= 1);
+          final v = !shown ? 0.0 : (reduce ? 1.0 : _iv(tap.value, 0.0, 0.5, Curves.easeOutCubic));
+          return Opacity(
+            opacity: v,
+            child: Transform.translate(offset: Offset(-24 * (1 - v), 0), child: c),
+          );
+        },
+      ),
     );
   }
 
-  double _dotBounce(double t, int i) {
-    final s = (t * 4 - i * 0.2) % 1.0;
-    return s < 0.5 ? math.sin(math.pi * s * 2) : 0;
-  }
-
-  Widget _statusPill() {
-    return AnimatedBuilder(
-      animation: entrance,
-      builder: (context, _) {
-        final e = entrance.value;
-        final c = _iv(e, 0.65, 0.75);
-        final tick = _iv(e, 0.65, 0.75, Curves.easeOutBack);
-        final fill = Color.lerp(AppColors.neutralChip, AppColors.successSurface, c)!;
-        final fg = Color.lerp(AppColors.neutralChipText, AppColors.successText, c)!;
-        final offer = e >= 0.65;
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(20)),
-          child: AnimatedSwitcher(
-            duration: reduce ? Duration.zero : const Duration(milliseconds: 250),
-            child: offer
-                ? Row(
-                    key: const ValueKey('offer'),
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Transform.scale(scale: tick.clamp(0.0, 1.3), child: Icon(Iconsax.tick_circle, size: 11, color: fg)),
-                      const SizedBox(width: 4),
-                      Text(IntroStrings.offerReceived, maxLines: 1, softWrap: false, style: _ts(10, FontWeight.w700, fg)),
-                    ],
-                  )
-                : Text(IntroStrings.sent, key: const ValueKey('sent'), maxLines: 1, softWrap: false, style: _ts(10, FontWeight.w700, fg)),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _acceptChip() {
+  Widget _reserveChip() {
     final chip = ValueListenableBuilder<bool>(
       valueListenable: _accepted,
       builder: (context, accepted, _) => AnimatedSwitcher(
@@ -575,13 +416,13 @@ class _AskState extends _SlideState<IntroSlideAsk> {
         transitionBuilder: (c, a) => FadeTransition(opacity: a, child: ScaleTransition(scale: a, child: c)),
         child: accepted
             ? const _Chip(
-                key: ValueKey('accepted'),
-                label: IntroStrings.accepted,
+                key: ValueKey('reserved'),
+                label: IntroStrings.reserved,
                 fill: AppColors.successSurface,
                 color: AppColors.successText,
                 icon: Iconsax.tick_circle,
               )
-            : const _Chip(key: ValueKey('accept'), label: IntroStrings.accept, fill: AppColors.trip, color: Colors.white),
+            : const _Chip(key: ValueKey('reserve'), label: IntroStrings.reserve, fill: AppColors.stay, color: Colors.white),
       ),
     );
     final tappable = GestureDetector(behavior: HitTestBehavior.opaque, onTap: _onAccept, child: chip);
@@ -606,7 +447,7 @@ class _AskState extends _SlideState<IntroSlideAsk> {
                       t: t,
                       count: 8,
                       radius: 28,
-                      colors: const [AppColors.trip, AppColors.tripLight, AppColors.success],
+                      colors: const [AppColors.stay, AppColors.stayLight, AppColors.success],
                     ),
                   ),
               ],
@@ -619,7 +460,7 @@ class _AskState extends _SlideState<IntroSlideAsk> {
 }
 
 // ============================================================
-// Slide 4: Live
+// Slide 5: On the day
 // ============================================================
 
 class IntroSlideLive extends StatefulWidget {
@@ -632,7 +473,7 @@ class IntroSlideLive extends StatefulWidget {
 }
 
 class _LiveState extends _SlideState<IntroSlideLive> {
-  static const int _index = 3;
+  static const int _index = 4;
   static const int _tapDot = 1;
   static const int _tapShare = 2;
   static const double _rowH = 26;
@@ -878,7 +719,7 @@ class _LiveState extends _SlideState<IntroSlideLive> {
           children: [
             const Icon(Iconsax.share, size: 12, color: Colors.white),
             const SizedBox(width: 6),
-            Text(IntroStrings.shareSummary, maxLines: 1, softWrap: false, style: _ts(10.5, FontWeight.w700, Colors.white)),
+            Text(IntroStrings.shareTrip, maxLines: 1, softWrap: false, style: _ts(10.5, FontWeight.w700, Colors.white)),
           ],
         ),
       ),
@@ -1004,7 +845,7 @@ class _WatermarkPainter extends CustomPainter {
 }
 
 // ============================================================
-// Slide 5: Start (finale)
+// Slide 6: Finale
 // ============================================================
 
 class IntroSlideStart extends StatefulWidget {
@@ -1017,11 +858,11 @@ class IntroSlideStart extends StatefulWidget {
 }
 
 class _StartState extends _SlideState<IntroSlideStart> {
-  static const int _index = 4;
+  static const int _index = 5;
   static const Offset _centre = Offset(140, 104);
   static const double _ring = 78;
   static const List<double> _restDeg = [-135, -45, 45, 135];
-  static const List<IconData> _icons = [Iconsax.location, Iconsax.routing_2, Iconsax.message_text, Iconsax.sun_1];
+  static const List<IconData> _icons = [Iconsax.location, Iconsax.routing_2, Iconsax.house_2, Iconsax.car];
   static const List<Color> _iconColors = [AppColors.primary, AppColors.trip, AppColors.stay, AppColors.taxi];
 
   @override
@@ -1051,17 +892,27 @@ class _StartState extends _SlideState<IntroSlideStart> {
         width: 120,
         height: 120,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.5),
-        ),
-        child: Container(
-          width: 64,
-          height: 64,
+        child: Stack(
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-          child: Image.asset('assets/images/app_logo.png', width: 44, height: 44, cacheWidth: 132),
+          children: [
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: tap,
+                builder: (context, _) {
+                  final t = tap.isAnimating ? Curves.easeInOut.transform(math.sin(math.pi * tap.value)) : 0.0;
+                  return CustomPaint(painter: _RingPainter(0.05 + 0.20 * t));
+                },
+              ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(IntroStrings.ringValue, maxLines: 1, softWrap: false, style: _ts(22, FontWeight.w700, Colors.white)),
+                Text(IntroStrings.nextTrip,
+                    maxLines: 1, softWrap: false, style: _ts(8.5, FontWeight.w500, Colors.white.withValues(alpha: 0.85))),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -1079,19 +930,6 @@ class _StartState extends _SlideState<IntroSlideStart> {
           child: Icon(_icons[k], size: 15, color: _iconColors[k]),
         ),
     ];
-
-    final ownerLine = FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Iconsax.house_2, size: 11, color: Colors.white70),
-          const SizedBox(width: 5),
-          Text(IntroStrings.ownerLine,
-              maxLines: 1, softWrap: false, style: _ts(10.5, FontWeight.w600, Colors.white.withValues(alpha: 0.75))),
-        ],
-      ),
-    );
 
     return MediaQuery.withNoTextScaling(
       child: SizedBox.fromSize(
@@ -1119,17 +957,6 @@ class _StartState extends _SlideState<IntroSlideStart> {
                   child: medallion,
                   builder: (context, c) => _orbit(c!, badges),
                 ),
-              ),
-            ),
-            Positioned(
-              left: 8,
-              right: 8,
-              top: 212,
-              height: 20,
-              child: AnimatedBuilder(
-                animation: entrance,
-                child: Center(child: ownerLine),
-                builder: (context, c) => Opacity(opacity: _iv(entrance.value, 0.80, 1.0), child: c),
               ),
             ),
           ],
@@ -1191,6 +1018,38 @@ class _StartState extends _SlideState<IntroSlideStart> {
   }
 }
 
+class _RingPainter extends CustomPainter {
+  const _RingPainter(this.fraction);
+  final double fraction;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = (Offset.zero & size).deflate(3);
+    canvas.drawCircle(
+      rect.center,
+      rect.width / 2,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6
+        ..color = Colors.white.withValues(alpha: 0.25),
+    );
+    canvas.drawArc(
+      rect,
+      -math.pi / 2,
+      2 * math.pi * fraction,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6
+        ..strokeCap = StrokeCap.round
+        ..color = AppColors.warning,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter oldDelegate) => oldDelegate.fraction != fraction;
+}
+
 class _RidgePainter extends CustomPainter {
   _RidgePainter(this.anim) : super(repaint: anim);
   final Animation<double> anim;
@@ -1229,6 +1088,15 @@ class _RidgePainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.translate(0, 20 * (1 - r));
+    final glowC = Offset(size.width * 0.5, size.height - 50);
+    canvas.drawCircle(
+      glowC,
+      110,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [AppColors.warning.withValues(alpha: 0.25 * r), AppColors.warning.withValues(alpha: 0)],
+        ).createShader(Rect.fromCircle(center: glowC, radius: 110)),
+    );
     canvas.drawPath(_back!, Paint()..color = Colors.white.withValues(alpha: 0.10 * r));
     canvas.drawPath(_front!, Paint()..color = Colors.white.withValues(alpha: 0.16 * r));
     canvas.restore();

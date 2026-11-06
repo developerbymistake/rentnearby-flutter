@@ -270,8 +270,11 @@ class IntroCtaButton extends StatefulWidget {
     AppColors.tripDark,
     AppColors.stayDark,
     AppColors.taxiDark,
+    AppColors.taxiDark,
     AppColors.textDark,
   ];
+
+  static const int _lastIndex = 5;
 
   @override
   State<IntroCtaButton> createState() => _IntroCtaButtonState();
@@ -325,9 +328,9 @@ class _IntroCtaButtonState extends State<IntroCtaButton> with SingleTickerProvid
   }
 
   static Color _accentAt(double p) {
-    final c = p.clamp(0.0, 4.0);
+    final c = p.clamp(0.0, IntroCtaButton._lastIndex.toDouble());
     final i = c.floor();
-    final j = math.min(i + 1, 4);
+    final j = math.min(i + 1, IntroCtaButton._lastIndex);
     return Color.lerp(IntroCtaButton.accents[i], IntroCtaButton.accents[j], c - i)!;
   }
 

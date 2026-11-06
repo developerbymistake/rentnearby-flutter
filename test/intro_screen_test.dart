@@ -1,6 +1,7 @@
 import 'package:bakhli/screens/intro/intro_scaffold.dart';
 import 'package:bakhli/screens/intro/intro_slide_a.dart';
 import 'package:bakhli/screens/intro/intro_slide_b.dart';
+import 'package:bakhli/screens/intro/intro_strings.dart';
 import 'package:bakhli/screens/intro/intro_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -99,7 +100,8 @@ void main() {
   });
 
   group('structure', () {
-    testWidgets('five stops and five pages', (tester) async {
+    testWidgets('six stops and six pages', (tester) async {
+      expect(IntroScaffold.pageCount, 6);
       await _pumpIntro(tester, size: _sizes['360x640']!);
       for (var k = 0; k < IntroScaffold.pageCount; k++) {
         expect(find.byKey(Key('intro_stop_$k')), findsOneWidget);
@@ -110,7 +112,7 @@ void main() {
           .estimatedChildCount, IntroScaffold.pageCount);
     });
 
-    testWidgets('skip is tappable on pages 0-3 and not on page 4',
+    testWidgets('skip tappable on pages 0-4, not on 5',
         (tester) async {
       await _pumpIntro(tester, size: _sizes['360x640']!);
       for (var k = 0; k < IntroScaffold.pageCount; k++) {
@@ -133,16 +135,16 @@ void main() {
       expect(finished, 1);
     });
 
-    testWidgets('cta label is Next on 0-3 and Get started on 4',
+    testWidgets('cta label is Next on 0-4 and Start planning on 5',
         (tester) async {
       await _pumpIntro(tester, size: _sizes['360x640']!);
       for (var k = 0; k < IntroScaffold.pageCount; k++) {
         if (k > 0) await _goTo(tester, k);
         if (k < IntroScaffold.pageCount - 1) {
           expect(_ctaText('Next'), findsOneWidget, reason: 'page $k');
-          expect(_ctaText('Get started'), findsNothing);
+          expect(_ctaText('Start planning'), findsNothing);
         } else {
-          expect(_ctaText('Get started'), findsOneWidget);
+          expect(_ctaText('Start planning'), findsOneWidget);
           expect(_ctaText('Next'), findsNothing);
         }
       }
@@ -243,6 +245,7 @@ void main() {
       'pick': (a, p) => IntroSlidePick(isActive: a, progress: p),
       'plan': (a, p) => IntroSlidePlan(isActive: a, progress: p),
       'ask': (a, p) => IntroSlideAsk(isActive: a, progress: p),
+      'taxi': (a, p) => IntroSlideTaxi(isActive: a, progress: p),
       'live': (a, p) => IntroSlideLive(isActive: a, progress: p),
       'start': (a, p) => IntroSlideStart(isActive: a, progress: p),
     };
@@ -287,5 +290,40 @@ void main() {
         expect(tester.binding.transientCallbackCount, 0);
       });
     }
+  });
+
+  group('copy rules', () {
+    const forbidden = [
+      'Nainital',
+      'Bhimtal',
+      'Kainchi',
+      'Naini',
+      'Mall Road',
+      'hills',
+      'commission',
+      'middleman',
+      'Talk to hosts',
+    ];
+
+    testWidgets('tagline only on page 5, finale ring text', (tester) async {
+      await _pumpIntro(tester, size: _sizes['360x640']!);
+      for (var k = 0; k < IntroScaffold.pageCount; k++) {
+        if (k > 0) await _goTo(tester, k);
+        final page = find.byKey(ValueKey('intro_page_$k'));
+        expect(
+          find.descendant(
+              of: page, matching: find.text(IntroStrings.tagline)),
+          k == 5 ? findsOneWidget : findsNothing,
+          reason: 'tagline on page $k',
+        );
+        for (final word in forbidden) {
+          expect(find.textContaining(word), findsNothing,
+              reason: '$word on page $k');
+        }
+      }
+      expect(find.text(IntroStrings.tagline), findsOneWidget);
+      expect(find.text('Your next trip'), findsOneWidget);
+      expect(find.text('0%'), findsOneWidget);
+    });
   });
 }

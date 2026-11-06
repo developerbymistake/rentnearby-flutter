@@ -22,7 +22,7 @@ class IntroScaffold extends StatefulWidget {
   final VoidCallback? onFinish;
   final bool autoplay;
 
-  static const int pageCount = 5;
+  static const int pageCount = 6;
   static const Duration autoplayInterval = Duration(milliseconds: 5600);
   static const Duration pageAnim = Duration(milliseconds: 600);
 
@@ -35,6 +35,7 @@ class _IntroScaffoldState extends State<IntroScaffold> with TickerProviderStateM
     (a, p) => IntroSlidePick(isActive: a, progress: p),
     (a, p) => IntroSlidePlan(isActive: a, progress: p),
     (a, p) => IntroSlideAsk(isActive: a, progress: p),
+    (a, p) => IntroSlideTaxi(isActive: a, progress: p),
     (a, p) => IntroSlideLive(isActive: a, progress: p),
     (a, p) => IntroSlideStart(isActive: a, progress: p),
   ];
