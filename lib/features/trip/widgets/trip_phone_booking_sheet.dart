@@ -15,6 +15,7 @@ import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a3.dart';
 import '../utils/trip_format.dart';
+import 'trip_accept_sheet.dart';
 import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
 
@@ -41,6 +42,7 @@ class TripPhoneBookingSheet {
     required int day,
     List<String> rooms = const [],
     TripEnquiryModel? existing,
+    String? replaceEnquiryId,
   }) {
     return TripSheetFrame.show<TripPhoneBookingResult>(
       context,
@@ -52,6 +54,7 @@ class TripPhoneBookingSheet {
         day: day,
         rooms: rooms,
         existing: existing,
+        replaceEnquiryId: replaceEnquiryId,
       ),
     );
   }
@@ -70,6 +73,7 @@ class _PhoneBookingBody extends StatefulWidget {
   final int day;
   final List<String> rooms;
   final TripEnquiryModel? existing;
+  final String? replaceEnquiryId;
 
   const _PhoneBookingBody({
     required this.stayId,
@@ -79,6 +83,7 @@ class _PhoneBookingBody extends StatefulWidget {
     required this.day,
     required this.rooms,
     this.existing,
+    this.replaceEnquiryId,
   });
 
   @override
@@ -167,11 +172,6 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
     return '${TripFormat.dateRange(a, b)} · ${TripStrings.nights(_nights)}';
   }
 
-  String _dayLabel() {
-    final a = _checkIn;
-    return a == null ? TripStrings.dayN(_day) : TripFormat.shortDate(a);
-  }
-
   String get _roomValue => _otherSelected || !_hasRoomChips ? _otherRoom.text.trim() : (_room ?? '');
 
   Map<String, dynamic>? _validate() {
@@ -207,13 +207,13 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
     return null;
   }
 
-  Future<bool> _confirmReplace(String name) async {
+  Future<bool> _confirmReplace(String name, {String? title}) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(TripStrings.replaceNight(_dayLabel(), name),
+        title: Text(title ?? TripStrings.replaceNight(TripStrings.night(_day), name),
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
         content: Text(TripStrings.replaceTold(name),
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight)),
@@ -251,10 +251,32 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
         ...fields,
       });
     } else {
+      final target = TripReplaceTarget.find(
+        tripId: _plan.trip.value?.id,
+        checkIn: _plan.dateOf(_day),
+        nights: _nights,
+        replaceEnquiryId: widget.replaceEnquiryId,
+      );
+      String? replaceId;
+      if (target != null) {
+        final name = target.row.listingName;
+        final ok = await _confirmReplace(name, title: TripStrings.replaceFor(name, TripStrings.night(target.day)));
+        if (!mounted) return;
+        if (!ok) {
+          setState(() => _saving = false);
+          return;
+        }
+        replaceId = target.row.id;
+      }
       result = await ctrl.savePhoneBooking(
-          stayId: widget.stayId, day: _day, allNights: _allNights, nights: _nights, fields: fields);
+          stayId: widget.stayId,
+          day: _day,
+          allNights: _allNights,
+          nights: _nights,
+          fields: fields,
+          replaceEnquiryId: replaceId);
       final conflict = ctrl.lastConflict;
-      if (result == null && conflict != null) {
+      if (result == null && conflict != null && conflict.enquiryId != replaceId) {
         final replace = await _confirmReplace(conflict.listingName);
         if (!mounted) return;
         if (!replace) {

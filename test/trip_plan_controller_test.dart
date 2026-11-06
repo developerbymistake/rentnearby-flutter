@@ -7,10 +7,12 @@ import 'package:bakhli/features/trip/models/trip_journey_model.dart';
 import 'package:bakhli/features/trip/models/trip_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_result_model.dart';
+import 'package:bakhli/features/trip/models/trip_spot_model.dart';
 import 'package:bakhli/features/trip/trip_strings.dart';
 import 'package:bakhli/features/trip/trip_strings_mca_a1.dart';
 import 'package:bakhli/features/trip/utils/trip_map_rules.dart';
 import 'package:bakhli/features/trip/utils/trip_travel_rules.dart';
+import 'package:bakhli/features/trip/utils/trip_wizard_rules.dart';
 import 'package:bakhli/models/browse_item.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import 'package:get/get.dart';
@@ -111,6 +113,25 @@ void main() {
       ];
       expect(c.renumberForTest(days).length, 1);
       expect(c.renumberForTest(days, keepEmptyDays: true).length, 2);
+    });
+
+    test('a rest day at the end is kept when places move', () {
+      final c = TripPlanController();
+      final days = [
+        TripDay(day: 1, spots: [_spot('a'), _spot('b')]),
+        const TripDay(day: 2, stay: _lastStay, restDay: true),
+      ];
+      final out = c.renumberForTest(days);
+      expect(out.length, 2);
+      expect(out.last.restDay, isTrue);
+      expect(out.last.stay?.stayId, 's9');
+    });
+
+    test('a no-stay night keeps the leave-time undo across a save', () {
+      const night = TripStayChoice.skippedNight(note: 'bus', leaveMoved: true);
+      final back = TripStayChoice.fromJson(night.toJson());
+      expect((back.isSkipped, back.leaveMoved, back.note), (true, true, 'bus'));
+      expect(TripStayChoice.fromJson(const TripStayChoice(stayId: 's', name: 's').toJson()).leaveMoved, isFalse);
     });
   });
 
@@ -241,7 +262,9 @@ void main() {
       expect(s.journeyId, 'j1');
       expect(s.date, isNull);
       expect(c.journeyFor(TripStepRole.gettingThere)?.id, 'j1');
-      expect(c.stepDisplay(TripStepRole.gettingThere), TripStepDisplay.chosen);
+      final info = c.stepInfo(TripStepKey.gettingThere)!;
+      expect(info.state, TripStepState.waiting);
+      expect(info.needsYou, isTrue);
     });
 
     test('coming back default is check-out, another day is stored', () {
@@ -254,6 +277,19 @@ void main() {
       expect(c.journeys.map((j) => j.id), ['j3']);
     });
 
+    test('leave on the last evening moves the coming back date and survives relinking', () {
+      final c = withPlan(steps: const TripSteps(startFrom: delhi));
+      c.setLeaveOn(TripLeaveOn.lastDayEvening);
+      expect(c.stepDate(TripStepRole.comingBack), DateTime(2030, 11, 2));
+      c.linkJourney(TripStepRole.comingBack, journey('j2', DateTime(2030, 11, 2)));
+      expect(c.stepOf(TripStepRole.comingBack).date, isNull);
+      expect(c.stepOf(TripStepRole.comingBack).leaveOn, TripLeaveOn.lastDayEvening);
+      c.unlinkJourney(TripStepRole.comingBack);
+      expect(c.stepOf(TripStepRole.comingBack).leaveOn, TripLeaveOn.lastDayEvening);
+      c.setLeaveOn(TripLeaveOn.checkOut);
+      expect(c.stepDate(TripStepRole.comingBack), DateTime(2030, 11, 3));
+    });
+
     test('one journey id per trip: linking it to the other role clears the first', () {
       final c = withPlan(steps: const TripSteps(startFrom: delhi));
       c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
@@ -262,11 +298,12 @@ void main() {
       expect(c.stepOf(TripStepRole.comingBack).journeyId, 'j1');
     });
 
-    test('booked toggle, unlink, own and skip clear the link', () {
+    test('booked toggle, unlink and own clear the link; reset undoes own', () {
       final c = withPlan(steps: const TripSteps(startFrom: delhi));
       c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
       c.markStepBooked(TripStepRole.gettingThere);
-      expect(c.stepDisplay(TripStepRole.gettingThere), TripStepDisplay.booked);
+      expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.booked);
+      expect(c.stepInfo(TripStepKey.gettingThere)!.state, TripStepState.waiting);
       c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
       expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.booked);
       c.unmarkStepBooked(TripStepRole.gettingThere);
@@ -281,24 +318,18 @@ void main() {
       expect(c.stepOf(TripStepRole.gettingThere).note, 'Own car');
       expect(c.stepOf(TripStepRole.gettingThere).journeyId, isNull);
       expect(c.journeys, isEmpty);
-
-      c.linkJourney(TripStepRole.comingBack, journey('j2', DateTime(2030, 11, 3)));
-      c.skipStep(TripStepRole.comingBack);
-      expect(c.stepOf(TripStepRole.comingBack).status, TripStepStatus.skipped);
-      expect(c.stepOf(TripStepRole.comingBack).journeyId, isNull);
-      c.resetStep(TripStepRole.comingBack);
-      expect(c.stepOf(TripStepRole.comingBack).status, TripStepStatus.notStarted);
+      expect(c.stepInfo(TripStepKey.gettingThere)!.state, TripStepState.own);
+      c.resetStep(TripStepRole.gettingThere);
+      expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notStarted);
     });
 
-    test('not needed when starting inside the city, back when moved out', () async {
+    test('a start inside the city never marks a step not needed', () async {
       final c = withPlan();
       await c.setStartFrom(const TripStartFrom(name: 'Nainital', lat: 29.401, lon: 79.401));
       expect(c.startsInsideCity, isTrue);
-      expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notNeeded);
-      expect(c.stepOf(TripStepRole.comingBack).status, TripStepStatus.notNeeded);
-      await c.setStartFrom(delhi);
       expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notStarted);
       expect(c.stepOf(TripStepRole.comingBack).status, TripStepStatus.notStarted);
+      expect(c.wizardSteps.length, 9);
     });
 
     test('a new start city flags a linked journey', () async {
@@ -307,6 +338,7 @@ void main() {
       expect(await c.setStartFrom(const TripStartFrom(name: 'Dehradun', lat: 30.3165, lon: 78.0322)), isTrue);
       expect(c.startChangedRole, TripStepRole.gettingThere);
       expect(c.stepNeedsAttention(TripStepRole.gettingThere), isTrue);
+      expect(c.stepInfo(TripStepKey.gettingThere)!.state, TripStepState.attention);
     });
 
     test('a start date change clears both step dates and flags the journey', () async {
@@ -353,25 +385,176 @@ void main() {
       expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notStarted);
     });
 
-    test('skipped taxi day counts as sorted and costs nothing', () {
+    test('No taxi this day counts grey, keeps its note and costs nothing', () {
       final c = withPlan();
-      c.setSkippedTaxiDay(1);
+      expect(c.setSkippedTaxiDay(1, note: ' Walking day '), NoTaxiBlock.none);
       expect(c.plan.value!.dayAt(1)!.taxi!.isSkipped, isTrue);
-      expect(c.hasTaxiActivity(1), isTrue);
-      expect(c.priceSoFar, 0);
-      expect(c.taxiStep.sorted, 1);
-      expect(c.taxiStep.firstUnsorted, 2);
-      c.skipRemainingTaxiDays();
-      expect(c.taxiStep.display, TripStepDisplay.skipped);
+      expect(c.plan.value!.dayAt(1)!.taxi!.note, 'Walking day');
+      final info = c.stepInfo(const TripStepKey.taxi(1, 1))!;
+      expect((info.state, info.counted, info.note), (TripStepState.skipped, true, 'Walking day'));
+      expect(TripWizardRules.runningCost(c.wizardSteps), 0);
+      expect(c.stepInfo(const TripStepKey.taxi(1, 2))!.state, TripStepState.todo);
       c.clearSkippedTaxiDay(1);
       expect(c.plan.value!.dayAt(1)!.taxi, isNull);
     });
 
-    test('skip remaining nights marks every open night', () {
+    test('taxi skip guard returns every block', () {
       final c = withPlan();
-      c.skipRemainingNights();
-      expect(c.stayStep.display, TripStepDisplay.skipped);
-      expect(c.stayStep.sorted, 2);
+      c.enquiryList.assignAll([
+        TripEnquiryModel(
+          id: 'lead',
+          tripId: 't1',
+          kind: TripEnquiryKinds.taxi,
+          checkIn: DateTime(2030, 11, 2),
+          days: const [2],
+          status: TripEnquiryStatuses.asked,
+        ),
+      ]);
+      expect(c.canSkipTaxiDay(1), NoTaxiBlock.none);
+      expect(c.canSkipTaxiDay(2), NoTaxiBlock.hasEnquiry);
+      expect(c.setSkippedTaxiDay(2), NoTaxiBlock.hasEnquiry);
+      c.setOwnTaxi(days: const [1], name: 'Ravi');
+      expect(c.canSkipTaxiDay(1), NoTaxiBlock.hasOwn);
+      expect(c.setSkippedTaxiDay(1), NoTaxiBlock.hasOwn);
+      expect(c.plan.value!.dayAt(1)!.taxi!.isOwn, isTrue);
+      expect(c.setSkippedTaxiDay(1, replaceOwn: true), NoTaxiBlock.none);
+      expect(c.plan.value!.dayAt(1)!.taxi!.isSkipped, isTrue);
+      c.trip.value = c.trip.value!.copyWith(status: TripStatuses.completed);
+      expect(c.canSkipTaxiDay(1), NoTaxiBlock.readOnly);
+    });
+
+    test('No stay tonight asks before replacing an own stay', () {
+      final c = withPlan();
+      c.setOwnStay(1, name: 'Uncle');
+      expect(c.canSkipNight(1), NoStayBlock.hasOwn);
+      expect(c.setSkippedNight(1), NoStayBlock.hasOwn);
+      expect(c.plan.value!.dayAt(1)!.stay!.isOwn, isTrue);
+      expect(c.setSkippedNight(1, note: 'Night bus', replaceOwn: true), NoStayBlock.none);
+      expect(c.plan.value!.dayAt(1)!.stay!.isSkipped, isTrue);
+      expect(c.plan.value!.dayAt(1)!.stay!.note, 'Night bus');
+      c.clearSkippedNight(1);
+      expect(c.plan.value!.dayAt(1)!.stay, isNull);
+    });
+
+    test('own cars on a step and on a city change', () {
+      final c = withPlan(steps: const TripSteps(startFrom: delhi));
+      c.setOwnCar(TripStepRole.gettingThere, null, 2, true);
+      expect(c.stepOf(TripStepRole.gettingThere).ownCars, isEmpty);
+      c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
+      c.setOwnCar(TripStepRole.gettingThere, null, 2, true);
+      expect(c.stepOf(TripStepRole.gettingThere).ownCars, [2]);
+      c.setOwnCar(TripStepRole.gettingThere, null, 2, false);
+      expect(c.stepOf(TripStepRole.gettingThere).ownCars, isEmpty);
+      c.setOwnCar(TripStepRole.gettingThere, null, 2, true);
+      c.unlinkJourney(TripStepRole.gettingThere);
+      expect(c.stepOf(TripStepRole.gettingThere).ownCars, isEmpty);
+    });
+
+    test('rest day reads as No places this day', () {
+      final c = withPlan();
+      c.setRestDay(2, true);
+      expect(c.plan.value!.dayAt(2)!.restDay, isTrue);
+      expect(c.stepInfo(const TripStepKey.places(1, 2))!.state, TripStepState.skipped);
+      c.setRestDay(2, false);
+      expect(c.stepInfo(const TripStepKey.places(1, 2))!.state, TripStepState.todo);
+    });
+
+    test('dismissing a problem is saved in the plan and keeps the stay', () {
+      final c = withPlan();
+      c.plan.value = c.plan.value!.copyWith(days: [
+        const TripDay(day: 1, stay: TripStayChoice(stayId: 's1', name: 'Pine Lodge')),
+        const TripDay(day: 2),
+      ]);
+      c.enquiryList.assignAll([
+        TripEnquiryModel(
+          id: 'e1',
+          tripId: 't1',
+          listingId: 's1',
+          checkIn: DateTime(2030, 11, 1),
+          checkOut: DateTime(2030, 11, 2),
+          status: TripEnquiryStatuses.notAvailable,
+          displayStatusWire: 'notAvailable',
+        ),
+      ]);
+      c.dismissProblem('e1');
+      expect(c.plan.value!.dismissedEnquiryIds, ['e1']);
+      expect(c.plan.value!.toJson()['dismissedEnquiryIds'], ['e1']);
+      expect(c.plan.value!.dayAt(1)!.stay?.stayId, 's1');
+      expect(c.isDismissed('e1'), isTrue);
+      expect(c.primaryEnquiry(1), isNull);
+    });
+
+    test('clear dates impact and undated bookings', () {
+      final c = withPlan();
+      final rows = [
+        TripEnquiryModel(
+          id: 'b',
+          tripId: 't1',
+          checkIn: DateTime(2030, 11, 1),
+          checkOut: DateTime(2030, 11, 2),
+          status: TripEnquiryStatuses.confirmedByBoth,
+        ),
+        TripEnquiryModel(
+          id: 'o',
+          tripId: 't1',
+          checkIn: DateTime(2030, 11, 2),
+          checkOut: DateTime(2030, 11, 3),
+          status: TripEnquiryStatuses.asked,
+        ),
+      ];
+      c.enquiryList.assignAll(rows);
+      final impact = c.clearDatesImpact();
+      expect(impact.booked.map((e) => e.id), ['b']);
+      expect(impact.open.map((e) => e.id), ['o']);
+      expect(c.undatedBookedRows, isEmpty);
+      c.plan.value = c.plan.value!.copyWith(settings: c.settings.copyWith(clearStartDate: true));
+      expect(c.undatedBookedRows.map((e) => e.id), ['b']);
+    });
+
+    test('a date shift drops a stale stay and notes the lost start', () {
+      final c = withPlan();
+      c.plan.value = c.plan.value!.copyWith(days: [
+        const TripDay(day: 1, stay: TripStayChoice(stayId: 's1', name: 'Pine Lodge')),
+        const TripDay(day: 2),
+      ]);
+      c.enquiryList.assignAll([
+        TripEnquiryModel(
+          id: 'e1',
+          tripId: 't1',
+          listingId: 's1',
+          listingName: 'Pine Lodge',
+          checkIn: DateTime(2030, 11, 2),
+          checkOut: DateTime(2030, 11, 3),
+          status: TripEnquiryStatuses.confirmedByBoth,
+          displayStatusWire: 'confirmedByBoth',
+        ),
+      ]);
+      c.reconcilePlan();
+      final p = c.plan.value!;
+      expect(p.dayAt(1)!.stay, isNull);
+      expect(p.dayAt(2)!.stay?.stayId, 's1');
+      expect(c.startChangedNotes[2], isNotNull);
+      expect(c.startOf(2).changedNote, isNotNull);
+      c.clearStartNote(2);
+      expect(c.startOf(2).changedNote, isNull);
+    });
+
+    test('places changed after asking a driver', () {
+      final c = withPlan();
+      c.plan.value = c.plan.value!.copyWith(days: [
+        TripDay(day: 1, spots: [_spot('a'), _spot('b')]),
+        const TripDay(day: 2),
+      ]);
+      TripEnquiryModel lead(List<String> spots) => TripEnquiryModel(
+            id: 'l',
+            kind: TripEnquiryKinds.taxi,
+            checkIn: DateTime(2030, 11, 1),
+            days: const [1],
+            context: TripEnquiryContext(days: [TripContextDay(day: 1, date: DateTime(2030, 11, 1), spots: spots)]),
+          );
+      expect(c.placesChangedSince(lead(const ['a', 'b']), 1), isFalse);
+      expect(c.placesChangedSince(lead(const ['a']), 1), isTrue);
+      expect(c.placesChangedSince(lead(const ['a']), 2), isFalse);
     });
 
     test('journey today on the travel day', () {
@@ -593,6 +776,48 @@ void main() {
       expect(p.dayAt(2)!.stay?.sameAsDay, 1);
       expect(p.dayAt(3)!.stay?.stayId, 's1');
       expect(p.dayAt(3)!.stay?.sameAsDay, isNull);
+    });
+
+    test('a booking never replaces an own or skipped night or day (two plans stay visible)', () {
+      final c = withPlan(stayAcrossLegs());
+      final p0 = c.plan.value!;
+      c.plan.value = p0.copyWith(days: [
+        for (final d in p0.days)
+          d.day == 1
+              ? d.copyWith(stay: const TripStayChoice(stayId: '', name: 'Uncle', isOwn: true), taxi: const TripTaxiChoice.skippedDay(note: 'walk'))
+              : d,
+      ]);
+      c.enquiryList.assignAll([
+        TripEnquiryModel(
+          id: 'e1',
+          listingId: 's1',
+          listingName: 'Ganga View',
+          status: TripEnquiryStatuses.confirmedByBoth,
+          displayStatusWire: 'confirmedByBoth',
+          checkIn: DateTime(2030, 11, 1),
+          checkOut: DateTime(2030, 11, 3),
+          agreedTotal: 3000,
+        ),
+        TripEnquiryModel(
+          id: 't1',
+          kind: TripEnquiryKinds.taxi,
+          listingId: 'x1',
+          listingName: 'Ravi',
+          status: TripEnquiryStatuses.confirmedByBoth,
+          displayStatusWire: 'confirmedByBoth',
+          checkIn: DateTime(2030, 11, 1),
+          days: const [1],
+          taxi: const TripTaxiModel(agreedFare: 2000),
+        ),
+      ]);
+      c.reconcilePlan();
+      final p = c.plan.value!;
+      expect(p.dayAt(1)!.stay?.isOwn, isTrue);
+      expect(p.dayAt(1)!.taxi?.isSkipped, isTrue);
+      expect(p.dayAt(1)!.taxi?.note, 'walk');
+      expect(p.dayAt(2)!.stay?.stayId, 's1');
+      expect(c.stepInfo(const TripStepKey.stay(1, 1))!.state, TripStepState.attention);
+      expect(c.stepInfo(const TripStepKey.taxi(1, 1))!.state, TripStepState.attention);
     });
 
     test('a booked taxi covering two cities is not written into the plan (MC-C D7)', () {
@@ -845,12 +1070,14 @@ void main() {
       expect(c.taxiEnquiriesForDay(2), isEmpty);
       expect(c.hasTaxiActivity(2), isFalse);
       expect(c.bookedTaxiEnquiryFor(2), isNull);
-      expect(c.taxiStep.sorted, 1);
-      expect(c.taxiStep.firstUnsorted, 1);
+      expect(c.stepInfo(const TripStepKey.taxi(1, 1))!.state, TripStepState.todo);
+      expect(c.stepInfo(const TripStepKey.taxi(2, 1))!.state, TripStepState.todo);
       expect(c.segmentRows(2).length, 1);
       expect(c.carBooking(2, 1), isNotNull);
       expect(c.travelStateOf(2), TripTravelState.booked);
       expect(c.bookingsOutsideDates(DateTime(2030, 12, 1)).length, 1);
+      expect(c.bookingsOutsideDates(DateTime(2030, 11, 1)), isEmpty);
+      expect(c.enquiriesOutsideDates, isEmpty);
       c.reconcilePlan();
       expect(c.plan.value!.dayAt(2)!.taxi, isNull);
     });
@@ -878,15 +1105,39 @@ void main() {
       expect(c.travelStateOf(2), TripTravelState.notPlanned);
     });
 
-    test('a journey travel day counts as sorted for the local taxi step', () {
+    test('a journey travel day still offers the sightseeing taxi with a hint', () {
       final p = legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival);
       final days = [
         for (final d in p.days)
           d.day == 2 ? d : d.copyWith(taxi: const TripTaxiChoice(taxiId: 'tx', name: 'Sunil', fare: 2000)),
       ];
       final c = ctl(p.copyWith(days: days), journeys: [segJourney('j2')]);
-      expect(c.taxiStep.sorted, 3);
-      expect(c.taxiStep.firstUnsorted, isNull);
+      expect(c.stepInfo(const TripStepKey.taxi(2, 1))!.state, TripStepState.todo);
+      expect(c.journeyHintFor(2), isNotNull);
+      expect(c.journeyHintFor(3), isNull);
+      final chosen = c.stepInfo(const TripStepKey.taxi(1, 1))!;
+      expect((chosen.state, chosen.needsYou), (TripStepState.waiting, true));
+    });
+
+    test('a coming back car on the check-out date is never outside the dates', () {
+      final p = legsPlan(start: DateTime(2030, 11, 1))
+          .copyWith(steps: const TripSteps(comingBack: TripStep(status: TripStepStatus.chosen, journeyId: 'jb')));
+      final row = TripEnquiryModel(
+        id: 'back',
+        tripId: 't1',
+        kind: TripEnquiryKinds.taxi,
+        day: 4,
+        checkIn: DateTime(2030, 11, 4),
+        checkOut: DateTime(2030, 11, 4),
+        days: const [4],
+        status: TripEnquiryStatuses.bookedByTraveller,
+        context: const TripEnquiryContext(journeyId: 'jb', journeyLegIndex: 1, role: 'comingBack'),
+      );
+      final c = ctl(p, rows: [row]);
+      expect(c.enquiriesOutsideDates, isEmpty);
+      expect(c.dateChangeImpact(DateTime(2030, 11, 1)).isEmpty, isTrue);
+      expect(c.dateChangeImpact(DateTime(2030, 11, 2)).booked.single.id, 'back');
+      expect(c.taxiEnquiriesForDay(3), isEmpty);
     });
 
     test('journey arrival road minutes: given, clamped, else previous own or a whole day', () async {
@@ -1526,6 +1777,46 @@ void main() {
       expect(c.carLeg(2, 2)?.driverName, 'Mohan Bisht');
       expect(c.carLeg(2, 3), isNull);
       expect(c.legAt(2)?.cityName, 'Badrinath');
+    });
+  });
+
+  group('fix round 3', () {
+    TripSpotModel pick(String id) => TripSpotModel(
+        id: id, source: 'atlas', name: id, latitude: 29.4, longitude: 79.4, category: 'attraction', visitMinutes: 60);
+
+    TripPlanController threeDays() {
+      final c = TripPlanController();
+      addTearDown(c.onClose);
+      final p = TripPlan.singleCity(
+        cityKey: 1,
+        cityName: 'Nainital',
+        settings: TripSettings(startDate: DateTime(2030, 11, 1)),
+        days: [
+          TripDay(day: 1, spots: [_spot('a')]),
+          TripDay(day: 2, spots: [_spot('b')]),
+          const TripDay(day: 3, restDay: true),
+        ],
+      );
+      c.plan.value = p;
+      c.trip.value = _trip(p);
+      return c;
+    }
+
+    test('a place added to a day lands there and the rest day stays', () {
+      final c = threeDays();
+      c.addSpots([pick('x')], day: 1);
+      final p = c.plan.value!;
+      expect(p.dayOfSpot('x'), 1);
+      expect(p.dayAt(3)!.restDay, isTrue);
+      expect(p.days.length, 3);
+    });
+
+    test('places added without a day skip the rest day', () {
+      final c = threeDays();
+      c.addSpots([pick('y'), pick('z')]);
+      final p = c.plan.value!;
+      expect((p.dayOfSpot('y'), p.dayOfSpot('z')), (2, 2));
+      expect(p.dayAt(3)!.restDay, isTrue);
     });
   });
 }

@@ -142,6 +142,68 @@ void main() {
     });
   });
 
+  group('plan v5 fields', () {
+    test('dismissed ids, rest day and a skipped taxi note round trip', () {
+      final p = TripPlan.singleCity(
+        cityKey: 1,
+        cityName: 'Nainital',
+        days: const [
+          TripDay(day: 1, restDay: true, taxi: TripTaxiChoice.skippedDay(note: 'Walking day')),
+          TripDay(day: 2, stay: TripStayChoice.skippedNight(note: 'Night bus')),
+        ],
+      ).withDismissed('e1').withDismissed('e1').withDismissed('e2');
+      final json = p.toJson();
+      expect(json['version'], 5);
+      expect(json['dismissedEnquiryIds'], ['e1', 'e2']);
+      expect((json['days'] as List).first['restDay'], isTrue);
+      expect(((json['days'] as List).first['taxi'] as Map)['note'], 'Walking day');
+      final back = TripPlan.fromJson(json);
+      expect(back.dismissedEnquiryIds, ['e1', 'e2']);
+      expect(back.dayAt(1)!.restDay, isTrue);
+      expect(back.dayAt(1)!.taxi!.isSkipped, isTrue);
+      expect(back.dayAt(1)!.taxi!.note, 'Walking day');
+      expect(back.dayAt(2)!.stay!.note, 'Night bus');
+      expect(back.dayAt(2)!.restDay, isFalse);
+    });
+
+    test('dismissed list keeps the newest 100', () {
+      var p = TripPlan.singleCity(cityKey: 1, cityName: 'Nainital');
+      for (var i = 0; i < 105; i++) {
+        p = p.withDismissed('e$i');
+      }
+      expect(p.dismissedEnquiryIds.length, 100);
+      expect(p.dismissedEnquiryIds.first, 'e5');
+    });
+
+    test('leave-on and own cars round trip; notNeeded is written back as notStarted', () {
+      const steps = TripSteps(
+        gettingThere: TripStep(status: TripStepStatus.chosen, journeyId: 'j1', ownCars: [2]),
+        comingBack: TripStep(status: TripStepStatus.notNeeded, leaveOn: TripLeaveOn.lastDayEvening),
+      );
+      final json = steps.toJson();
+      expect((json['gettingThere'] as Map)['ownCars'], [2]);
+      expect((json['comingBack'] as Map)['leaveOn'], 'lastDayEvening');
+      expect((json['comingBack'] as Map)['status'], 'notStarted');
+      final back = TripSteps.fromJson(json);
+      expect(back.gettingThere.ownCars, [2]);
+      expect(back.comingBack.leaveOn, TripLeaveOn.lastDayEvening);
+      expect(TripStep.fromJson({'status': 'notStarted', 'leaveOn': 'later', 'ownCars': [0, 2, 2, 9]}).ownCars, [2]);
+      expect(TripStep.fromJson({'leaveOn': 'later'}).leaveOn, isNull);
+      expect(const TripStep(leaveOn: TripLeaveOn.checkOut).isDefault, isFalse);
+      expect(const TripStep(leaveOn: TripLeaveOn.lastDayEvening, ownCars: [1]).cleared.ownCars, isEmpty);
+      expect(const TripStep(leaveOn: TripLeaveOn.lastDayEvening).cleared.leaveOn, TripLeaveOn.lastDayEvening);
+    });
+
+    test('a segment keeps own cars until the journey changes', () {
+      const a = TripTravel.journey(fromName: 'Nainital', journeyId: 'j1', cars: 2);
+      final own = a.withOwnCar(2, true);
+      expect(own.ownCars, [2]);
+      expect(TripTravel.fromJson(own.toJson()).ownCars, [2]);
+      expect(own.copyWith(journeyId: 'j2').ownCars, isEmpty);
+      expect(const TripTravel.own(fromName: 'Nainital').withOwnCar(1, true).ownCars, isEmpty);
+    });
+  });
+
   group('settings', () {
     test('check-out is the morning after the last day', () {
       final s = TripSettings(startDate: DateTime(2026, 11, 1));
@@ -230,7 +292,7 @@ void main() {
     test('two legs round trip keeps legs, leg, arrival and the leg 1 copies', () {
       final p = TripPlan.fromJson(twoLegJson());
       final json = p.toJson();
-      expect(json['version'], 4);
+      expect(json['version'], 5);
       expect(json['cityName'], 'Haridwar');
       expect((json['legs'] as List).length, 2);
       expect(((json['days'] as List)[2] as Map)['leg'], 2);
@@ -246,7 +308,7 @@ void main() {
     test('toJson always writes legs for a single-city plan', () {
       final json = TripPlan.singleCity(cityKey: 1, cityName: 'Nainital', days: const [TripDay(day: 1)]).toJson();
       expect((json['legs'] as List).length, 1);
-      expect(json['version'], 4);
+      expect(json['version'], 5);
     });
 
     test('leg helpers', () {

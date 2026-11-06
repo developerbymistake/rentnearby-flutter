@@ -54,14 +54,14 @@ class TripLegMenuSheet {
     );
   }
 
-  static Future<void> addPlaces(int legIndex) async {
+  static Future<void> addPlaces(int legIndex, {int? pickDay, String? replaceSpotId}) async {
     final c = TripPlanController.to;
     final plan = c.plan.value;
     final leg = plan?.legAt(legIndex);
-    final city = cityOf(legIndex);
-    if (plan == null || leg == null || city == null) return;
+    final city = cityOf(legIndex) ?? (leg == null && legIndex == 1 ? c.picked : null);
+    if (plan == null || city == null) return;
     Worker? watch;
-    if (leg.notReady) {
+    if (leg != null && leg.notReady) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final tag = '${city.cityKey}';
         if (!Get.isRegistered<TripSpotsController>(tag: tag)) return;
@@ -74,7 +74,8 @@ class TripLegMenuSheet {
         watch = ever(spots.items, (_) => check());
       });
     }
-    await TripNavigation.openSpots(city, tripId: c.trip.value?.id, existingIds: plan.spotIds, legIndex: legIndex);
+    await TripNavigation.openSpots(city,
+        tripId: c.trip.value?.id, existingIds: plan.spotIds, legIndex: legIndex, pickDay: pickDay, replaceSpotId: replaceSpotId);
     watch?.dispose();
     final now = c.plan.value;
     if ((now?.legAt(legIndex)?.notReady ?? false) && (now?.legSpotCount(legIndex) ?? 0) > 0) c.markLegReady(legIndex);

@@ -15,16 +15,17 @@ class TripStringsA6 {
     return '$s$cars cars for $people';
   }
 
-  static const String journeyGoneTitle = 'Journey not available';
-  static const String journeyGoneBody = 'Go back and pick a way again.';
+  static const String journeyGoneTitle = "Couldn't open this journey";
+  static const String journeyGoneBody = 'The ways list changed. Your picks are safe.';
+  static const String backToWays = 'Back to ways to go';
   static const String goBack = 'Go back';
+  static const String waysGoneBody = 'Go back and search again.';
+  static const String planGoneTitle = 'This plan has changed';
+  static const String planGoneBody = 'Go back to ways to go and pick it again.';
   static const String planEmptyTitle = 'No plan to show';
   static const String planEmptyBody = 'This plan has no cars yet. Try again.';
   static const String refreshFailedTitle = "Couldn't refresh the plan";
   static const String noLocation = 'Turn on location to see every way to go';
-
-  static String waysLinkTitle(String city) => 'Every way to go to $city';
-  static const String waysLinkBody = 'Cars, changes and local taxis';
 
   static String feedSubtitle(DateTime date, int people) =>
       '${TripFormat.dayMonth(date)} · ${people == 1 ? '1 person' : '$people people'}';

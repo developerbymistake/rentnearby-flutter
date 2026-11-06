@@ -12,7 +12,9 @@ class TripStringsA3 {
   static String sendForDays(int n) => 'Send enquiry for $n ${n == 1 ? 'day' : 'days'}';
 
   static const String noDriversTitle = 'No drivers with a day rate here yet';
-  static const String noDriversBody = 'Add your own taxi to keep the plan complete.';
+  static const String noDriversBody = 'Use your own taxi, or come back later.';
+  static String noTaxiHasEnquiry(int d) => 'Day $d has a driver enquiry · withdraw it first';
+  static String replaceOwnTaxi(String name) => name.isEmpty ? 'Replace your own taxi?' : 'Replace your own taxi $name?';
   static const String noMatchTitle = 'No drivers match';
   static const String noMatchBody = 'Try fewer filters.';
   static const String clearFilters = 'Clear filters';

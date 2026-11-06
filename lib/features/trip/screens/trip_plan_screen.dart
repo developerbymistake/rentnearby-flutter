@@ -6,9 +6,7 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
-import '../../../config/app_routes.dart';
-import '../../../models/browse_item.dart';
-import '../../../utils/app_toast.dart';
+import '../../../services/storage_service.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/gradient_button.dart';
@@ -20,28 +18,26 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
-import '../trip_strings_fin_b1.dart';
-import '../trip_strings_mca_a3.dart';
-import '../trip_strings_mca_n2.dart';
+import '../trip_strings_wizard.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_wizard_rules.dart';
 import '../widgets/trip_add_city_card.dart';
-import '../widgets/trip_day_tile.dart';
-import '../widgets/trip_leg_chips.dart';
+import '../widgets/trip_cancel_sheet.dart';
+import '../widgets/trip_change_request_sheet.dart';
+import '../widgets/trip_withdraw_sheet.dart';
+import '../widgets/trip_hero_card.dart';
 import '../widgets/trip_leg_header.dart';
-import '../widgets/trip_leg_menu_sheet.dart';
 import '../widgets/trip_lifecycle_actions.dart';
+import '../widgets/trip_milestone_card.dart';
 import '../widgets/trip_not_found_view.dart';
-import '../widgets/trip_plan_hint_strip.dart';
+import '../widgets/trip_sheet_frame.dart';
 import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_status.dart';
-import '../widgets/trip_status_card.dart';
-import '../widgets/trip_step_card.dart';
-import '../widgets/trip_step_skip_sheet.dart';
-import '../widgets/trip_steps_strip.dart';
-import '../widgets/trip_summary_strip.dart';
+import '../widgets/trip_step_dot.dart';
+import '../widgets/trip_step_row.dart';
 import '../widgets/trip_today_card.dart';
-import '../widgets/trip_travel_tile.dart';
 import '../widgets/trip_update_app_card.dart';
+import '../widgets/trip_wishlist_sheet.dart';
 import 'trip_details_sheet.dart';
 
 class TripPlanScreen extends StatefulWidget {
@@ -51,25 +47,40 @@ class TripPlanScreen extends StatefulWidget {
   State<TripPlanScreen> createState() => _TripPlanScreenState();
 }
 
-enum _MenuAction { rename, addPlaces, delete, myTrips, summary, mute, complete }
+enum _MenuAction { rename, summary, map, mute, complete }
 
 class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObserver {
   late final TripPlanController _c;
   bool _saving = false;
   final _scroll = ScrollController();
-  final _gettingKey = GlobalKey();
-  final _comingKey = GlobalKey();
-  final Map<int, GlobalKey> _dayKeys = {};
+  final _rowsKey = GlobalKey();
   final Map<int, GlobalKey> _legKeys = {};
   Worker? _startWorker;
   Worker? _nextWorker;
   Worker? _nextTripWorker;
   Worker? _addedWorker;
+  Worker? _linkPlanWorker;
+  Worker? _linkOpenWorker;
   bool _nextOpening = false;
+  String? _tripId;
+  String? _step;
+  int? _linkDay;
+  DateTime? _linkDate;
+  int? _linkLeg;
+  bool _linkDone = true;
+  String? _pickUpKey;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _c.trip.value != null) _c.refreshEnquiries();
+  }
+
+  static int? _int(Object? v) => v is int ? v : (v is String ? int.tryParse(v) : null);
+
+  static DateTime? _dateArg(Object? v) {
+    if (v is DateTime) return v;
+    if (v is String) return DateTime.tryParse(v);
+    return null;
   }
 
   @override
@@ -79,25 +90,41 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     _c = TripPlanController.to;
     _c.openPages++;
     final args = Get.arguments;
-    final tripId = args is Map ? args['tripId'] as String? : null;
-    final fresh = args is Map && args['fresh'] == true;
+    final map = args is Map ? args : const {};
+    _tripId = map['tripId'] as String?;
+    final fresh = map['fresh'] == true;
+    final step = map['step'];
+    _step = step is String && step.isNotEmpty ? step : null;
+    _linkDay = _int(map['day']);
+    _linkDate = _dateArg(map['date']);
+    _linkLeg = _int(map['legIndex']);
+    _linkDone = _step == null;
+    final id = _tripId;
+    if (_step == null && id != null && (fresh || _c.trip.value?.id != id || _c.plan.value == null)) {
+      _pickUpKey = StorageService.getTripWizardLast(id);
+    }
     _startWorker = ever<TripPlan?>(_c.plan, (_) => _checkStartFrom());
     _nextWorker = ever<TripCityModel?>(_c.pendingNextCity, (_) => _openPendingNext());
     _nextTripWorker = ever(_c.trip, (_) => _openPendingNext());
     _addedWorker = ever<int?>(_c.lastAddedLeg, _scrollToAdded);
+    _linkPlanWorker = ever<TripPlan?>(_c.plan, (_) => _tryLink());
+    _linkOpenWorker = ever<bool>(_c.isOpening, (_) => _tryLink());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkStartFrom();
       _openPendingNext();
     });
-    if (tripId != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (id != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
-        if (!fresh && _c.trip.value?.id == tripId && _c.plan.value != null) {
+        if (!fresh && _c.trip.value?.id == id && _c.plan.value != null) {
           _c.refreshEnquiries();
         } else {
-          _c.open(tripId, fresh: fresh);
+          await _c.open(id, fresh: fresh);
         }
+        _tryLink();
       });
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _tryLink());
     }
   }
 
@@ -108,6 +135,8 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     _nextWorker?.dispose();
     _nextTripWorker?.dispose();
     _addedWorker?.dispose();
+    _linkPlanWorker?.dispose();
+    _linkOpenWorker?.dispose();
     _scroll.dispose();
     if (Get.isRegistered<TripPlanController>() && identical(Get.find<TripPlanController>(), _c)) {
       _c.openPages--;
@@ -141,6 +170,48 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     });
   }
 
+  void _tryLink() {
+    if (_linkDone || !mounted) return;
+    final id = _tripId;
+    if (_c.isOpening.value || _c.plan.value == null || (id != null && _c.trip.value?.id != id)) return;
+    if (_c.tripGone.value || _c.plannerOff.value) {
+      _linkDone = true;
+      return;
+    }
+    final steps = _c.wizardSteps;
+    if (steps.isEmpty) return;
+    _linkDone = true;
+    final key = _resolve(steps);
+    if (key == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) _openStep(key);
+    });
+  }
+
+  String? _resolve(List<TripStepInfo> steps) {
+    final raw = _step;
+    if (raw == null) return null;
+    final parsed = TripStepKey.parse(raw);
+    if (parsed != null) return steps.any((s) => s.key.id == parsed.id) ? parsed.id : null;
+    final kind = TripWizardStepKind.parse(raw);
+    switch (kind) {
+      case TripWizardStepKind.stay || TripWizardStepKind.taxi || TripWizardStepKind.places:
+        final day = (_linkDate != null ? _c.dayOfDate(_linkDate) : null) ?? _linkDay;
+        if (day == null) return null;
+        return steps.firstWhereOrNull((s) => s.key.kind == kind && s.day == day)?.key.id;
+      case TripWizardStepKind.travel:
+        final leg = _linkLeg;
+        if (leg == null) return null;
+        return steps.firstWhereOrNull((s) => s.key.kind == kind && s.key.legIndex == leg)?.key.id;
+      case TripWizardStepKind.gettingThere || TripWizardStepKind.comingBack || TripWizardStepKind.basics:
+        return steps.firstWhereOrNull((s) => s.key.kind == kind)?.key.id;
+      case null:
+        return null;
+    }
+  }
+
+  void _openStep(String key) => TripNavigation.openStep(_c.trip.value?.id ?? _tripId ?? '', key);
+
   void _scrollToAdded(int? legIndex) {
     if (legIndex == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -149,8 +220,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       if (_c.lastAddedLeg.value == legIndex) _c.lastAddedLeg.value = null;
     });
   }
-
-  GlobalKey _dayKey(int day) => _dayKeys.putIfAbsent(day, () => GlobalKey());
 
   GlobalKey _legKey(int legIndex) => _legKeys.putIfAbsent(legIndex, () => GlobalKey());
 
@@ -175,23 +244,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     }
   }
 
-  void _onStep(TripStepKind kind) {
-    switch (kind) {
-      case TripStepKind.itinerary:
-        _scrollTo(_dayKey(1));
-      case TripStepKind.gettingThere:
-        _scrollTo(_gettingKey);
-      case TripStepKind.stay:
-        _scrollTo(_dayKey(_c.stayStep.firstUnsorted ?? 1));
-      case TripStepKind.localTaxi:
-        _scrollTo(_dayKey(_c.taxiStep.firstUnsorted ?? 1));
-      case TripStepKind.comingBack:
-        _scrollTo(_comingKey);
-    }
-  }
-
-  void _onStepLong(TripStepKind kind) => TripStepSkipSheet.show(context, step: kind);
-
   Future<void> _save() async {
     if (_saving || _c.isSaving.value || _c.spotCount == 0) return;
     setState(() => _saving = true);
@@ -199,54 +251,24 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     if (mounted) setState(() => _saving = false);
   }
 
+  void _openSummary() {
+    final id = _c.trip.value?.id;
+    if (id != null) TripLifecycleActions.openSummary(id);
+  }
+
   Future<void> _onMenu(_MenuAction action) async {
     switch (action) {
       case _MenuAction.rename:
         await _rename();
-      case _MenuAction.addPlaces:
-        _addPlaces();
-      case _MenuAction.delete:
-        await _delete();
       case _MenuAction.summary:
-        final id = _c.trip.value?.id;
-        if (id != null) TripLifecycleActions.openSummary(id);
+        _openSummary();
+      case _MenuAction.map:
+        TripNavigation.openMap(day: _c.defaultMapDay, tripId: _c.trip.value?.id);
       case _MenuAction.mute:
         await TripLifecycleActions.toggleMute(context);
       case _MenuAction.complete:
         await TripLifecycleActions.markComplete(context);
-      case _MenuAction.myTrips:
-        if (Get.previousRoute == AppRoutes.myTrips) {
-          Get.back();
-        } else {
-          TripNavigation.replaceWithMyTrips();
-        }
     }
-  }
-
-  Future<void> _askAgain(bool taxi, int day) async {
-    final batch = await _c.askAgain(kind: taxi ? TripEnquiryKinds.taxi : TripEnquiryKinds.stay, day: day);
-    if (batch == null) return;
-    if (taxi) {
-      TripNavigation.openTaxiReplies(day);
-    } else {
-      TripNavigation.openReplies(day);
-    }
-  }
-
-  void _addPlaces() {
-    final picked = _c.picked;
-    final plan = _c.plan.value;
-    if (plan != null && plan.isMultiCity) {
-      final leg = TripLegMenuSheet.lastReadyLeg();
-      if (leg == null) {
-        AppToast.warning(TripStringsMcaN2.noReadyCity);
-      } else {
-        TripLegMenuSheet.addPlaces(leg);
-      }
-      return;
-    }
-    if (picked == null || plan == null) return;
-    TripNavigation.openSpots(picked, tripId: _c.trip.value?.id, existingIds: plan.spotIds);
   }
 
   Future<void> _rename() async {
@@ -255,23 +277,24 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Rename trip', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+        title: const Text(TripStringsWizard.renameTrip,
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           maxLength: 80,
           inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(80)],
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-          decoration: const InputDecoration(hintText: 'Trip name'),
+          decoration: const InputDecoration(hintText: TripStringsWizard.tripName),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+            child: const Text(TripStringsWizard.cancel, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('Save',
+            child: const Text(TripStringsWizard.save,
                 style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: TripColors.accentDark)),
           ),
         ],
@@ -279,40 +302,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     );
     if (title == null || title.isEmpty || title == _c.title) return;
     await _c.rename(title);
-  }
-
-  Future<void> _delete() async {
-    final hosts = {
-      for (final e in _c.enquiries)
-        if (e.isOpen) e.owner.id ?? e.listingId,
-    }.length;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(TripStrings.deleteTrip, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-        content: Text(hosts > 0 ? TripStrings.deleteTripTold(hosts) : 'This cannot be undone.',
-            style: const TextStyle(fontFamily: 'Poppins')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(fontFamily: 'Poppins')),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    if (await _c.deleteTrip()) Get.until((r) => r.settings.name == AppRoutes.main);
   }
 
   @override
@@ -323,7 +312,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         children: [
           _buildHeader(context),
           _buildNotSaved(),
-          _buildSteps(),
           Expanded(
             child: Center(
               child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: _buildBody()),
@@ -335,6 +323,16 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
     );
   }
 
+  String? _subtitle() {
+    final s = _c.settings;
+    final start = s.startDate;
+    final end = s.endDate(_c.dayCount);
+    final dates = start == null || end == null ? null : TripFormat.dayMonthRange(start, end);
+    final people = s.peopleSummary;
+    if (dates == null) return null;
+    return people == null ? dates : '$dates · $people';
+  }
+
   Widget _buildHeader(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
     return Container(
@@ -342,236 +340,99 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         gradient: TripColors.gradient,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
-      padding: EdgeInsets.fromLTRB(12, top + 8, 4, 16),
+      padding: EdgeInsets.fromLTRB(4, top + 6, 4, 12),
       child: Obx(() {
         final plan = _c.plan.value;
         _c.trip.value;
-        _c.isSaving.value;
-        final off = _c.plannerOff.value;
-        final days = _c.dayCount;
-        final spots = _c.spotCount;
-        _c.enquiryList.length;
-        _c.result.value;
         _c.needsUpdate.value;
-        final saved =(_c.isPlanned || _c.isCompleted) && !_c.saveFailed.value && !_c.isSaving.value;
-        final completed = _c.isCompleted;
+        final off = _c.plannerOff.value;
         final pill = _headerPill();
-        final overDay = plan == null ? null : _overLimitDay(plan);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
+        final sub = plan == null ? null : _subtitle();
+        final editable = plan != null && !_c.isReadOnly && !_c.needsUpdate.value;
+        return Row(
           children: [
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () => Get.back(),
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 2),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            IconButton(
+              onPressed: () => Get.back(),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              plan == null ? 'Trip' : _c.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-                            ),
-                          ),
-                          if (pill != null) ...[
-                            const SizedBox(width: 8),
-                            pill,
-                          ],
-                        ],
+                      Flexible(
+                        child: Text(
+                          plan == null ? TripStringsWizard.trip : _c.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontFamily: 'Poppins', fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white),
+                        ),
                       ),
-                      if (plan != null) ...[
-                        const SizedBox(height: 2),
-                        Row(
+                      if (pill != null) ...[const SizedBox(width: 8), pill],
+                    ],
+                  ),
+                  if (plan != null && !off)
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: editable
+                          ? () => TripDetailsSheet.edit(context,
+                              heading: sub == null ? TripStringsWizard.addDates : null)
+                          : null,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 28),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Flexible(
                               child: Text(
-                                '$days ${days == 1 ? 'day' : 'days'} · $spots ${spots == 1 ? 'spot' : 'spots'}'
-                                '${plan.isMultiCity ? ' · ${TripStringsMcaA3.cities(plan.legCount)}' : ''}',
+                                sub ?? TripStringsWizard.addDates,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: _subtitleStyle,
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  decoration: sub == null ? TextDecoration.underline : null,
+                                  decorationColor: Colors.white,
+                                ),
                               ),
                             ),
-                            if (saved) ...[
-                              Text(' · ', style: _subtitleStyle),
-                              const Icon(Iconsax.tick_circle, size: 14, color: Colors.white),
-                              const SizedBox(width: 3),
-                              Text(TripStrings.saved, style: _subtitleStyle),
+                            if (editable) ...[
+                              const SizedBox(width: 4),
+                              Icon(Iconsax.edit_2, size: 13, color: Colors.white.withValues(alpha: 0.9)),
                             ],
                           ],
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (plan != null && !off) ...[
-                  _mapChip(),
-                  _menu(),
-                ],
-              ],
-            ),
-            if (plan != null && !off)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(48, 4, 12, 0),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    _datesChip(plan.settings, days),
-                    _peopleChip(plan.settings),
-                    _headerChip(Iconsax.timer_1, plan.settings.paceLabel),
-                  ],
-                ),
-              ),
-            if (plan != null && !off && overDay != null && !completed)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(48, 8, 12, 0),
-                child: Row(
-                  children: [
-                    const Icon(Iconsax.warning_2, size: 14, color: Colors.white),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        TripStringsA4.overLimitHint(overDay),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: _subtitleStyle,
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
+            ),
+            if (plan != null && !off) _menu(),
           ],
         );
       }),
     );
   }
 
-  int? _overLimitDay(TripPlan plan) {
-    if (plan.settings.maxDays == null) return null;
-    for (final d in plan.days) {
-      if (d.spots.isNotEmpty && _c.isOverLimit(d.day)) return d.day;
-    }
-    return null;
-  }
-
   Widget? _headerPill() {
     if (_c.isCompleted) return const TripBookingStatePill(TripBookingState.completed);
-    if (_c.plan.value == null) return null;
-    if (_c.isPastTrip) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-        ),
-        child: const Text(
-          TripStrings.pastTrip,
-          maxLines: 1,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white),
-        ),
-      );
-    }
-    if (_c.isPlanned && _isPlanOnly()) return const TripBookingStatePill(TripBookingState.planOnly);
-    return null;
-  }
-
-  bool _isPlanOnly() {
-    if (_c.spotCount == 0) return false;
-    if (!_c.hasDates) return true;
-    final live = _c.enquiryList.any((e) => e.isOpen || e.isBooked);
-    return !_c.hasChoice && !live;
-  }
-
-  static final TextStyle _subtitleStyle = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-    color: Colors.white.withValues(alpha: 0.85),
-  );
-
-  Widget _datesChip(TripSettings settings, int days) {
-    final start = settings.startDate;
-    final end = settings.endDate(days);
-    if (start == null || end == null) {
-      return _headerChip(Iconsax.calendar_add, TripStrings.addDates, outlined: true);
-    }
-    return _headerChip(Iconsax.calendar_1, TripFormat.dateRange(start, end));
-  }
-
-  Widget _peopleChip(TripSettings settings) {
-    final people = settings.peopleSummary;
-    if (people == null) return _headerChip(Iconsax.people, TripStrings.addPeople, outlined: true);
-    final rooms = settings.roomsSummary;
-    return _headerChip(Iconsax.people, rooms == null ? people : '$people · $rooms');
-  }
-
-  Widget _headerChip(IconData icon, String label, {bool outlined = false}) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 44),
-      child: Align(
-        widthFactor: 1,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _c.isReadOnly || _c.needsUpdate.value ? null : () => TripDetailsSheet.edit(context),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 36),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: outlined ? Colors.transparent : Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Colors.white.withValues(alpha: outlined ? 0.7 : 0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 14, color: Colors.white),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+    if (_c.plan.value == null || !_c.isPastTrip) return null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
       ),
-    );
-  }
-
-  Widget _mapChip() {
-    return GestureDetector(
-      onTap: () => TripNavigation.openMap(day: _c.defaultMapDay),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Iconsax.map, size: 14, color: Colors.white),
-            SizedBox(width: 4),
-            Text('Map', style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
-          ],
-        ),
+      child: const Text(
+        TripStrings.pastTrip,
+        maxLines: 1,
+        style: TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white),
       ),
     );
   }
@@ -583,16 +444,12 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       onSelected: _onMenu,
       itemBuilder: (_) {
         final saved = _c.trip.value != null;
-        final editable = !_c.isReadOnly && !_c.needsUpdate.value;
         return [
-          if (!_c.needsUpdate.value) _menuItem(_MenuAction.rename, Iconsax.edit_2, 'Rename'),
-          if (editable) _menuItem(_MenuAction.addPlaces, Iconsax.add_circle, TripStringsA4.addPlaces),
+          if (!_c.needsUpdate.value) _menuItem(_MenuAction.rename, Iconsax.edit_2, TripStringsWizard.rename),
           if (saved) _menuItem(_MenuAction.summary, Iconsax.receipt_text, TripStrings.summary),
+          _menuItem(_MenuAction.map, Iconsax.map, TripStringsWizard.mapOfTrip),
           if (saved) _muteItem(),
-          if (saved && _c.canComplete)
-            _menuItem(_MenuAction.complete, Iconsax.tick_circle, TripStrings.markTripComplete),
-          _menuItem(_MenuAction.myTrips, Iconsax.routing_2, TripStrings.myTrips),
-          _menuItem(_MenuAction.delete, Iconsax.trash, 'Delete trip', color: AppColors.error),
+          if (saved && _c.canComplete) _menuItem(_MenuAction.complete, Iconsax.tick_circle, TripStrings.markTripComplete),
         ];
       },
     );
@@ -605,7 +462,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       height: 52,
       child: Row(
         children: [
-          Icon(Iconsax.notification, size: 18, color: AppColors.textDark),
+          const Icon(Iconsax.notification, size: 18, color: AppColors.textDark),
           const SizedBox(width: 10),
           const Expanded(
             child: Column(
@@ -627,13 +484,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
               ],
             ),
           ),
-          IgnorePointer(
-            child: Switch(
-              value: muted,
-              activeThumbColor: TripColors.accent,
-              onChanged: (_) {},
-            ),
-          ),
+          IgnorePointer(child: Switch(value: muted, activeThumbColor: TripColors.accent, onChanged: (_) {})),
         ],
       ),
     );
@@ -683,7 +534,7 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                       ),
                     )
                   : TextButton(
-                      onPressed: () => _c.saveNow(),
+                      onPressed: _c.retrySave,
                       child: const Text(
                         TripStrings.retry,
                         style: TextStyle(
@@ -692,41 +543,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                     ),
             ),
           ],
-        ),
-      );
-    });
-  }
-
-  bool get _showSteps =>
-      _c.plan.value != null &&
-      !_c.tripGone.value &&
-      !_c.plannerOff.value &&
-      !_c.needsUpdate.value &&
-      !(_c.isPlanning.value && _c.result.value == null && !_c.planFailed.value);
-
-  Widget _buildSteps() {
-    return Obx(() {
-      _c.trip.value;
-      if (!_showSteps) return const SizedBox.shrink();
-      final multi = _c.plan.value?.isMultiCity ?? false;
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-        child: Center(
-          heightFactor: 1,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TripStepsStrip(onTap: _onStep, onLongPress: _c.isReadOnly ? null : _onStepLong),
-                if (multi) ...[
-                  const SizedBox(height: 6),
-                  TripLegChips(onTap: (k) => _scrollTo(_legKey(k))),
-                ],
-              ],
-            ),
-          ),
         ),
       );
     });
@@ -761,7 +577,10 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
         return _skeletons();
       }
       if (_c.isPlanning.value && _c.result.value == null && !_c.planFailed.value) return _skeletons();
-      final steps = !_c.needsUpdate.value;
+      _c.trip.value;
+      _c.enquiryList.length;
+      _c.result.value;
+      final steps = _c.wizardSteps;
       return ListView(
         controller: _scroll,
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
@@ -776,221 +595,248 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
             ),
             const SizedBox(height: 20),
           ],
-          _offlineStrip(),
           const TripTodayCard(),
-          if (steps) ...[
-            TripStepCard(role: TripStepRole.gettingThere, anchorKey: _gettingKey),
-            const SizedBox(height: 14),
-          ],
-          if (!plan.isMultiCity) const TripPlanHintStrip(),
-          if (!_c.isReadOnly) _redBanner(),
-          ...(plan.isMultiCity
-              ? [for (var k = 1; k <= plan.legCount; k++) ..._legSection(plan, k)]
-              : [for (final d in plan.days) ..._dayTile(d.day)]),
-          if (!_c.isReadOnly && !_c.needsUpdate.value) ...[
-            const TripAddCityCard(),
-            const SizedBox(height: 14),
-          ],
-          if (steps && plan.days.isNotEmpty) ...[
-            TripStepCard(role: TripStepRole.comingBack, anchorKey: _comingKey),
-            const SizedBox(height: 14),
-          ],
-          ..._outsideDates(),
-          const TripSummaryStrip(),
+          TripHeroCard(
+            onStep: _openStep,
+            onWishlist: () => TripWishlistSheet.show(context, onPick: _openStep),
+            onSummary: _openSummary,
+            onSeeAll: () => _scrollTo(_rowsKey),
+            pickUpKey: _pickUpKey,
+          ),
+          TripMilestoneCard(onStep: _openStep),
+          const SizedBox(height: 8),
+          KeyedSubtree(key: _rowsKey, child: const SizedBox.shrink()),
+          ..._rows(plan, steps),
         ],
       );
     });
   }
 
-  List<Widget> _dayTile(int day) => [
-        KeyedSubtree(key: _dayKey(day), child: TripDayTile(day, key: ValueKey('trip-day-$day'))),
-        const SizedBox(height: 14),
-      ];
+  static String _rowTitle(TripStepInfo s) => switch (s.key.kind) {
+        TripWizardStepKind.places => TripStringsWizard.places,
+        TripWizardStepKind.taxi => TripStringsWizard.sightseeingTaxi,
+        TripWizardStepKind.stay => TripStringsWizard.stay,
+        _ => s.title,
+      };
 
-  List<Widget> _legSection(TripPlan plan, int k) => [
-        if (k >= 2) ...[
-          TripTravelTile(key: ValueKey('trip-travel-$k'), legIndex: k),
-          const SizedBox(height: 12),
-        ],
-        TripLegHeader(key: ValueKey('trip-leg-$k'), legIndex: k, anchorKey: _legKey(k)),
-        TripPlanHintStrip(key: ValueKey('trip-hint-$k'), legIndex: k),
-        for (final d in plan.daysOf(k)) ..._dayTile(d.day),
-      ];
+  String _group(TripStepInfo s) => switch (s.key.kind) {
+        TripWizardStepKind.basics || TripWizardStepKind.gettingThere => 'before',
+        TripWizardStepKind.travel => 'travel:${s.key.legIndex}',
+        TripWizardStepKind.comingBack => 'end',
+        _ => 'day:${s.day}',
+      };
 
-  Widget _offlineStrip() {
-    if (!_c.offline.value || _c.todayDay != null || _c.isCompleted) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: AppColors.neutralChip, borderRadius: BorderRadius.circular(12)),
-        child: const Row(
+  List<Widget> _rows(TripPlan plan, List<TripStepInfo> steps) {
+    final next = TripWizardRules.nextStep(steps);
+    final readOnly = _c.isReadOnly;
+    final out = <Widget>[];
+    String? group;
+    for (var i = 0; i < steps.length; i++) {
+      final s = steps[i];
+      final g = _group(s);
+      if (g != group) {
+        if (g == 'end' && !readOnly && !_c.needsUpdate.value) {
+          out.addAll([const SizedBox(height: 6), const TripAddCityCard(), const SizedBox(height: 10)]);
+        }
+        out.addAll(_groupHeader(plan, s, g));
+        if (g == 'before') out.add(_undatedRow());
+        group = g;
+      }
+      out.add(TripStepRow(
+        key: ValueKey('step-${s.key.id}'),
+        info: s,
+        number: i + 1,
+        title: _rowTitle(s),
+        isNext: next?.key.id == s.key.id,
+        readOnly: readOnly,
+        onTap: () => _openStep(s.key.id),
+      ));
+    }
+    return out;
+  }
+
+  List<Widget> _groupHeader(TripPlan plan, TripStepInfo s, String g) {
+    if (g == 'before') return [_label(TripStringsWizard.groupBefore)];
+    if (g == 'end') return [_label(TripStringsWizard.groupEnd(_leaveLabel()))];
+    if (s.key.kind == TripWizardStepKind.travel) {
+      final k = s.key.legIndex ?? 2;
+      return [_label(TripStringsWizard.groupBetween(plan.legEnd(k - 1), plan.legStart(k)))];
+    }
+    final day = s.day ?? 1;
+    final legIndex = plan.legIndexOf(day);
+    final firstOfLeg = plan.legStart(legIndex) == day;
+    final date = _c.dateOf(day);
+    final start = _c.startOf(day);
+    return [
+      if (plan.isMultiCity && firstOfLeg)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: TripLegHeader(key: ValueKey('trip-leg-$legIndex'), legIndex: legIndex, anchorKey: _legKey(legIndex)),
+        ),
+      _label(
+        TripStringsWizard.groupDay(day, _c.cityNameOf(day), date == null ? null : TripFormat.shortDate(date)),
+        sub: switch (start.kind) {
+          TripStartKind.stay || TripStartKind.stayUnconfirmed || TripStartKind.ownStay => TripStringsWizard.startsAt(start.heading),
+          TripStartKind.notChosen => TripStringsWizard.startNotChosen,
+          TripStartKind.noStay => TripStringsWizard.startNoStay,
+          TripStartKind.arrival || TripStartKind.checkOut => start.heading,
+        },
+      ),
+    ];
+  }
+
+  String _leaveLabel() {
+    final date = _c.stepDate(TripStepRole.comingBack);
+    if (date == null) return TripStringsWizard.dateNotSet;
+    final d = TripFormat.shortDate(date);
+    return _c.steps.comingBack.leaveOnOrDefault == TripLeaveOn.lastDayEvening
+        ? TripStringsWizard.leaveEvening(_c.dayCount, d)
+        : TripStringsWizard.leaveCheckOut(d);
+  }
+
+  Widget _label(String text, {String? sub}) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Iconsax.cloud_cross, size: 16, color: AppColors.textMedium),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                TripStrings.offlineSaved,
-                maxLines: 2,
+            Text(text,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
-              ),
+                style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: AppColors.textLight)),
+            if (sub != null)
+              Text(sub,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
+          ],
+        ),
+      );
+
+  Widget _undatedRow() {
+    final dated = _c.hasDates;
+    final rows = dated ? _c.enquiriesOutsideDates : _c.undatedBookedRows;
+    if (rows.isEmpty || _c.isReadOnly) return const SizedBox.shrink();
+    final mark = TripStepMark.of(TripStepState.attention);
+    return GestureDetector(
+      onTap: () => _undatedSheet(rows),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        constraints: const BoxConstraints(minHeight: 64),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: TripStatusColors.failed.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          children: [
+            mark.badge(),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(dated ? TripStringsWizard.outsideBookings(rows.length) : TripStringsWizard.undatedBookings(rows.length),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
             ),
+            const Text(TripStringsWizard.fix,
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.errorText)),
+            const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textHint),
           ],
         ),
       ),
     );
   }
 
-  Widget _redBanner() {
-    if (_c.bannerDismissed.value || _c.isCompleted) return const SizedBox.shrink();
-    final stayDay = _c.showStayOption ? _c.firstRedDay : null;
-    final taxiDay = stayDay == null && _c.showTaxiOption ? _c.firstRedTaxiDay : null;
-    final day = stayDay ?? taxiDay;
-    final e = stayDay != null
-        ? _c.primaryEnquiry(stayDay)
-        : (taxiDay != null ? _c.primaryTaxiEnquiry(taxiDay) : null);
-    if (day == null || e == null) return const SizedBox.shrink();
-    final taxi = taxiDay != null;
-    final label = e.display == TripDisplayStatus.cancelled && e.cancelledBy == 'owner'
-        ? TripStrings.hostCancelled
-        : TripStatusVisuals.label(e.display, taxi: taxi);
-    final again = _c.canAskAgain(taxi ? TripEnquiryKinds.taxi : TripEnquiryKinds.stay, day);
-    final split = taxi ? null : _splitLine(e);
-    final text = split != null
-        ? '$split ›'
-        : taxi
-            ? (again ? '${e.listingName} · $label.' : '${e.listingName} · $label. ${TripStrings.askAnother} ›')
-            : (again ? '$label.' : '$label. ${TripStrings.findAnother} ›');
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Material(
-        color: TripStatusColors.failedSurface,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => taxi ? TripNavigation.openTaxiReplies(day) : TripNavigation.openReplies(day),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Row(
-              children: [
-                const SizedBox(width: 12),
-                const Icon(Iconsax.warning_2, size: 16, color: TripStatusColors.failed),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    text,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.errorText),
-                  ),
-                ),
-                if (again)
-                  TextButton(
-                    onPressed: _c.askBusy.value ? null : () => _askAgain(taxi, day),
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(44, 44),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    child: const Text(
-                      TripStrings.askAgain,
-                      maxLines: 1,
-                      style: TextStyle(
-                          fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: TripStatusColors.failed),
-                    ),
-                  ),
-                IconButton(
-                  onPressed: () => _c.bannerDismissed.value = true,
-                  icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.errorText),
-                ),
-              ],
-            ),
+  Future<void> _undatedSheet(List<TripEnquiryModel> rows) async {
+    final dated = _c.hasDates;
+    await TripSheetFrame.show<void>(
+      context,
+      Builder(
+        builder: (sheetCtx) => TripSheetFrame(
+          title: dated ? TripStringsWizard.outsideBookings(rows.length) : TripStringsWizard.undatedBookings(rows.length),
+          description: dated ? TripStringsWizard.outsideHint : TripStringsWizard.undatedHint,
+          footer: dated ? null : GradientButton(
+            label: TripStringsWizard.addDates,
+            height: 48,
+            gradient: TripColors.gradient,
+            shadowColor: TripColors.accent,
+            onPressed: () {
+              Navigator.pop(sheetCtx);
+              TripDetailsSheet.edit(context, heading: TripStringsWizard.addDates);
+            },
           ),
+          children: [
+            for (final e in rows)
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: Row(
+                  children: [
+                    Icon(e.isTaxi ? Iconsax.car : Iconsax.building_4, size: 18, color: AppColors.textMedium),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(e.listingName.isEmpty ? (e.isTaxi ? TripStrings.driver : TripStrings.stay) : e.listingName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          Text(e.datesLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                        ],
+                      ),
+                    ),
+                    if (dated && !e.isTaxi && e.isBooked)
+                      TextButton(
+                        onPressed: () async {
+                          Navigator.pop(sheetCtx);
+                          final sent = await TripChangeRequestSheet.show(context, enquiry: e, prefill: _c.settings);
+                          if (sent && mounted) await _c.refreshEnquiries();
+                        },
+                        style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                        child: const Text(TripStringsWizard.changeDates,
+                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+                      ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(sheetCtx);
+                        if (e.isBooked) {
+                          TripCancelSheet.show(context, enquiry: e, ownerSide: false);
+                        } else {
+                          TripWithdrawSheet.show(context, enquiry: e);
+                        }
+                      },
+                      style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                      child: Text(e.isBooked ? TripStringsWizard.cancel : TripStrings.withdraw,
+                          style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: AppColors.error)),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
 
-  String? _splitLine(TripEnquiryModel e) {
-    final failIn = e.checkIn;
-    final failOut = e.checkOut;
-    if (e.failReason != 'ProblemHostNoRoom' || failIn == null || failOut == null) return null;
-    bool same(DateTime? a, DateTime b) => a != null && a.year == b.year && a.month == b.month && a.day == b.day;
-    final kept = _c.enquiryList.firstWhereOrNull(
-        (x) => x.id != e.id && !x.isTaxi && x.isBooked && x.listingId == e.listingId && same(x.checkOut, failIn));
-    final keptIn = kept?.checkIn;
-    final a = _c.dayOfDate(failIn);
-    final b = _c.dayOfDate(failOut);
-    final k = _c.dayOfDate(keptIn);
-    if (kept == null || a == null || k == null) return null;
-    final last = b == null ? a + e.nights - 1 : b - 1;
-    return TripStringsFinB1.splitNights(a, last < a ? a : last, k, a - 1);
-  }
-
-  List<Widget> _outsideDates() {
-    final items = _c.enquiriesOutsideDates;
-    if (items.isEmpty) return const [];
-    return [
-      const Padding(
-        padding: EdgeInsets.only(left: 4, bottom: 8),
-        child: Text(
-          TripStrings.notInDates,
-          style: TextStyle(
-              fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: AppColors.textLight),
-        ),
-      ),
-      for (final e in items) ...[
-        TripStatusCard(
-          key: ValueKey('outside-${e.id}'),
-          status: e.display,
-          onTap: () => e.isTaxi
-              ? TripNavigation.openTaxiReplies(e.days.isEmpty ? 1 : e.days.first, enquiryId: e.id)
-              : TripNavigation.openReplies(e.day ?? 1, enquiryId: e.id),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(e.isTaxi ? Iconsax.car : Iconsax.building_4, size: 15, color: AppColors.textMedium),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      e.listingName.isEmpty ? (e.isTaxi ? TripStrings.driver : TripStrings.stay) : e.listingName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(child: TripStatusPill(e.display, taxi: e.isTaxi)),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _outsidePrice(e) == null ? e.datesLabel : TripStrings.oldDates(e.datesLabel, BrowseItem.inr(_outsidePrice(e)!)),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-      ],
-      const SizedBox(height: 4),
-    ];
-  }
-
-  static int? _outsidePrice(TripEnquiryModel e) =>
-      e.isTaxi ? (e.taxi?.agreedFare ?? e.taxi?.driverFare) : (e.agreedTotal ?? e.openOffer?.total);
-
-  Widget _skeletons() => ListView.separated(
+  Widget _skeletons() => ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-        itemCount: 2,
-        separatorBuilder: (_, _) => const SizedBox(height: 14),
-        itemBuilder: (_, _) => const TripDayTileSkeleton(),
+        children: [
+          TripShimmers.rowBox(height: 170, radius: 18),
+          const SizedBox(height: 18),
+          for (var i = 0; i < 5; i++) const TripStepRowSkeleton(),
+        ],
       );
 
   Widget _completeBar(BuildContext context) {

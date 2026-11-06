@@ -134,6 +134,12 @@ class TripEnquiryRepository {
   Future<TripPhoneBookingResult> resendHostLink(String enquiryId) async => TripPhoneBookingResult.fromJson(
       _data(await ApiService.post('/trips/enquiries/$enquiryId/host-confirm-link/resend', const {})));
 
+  Future<TripEnquiryModel> updateLead(String enquiryId) async =>
+      _one(await ApiService.post('/trips/enquiries/$enquiryId/lead-update', const {}));
+
+  Future<TripEnquiryModel> refreshContext(String enquiryId) async =>
+      _one(await ApiService.post('/trips/enquiries/$enquiryId/refresh-context', const {}));
+
   Future<TripEnquiryModel> withdraw(String enquiryId) async =>
       _one(await ApiService.post('/trips/enquiries/$enquiryId/withdraw', const {}));
 

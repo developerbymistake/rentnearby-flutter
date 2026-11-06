@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_enquiry_controller.dart';
+import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_offer_model.dart';
 import '../trip_colors.dart';
@@ -12,14 +14,51 @@ import '../utils/trip_format.dart';
 import 'trip_payment_line.dart';
 import 'trip_sheet_frame.dart';
 
+class TripReplaceTarget {
+  final TripEnquiryModel row;
+  final int day;
+
+  const TripReplaceTarget(this.row, this.day);
+
+  static TripReplaceTarget? find({
+    required String? tripId,
+    required DateTime? checkIn,
+    required int nights,
+    String? selfId,
+    String? replaceEnquiryId,
+  }) {
+    if (tripId == null || checkIn == null || !Get.isRegistered<TripPlanController>()) return null;
+    final c = Get.find<TripPlanController>();
+    if (c.trip.value?.id != tripId) return null;
+    final first = c.dayOfDate(checkIn);
+    if (first == null) return null;
+    TripReplaceTarget? any;
+    for (var d = first; d < first + (nights < 1 ? 1 : nights); d++) {
+      for (final e in c.enquiriesForNight(d)) {
+        if (!e.isBooked || e.id == selfId) continue;
+        if (e.id == replaceEnquiryId) return TripReplaceTarget(e, d);
+        any ??= TripReplaceTarget(e, d);
+      }
+    }
+    return any;
+  }
+}
+
 class TripAcceptSheet extends StatefulWidget {
-  const TripAcceptSheet._({required this.enquiry, required this.offer});
+  const TripAcceptSheet._({required this.enquiry, required this.offer, this.replaceEnquiryId});
 
   final TripEnquiryModel enquiry;
   final TripOfferModel offer;
+  final String? replaceEnquiryId;
 
-  static Future<bool> show(BuildContext context, {required TripEnquiryModel enquiry, required TripOfferModel offer}) async {
-    final ok = await TripSheetFrame.show<bool>(context, TripAcceptSheet._(enquiry: enquiry, offer: offer));
+  static Future<bool> show(
+    BuildContext context, {
+    required TripEnquiryModel enquiry,
+    required TripOfferModel offer,
+    String? replaceEnquiryId,
+  }) async {
+    final ok = await TripSheetFrame.show<bool>(
+        context, TripAcceptSheet._(enquiry: enquiry, offer: offer, replaceEnquiryId: replaceEnquiryId));
     return ok == true;
   }
 
@@ -31,6 +70,23 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
   bool _tell = true;
   bool _busy = false;
   String? _error;
+  TripReplaceTarget? _target;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.offer.isRevised) {
+      final offer = widget.offer;
+      final enq = widget.enquiry;
+      _target = TripReplaceTarget.find(
+        tripId: enq.tripId,
+        checkIn: offer.checkIn ?? enq.checkIn,
+        nights: offer.nights > 0 ? offer.nights : enq.nights,
+        selfId: enq.id,
+        replaceEnquiryId: widget.replaceEnquiryId,
+      );
+    }
+  }
 
   bool get _revised => widget.offer.isRevised;
 
@@ -59,7 +115,7 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
     if (_busy) return;
     setState(() => _busy = true);
     final ctrl = TripEnquiryController.to;
-    String? replaceId;
+    String? replaceId = _target?.row.id;
     try {
       while (true) {
         final res = await ctrl.accept(
@@ -73,7 +129,7 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
           return;
         }
         final conflict = ctrl.lastConflict;
-        if (conflict != null && replaceId == null && mounted) {
+        if (conflict != null && conflict.enquiryId != replaceId && mounted) {
           final replace = await _askReplace(conflict.listingName);
           if (replace != true) return;
           replaceId = conflict.enquiryId;
@@ -155,8 +211,12 @@ class _TripAcceptSheetState extends State<TripAcceptSheet> {
         ],
       );
     }
+    final target = _target;
     return TripSheetFrame(
-      title: TripStrings.acceptQuestion,
+      title: target == null
+          ? TripStrings.acceptQuestion
+          : TripStrings.replaceFor(target.row.listingName, TripStrings.night(target.day)),
+      description: target == null ? null : TripStrings.replaceTold(target.row.listingName),
       children: [
         _row(TripStrings.stay, enq.listingName),
         if (dates != null) _row(TripStrings.dates, nights > 0 ? '$dates · ${TripStrings.nights(nights)}' : dates),

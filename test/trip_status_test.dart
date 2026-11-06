@@ -45,6 +45,25 @@ void main() {
     });
   });
 
+  test('own cancel, own decline and closed are not problems', () {
+    expect(TripEnquiryStatuses.problem, isNot(contains(TripEnquiryStatuses.declined)));
+    expect(TripEnquiryStatuses.problem, isNot(contains(TripEnquiryStatuses.cancelledByTraveller)));
+    expect(TripEnquiryStatuses.problem, isNot(contains(TripEnquiryStatuses.closed)));
+    expect(TripEnquiryStatuses.problem.toSet(), {
+      TripEnquiryStatuses.notAvailable,
+      TripEnquiryStatuses.expired,
+      TripEnquiryStatuses.failed,
+      TripEnquiryStatuses.cancelledByOwner,
+    });
+  });
+
+  test('booked by you is booked but not confirmed by both', () {
+    expect(TripEnquiryStatuses.booked, contains(TripEnquiryStatuses.bookedByTraveller));
+    expect(TripEnquiryStatuses.booked, contains(TripEnquiryStatuses.confirmedByTraveller));
+    expect(TripDisplayStatus.bookedByYou.isGreen, isFalse);
+    expect(TripDisplayStatus.confirmedByYou.isGreen, isFalse);
+  });
+
   test('green set is only confirmedByBoth', () {
     expect(TripDisplayStatus.values.where((s) => s.isGreen), [TripDisplayStatus.confirmedByBoth]);
   });

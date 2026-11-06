@@ -393,6 +393,118 @@ class WayPlan {
 
 typedef WayPlanDetail = WayPlan;
 
+typedef WayFeedArgs = ({
+  WayPlace from,
+  WayPlace to,
+  DateTime? date,
+  int? people,
+  String? tripId,
+  String? tripRole,
+  int? tripLegIndex,
+  String? fromStep,
+});
+
+class JourneyOpenArgs {
+  static const String roleSegment = 'segment';
+  static const List<String> stepRoles = ['gettingThere', 'comingBack'];
+
+  final WayPlan plan;
+  final String planKey;
+  final WayPlace from;
+  final WayPlace to;
+  final DateTime date;
+  final int people;
+  final String? tripId;
+  final String? tripRole;
+  final int? tripLegIndex;
+  final Map<int, WayDriver> chosen;
+  final String? fromStep;
+  final bool synthetic;
+  final bool fromMyLocation;
+
+  const JourneyOpenArgs({
+    required this.plan,
+    required this.planKey,
+    required this.from,
+    required this.to,
+    required this.date,
+    required this.people,
+    this.tripId,
+    this.tripRole,
+    this.tripLegIndex,
+    this.chosen = const {},
+    this.fromStep,
+    this.synthetic = false,
+    this.fromMyLocation = false,
+  });
+
+  bool get forTrip => tripId != null && stepRoles.contains(tripRole);
+
+  bool get forSegment => tripId != null && tripLegIndex != null;
+
+  bool get inTrip => forTrip || forSegment;
+
+  JourneyOpenArgs withChosen(Map<int, WayDriver> next) => JourneyOpenArgs(
+        plan: plan,
+        planKey: planKey,
+        from: from,
+        to: to,
+        date: date,
+        people: people,
+        tripId: tripId,
+        tripRole: tripRole,
+        tripLegIndex: tripLegIndex,
+        chosen: Map.unmodifiable(next),
+        fromStep: fromStep,
+        synthetic: synthetic,
+        fromMyLocation: fromMyLocation,
+      );
+
+  static String? invalidReason(Object? args) {
+    if (args == null) return 'no arguments';
+    if (args is! JourneyOpenArgs) return 'arguments are ${args.runtimeType}, not JourneyOpenArgs';
+    if (args.planKey.isEmpty) return 'empty planKey';
+    if (args.plan.planKey != args.planKey) return 'plan ${args.plan.planKey} does not match planKey ${args.planKey}';
+    if (args.people < 1) return 'people ${args.people}';
+    return null;
+  }
+
+  static JourneyOpenArgs? of(Object? args) => invalidReason(args) == null ? args as JourneyOpenArgs : null;
+
+  static WayFeedArgs? feedOf(Object? args) {
+    if (args is JourneyOpenArgs) {
+      return (
+        from: args.from,
+        to: args.to,
+        date: args.date,
+        people: args.people,
+        tripId: args.tripId,
+        tripRole: args.tripRole,
+        tripLegIndex: args.tripLegIndex,
+        fromStep: args.fromStep,
+      );
+    }
+    if (args is! Map) return null;
+    final from = WayPlace.tryParse(args['from']);
+    final to = WayPlace.tryParse(args['to']);
+    if (from == null || to == null || from.name.isEmpty || to.name.isEmpty) return null;
+    final rawDate = args['date'];
+    final date = rawDate is DateTime ? rawDate : (rawDate is String ? DateTime.tryParse(rawDate) : null);
+    final people = args['people'];
+    final legIndex = args['tripLegIndex'];
+    return (
+      from: from,
+      to: to,
+      date: date,
+      people: people is int && people > 0 ? people : null,
+      tripId: args['tripId'] as String?,
+      tripRole: args['tripRole'] as String?,
+      tripLegIndex: legIndex is int ? legIndex : null,
+      fromStep: args['fromStep'] as String?,
+    );
+  }
+}
+
 class TaxiWaysResult {
   final String version;
   final WayPlace from;

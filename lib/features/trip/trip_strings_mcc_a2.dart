@@ -1,3 +1,4 @@
+import 'trip_state_labels.dart';
 class TripStringsMccA2 {
   static const String wrongCityNow = 'Wrong city now';
   static String nightInCity(int n, String city) => 'Night $n is in $city';
@@ -6,12 +7,10 @@ class TripStringsMccA2 {
   static String daysInCity(int w, int t, String city) => '$w of $t days are now in $city';
   static const String cancel = 'Cancel';
   static const String changeDays = 'Change days';
-  static const String noStayTonight = 'No stay tonight';
+  static const String noStayTonight = TripStateLabels.noStayTonight;
   static const String noStayHint = 'On a night bus or train';
   static const String undo = 'Undo';
   static const String undoHint = 'Find a stay for this night';
-  static String nightMenuTitle(int n) => 'Night $n';
-  static const String moreOptions = 'More options';
 
   static String removeQ(String city) => 'Remove $city?';
   static String changeDaysQ(String city) => 'Change days in $city?';

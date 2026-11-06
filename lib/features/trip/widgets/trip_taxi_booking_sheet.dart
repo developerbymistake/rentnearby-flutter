@@ -49,7 +49,8 @@ class TripTaxiBookingSheet {
 
   static Future<bool> showForJourneyCar(
     BuildContext context, {
-    required int legIndex,
+    TripStepRole? role,
+    int? legIndex,
     required String journeyId,
     required int carIndex,
     required TripJourneyLeg car,
@@ -63,7 +64,8 @@ class TripTaxiBookingSheet {
       backgroundColor: Colors.white,
       constraints: BoxConstraints(maxHeight: size.height * 0.9),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _JourneyCarBody(legIndex: legIndex, journeyId: journeyId, carIndex: carIndex, car: car, enquiry: enquiry),
+      builder: (_) => _JourneyCarBody(
+          role: role, legIndex: legIndex, journeyId: journeyId, carIndex: carIndex, car: car, enquiry: enquiry),
     );
     return saved == true;
   }
@@ -691,13 +693,16 @@ class _BookingBodyState extends State<_BookingBody> {
 }
 
 class _JourneyCarBody extends StatefulWidget {
-  final int legIndex;
+  final TripStepRole? role;
+  final int? legIndex;
   final String journeyId;
   final int carIndex;
   final TripJourneyLeg car;
   final TripEnquiryModel? enquiry;
 
-  const _JourneyCarBody({required this.legIndex, required this.journeyId, required this.carIndex, required this.car, this.enquiry});
+  const _JourneyCarBody(
+      {this.role, this.legIndex, required this.journeyId, required this.carIndex, required this.car, this.enquiry})
+      : assert((role == null) != (legIndex == null));
 
   @override
   State<_JourneyCarBody> createState() => _JourneyCarBodyState();
@@ -708,7 +713,6 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
   static const _inputStyle = TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark);
 
   late final TripPlanController _plan;
-  late final int _travelDay;
   late final DateTime? _date;
   late final bool _past;
   late TimeOfDay _time;
@@ -724,9 +728,8 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
   void initState() {
     super.initState();
     _plan = TripPlanController.to;
-    _travelDay = _plan.plan.value!.legStart(widget.legIndex);
-    _date = _plan.dateOf(_travelDay);
-    _past = _plan.isDayPast(_travelDay);
+    _date = _plan.journeyDateOf(role: widget.role, legIndex: widget.legIndex);
+    _past = _plan.isDatePast(_date);
     final row = widget.enquiry ?? _carRow();
     final server = row?.taxi;
     _time = _parseTime(server?.pickupTime ?? _plan.settings.pickupTime) ?? _parseTime(TripConstants.defaultPickupTime)!;
@@ -745,9 +748,18 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
     super.dispose();
   }
 
+  String get _when {
+    final date = _date;
+    if (date != null) return TripFormat.shortDate(date);
+    final k = widget.legIndex;
+    return TripStrings.dayN(k == null ? 1 : _plan.plan.value?.legStart(k) ?? 1);
+  }
+
+  List<TripEnquiryModel> _rows() => _plan.journeyRowsOf(role: widget.role, legIndex: widget.legIndex);
+
   TripEnquiryModel? _carRow() {
     TripEnquiryModel? quoted;
-    for (final e in _plan.segmentRows(widget.legIndex)) {
+    for (final e in _rows()) {
       if (e.listingId != _car.taxiId || e.context.journeyLegIndex != widget.carIndex) continue;
       if (e.isBooked) return e;
       if (e.taxi?.driverFare != null) quoted ??= e;
@@ -776,7 +788,7 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(TripStrings.replaceDriver(TripStrings.dayN(_travelDay), other),
+        title: Text(TripStrings.replaceDriver(_when, other),
             style: const TextStyle(
                 fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
         content: Text(TripStrings.replaceDriverTold(other),
@@ -825,6 +837,7 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
     final note = _note.text.trim();
     final replaceIds = <String>[];
     Future<TripEnquiryModel?> submit() => _plan.bookJourneyCar(
+          role: widget.role,
           legIndex: widget.legIndex,
           journeyId: widget.journeyId,
           carIndex: widget.carIndex,
@@ -841,9 +854,7 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
     while (saved == null) {
       final conflict = ctrl.lastConflict;
       if (conflict == null || replaceIds.contains(conflict.enquiryId)) break;
-      final sameCar = _plan
-          .segmentRows(widget.legIndex)
-          .any((e) => e.id == conflict.enquiryId && e.context.journeyLegIndex == widget.carIndex);
+      final sameCar = _rows().any((e) => e.id == conflict.enquiryId && e.context.journeyLegIndex == widget.carIndex);
       if (!sameCar) break;
       final replace = await _confirmReplace(conflict.listingName);
       if (!mounted) return;
@@ -1048,7 +1059,7 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
 
   Widget _dayChip() {
     final date = _date;
-    final label = date == null ? TripStrings.dayN(_travelDay) : TripStringsMcbA3.travelDay(TripFormat.shortDate(date));
+    final label = date == null ? _when : TripStringsMcbA3.travelDay(TripFormat.shortDate(date));
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(

@@ -9,6 +9,7 @@ import '../../../models/place_result_model.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../trip/controllers/trip_plan_controller.dart';
 import '../../trip/models/trip_plan_model.dart';
+import '../../trip/utils/trip_wizard_rules.dart';
 import '../../trip/trip_strings_steps_a3.dart';
 import '../models/taxi_browse_item.dart';
 import '../taxi_option_sets.dart';
@@ -197,6 +198,7 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
       fromTrip: _forTrip || widget.date != null || widget.people != null,
       tripId: _tripId,
       tripRole: _forTrip ? TripStepRole.gettingThere.name : null,
+      fromStep: _forTrip ? TripStepKey.gettingThere.id : null,
     );
   }
 

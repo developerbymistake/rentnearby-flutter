@@ -15,7 +15,6 @@ class TripStringsA4 {
   static String noSupplyTitle(String city) =>
       city.isEmpty ? 'No Bakhli stays or drivers here yet' : 'No Bakhli stays or drivers in $city yet';
   static const String noSupplyBody = 'Add your own bookings so the plan is complete.';
-  static String overLimitHint(int day) => 'Over the day limit. Day $day is long.';
   static const String dismiss = 'Dismiss';
 
   static const String days = 'Days';

@@ -1,3 +1,4 @@
+import 'trip_state_labels.dart';
 import '../../models/browse_item.dart';
 import 'utils/trip_format.dart';
 
@@ -26,7 +27,7 @@ class TripStringsStepsA2 {
   }
 
   static const String seeWays = 'See ways to go';
-  static const String arrangeMyself = 'I will arrange it myself';
+  static const String arrangeMyself = TripStateLabels.arrangeMyself;
   static const String differentWayBack = 'Need a different way back?';
 
   static String fromTo(String from, String to) => '$from to $to';
@@ -60,7 +61,7 @@ class TripStringsStepsA2 {
         _ => 'Ask all drivers',
       };
 
-  static const String openJourney = 'Open journey';
+  static const String openJourney = TripStateLabels.openJourney;
   static const String iBookedIt = 'I booked it';
   static const String notBookedYet = 'Not booked yet';
   static const String undo = 'Undo';
@@ -74,12 +75,8 @@ class TripStringsStepsA2 {
   static const String notArranged = 'Not arranged';
   static String arrangedByYou(String? note) =>
       note == null || note.trim().isEmpty ? 'Arranged by you' : 'Arranged by you · ${note.trim()}';
-  static const String skippedLine = 'Skipped for now. You can come back to it.';
-  static String notNeededLine(String city) => city.isEmpty ? 'You start in the trip city.' : 'You start in $city.';
 
   static const String arrangeTitle = 'Arrange it yourself?';
   static const String arrangeBody = 'We will stop reminders for this step.';
   static const String noteOptional = 'Note (optional)';
-  static const String markArranged = 'Mark as arranged';
-  static const String skipForNow = 'Skip for now';
 }

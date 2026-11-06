@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../utils/input_formatters.dart';
@@ -12,16 +13,32 @@ import '../trip_constants.dart';
 import '../trip_strings_mca_a3.dart';
 import '../utils/trip_format.dart';
 import 'trip_filter_chips.dart';
+import 'trip_going_home_row.dart';
 import 'trip_sheet_frame.dart';
 
+typedef TripBeforeOwn = Future<bool> Function();
+
 class TripOwnTravelSheet {
-  static Future<bool> show(BuildContext context, int legIndex, {TripTravelHow? initialHow, String? hubName}) async {
+  static Future<bool> show(
+    BuildContext context,
+    int legIndex, {
+    TripTravelHow? initialHow,
+    String? hubName,
+    TripBeforeOwn? beforeSave,
+  }) async {
     final c = TripPlanController.to;
     if (legIndex < 2 || c.isReadOnly || c.plan.value?.legAt(legIndex) == null) return false;
     final ok = await TripSheetFrame.show<bool>(
       context,
-      _OwnTravelBody(legIndex: legIndex, initialHow: initialHow, hubName: hubName),
+      _OwnTravelBody(legIndex: legIndex, initialHow: initialHow, hubName: hubName, beforeSave: beforeSave),
     );
+    return ok == true;
+  }
+
+  static Future<bool> showForRole(BuildContext context, TripStepRole role, {TripBeforeOwn? beforeSave}) async {
+    final c = TripPlanController.to;
+    if (c.isReadOnly || c.plan.value == null) return false;
+    final ok = await TripSheetFrame.show<bool>(context, _OwnTravelBody(role: role, beforeSave: beforeSave));
     return ok == true;
   }
 
@@ -40,12 +57,15 @@ class TripOwnTravelSheet {
       };
 }
 
+// One sheet for all journey roles: a city change (legIndex) or Getting there / Coming back (role).
 class _OwnTravelBody extends StatefulWidget {
-  const _OwnTravelBody({required this.legIndex, this.initialHow, this.hubName});
+  const _OwnTravelBody({this.legIndex, this.role, this.initialHow, this.hubName, this.beforeSave});
 
-  final int legIndex;
+  final int? legIndex;
+  final TripStepRole? role;
   final TripTravelHow? initialHow;
   final String? hubName;
+  final TripBeforeOwn? beforeSave;
 
   @override
   State<_OwnTravelBody> createState() => _OwnTravelBodyState();
@@ -66,7 +86,18 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
   @override
   void initState() {
     super.initState();
-    final current = _c.plan.value?.legAt(widget.legIndex)?.arrival;
+    final role = widget.role;
+    if (role != null) {
+      final s = _c.stepOf(role);
+      final own = s.status == TripStepStatus.own;
+      _how = own ? s.how : widget.initialHow;
+      _leavesAt = own ? s.leavesAt : null;
+      _name = TextEditingController(text: own ? (s.ownName ?? '') : '');
+      _phone = TextEditingController(text: own ? (s.ownPhone ?? '') : '');
+      _note = TextEditingController(text: own ? (s.note ?? '') : '');
+      return;
+    }
+    final current = _c.plan.value?.legAt(widget.legIndex!)?.arrival;
     final a = current != null && current.isOwn ? current : null;
     _how = a?.how ?? widget.initialHow;
     _hubName = widget.hubName ?? a?.hubName;
@@ -104,12 +135,30 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
     if (t != null && mounted) setState(() => _leavesAt = TripFormat.hhmm(t));
   }
 
+  String? _text(TextEditingController t) => t.text.trim().isEmpty ? null : t.text.trim();
+
   Future<void> _save() async {
     if (!_phoneOk || _saving) return;
-    final k = widget.legIndex;
+    final before = widget.beforeSave;
+    if (before != null) {
+      setState(() => _saving = true);
+      final ok = await before();
+      if (!mounted) return;
+      setState(() => _saving = false);
+      if (!ok) return;
+    }
+    final role = widget.role;
+    if (role != null) {
+      _c.markStepOwn(role,
+          note: _text(_note), how: _how, ownName: _text(_name), ownPhone: _text(_phone), leavesAt: _leavesAt);
+      Navigator.pop(context, true);
+      return;
+    }
+    final k = widget.legIndex!;
     if (_c.plan.value?.legAt(k)?.arrival?.isJourney ?? false) {
       final impact = _c.travelImpact(k);
       if (impact.hasBooked && !await TravelConfirmSheet.replaceTravel(context, impact.bookedRows)) return;
+      if (!mounted) return;
       setState(() => _saving = true);
       final removed = await _c.removeTravel(k, cancelBooked: impact.hasBooked);
       if (!mounted) return;
@@ -118,7 +167,7 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
     }
     final p = _c.plan.value;
     final prev = p?.legAt(k - 1)?.cityName ?? '';
-    String? text(TextEditingController t) => t.text.trim().isEmpty ? null : t.text.trim();
+    String? text(TextEditingController t) => _text(t);
     _c.setOwnTravel(
       k,
       TripTravel.own(
@@ -187,18 +236,43 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
     );
   }
 
+  Widget _roleSheet(TripStepRole role) => Obx(() => _roleSheetBody(role));
+
+  Widget _roleSheetBody(TripStepRole role) {
+    final going = role == TripStepRole.gettingThere;
+    final start = _c.startFrom?.name ?? '';
+    final city = going ? _c.cityName : _c.lastCityName;
+    final date = _c.stepDate(role);
+    final end = _c.homeEndName.isEmpty ? start : _c.homeEndName;
+    final route = going ? TripStringsMcaA3.fromTo(start, city) : TripStringsMcaA3.fromTo(city, end);
+    return TripSheetFrame(
+      title: TripStringsMcaA3.yourOwnTravel,
+      description: date == null ? route : '$route · ${TripFormat.shortDate(date)}',
+      children: [
+        if (!going) const TripGoingHomeRow(),
+        ..._fields(
+          editing: _c.stepOf(role).status == TripStepStatus.own,
+          onRemove: () => _c.resetStep(role),
+          roadTime: false,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final role = widget.role;
+    if (role != null) return _roleSheet(role);
+    final k = widget.legIndex!;
     final p = _c.plan.value;
-    final leg = p?.legAt(widget.legIndex);
+    final leg = p?.legAt(k);
     if (p == null || leg == null) {
       return const TripSheetFrame(title: TripStringsMcaA3.yourOwnTravel, children: [SizedBox(height: 24)]);
     }
-    final prev = p.legAt(widget.legIndex - 1)?.cityName ?? '';
-    final travelDay = p.legStart(widget.legIndex);
+    final prev = p.legAt(k - 1)?.cityName ?? '';
+    final travelDay = p.legStart(k);
     final date = _c.dateOf(travelDay);
     final route = TripStringsMcaA3.fromTo(prev, leg.cityName);
-    final editing = leg.arrival?.isOwn ?? false;
     return TripSheetFrame(
       title: TripStringsMcaA3.yourOwnTravel,
       description: date == null ? route : '$route · ${TripFormat.shortDate(date)}',
@@ -206,7 +280,11 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
         TripStringsMcaA3.roadTimeHelper(travelDay),
         style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.35),
       ),
-      children: [
+      children: _fields(editing: leg.arrival?.isOwn ?? false, onRemove: () => _c.clearTravel(k), roadTime: true),
+    );
+  }
+
+  List<Widget> _fields({required bool editing, required VoidCallback onRemove, required bool roadTime}) => [
         _label(TripStringsMcaA3.how),
         TripFilterChips(
           accent: TripColors.accent,
@@ -274,18 +352,20 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
             error: !_phoneOk ? TripStringsMcaA3.phoneInvalid : null,
           ),
         ),
-        const SizedBox(height: 14),
-        _label(TripStringsMcaA3.roadTime),
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _roadOption(TripConstants.travelHalfDayMinutes, TripStringsMcaA3.halfDay),
-              const SizedBox(width: 8),
-              _roadOption(TripConstants.travelWholeDayMinutes, TripStringsMcaA3.wholeDay),
-            ],
+        if (roadTime) ...[
+          const SizedBox(height: 14),
+          _label(TripStringsMcaA3.roadTime),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _roadOption(TripConstants.travelHalfDayMinutes, TripStringsMcaA3.halfDay),
+                const SizedBox(width: 8),
+                _roadOption(TripConstants.travelWholeDayMinutes, TripStringsMcaA3.wholeDay),
+              ],
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: 12),
         TextField(
           controller: _note,
@@ -309,7 +389,7 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
           Center(
             child: TextButton(
               onPressed: () {
-                _c.clearTravel(widget.legIndex);
+                onRemove();
                 Navigator.pop(context, true);
               },
               style: TextButton.styleFrom(minimumSize: const Size(88, 44)),
@@ -318,7 +398,5 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
             ),
           ),
         ],
-      ],
-    );
-  }
+      ];
 }

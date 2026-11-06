@@ -146,6 +146,70 @@ void main() {
     });
   });
 
+  group('wizard progress on the list (5.3)', () {
+    test('progress and the next step parse from the server DTO', () {
+      final s = TripSummaryModel.fromJson({
+        'id': 't1',
+        'cityName': 'Nainital',
+        'progress': {
+          'total': 13,
+          'counted': 5,
+          'decided': 1,
+          'waiting': 2,
+          'attention': 1,
+          'percent': 38,
+          'needsYou': true,
+          'next': {'kind': 'stay', 'day': 1, 'legIndex': 1, 'key': 'stay:1:1'},
+          'lastEventAt': '2030-11-01T10:00:00Z',
+        },
+      });
+      final pr = s.progress;
+      expect((pr.total, pr.counted, pr.decided, pr.percent), (13, 5, 1, 38));
+      expect(pr.waitingForReply, 2);
+      expect(pr.needsYou, isTrue);
+      expect(pr.needYou, 1);
+      expect(pr.next?.key, 'stay:1:1');
+      expect(pr.next?.day, 1);
+      expect(pr.lastEventAt, isNotNull);
+      expect(pr.isReady, isFalse);
+      expect(s.withMuted(null).progress.counted, 5);
+    });
+
+    test('an older server has no progress; bad numbers are clamped', () {
+      expect(TripSummaryModel.fromJson({'id': 't1', 'cityName': 'A'}).progress.total, 0);
+      final pr = TripProgress.tryParse({'total': 6, 'counted': 9, 'needYou': 2, 'next': {'key': ''}})!;
+      expect((pr.counted, pr.percent, pr.needsYou, pr.next), (6, 100, true, null));
+      expect(pr.isReady, isTrue);
+    });
+
+    test('the check-out day is the morning after the last day', () {
+      final s = TripSummaryModel.fromJson({
+        'id': 't1',
+        'cityName': 'A',
+        'dayCount': 2,
+        'startDate': '2030-11-01',
+        'endDate': '2030-11-02',
+      });
+      expect(s.isCheckOutDay(DateTime(2030, 11, 3)), isTrue);
+      expect(s.isCheckOutDay(DateTime(2030, 11, 2)), isFalse);
+      expect(s.isRunningOn(DateTime(2030, 11, 3)), isFalse);
+      expect(s.asCompleted(null).isCheckOutDay(DateTime(2030, 11, 3)), isFalse);
+      final noEnd = TripSummaryModel.fromJson({'id': 't1', 'cityName': 'A', 'dayCount': 1, 'startDate': '2030-11-01'});
+      expect(noEnd.isCheckOutDay(DateTime(2030, 11, 2)), isTrue);
+    });
+
+    test('the full trip DTO carries progress too', () {
+      final t = TripModel.fromJson({
+        'id': 't1',
+        'cityKey': 1,
+        'plan': {'cityKey': 1, 'cityName': 'A'},
+        'progress': {'total': 6, 'counted': 3, 'percent': 50},
+      });
+      expect(t.progress?.percent, 50);
+      expect(t.copyWith(title: 'x').progress?.total, 6);
+    });
+  });
+
   group('offline cache shape (MC-D)', () {
     Map<String, dynamic> raw() => {
           'id': 't1',

@@ -1,8 +1,11 @@
+import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_summary_model.dart';
 import 'package:bakhli/features/trip/trip_constants.dart';
 import 'package:bakhli/features/trip/trip_strings.dart';
 import 'package:bakhli/features/trip/trip_strings_a5.dart';
 import 'package:bakhli/features/trip/utils/trip_summary_text.dart';
+import 'package:bakhli/features/trip/utils/trip_wizard_rules.dart';
+import 'package:bakhli/features/trip/widgets/trip_status.dart';
 import 'package:bakhli/models/browse_item.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -239,7 +242,7 @@ void main() {
     expect(text, contains('Arranged by you · Own car, leaving 6 am'));
   });
 
-  test('skipped and not needed steps are omitted', () {
+  test('skipped and legacy not needed steps are omitted', () {
     final r = TripSummaryRecord.fromJson(withSteps({
       'gettingThere': {'status': 'skipped'},
       'comingBack': {'status': 'notNeeded'},
@@ -248,6 +251,37 @@ void main() {
     expect(text, isNot(contains('Getting there')));
     expect(text, isNot(contains('Coming back')));
     expect(TripSummaryText.hasSteps(r), isFalse);
+    expect(TripSummaryText.stepState(r, TripStepRole.comingBack), TripStepState.todo);
+  });
+
+  test('a saved journey nobody asked is waiting, not done', () {
+    final r = TripSummaryRecord.fromJson(withSteps(
+      {
+        'gettingThere': {'status': 'chosen', 'journeyId': 'j-gettingThere'},
+      },
+      gt: journey('gettingThere'),
+    ));
+    final state = TripSummaryText.stepState(r, TripStepRole.gettingThere);
+    expect(state, TripStepState.waiting);
+    expect(TripSummaryText.pillStatus(state), TripDisplayStatus.asked);
+    expect(TripSummaryText.stepInfo(r, TripStepRole.gettingThere)?.counted, isFalse);
+  });
+
+  test('own step reads own and counts', () {
+    final r = TripSummaryRecord.fromJson(withSteps({
+      'gettingThere': {'status': 'own', 'note': 'By bus'},
+    }));
+    final info = TripSummaryText.stepInfo(r, TripStepRole.gettingThere);
+    expect(info?.state, TripStepState.own);
+    expect(info?.counted, isTrue);
+    expect(TripSummaryText.pillStatus(info?.state), TripDisplayStatus.own);
+  });
+
+  test('pill status has one look per state', () {
+    expect(TripSummaryText.pillStatus(TripStepState.done), TripDisplayStatus.confirmedByBoth);
+    expect(TripSummaryText.pillStatus(TripStepState.skipped), TripDisplayStatus.own);
+    expect(TripSummaryText.pillStatus(TripStepState.attention), TripDisplayStatus.notAvailable);
+    expect(TripSummaryText.pillStatus(TripStepState.todo), TripDisplayStatus.none);
   });
 
   test('a chosen journey alone brings the driver pay line', () {

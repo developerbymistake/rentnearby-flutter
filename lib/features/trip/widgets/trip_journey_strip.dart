@@ -5,19 +5,23 @@ import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/contact_launcher.dart';
 import '../../taxi/taxi_option_sets.dart';
+import '../../taxi/ways/trip_strings_journey_card.dart';
 import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_journey_model.dart';
+import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
-import '../trip_navigation.dart';
 import '../utils/trip_travel_rules.dart';
+import 'trip_journey_card.dart';
 import 'trip_taxi_booking_sheet.dart';
 
 class TripJourneyStrip extends StatelessWidget {
-  const TripJourneyStrip({super.key, required this.legIndex, this.dense = false});
+  const TripJourneyStrip({super.key, this.legIndex, this.role, this.dense = false})
+      : assert((legIndex == null) != (role == null));
 
-  final int legIndex;
+  final int? legIndex;
+  final TripStepRole? role;
   final bool dense;
 
   static const List<Color> _carColors = [TaxiColors.accentDark, TripStatusColors.booked, TripColors.accentDark];
@@ -59,13 +63,16 @@ class TripJourneyStrip extends StatelessWidget {
       c.trip.value;
       c.plan.value;
       c.enquiryList.length;
-      final j = c.segmentJourney(legIndex);
+      final j = TripJourneyCard.journeyOf(c, role: role, legIndex: legIndex);
       if (j == null || j.legs.isEmpty) return const SizedBox.shrink();
       if (dense) return _ribbon(j);
-      final rows = c.segmentRows(legIndex);
-      final day = c.plan.value?.legStart(legIndex) ?? 1;
-      final dateOk = c.travelStateOf(legIndex) != TripTravelState.dateChanged;
-      final canAct = !c.isReadOnly && !c.needsUpdate.value && c.canEditDay(day) && dateOk;
+      final rows = TripJourneyCard.rowsOf(c, j, legIndex: legIndex);
+      final canAct = TripJourneyCard.canActOn(c, j, role: role, legIndex: legIndex);
+      final k = legIndex;
+      final moved = !c.isReadOnly &&
+          !c.needsUpdate.value &&
+          (k != null ? c.travelStateOf(k) == TripTravelState.dateChanged : j.dateChanged);
+      final lines = TripJourneyCard.infoOf(c, role: role, legIndex: legIndex)?.cars ?? const <TripCarLine>[];
       final total = totalOf(j);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -74,7 +81,7 @@ class TripJourneyStrip extends StatelessWidget {
           _places(j),
           for (final l in j.legs) ...[
             const SizedBox(height: 8),
-            _car(context, j, l, rows, canAct),
+            _car(context, j, l, rows, canAct, lines.firstWhereOrNull((x) => x.car == l.legIndex), moved: moved),
           ],
           if (total != null) ...[
             const SizedBox(height: 8),
@@ -264,25 +271,53 @@ class TripJourneyStrip extends StatelessWidget {
     return pick;
   }
 
-  Widget _car(BuildContext context, TripJourney j, TripJourneyLeg l, List<TripEnquiryModel> rows, bool canAct) {
+  static TripCarState carStateOf(TripJourney j, TripJourneyLeg l, List<TripEnquiryModel> rows) {
+    final booking = TripTravelRules.carBooking(l.legIndex, rows);
+    if (booking?.status == TripEnquiryStatuses.confirmedByBoth) return TripCarState.confirmed;
+    if (booking != null) return TripCarState.bookedByYou;
+    if (TripTravelRules.carMissing(j, l.legIndex, rows)) return TripCarState.notAvailable;
+    if (!l.driverAvailable) return TripCarState.paused;
+    if (l.lastKnownStatus == TripTravelRules.freeStatus) return TripCarState.free;
+    return l.isAsked ? TripCarState.asked : TripCarState.notAsked;
+  }
+
+  static String carLabel(TripCarState s, {bool noReply = false}) => switch (s) {
+        TripCarState.notAsked => TripStringsJourneyCard.carNotAsked,
+        TripCarState.asked => TripStringsJourneyCard.carAsked,
+        TripCarState.free => TripStringsJourneyCard.carFree,
+        TripCarState.bookedByYou => TripStringsJourneyCard.carBookedByYou,
+        TripCarState.confirmed => TripStringsJourneyCard.carConfirmed,
+        TripCarState.own => TripStringsJourneyCard.carOwn,
+        TripCarState.notAvailable => noReply ? TripStringsJourneyCard.carNoReply : TripStringsJourneyCard.carNotAvailable,
+        TripCarState.paused => TripStringsJourneyCard.carPaused,
+      };
+
+  static (Color, Color) carTone(TripCarState s) => switch (s) {
+        TripCarState.confirmed => (TripStatusColors.both, TripStatusColors.bothSurface),
+        TripCarState.bookedByYou || TripCarState.asked || TripCarState.free || TripCarState.paused =>
+          (AppColors.warningText, TripStatusColors.waitingSurface),
+        TripCarState.notAvailable => (TripStatusColors.failed, TripStatusColors.failedSurface),
+        TripCarState.own || TripCarState.notAsked => (AppColors.textLight, AppColors.divider),
+      };
+
+  Widget _car(
+    BuildContext context,
+    TripJourney j,
+    TripJourneyLeg l,
+    List<TripEnquiryModel> rows,
+    bool canAct,
+    TripCarLine? line, {
+    bool moved = false,
+  }) {
     final car = l.legIndex;
     final booking = TripTravelRules.carBooking(car, rows);
-    final confirmed = booking?.status == TripEnquiryStatuses.confirmedByBoth;
-    final missing = TripTravelRules.carMissing(j, car, rows);
+    final state = line?.state ?? carStateOf(j, l, rows);
+    final own = state == TripCarState.own;
+    final confirmed = state == TripCarState.confirmed;
+    final missing = state == TripCarState.notAvailable;
     final paused = !l.driverAvailable;
-    final (String pill, Color tone, Color fill) = confirmed
-        ? (TripStringsMcbA2.confirmed, TripStatusColors.both, TripStatusColors.bothSurface)
-        : booking != null
-            ? (TripStringsMcbA2.bookedByYou, TripStatusColors.booked, TripStatusColors.bookedSurface)
-            : missing
-                ? (TripStringsMcbA2.noDriver, TripStatusColors.failed, TripStatusColors.failedSurface)
-                : paused
-                    ? (TripStringsMcbA2.paused, AppColors.warningText, TripStatusColors.waitingSurface)
-                    : l.lastKnownStatus == TripTravelRules.freeStatus
-                        ? (TripStringsMcbA2.free, AppColors.warningText, TripStatusColors.waitingSurface)
-                        : l.isAsked
-                            ? (TripStringsMcbA2.waiting, AppColors.warningText, TripStatusColors.waitingSurface)
-                            : (TripStringsMcbA2.notAsked, AppColors.textLight, AppColors.divider);
+    final pill = carLabel(state, noReply: line?.noReply ?? (missing && TripTravelRules.carNoReply(j, car, rows)));
+    final (Color tone, Color fill) = carTone(state);
     final agreed = booking?.taxi?.agreedFare;
     final String? fareText;
     if (agreed != null && agreed > 0) {
@@ -296,16 +331,21 @@ class TripJourneyStrip extends StatelessWidget {
     }
     final phone = _phoneOf(booking?.owner.phone, l.phone, l.whatsApp);
     final driverLine = [driverOf(l.driverName), if (l.vehicleTypeName != null) l.vehicleTypeName!].join(' · ');
-    final canBook = canAct && booking == null && !missing && l.taxiId != null;
+    final canBook = canAct && booking == null && !missing && !own && l.taxiId != null;
+    final backup = l.backupName;
+    final exits = canAct && !own && !confirmed;
     String? alert;
     Color alertColor = AppColors.warningText;
-    if (missing) {
-      alert = TripStringsMcbA2.carNoDriver(car);
+    if (own) {
+      alert = null;
+    } else if (missing) {
+      alert = (line?.noReply ?? TripTravelRules.carNoReply(j, car, rows))
+          ? TripStringsMcbA2.carNoReply(car)
+          : TripStringsMcbA2.carNoDriver(car);
       alertColor = TripStatusColors.failed;
     } else if (paused && booking != null) {
       alert = TripStringsMcbA2.driverPaused;
     } else if (paused) {
-      final backup = l.backupName;
       alert = backup != null && backup.isNotEmpty ? TripStringsMcbA2.replaceWith(backup) : TripStringsMcbA2.driversUnavailable(1);
       alertColor = TripStatusColors.failed;
     }
@@ -351,12 +391,12 @@ class TripJourneyStrip extends StatelessWidget {
               ]),
             ),
             const SizedBox(width: 6),
-            ConstrainedBox(constraints: const BoxConstraints(maxWidth: 112), child: _pill(pill, tone, fill)),
+            ConstrainedBox(constraints: const BoxConstraints(maxWidth: 132), child: _pill(pill, tone, fill)),
           ]),
           if (alert != null) ...[
             const SizedBox(height: 6),
             InkWell(
-              onTap: () => TripNavigation.openJourney(j.id),
+              onTap: () => TripJourneyCard.findAnotherCar(context, j, car),
               borderRadius: BorderRadius.circular(8),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
@@ -402,6 +442,7 @@ class TripJourneyStrip extends StatelessWidget {
                   : ElevatedButton(
                       onPressed: () => TripTaxiBookingSheet.showForJourneyCar(
                         context,
+                        role: role,
                         legIndex: legIndex,
                         journeyId: j.id,
                         carIndex: car,
@@ -429,10 +470,40 @@ class TripJourneyStrip extends StatelessWidget {
               return Row(children: [Expanded(child: buttons[0]), const SizedBox(width: 8), Expanded(child: buttons[1])]);
             }),
           ],
+          if (moved && booking != null && !own)
+            Wrap(children: [
+              _exit(
+                TripStringsJourneyCard.cancelDriverBooking(firstName(l.driverName)),
+                () => TripJourneyCard.cancelCarBooking(context, role: role, legIndex: legIndex, car: car),
+              ),
+            ]),
+          if (exits || (own && canAct))
+            Wrap(spacing: 2, runSpacing: 0, children: [
+              if (own)
+                _exit(TripStringsJourneyCard.undo, () => TripJourneyCard.setCarOwn(role: role, legIndex: legIndex, car: car, own: false))
+              else ...[
+                if (booking == null && backup != null && backup.isNotEmpty && l.backupTaxiId != null && (missing || paused))
+                  _exit(TripStringsJourneyCard.useBackup(firstName(backup)), () => TripJourneyCard.useBackup(j, car, l.backupTaxiId!)),
+                if (booking == null) _exit(TripStringsJourneyCard.findAnotherCar, () => TripJourneyCard.findAnotherCar(context, j, car)),
+                _exit(
+                  TripStringsJourneyCard.arrangeCar(car),
+                  () => TripJourneyCard.arrangeCar(context, role: role, legIndex: legIndex, car: car),
+                ),
+              ],
+            ]),
         ],
       ),
     );
   }
+
+  static Widget _exit(String label, VoidCallback onTap) => TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(minimumSize: const Size(44, 44), padding: const EdgeInsets.symmetric(horizontal: 8)),
+        child: Text(label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+      );
 
   static String? _phoneOf(String? a, String? b, String? c) {
     for (final p in [a, b, c]) {

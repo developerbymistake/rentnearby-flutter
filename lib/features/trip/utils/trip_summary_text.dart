@@ -9,11 +9,11 @@ import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
 import '../trip_strings_mcb_a1.dart';
 import '../trip_strings_mcd_a1.dart';
-import '../trip_strings_steps_a1.dart';
 import '../trip_strings_steps_a3.dart';
 import '../widgets/trip_status.dart';
 import 'trip_format.dart';
-import 'trip_step_rules.dart';
+import 'trip_summary_source.dart';
+import 'trip_wizard_rules.dart';
 
 class TripSummaryText {
   static const String skippedStatus = 'skipped';
@@ -25,20 +25,36 @@ class TripSummaryText {
   static TripJourney? journeyOf(TripSummaryRecord r, TripStepRole role) =>
       role == TripStepRole.gettingThere ? r.gettingThere : r.comingBack;
 
-  static TripStepDisplay stepDisplay(TripSummaryRecord r, TripStepRole role) =>
-      TripStepRules.display(r.steps.of(role), journeyOf(r, role));
+  static TripStepInfo? stepInfo(TripSummaryRecord r, TripStepRole role) {
+    final kind = role == TripStepRole.gettingThere ? TripWizardStepKind.gettingThere : TripWizardStepKind.comingBack;
+    for (final s in TripWizardRules.steps(TripSummarySource.wizardInput(r))) {
+      if (s.key.kind == kind) return s;
+    }
+    return null;
+  }
+
+  static TripStepState? stepState(TripSummaryRecord r, TripStepRole role) => stepInfo(r, role)?.state;
 
   static bool stepShown(TripSummaryRecord r, TripStepRole role) {
-    final d = stepDisplay(r, role);
-    return d != TripStepDisplay.notStarted && d != TripStepDisplay.notNeeded && d != TripStepDisplay.skipped;
+    final s = stepState(r, role);
+    if (s == null || s == TripStepState.skipped) return false;
+    return s == TripStepState.own || journeyOf(r, role) != null;
   }
 
   static bool hasSteps(TripSummaryRecord r) => TripStepRole.values.any((role) => stepShown(r, role));
 
   static bool stepHasDriver(TripSummaryRecord r, TripStepRole role) {
-    final d = stepDisplay(r, role);
-    return d == TripStepDisplay.chosen || d == TripStepDisplay.asked || d == TripStepDisplay.booked;
+    final s = stepState(r, role);
+    return s != null && s != TripStepState.own && s != TripStepState.skipped && journeyOf(r, role) != null;
   }
+
+  static TripDisplayStatus pillStatus(TripStepState? s) => switch (s) {
+        TripStepState.done => TripDisplayStatus.confirmedByBoth,
+        TripStepState.own || TripStepState.skipped => TripDisplayStatus.own,
+        TripStepState.waiting => TripDisplayStatus.asked,
+        TripStepState.attention => TripDisplayStatus.notAvailable,
+        _ => TripDisplayStatus.none,
+      };
 
   static bool hasContent(TripSummaryRecord r) =>
       r.days.isNotEmpty || r.nights.isNotEmpty || r.taxis.isNotEmpty || hasSteps(r) || r.hasLegTravel;
@@ -64,9 +80,9 @@ class TripSummaryText {
 
   static List<String> stepLines(TripSummaryRecord r, TripStepRole role, int level) {
     if (!stepShown(r, role)) return const [];
-    final display = stepDisplay(r, role);
+    final info = stepInfo(r, role);
     final lines = <String>[roleHeading(role)];
-    if (display == TripStepDisplay.own) {
+    if (info?.state == TripStepState.own) {
       final note = (r.steps.of(role).note ?? '').trim();
       lines.add(note.isEmpty ? TripStringsStepsA3.arrangedByYou : TripStringsStepsA3.arrangedWithNote(note));
       lines.add('');
@@ -80,7 +96,8 @@ class TripSummaryText {
         lines.add('  ${carLine(j.legs[i], i + 1)}');
       }
     }
-    lines.add('  ${TripStringsStepsA1.stepLabel(display)}');
+    final line = info?.line ?? '';
+    if (line.isNotEmpty) lines.add('  $line');
     lines.add('');
     return lines;
   }
@@ -229,7 +246,7 @@ class TripSummaryText {
     if (parts.isNotEmpty) return parts.join('\n');
     final anyOwn = r.nights.any((n) => n.isOwn) ||
         r.taxis.any((t) => t.isOwn) ||
-        TripStepRole.values.any((role) => stepDisplay(r, role) == TripStepDisplay.own);
+        TripStepRole.values.any((role) => stepState(r, role) == TripStepState.own);
     return anyOwn ? TripStringsA5.ownFooter : TripStringsA5.planOnlyFooter;
   }
 

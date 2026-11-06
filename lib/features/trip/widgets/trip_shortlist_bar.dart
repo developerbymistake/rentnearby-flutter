@@ -17,22 +17,23 @@ import 'trip_own_booking_sheet.dart';
 import 'trip_page_bottom_bar.dart';
 
 class TripShortlistBar extends StatelessWidget {
-  const TripShortlistBar({super.key, required this.day});
+  const TripShortlistBar({super.key, required this.day, this.fromStep});
 
   final int day;
+  final String? fromStep;
 
   static Future<void> openOwn(BuildContext context, int day) async {
     final stay = TripPlanController.to.plan.value?.dayAt(day)?.stay;
     await TripOwnBookingSheet.show(context, day: day, existingStay: stay?.isOwn == true ? stay : null);
   }
 
-  static Future<void> send(BuildContext context, int day) async {
+  static Future<void> send(BuildContext context, int day, {String? fromStep}) async {
     final c = TripPlanController.to;
     if (!c.hasDates) {
       await TripDetailsSheet.edit(context, heading: TripStrings.addYourDates, description: TripStrings.addYourDatesOwners);
       if (!c.hasDates || !context.mounted) return;
     }
-    await TripStayEnquirySheet.show(context, day: day);
+    await TripStayEnquirySheet.show(context, day: day, fromStep: fromStep);
   }
 
   static Set<String> askedIds(TripPlanController c, int day) => {
@@ -98,9 +99,9 @@ class TripShortlistBar extends StatelessWidget {
         secondaryIcon: Iconsax.home_hashtag,
         onSecondary: () => openOwn(context, day),
         primaryLabel: ownOnly || sendable == 0 ? TripStringsA2.sendEnquiry : TripStrings.sendToStays(sendable),
-        onPrimary: ownOnly || sendable == 0 ? null : () => send(context, day),
+        onPrimary: ownOnly || sendable == 0 ? null : () => send(context, day, fromStep: fromStep),
         hint: !ownOnly && used >= TripConstants.maxShortlist ? TripStrings.shortlistFull : null,
-        showPrimary: true,
+        showPrimary: !noSupply,
         accent: StayColors.accent,
         gradient: StayColors.gradient,
       );

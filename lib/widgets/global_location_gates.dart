@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import '../config/app_colors.dart';
+import '../config/app_routes.dart';
 import '../controllers/app_version_controller.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/location_controller.dart';
+import '../services/top_route_observer.dart';
 import '../utils/update_decision.dart';
 import 'force_update_screen.dart';
 import 'gradient_button.dart';
@@ -27,6 +30,38 @@ class GlobalLocationGates extends StatelessWidget {
   // registration check at least once, right when it becomes true.
   static final ValueNotifier<int> _readyTick = ValueNotifier<int>(0);
   static void notifyReady() => _readyTick.value++;
+
+  // Trip pages work from the saved copy, so no connection never blocks them.
+  static const Set<String> _offlineRoutes = {
+    AppRoutes.myTrips,
+    AppRoutes.tripPlan,
+    AppRoutes.tripStep,
+    AppRoutes.tripSummary,
+    AppRoutes.tripMap,
+  };
+
+  static const Set<String> _tripRoutes = {
+    ..._offlineRoutes,
+    AppRoutes.tripSpots,
+    AppRoutes.tripStay,
+    AppRoutes.tripTaxi,
+    AppRoutes.tripReplies,
+    AppRoutes.tripTaxiReplies,
+    AppRoutes.taxiWays,
+    AppRoutes.journeyPlan,
+    AppRoutes.journeyRoad,
+    AppRoutes.savedJourney,
+  };
+
+  static const Set<String> _tripChildRoutes = {
+    AppRoutes.stayDetail,
+    AppRoutes.taxiDetail,
+    AppRoutes.chatConversation,
+  };
+
+  // A trip is planned for another place, so district and GPS never block it.
+  static bool _locationExempt(String? top) =>
+      _tripRoutes.contains(top) || (_tripChildRoutes.contains(top) && TopRouteObserver.hasAny(_tripRoutes));
 
   @override
   Widget build(BuildContext context) {
@@ -64,20 +99,31 @@ class GlobalLocationGates extends StatelessWidget {
         return Stack(
           children: [
             Positioned.fill(child: child),
-            Obx(() => locationCtrl.isOffline.value
+            Obx(() => locationCtrl.isOffline.value && !_offlineRoutes.contains(TopRouteObserver.top.value)
                 ? _buildOfflineGate()
                 : const SizedBox.shrink()),
-            Obx(() => !locationCtrl.isOffline.value && locationCtrl.districtUnavailable.value
+            Obx(() => !locationCtrl.isOffline.value &&
+                    locationCtrl.districtUnavailable.value &&
+                    !_locationExempt(TopRouteObserver.top.value)
                 ? _buildDistrictGate(locationCtrl)
                 : const SizedBox.shrink()),
             Obx(() => !locationCtrl.isOffline.value &&
-                    (!locationCtrl.gpsEnabled.value || !locationCtrl.locationPermissionGranted.value)
+                    (!locationCtrl.gpsEnabled.value || !locationCtrl.locationPermissionGranted.value) &&
+                    !_locationExempt(TopRouteObserver.top.value)
                 ? _buildGpsGate(locationCtrl)
                 : const SizedBox.shrink()),
           ],
         );
       },
     );
+  }
+
+  static void _openTrips() {
+    if (TopRouteObserver.hasAny(_offlineRoutes)) {
+      Get.until((r) => _offlineRoutes.contains(r.settings.name) || r.isFirst);
+    } else {
+      Get.toNamed(AppRoutes.myTrips);
+    }
   }
 
   Widget _buildOfflineGate() {
@@ -119,6 +165,21 @@ class GlobalLocationGates extends StatelessWidget {
                     height: 1.6,
                   ),
                 ),
+                if (Get.isRegistered<AuthController>() && Get.find<AuthController>().postLoginRoute == AppRoutes.main) ...[
+                const SizedBox(height: 32),
+                TextButton(
+                  onPressed: _openTrips,
+                  child: Text(
+                    TopRouteObserver.hasAny(_offlineRoutes) ? 'Back to my trip' : 'Open my trips (offline copy)',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+                ],
               ],
             ),
           ),

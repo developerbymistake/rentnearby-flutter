@@ -10,7 +10,8 @@ class TripConstants {
   static const double stayRadiusWideKm = 12;
   static const int spotsPageSize = 20;
   static const int maxSpots = 60;
-  static const int planVersion = 4;
+  static const int planVersion = 5;
+  static const int maxDismissed = 100;
   static const int maxLegs = 4;
   static const int travelHalfDayMinutes = 240;
   static const int travelWholeDayMinutes = 450;

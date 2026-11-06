@@ -34,38 +34,6 @@ TripJourney _journey({
 double _northOf(double lat, double metres) => lat + metres / 111195.0;
 
 void main() {
-  group('display matrix', () {
-    test('stored statuses without a journey', () {
-      expect(TripStepRules.display(const TripStep(), null), TripStepDisplay.notStarted);
-      expect(TripStepRules.display(const TripStep(status: TripStepStatus.own), null), TripStepDisplay.own);
-      expect(TripStepRules.display(const TripStep(status: TripStepStatus.skipped), null), TripStepDisplay.skipped);
-      expect(TripStepRules.display(const TripStep(status: TripStepStatus.notNeeded), null), TripStepDisplay.notNeeded);
-    });
-
-    test('chosen or booked with no linked journey reads as not started', () {
-      expect(TripStepRules.display(const TripStep(status: TripStepStatus.chosen, journeyId: 'j1'), null),
-          TripStepDisplay.notStarted);
-      expect(TripStepRules.display(const TripStep(status: TripStepStatus.booked, journeyId: 'j1'), null),
-          TripStepDisplay.notStarted);
-      expect(TripStepRules.display(const TripStep(status: TripStepStatus.chosen), _journey()), TripStepDisplay.notStarted);
-    });
-
-    test('chosen, asked and booked with the journey', () {
-      const chosen = TripStep(status: TripStepStatus.chosen, journeyId: 'j1');
-      expect(TripStepRules.display(chosen, _journey()), TripStepDisplay.chosen);
-      expect(TripStepRules.display(chosen, _journey(asked: true)), TripStepDisplay.asked);
-      expect(TripStepRules.display(const TripStep(status: TripStepStatus.booked, journeyId: 'j1'), _journey(asked: true)),
-          TripStepDisplay.booked);
-      expect(TripStepRules.display(chosen, _journey(id: 'other')), TripStepDisplay.notStarted);
-    });
-
-    test('sorted is everything but not started', () {
-      for (final d in TripStepDisplay.values) {
-        expect(TripStepRules.isSorted(d), d != TripStepDisplay.notStarted);
-      }
-    });
-  });
-
   group('expected dates (night rule)', () {
     final settings = TripSettings(startDate: DateTime(2030, 11, 1));
 
@@ -84,6 +52,22 @@ void main() {
     test('a step date overrides the default', () {
       final step = TripStep(date: DateTime(2030, 10, 31));
       expect(TripStepRules.expectedDate(TripStepRole.gettingThere, step, settings, 2), DateTime(2030, 10, 31));
+    });
+
+    test('coming back on the last day evening when the traveller leaves then', () {
+      const step = TripStep(leaveOn: TripLeaveOn.lastDayEvening);
+      expect(TripStepRules.expectedDate(TripStepRole.comingBack, step, settings, 2), DateTime(2030, 11, 2));
+      expect(TripStepRules.expectedDate(TripStepRole.comingBack, step, settings, 1), DateTime(2030, 11, 1));
+    });
+
+    test('a step date still wins over leave-on', () {
+      final step = TripStep(date: DateTime(2030, 11, 5), leaveOn: TripLeaveOn.lastDayEvening);
+      expect(TripStepRules.expectedDate(TripStepRole.comingBack, step, settings, 2), DateTime(2030, 11, 5));
+    });
+
+    test('leave-on never moves getting there', () {
+      const step = TripStep(leaveOn: TripLeaveOn.lastDayEvening);
+      expect(TripStepRules.expectedDate(TripStepRole.gettingThere, step, settings, 2), DateTime(2030, 11, 1));
     });
 
     test('no trip dates means no expected date', () {
@@ -136,37 +120,6 @@ void main() {
       expect(TripStepRules.startChanged(TripStepRole.gettingThere, _delhi, j, cityLat: 30.74, cityLon: 79.49), isTrue);
       expect(TripStepRules.startChanged(TripStepRole.gettingThere, null, j, cityLat: 30.74, cityLon: 79.49), isTrue);
     });
-
-    test('auto not needed both ways', () {
-      const inside = TripSteps(startFrom: _delhi);
-      final on = TripStepRules.withAutoNotNeeded(inside, _delhi.lat, _delhi.lon, _delhi.lat, _delhi.lon);
-      expect(on.gettingThere.status, TripStepStatus.notNeeded);
-      expect(on.comingBack.status, TripStepStatus.notNeeded);
-      final off = TripStepRules.withAutoNotNeeded(on, 29.39, 79.45, 29.39, 79.45);
-      expect(off.gettingThere.status, TripStepStatus.notStarted);
-      expect(off.comingBack.status, TripStepStatus.notStarted);
-    });
-
-    test('auto not needed reads the first city for getting there and the last for coming back', () {
-      const start = TripSteps(startFrom: _delhi);
-      final out = TripStepRules.withAutoNotNeeded(start, _delhi.lat, _delhi.lon, 29.39, 79.45);
-      expect(out.gettingThere.status, TripStepStatus.notNeeded);
-      expect(out.comingBack.status, TripStepStatus.notStarted);
-      final back = TripStepRules.withAutoNotNeeded(start, 29.39, 79.45, _delhi.lat, _delhi.lon);
-      expect(back.gettingThere.status, TripStepStatus.notStarted);
-      expect(back.comingBack.status, TripStepStatus.notNeeded);
-    });
-
-    test('auto not needed never touches own, skipped or a linked journey', () {
-      const s = TripSteps(
-        startFrom: _delhi,
-        gettingThere: TripStep(status: TripStepStatus.own),
-        comingBack: TripStep(status: TripStepStatus.chosen, journeyId: 'j1'),
-      );
-      final out = TripStepRules.withAutoNotNeeded(s, _delhi.lat, _delhi.lon, _delhi.lat, _delhi.lon);
-      expect(out.gettingThere.status, TripStepStatus.own);
-      expect(out.comingBack.status, TripStepStatus.chosen);
-    });
   });
 
   group('nudge', () {
@@ -185,29 +138,6 @@ void main() {
       for (final s in [TripStepStatus.own, TripStepStatus.skipped, TripStepStatus.notNeeded, TripStepStatus.chosen]) {
         expect(TripStepRules.needsNudge(TripStep(status: s), _delhi, DateTime(2030, 11, 3), today), isFalse);
       }
-    });
-  });
-
-  group('progress', () {
-    test('sorted count of five', () {
-      expect(
-        TripStepRules.sortedCount(const [
-          TripStepDisplay.chosen,
-          TripStepDisplay.asked,
-          TripStepDisplay.notStarted,
-          TripStepDisplay.skipped,
-          TripStepDisplay.notStarted,
-        ]),
-        3,
-      );
-    });
-
-    test('group display for nights and days', () {
-      expect(TripStepRules.groupDisplay(total: 3, sorted: 2, skipped: 0, own: 0), TripStepDisplay.notStarted);
-      expect(TripStepRules.groupDisplay(total: 3, sorted: 3, skipped: 3, own: 0), TripStepDisplay.skipped);
-      expect(TripStepRules.groupDisplay(total: 3, sorted: 3, skipped: 0, own: 3), TripStepDisplay.own);
-      expect(TripStepRules.groupDisplay(total: 3, sorted: 3, skipped: 1, own: 1), TripStepDisplay.chosen);
-      expect(TripStepRules.groupDisplay(total: 0, sorted: 0, skipped: 0, own: 0), TripStepDisplay.notStarted);
     });
   });
 }

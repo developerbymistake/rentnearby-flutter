@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
+import '../../../services/storage_service.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../utils/search_fold.dart';
@@ -9,6 +10,7 @@ import '../data/trip_city_catalog.dart';
 import '../data/trip_popular_routes.dart';
 import '../data/trip_repository.dart';
 import '../models/trip_city_model.dart';
+import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
@@ -43,8 +45,54 @@ enum TripCitySheetMode { start, add }
 class TripCityPick {
   final TripCityModel city;
   final TripCityModel? next;
+  final List<String> draftIds;
 
-  const TripCityPick(this.city, {this.next});
+  const TripCityPick(this.city, {this.next, this.draftIds = const []});
+}
+
+class TripNewDraft {
+  final TripCityModel city;
+  final TripCityModel? next;
+  final List<String> ids;
+  final TripSettings? settings;
+
+  const TripNewDraft(this.city, this.next, this.ids, [this.settings]);
+
+  static TripNewDraft? read() {
+    final m = StorageService.getTripNewDraft();
+    if (m == null) return null;
+    try {
+      final city = TripCityModel.fromJson(Map<String, dynamic>.from(m['city'] as Map));
+      final n = m['next'];
+      final ids = ((m['ids'] as List?) ?? const []).whereType<String>().toList();
+      if (ids.isEmpty) return null;
+      final st = m['settings'];
+      return TripNewDraft(
+        city,
+        n is Map ? TripCityModel.fromJson(Map<String, dynamic>.from(n)) : null,
+        ids,
+        st is Map ? TripSettings.fromJson(Map<String, dynamic>.from(st)) : null,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static void save(TripCityModel city, TripCityModel? next, Iterable<String> ids, {TripSettings? settings}) {
+    final list = ids.toList();
+    if (list.isEmpty) {
+      if (read()?.city.cityKey == city.cityKey) StorageService.clearTripNewDraft();
+      return;
+    }
+    final keep = settings ?? (read()?.city.cityKey == city.cityKey ? read()?.settings : null);
+    StorageService.saveTripNewDraft(
+        {'city': city.toJson(), 'next': ?next?.toJson(), 'ids': list, 'settings': ?keep?.toJson()});
+  }
+
+  static TripSettings? settingsFor(TripCityModel city) {
+    final d = read();
+    return d != null && d.city.cityKey == city.cityKey ? d.settings : null;
+  }
 }
 
 class TripCitySheet extends StatefulWidget {
@@ -85,6 +133,7 @@ enum _LoadError { none, failed, plannerOff }
 
 class _TripCitySheetState extends State<TripCitySheet> {
   final _searchCtrl = TextEditingController();
+  TripNewDraft? _draft = TripNewDraft.read();
   late final TripCityCatalog _catalog;
 
   List<TripCityModel> _items = const [];
@@ -324,9 +373,14 @@ class _TripCitySheetState extends State<TripCitySheet> {
     final nextKeys = {for (final c in _nextStops) c.cityKey};
     final rest = nextKeys.isEmpty ? _items : _items.where((c) => !nextKeys.contains(c.cityKey)).toList();
     final from = widget.afterCity?.trim() ?? '';
+    final draft = _add ? null : _draft;
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       children: [
+        if (draft != null) ...[
+          _sectionHeader(TripStrings.continueNewTrip),
+          _draftRow(draft),
+        ],
         if (_routes.isNotEmpty) ...[
           _sectionHeader(TripStringsMcaA2.popularRoutes),
           ..._routes.map(_routeRow),
@@ -369,6 +423,48 @@ class _TripCitySheetState extends State<TripCitySheet> {
               fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
         ),
       );
+
+  Widget _draftRow(TripNewDraft d) {
+    return InkWell(
+      onTap: () => Navigator.pop(context, TripCityPick(d.city, next: d.next, draftIds: d.ids)),
+      borderRadius: BorderRadius.circular(12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 52),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 8, top: 4, bottom: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Iconsax.edit_2, size: 17, color: TripColors.accentDark),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  TripStrings.draftPlaces(d.city.name, d.ids.length),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                ),
+              ),
+              TextButton(
+                onPressed: () => setState(() {
+                  StorageService.clearTripNewDraft();
+                  _draft = null;
+                }),
+                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                child: const Text(TripStrings.startOver,
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _routeRow(({TripCityModel from, TripCityModel to, int days}) r) {
     return InkWell(

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import '../../../config/app_colors.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
+import '../controllers/my_trips_controller.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../data/trip_repository.dart';
 import '../data/trip_today_cache.dart';
+import '../models/trip_model.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
@@ -18,8 +20,30 @@ class TripLifecycleActions {
     final c = TripPlanController.to;
     final id = c.trip.value?.id;
     if (id == null) return false;
-    final early = c.hasDates && !c.isLastDayOrAfter;
-    final ok = await showDialog<bool>(
+    final ok = await _confirmComplete(context, early: c.hasDates && !c.isLastDayOrAfter);
+    if (ok != true || _busy) return false;
+    _busy = true;
+    try {
+      final result = await _repo.complete(id);
+      c.trip.value = result;
+      TripTodayCache.saveTrip(result);
+      AppToast.success(TripStrings.tripCompleted);
+      return true;
+    } catch (e) {
+      if (DioErrorMapper.errorType(e) == TripErrorTypes.tripNotEnded) {
+        AppToast.error(TripStrings.tripNotEnded);
+      } else if (DioErrorMapper.isNetworkError(e)) {
+        AppToast.error(TripStrings.noNetwork);
+      } else {
+        AppToast.error(DioErrorMapper.toMessage(e, TripStrings.couldNotLoad));
+      }
+      return false;
+    } finally {
+      _busy = false;
+    }
+  }
+
+  static Future<bool?> _confirmComplete(BuildContext context, {required bool early}) => showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -51,23 +75,13 @@ class TripLifecycleActions {
         ],
       ),
     );
+
+  static Future<bool> markCompleteFromList(BuildContext context, TripSummaryModel trip) async {
+    final ok = await _confirmComplete(context, early: false);
     if (ok != true || _busy) return false;
     _busy = true;
     try {
-      final result = await _repo.complete(id);
-      c.trip.value = result;
-      TripTodayCache.saveTrip(result);
-      AppToast.success(TripStrings.tripCompleted);
-      return true;
-    } catch (e) {
-      if (DioErrorMapper.errorType(e) == TripErrorTypes.tripNotEnded) {
-        AppToast.error(TripStrings.tripNotEnded);
-      } else if (DioErrorMapper.isNetworkError(e)) {
-        AppToast.error(TripStrings.noNetwork);
-      } else {
-        AppToast.error(DioErrorMapper.toMessage(e, TripStrings.couldNotLoad));
-      }
-      return false;
+      return await MyTripsController.to.markComplete(trip.id);
     } finally {
       _busy = false;
     }

@@ -87,8 +87,6 @@ class TripStringsMcaA3 {
 
   static String stayIn(String city) => 'Stay in $city';
   static String taxiIn(String city) => 'Taxi in $city';
-  static String stayTonightIn(String city) => 'Stay · Tonight in $city';
-  static const String afterYouArrive = 'after you arrive';
   static const String noPlacesYet = 'No places yet · stay and taxi only';
   static String allNightsIn(String city, int n) => 'All nights in $city · ${nights(n)}';
   static String allDaysIn(String city) => 'All days in $city';

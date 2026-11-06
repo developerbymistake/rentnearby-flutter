@@ -19,9 +19,11 @@ import '../trip_strings.dart';
 import '../trip_strings_a3.dart';
 import '../trip_strings_fin_a1.dart';
 import '../trip_strings_mca_a3.dart';
+import '../trip_strings_steps_a1.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
 import '../widgets/trip_back_to_plan_bar.dart';
+import '../widgets/trip_no_taxi_flow.dart';
 import '../widgets/trip_cancel_sheet.dart';
 import '../widgets/trip_driver_row.dart';
 import '../widgets/trip_filter_chips.dart';
@@ -52,6 +54,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
   final _wholeTrip = true.obs;
   final _contactBusy = <String>{}.obs;
   final _contacts = <String, ({String phone, String whatsApp})>{};
+  String? _fromStep;
 
   int get _day => _supply.day.value;
 
@@ -65,6 +68,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
     _supply = TripSupplyController.to;
     final args = Get.arguments;
     final day = args is Map ? args['day'] as int? : null;
+    _fromStep = args is Map ? args['fromStep'] as String? : null;
     if (day != null) _supply.setDay(day);
     _supply.minSeats.value = null;
     _supply.onlySuv.value = false;
@@ -84,6 +88,11 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
   }
 
   void _changeDay(int d) {
+    final from = _fromStep;
+    if (from != null) {
+      final next = _plan.stepKeyForDay(from, d);
+      if (next != null && next != from) setState(() => _fromStep = next);
+    }
     _supply.setDay(d);
     _supply.ensureTaxis();
   }
@@ -235,7 +244,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
       );
       if (!ok || !mounted) return;
     }
-    await TripTaxiEnquirySheet.show(context, drivers: drivers, day: d);
+    await TripTaxiEnquirySheet.show(context, drivers: drivers, day: d, fromStep: _fromStep);
   }
 
   Future<void> _own() => TripOwnBookingSheet.show(
@@ -244,6 +253,10 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
         kind: TripOwnKind.taxi,
         existingTaxi: _plan.ownTaxiOf(_day),
       );
+
+  Future<void> _noTaxi(int d) async {
+    if (await TripNoTaxiFlow.run(context, d) && mounted) TripBackToStepBar.back(_fromStep);
+  }
 
   void _clearFilters() {
     _supply.minSeats.value = null;
@@ -256,9 +269,22 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
     return TripTaxiEnquirySheet.defaultDays(_plan, day, whole: whole, taxiIds: ids).length;
   }
 
+  void _exit() {
+    if (_fromStep == null) {
+      Get.back();
+    } else {
+      TripBackToStepBar.back(_fromStep);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: _fromStep == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _exit();
+      },
+      child: Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: Column(
         children: [
@@ -276,7 +302,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
         ],
       ),
       bottomNavigationBar: _buildBar(),
-    );
+    ));
   }
 
   Widget _buildHeader() => Obx(() {
@@ -295,13 +321,14 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
                   date == null ? null : TripFormat.dayMonth(date),
                   TripStrings.peopleText(_plan.settings.peopleCount),
                 ]),
-          onBack: () => Get.back(),
+          onBack: _exit,
           gradient: TaxiColors.gradient,
           bottom: TripTaxiStayToggle(
             selected: TripSupplyKind.taxi,
             day: d,
             onHeader: true,
             activeColor: TaxiColors.accent,
+            fromStep: _fromStep,
           ),
         );
       });
@@ -322,6 +349,10 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (_fromStep != null) ...[
+              TripBackToStepBar(fromStep: _fromStep!),
+              const SizedBox(height: 10),
+            ],
             TripRouteStrip(day: d, onDayChanged: _changeDay, accent: TaxiColors.accent),
             if (showChips) ...[
               const SizedBox(height: 12),
@@ -370,7 +401,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
           actions: [
             if (!readOnly)
               _bannerAction(TripStrings.cancelBooking, () => TripCancelSheet.show(context, enquiry: booked, ownerSide: false)),
-            _bannerAction(TripStrings.backToPlan, TripBackToPlanBar.backToPlan),
+            _bannerAction(TripBackToStepBar.backLabel(_fromStep), () => TripBackToStepBar.back(_fromStep)),
           ],
         ),
       ];
@@ -384,7 +415,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
           fg: TripStatusColors.booked,
           actions: [
             if (!readOnly) _bannerAction(TripStringsA3.edit, _own),
-            _bannerAction(TripStrings.backToPlan, TripBackToPlanBar.backToPlan),
+            _bannerAction(TripBackToStepBar.backLabel(_fromStep), () => TripBackToStepBar.back(_fromStep)),
           ],
         ),
       ];
@@ -396,7 +427,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
           text: chosen.isBooked ? TripStrings.bookedBar(chosen.name) : TripStringsA3.selectedForDay(chosen.name, d),
           bg: AppColors.successSurface,
           fg: AppColors.successText,
-          actions: [_bannerAction(TripStrings.backToPlan, TripBackToPlanBar.backToPlan)],
+          actions: [_bannerAction(TripBackToStepBar.backLabel(_fromStep), () => TripBackToStepBar.back(_fromStep))],
         ),
       ];
     }
@@ -526,6 +557,14 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
           subtitle: TripStringsA3.noDriversBody,
           actions: [
             _outlinedAction(TripStringsA3.iHaveTaxi, Iconsax.car, _own),
+            if (_plan.plan.value?.dayAt(d)?.taxi?.isSkipped != true)
+              _outlinedAction(TripStringsStepsA1.noTaxiThisDay, Iconsax.minus_cirlce, () => _noTaxi(d)),
+            TextButton(
+              onPressed: () => TripBackToStepBar.back(_fromStep),
+              style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+              child: const Text(TripStrings.askAgainLater,
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+            ),
             if (!_plan.taxiTabOff.value)
               TextButton(
                 onPressed: () => TaxiNavigation.openList(),

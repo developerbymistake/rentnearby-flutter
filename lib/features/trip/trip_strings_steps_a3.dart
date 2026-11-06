@@ -1,3 +1,4 @@
+import 'trip_state_labels.dart';
 import 'utils/trip_format.dart';
 
 class TripStringsStepsA3 {
@@ -6,7 +7,7 @@ class TripStringsStepsA3 {
   static const String gettingThereCaps = 'GETTING THERE';
   static const String comingBackCaps = 'COMING BACK';
   static const String useForMyTrip = 'Use for my trip';
-  static const String arrangeMyself = 'I will arrange it myself';
+  static const String arrangeMyself = TripStateLabels.arrangeMyself;
   static const String inYourTrip = 'In your trip';
   static const String alsoRemovedFromTrip = 'It is also removed from your trip.';
 
@@ -51,7 +52,6 @@ class TripStringsStepsA3 {
   static const String call = 'Call';
   static const String whatsApp = 'WhatsApp';
 
-  static String stepChip(String step, String label) => '$step · $label';
 
   static String routeLine(List<String> places) => places.join(' → ');
   static String carsLine(int cars) => cars == 1 ? '1 car' : '$cars cars';

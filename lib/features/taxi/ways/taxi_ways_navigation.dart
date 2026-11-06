@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../config/app_routes.dart';
 import '../../../models/place_result_model.dart';
+import 'models/taxi_ways_models.dart';
 
 class TaxiWaysNavigation {
   static Future<void>? openFeed({
@@ -13,6 +15,7 @@ class TaxiWaysNavigation {
     String? tripId,
     String? tripRole,
     int? tripLegIndex,
+    String? fromStep,
   }) =>
       Get.toNamed(AppRoutes.taxiWays, arguments: {
         'from': from,
@@ -24,25 +27,30 @@ class TaxiWaysNavigation {
         'tripId': ?tripId,
         'tripRole': ?tripRole,
         'tripLegIndex': ?tripLegIndex,
+        'fromStep': ?fromStep,
       });
 
-  static Future<void>? openPlan({required String planKey, required String controllerTag}) =>
-      Get.toNamed(AppRoutes.journeyPlan, arguments: {'planKey': planKey, 'tag': controllerTag});
+  static Future<dynamic>? openPlan(JourneyOpenArgs args) => Get.toNamed(AppRoutes.journeyPlan, arguments: args);
 
-  static Future<void>? openRoad({required String planKey, required String controllerTag}) =>
-      Get.toNamed(AppRoutes.journeyRoad, arguments: {'planKey': planKey, 'tag': controllerTag});
+  static Future<dynamic>? openRoad(JourneyOpenArgs args) => Get.toNamed(AppRoutes.journeyRoad, arguments: args);
+
+  static Future<dynamic>? replaceWithFeed(WayFeedArgs a) => Get.offNamed(AppRoutes.taxiWays, arguments: {
+        'from': _place(a.from),
+        'to': _place(a.to),
+        'date': ?a.date,
+        'people': ?a.people,
+        'fromTrip': a.tripId != null,
+        'tripId': ?a.tripId,
+        'tripRole': ?a.tripRole,
+        'tripLegIndex': ?a.tripLegIndex,
+        'fromStep': ?a.fromStep,
+      });
+
+  static PlaceResult _place(WayPlace p) => PlaceResult(name: p.name, subtitle: '', latLng: LatLng(p.lat, p.lng));
 
   static Future<void>? openMyJourneys({String? journeyId}) =>
       Get.toNamed(AppRoutes.myJourneys, arguments: journeyId == null ? null : {'journeyId': journeyId});
 
   static Future<void>? openSavedJourney(String id) =>
       Get.toNamed(AppRoutes.savedJourney, arguments: {'journeyId': id, 'id': id});
-
-  static ({String planKey, String tag})? planArgs(Object? args) {
-    if (args is! Map) return null;
-    final key = args['planKey'];
-    final tag = args['tag'];
-    if (key is! String || key.isEmpty || tag is! String || tag.isEmpty) return null;
-    return (planKey: key, tag: tag);
-  }
 }

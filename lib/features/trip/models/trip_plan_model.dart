@@ -55,7 +55,38 @@ enum TripStepDisplay {
   }
 }
 
-enum TripStepKind { itinerary, gettingThere, stay, localTaxi, comingBack }
+enum TripLeaveOn {
+  checkOut,
+  lastDayEvening;
+
+  static TripLeaveOn? parse(Object? wire) => switch (wire) {
+        'checkOut' => checkOut,
+        'lastDayEvening' => lastDayEvening,
+        _ => null,
+      };
+}
+
+List<int> _carList(Object? raw) {
+  if (raw is! List) return const [];
+  final out = <int>{
+    for (final v in raw)
+      if (v is num && v.toInt() >= 1 && v.toInt() <= TripConstants.maxJourneyCars) v.toInt(),
+  }.toList()
+    ..sort();
+  return out;
+}
+
+List<int> _withCar(List<int> cars, int car, bool own) {
+  final out = {...cars};
+  own ? out.add(car) : out.remove(car);
+  return out.toList()..sort();
+}
+
+String? _noteOf(Object? raw) {
+  final s = raw is String ? raw.trim() : null;
+  if (s == null || s.isEmpty) return null;
+  return s.length > TripConstants.noteMax ? s.substring(0, TripConstants.noteMax).trim() : s;
+}
 
 String _isoDay(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -96,65 +127,143 @@ class TripStep {
   final String? journeyId;
   final String? note;
   final DateTime? date;
+  final TripLeaveOn? leaveOn;
+  final List<int> ownCars;
+  final TripTravelHow? how;
+  final String? ownName;
+  final String? ownPhone;
+  final String? leavesAt;
 
-  const TripStep({this.status = TripStepStatus.notStarted, this.journeyId, this.note, this.date});
+  const TripStep({
+    this.status = TripStepStatus.notStarted,
+    this.journeyId,
+    this.note,
+    this.date,
+    this.leaveOn,
+    this.ownCars = const [],
+    this.how,
+    this.ownName,
+    this.ownPhone,
+    this.leavesAt,
+  });
 
   bool get hasJourney => status.linksJourney && journeyId != null && journeyId!.isNotEmpty;
 
-  bool get isDefault => status == TripStepStatus.notStarted && journeyId == null && note == null && date == null;
+  TripLeaveOn get leaveOnOrDefault => leaveOn ?? TripLeaveOn.checkOut;
+
+  bool get isDefault =>
+      status == TripStepStatus.notStarted &&
+      journeyId == null &&
+      note == null &&
+      date == null &&
+      leaveOn == null &&
+      ownCars.isEmpty;
+
+  // A fresh step for the same role: only the traveller's leave-on choice survives.
+  TripStep get cleared => TripStep(leaveOn: leaveOn);
 
   TripStep copyWith({
     TripStepStatus? status,
     String? journeyId,
     String? note,
     DateTime? date,
+    TripLeaveOn? leaveOn,
+    List<int>? ownCars,
     bool clearJourney = false,
     bool clearNote = false,
     bool clearDate = false,
-  }) =>
-      TripStep(
-        status: status ?? this.status,
-        journeyId: clearJourney ? null : (journeyId ?? this.journeyId),
-        note: clearNote ? null : (note ?? this.note),
-        date: clearDate ? null : (date ?? this.date),
-      );
+    bool clearLeaveOn = false,
+  }) {
+    final next = status ?? this.status;
+    final own = next == TripStepStatus.own;
+    return TripStep(
+      status: next,
+      journeyId: clearJourney ? null : (journeyId ?? this.journeyId),
+      note: clearNote ? null : (note ?? this.note),
+      date: clearDate ? null : (date ?? this.date),
+      leaveOn: clearLeaveOn ? null : (leaveOn ?? this.leaveOn),
+      ownCars: clearJourney ? const [] : (ownCars ?? this.ownCars),
+      how: own ? how : null,
+      ownName: own ? ownName : null,
+      ownPhone: own ? ownPhone : null,
+      leavesAt: own ? leavesAt : null,
+    );
+  }
+
+  TripStep withOwnCar(int car, bool own) => copyWith(ownCars: _withCar(ownCars, car, own));
+
+  static String? _text(Object? raw) {
+    final t = raw is String ? raw.trim() : null;
+    return t == null || t.isEmpty ? null : t;
+  }
 
   factory TripStep.fromJson(Map<String, dynamic> json) {
     final id = json['journeyId'];
-    final note = (json['note'] as String?)?.trim();
+    final status = TripStepStatus.parse(json['status']);
+    final own = status == TripStepStatus.own;
     return TripStep(
-      status: TripStepStatus.parse(json['status']),
+      status: status,
       journeyId: id is String && id.isNotEmpty ? id : null,
-      note: note == null || note.isEmpty ? null : note,
+      note: _text(json['note']),
       date: _parseDay(json['date']),
+      leaveOn: TripLeaveOn.parse(json['leaveOn']),
+      ownCars: _carList(json['ownCars']),
+      how: own ? TripTravelHow.parse(json['how']) : null,
+      ownName: own ? _text(json['ownName']) : null,
+      ownPhone: own ? _text(json['ownPhone']) : null,
+      leavesAt: own ? _text(json['leavesAt']) : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'status': status.name,
+        'status': (status == TripStepStatus.notNeeded ? TripStepStatus.notStarted : status).name,
         if (journeyId != null && journeyId!.isNotEmpty) 'journeyId': journeyId,
         'note': ?note,
         if (date != null) 'date': _isoDay(date!),
+        'leaveOn': ?leaveOn?.name,
+        if (ownCars.isNotEmpty) 'ownCars': ownCars,
+        'how': ?how?.wire,
+        'ownName': ?ownName,
+        'ownPhone': ?ownPhone,
+        'leavesAt': ?leavesAt,
       };
 }
 
 class TripSteps {
   final TripStartFrom? startFrom;
+  final TripStartFrom? goingHomeTo;
   final TripStep gettingThere;
   final TripStep comingBack;
 
-  const TripSteps({this.startFrom, this.gettingThere = const TripStep(), this.comingBack = const TripStep()});
+  const TripSteps({
+    this.startFrom,
+    this.goingHomeTo,
+    this.gettingThere = const TripStep(),
+    this.comingBack = const TripStep(),
+  });
+
+  TripStartFrom? get homeEnd => goingHomeTo ?? startFrom;
+
+  TripStartFrom? endOf(TripStepRole r) => r == TripStepRole.comingBack ? homeEnd : startFrom;
 
   TripStep of(TripStepRole r) => r == TripStepRole.gettingThere ? gettingThere : comingBack;
 
   TripSteps withStep(TripStepRole r, TripStep s) => TripSteps(
         startFrom: startFrom,
+        goingHomeTo: goingHomeTo,
         gettingThere: r == TripStepRole.gettingThere ? s : gettingThere,
         comingBack: r == TripStepRole.comingBack ? s : comingBack,
       );
 
-  TripSteps copyWith({TripStartFrom? startFrom, bool clearStartFrom = false}) => TripSteps(
+  TripSteps copyWith({
+    TripStartFrom? startFrom,
+    bool clearStartFrom = false,
+    TripStartFrom? goingHomeTo,
+    bool clearGoingHomeTo = false,
+  }) =>
+      TripSteps(
         startFrom: clearStartFrom ? null : (startFrom ?? this.startFrom),
+        goingHomeTo: clearGoingHomeTo ? null : (goingHomeTo ?? this.goingHomeTo),
         gettingThere: gettingThere,
         comingBack: comingBack,
       );
@@ -165,6 +274,7 @@ class TripSteps {
     final c = json['comingBack'];
     return TripSteps(
       startFrom: TripStartFrom.tryParse(json['startFrom']),
+      goingHomeTo: TripStartFrom.tryParse(json['goingHomeTo']),
       gettingThere: g is Map<String, dynamic> ? TripStep.fromJson(g) : const TripStep(),
       comingBack: c is Map<String, dynamic> ? TripStep.fromJson(c) : const TripStep(),
     );
@@ -172,6 +282,7 @@ class TripSteps {
 
   Map<String, dynamic> toJson() => {
         'startFrom': ?startFrom?.toJson(),
+        'goingHomeTo': ?goingHomeTo?.toJson(),
         if (!gettingThere.isDefault) 'gettingThere': gettingThere.toJson(),
         if (!comingBack.isDefault) 'comingBack': comingBack.toJson(),
       };
@@ -325,14 +436,13 @@ class TripTaxiChoice {
     this.skipped = false,
   });
 
-  const TripTaxiChoice.skippedDay()
+  const TripTaxiChoice.skippedDay({this.note})
       : taxiId = '',
         name = TripStringsStepsA1.noTaxiThisDay,
         fare = null,
         vehicleTypeName = null,
         isOwn = false,
         ownPhone = null,
-        note = null,
         wholeTrip = false,
         booking = null,
         skipped = true;
@@ -364,7 +474,7 @@ class TripTaxiChoice {
       );
 
   factory TripTaxiChoice.fromJson(Map<String, dynamic> json) => json['skipped'] == true
-      ? const TripTaxiChoice.skippedDay()
+      ? TripTaxiChoice.skippedDay(note: _noteOf(json['note']))
       : TripTaxiChoice(
         taxiId: json['taxiId'] as String? ?? '',
         name: json['name'] as String? ?? '',
@@ -380,7 +490,7 @@ class TripTaxiChoice {
       );
 
   Map<String, dynamic> toJson() => skipped
-      ? {'skipped': true, 'name': name}
+      ? {'skipped': true, 'name': name, 'note': ?note}
       : {
           if (!isOwn) 'taxiId': taxiId,
           'name': name,
@@ -405,6 +515,7 @@ class TripStayChoice {
   final String? ownPhone;
   final String? note;
   final bool skipped;
+  final bool leaveMoved;
 
   const TripStayChoice({
     required this.stayId,
@@ -417,9 +528,10 @@ class TripStayChoice {
     this.ownPhone,
     this.note,
     this.skipped = false,
+    this.leaveMoved = false,
   });
 
-  const TripStayChoice.skippedNight()
+  const TripStayChoice.skippedNight({this.note, this.leaveMoved = false})
       : stayId = '',
         name = TripStrings.noStayTonight,
         pricePerNight = null,
@@ -428,7 +540,6 @@ class TripStayChoice {
         longitude = null,
         isOwn = false,
         ownPhone = null,
-        note = null,
         skipped = true;
 
   bool get isSameStay => sameAsDay != null;
@@ -451,6 +562,7 @@ class TripStayChoice {
         ownPhone: ownPhone,
         note: note,
         skipped: skipped,
+        leaveMoved: leaveMoved,
       );
 
   factory TripStayChoice.fromJson(Map<String, dynamic> json) {
@@ -468,6 +580,7 @@ class TripStayChoice {
       ownPhone: json['ownPhone'] as String?,
       note: json['note'] as String?,
       skipped: json['skipped'] == true,
+      leaveMoved: json['skipped'] == true && json['leaveMoved'] == true,
     );
   }
 
@@ -482,6 +595,7 @@ class TripStayChoice {
         'ownPhone': ?ownPhone,
         'note': ?note,
         if (skipped) 'skipped': true,
+        if (skipped && leaveMoved) 'leaveMoved': true,
       };
 }
 
@@ -608,6 +722,7 @@ class TripTravel {
   final int? cars;
   final int? listedTotal;
   final String? hubName;
+  final List<int> ownCars;
 
   const TripTravel.own({
     required this.fromName,
@@ -622,7 +737,8 @@ class TripTravel {
         journeyId = null,
         planKey = null,
         cars = null,
-        listedTotal = null;
+        listedTotal = null,
+        ownCars = const [];
 
   const TripTravel.journey({
     required this.fromName,
@@ -631,6 +747,7 @@ class TripTravel {
     this.cars,
     this.listedTotal,
     this.roadMinutes,
+    this.ownCars = const [],
   })  : mode = TripTravelModes.journey,
         how = null,
         ownName = null,
@@ -645,6 +762,8 @@ class TripTravel {
 
   bool get hasPhone => ownPhone != null && ownPhone!.isNotEmpty;
 
+  TripTravel withOwnCar(int car, bool own) => isJourney ? copyWith(ownCars: _withCar(ownCars, car, own)) : this;
+
   TripTravel copyWith({
     String? fromName,
     TripTravelHow? how,
@@ -658,6 +777,7 @@ class TripTravel {
     String? planKey,
     int? cars,
     int? listedTotal,
+    List<int>? ownCars,
   }) =>
       isJourney
           ? TripTravel.journey(
@@ -667,6 +787,7 @@ class TripTravel {
               cars: cars ?? this.cars,
               listedTotal: listedTotal ?? this.listedTotal,
               roadMinutes: roadMinutes ?? this.roadMinutes,
+              ownCars: journeyId != null && journeyId != this.journeyId ? const [] : (ownCars ?? this.ownCars),
             )
           : TripTravel.own(
               fromName: fromName ?? this.fromName,
@@ -694,6 +815,7 @@ class TripTravel {
         cars: (json['cars'] as num?)?.toInt(),
         listedTotal: (json['listedTotal'] as num?)?.toInt(),
         roadMinutes: (json['roadMinutes'] as num?)?.toInt(),
+        ownCars: _carList(json['ownCars']),
       );
     }
     return TripTravel.own(
@@ -717,6 +839,7 @@ class TripTravel {
           'cars': ?cars,
           'listedTotal': ?listedTotal,
           'roadMinutes': ?roadMinutes,
+          if (ownCars.isNotEmpty) 'ownCars': ownCars,
         }
       : {
           'mode': mode,
@@ -830,6 +953,7 @@ class TripDay {
   final TripStayChoice? stay;
   final List<TripStayShortlistItem> stayShortlist;
   final List<TripTaxiShortlistItem> taxiShortlist;
+  final bool restDay;
 
   const TripDay({
     required this.day,
@@ -839,6 +963,7 @@ class TripDay {
     this.stay,
     this.stayShortlist = const [],
     this.taxiShortlist = const [],
+    this.restDay = false,
   });
 
   int get visitMinutes => spots.fold(0, (sum, s) => sum + s.visitMinutes);
@@ -853,6 +978,7 @@ class TripDay {
     bool clearStay = false,
     List<TripStayShortlistItem>? stayShortlist,
     List<TripTaxiShortlistItem>? taxiShortlist,
+    bool? restDay,
   }) =>
       TripDay(
         day: day ?? this.day,
@@ -862,6 +988,7 @@ class TripDay {
         stay: clearStay ? null : (stay ?? this.stay),
         stayShortlist: stayShortlist ?? this.stayShortlist,
         taxiShortlist: taxiShortlist ?? this.taxiShortlist,
+        restDay: restDay ?? this.restDay,
       );
 
   factory TripDay.fromJson(Map<String, dynamic> json) => TripDay(
@@ -878,6 +1005,7 @@ class TripDay {
         taxiShortlist: ((json['taxiShortlist'] as List?) ?? const [])
             .map((e) => TripTaxiShortlistItem.fromJson(e as Map<String, dynamic>))
             .toList(),
+        restDay: json['restDay'] == true,
       );
 
   Map<String, dynamic> toJson() => {
@@ -888,6 +1016,7 @@ class TripDay {
         'stay': ?stay?.toJson(),
         if (stayShortlist.isNotEmpty) 'stayShortlist': stayShortlist.map((e) => e.toJson()).toList(),
         if (taxiShortlist.isNotEmpty) 'taxiShortlist': taxiShortlist.map((e) => e.toJson()).toList(),
+        if (restDay) 'restDay': true,
       };
 }
 
@@ -1121,7 +1250,9 @@ class LegCancelResult {
   bool get ok => failed == 0;
 }
 
-enum NoStayBlock { none, readOnly, hasEnquiry }
+enum NoStayBlock { none, readOnly, hasEnquiry, hasOwn }
+
+enum NoTaxiBlock { none, readOnly, hasEnquiry, hasOwn }
 
 class TripPlan {
   final int version;
@@ -1129,6 +1260,7 @@ class TripPlan {
   final List<TripDay> days;
   final TripSettings settings;
   final TripSteps steps;
+  final List<String> dismissedEnquiryIds;
 
   const TripPlan({
     this.version = TripConstants.planVersion,
@@ -1136,6 +1268,7 @@ class TripPlan {
     this.days = const [],
     this.settings = const TripSettings(),
     this.steps = const TripSteps(),
+    this.dismissedEnquiryIds = const [],
   });
 
   factory TripPlan.singleCity({
@@ -1308,6 +1441,7 @@ class TripPlan {
     List<TripDay>? days,
     TripSettings? settings,
     TripSteps? steps,
+    List<String>? dismissedEnquiryIds,
     String? districtId,
     double? centreLatitude,
     double? centreLongitude,
@@ -1325,8 +1459,23 @@ class TripPlan {
       days: days ?? this.days,
       settings: settings ?? this.settings,
       steps: steps ?? this.steps,
+      dismissedEnquiryIds: dismissedEnquiryIds ?? this.dismissedEnquiryIds,
     );
   }
+
+  TripPlan withDismissed(String enquiryId) {
+    if (enquiryId.isEmpty || dismissedEnquiryIds.contains(enquiryId)) return this;
+    final next = [...dismissedEnquiryIds, enquiryId];
+    final over = next.length - TripConstants.maxDismissed;
+    return copyWith(dismissedEnquiryIds: over > 0 ? next.sublist(over) : next);
+  }
+
+  static List<String> _ids(Object? raw) => raw is List
+      ? [
+          for (final v in raw)
+            if (v is String && v.isNotEmpty) v,
+        ].toSet().toList()
+      : const [];
 
   factory TripPlan.fromJson(Map<String, dynamic> json) {
     final rawLegs = json['legs'] is List ? json['legs'] as List : const [];
@@ -1367,6 +1516,7 @@ class TripPlan {
           ? TripSettings.fromJson(json['settings'] as Map<String, dynamic>)
           : const TripSettings(),
       steps: TripSteps.fromJson(json['steps'] is Map<String, dynamic> ? json['steps'] as Map<String, dynamic> : null),
+      dismissedEnquiryIds: _ids(json['dismissedEnquiryIds']),
     );
   }
 
@@ -1381,5 +1531,6 @@ class TripPlan {
         'days': days.map((d) => d.toJson()).toList(),
         'settings': settings.toJson(),
         'steps': steps.toJson(),
+        'dismissedEnquiryIds': dismissedEnquiryIds,
       };
 }

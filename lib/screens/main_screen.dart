@@ -35,6 +35,8 @@ import '../features/stay/guest/stay_landing_controller.dart';
 import '../features/stay/guest/stay_guest_controller.dart';
 import '../features/jobs/controllers/jobs_list_controller.dart';
 import '../features/taxi/guest/taxi_list_controller.dart';
+import '../features/trip/controllers/my_trips_controller.dart';
+import '../features/trip/widgets/trip_bar.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -164,6 +166,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _digestTopicWorker?.dispose();
     _tabLeaveWorker?.dispose();
     _tabConfigWorker?.dispose();
+    // Permanent for the session (trip bar, Home card); the next login must not see these trips.
+    if (Get.isRegistered<MyTripsController>()) Get.delete<MyTripsController>(force: true);
     super.dispose();
   }
 
@@ -326,7 +330,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               index: _auth.tabIndex.value,
               children: _screens,
             )),
-            bottomNavigationBar: Obx(() => _buildBottomNav()),
+            bottomNavigationBar: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Obx(() => _locationCtrl.hasActiveGate || _auth.isLoggingOut.value
+                    ? const SizedBox.shrink()
+                    : const TripBar()),
+                Obx(() => _buildBottomNav()),
+              ],
+            ),
           ),
           Obx(() {
             if (_locationCtrl.hasActiveGate) return const SizedBox.shrink();

@@ -94,6 +94,10 @@ class TripEditSpotSheet extends StatelessWidget {
     return choice ?? _DropChoice.cancel;
   }
 
+  static void _markRest(TripPlanController c, int day) {
+    if (c.plan.value?.dayAt(day)?.spots.isEmpty ?? false) c.setRestDay(day, true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = TripPlanController.to;
@@ -140,7 +144,8 @@ class TripEditSpotSheet extends StatelessWidget {
                   final choice = await _confirmDrop(context, _afterMove(plan, spotId, d.day));
                   if (choice == _DropChoice.cancel || !context.mounted) return;
                   Navigator.pop(context);
-                  c.moveSpot(spotId, d.day, keepEmptyDays: choice == _DropChoice.restDay);
+                  final rest = choice == _DropChoice.restDay;
+                  if (c.moveSpot(spotId, d.day, keepEmptyDays: rest) && rest) _markRest(c, currentDay);
                 },
               ),
               const SizedBox(height: 8),
@@ -152,7 +157,9 @@ class TripEditSpotSheet extends StatelessWidget {
                 final choice = await _confirmDrop(context, _afterRemove(plan, spotId));
                 if (choice == _DropChoice.cancel || !context.mounted) return;
                 Navigator.pop(context);
-                c.removeSpot(spotId, keepEmptyDays: choice == _DropChoice.restDay);
+                final rest = choice == _DropChoice.restDay;
+                c.removeSpot(spotId, keepEmptyDays: rest);
+                if (rest) _markRest(c, currentDay);
               },
               child: const Padding(
                 padding: EdgeInsets.symmetric(vertical: 10, horizontal: 4),

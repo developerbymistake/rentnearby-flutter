@@ -7,6 +7,7 @@ import '../../../controllers/tab_config_controller.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../trip_colors.dart';
 import '../trip_strings_a2.dart';
+import '../utils/trip_wizard_rules.dart';
 
 enum TripSupplyKind { taxi, stay }
 
@@ -15,6 +16,7 @@ class TripTaxiStayToggle extends StatelessWidget {
   final int day;
   final bool onHeader;
   final Color activeColor;
+  final String? fromStep;
 
   const TripTaxiStayToggle({
     super.key,
@@ -22,11 +24,16 @@ class TripTaxiStayToggle extends StatelessWidget {
     required this.day,
     this.onHeader = false,
     this.activeColor = TripColors.accent,
+    this.fromStep,
   });
 
   void _switchTo(TripSupplyKind kind) {
     if (kind == selected) return;
-    Get.offNamed(kind == TripSupplyKind.taxi ? AppRoutes.tripTaxi : AppRoutes.tripStay, arguments: {'day': day});
+    final from = fromStep;
+    final target = kind == TripSupplyKind.taxi ? TripWizardStepKind.taxi : TripWizardStepKind.stay;
+    final step = from == null ? null : TripPlanController.to.stepKeyForDay(from, day, kind: target);
+    Get.offNamed(kind == TripSupplyKind.taxi ? AppRoutes.tripTaxi : AppRoutes.tripStay,
+        arguments: {'day': day, 'fromStep': ?step});
   }
 
   @override

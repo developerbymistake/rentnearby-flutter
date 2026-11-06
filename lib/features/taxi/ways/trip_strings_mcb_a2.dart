@@ -35,6 +35,7 @@ class TripStringsMcbA2 {
   static const String replaceDriver = 'Replace driver';
   static const String dateChanged = 'Travel date changed · Search again';
   static String carNoDriver(int n) => 'Car $n has no driver · Ask a backup';
+  static String carNoReply(int n) => 'Car $n · no reply · Ask a backup';
   static const String askBackup = 'Ask a backup';
   static const String driverPaused = 'Driver paused his listing · Call to check';
   static const String noDriverFound = 'No driver found';

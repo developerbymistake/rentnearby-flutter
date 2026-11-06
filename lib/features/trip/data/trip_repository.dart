@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import '../../../config/app_tabs.dart';
+import '../../../controllers/location_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
 import '../../../services/api_service.dart';
 import '../../../services/storage_service.dart';
@@ -75,6 +76,11 @@ class TripCached<T> {
   const TripCached(this.value, this.savedAt);
 }
 
+class TripListStates {
+  static const String active = 'active';
+  static const String past = 'past';
+}
+
 class TripRepository {
   const TripRepository();
 
@@ -109,14 +115,30 @@ class TripRepository {
 
   static DateTime? _savedAt(Map<String, dynamic> json) => DateTime.tryParse(json[_savedAtKey] as String? ?? '');
 
-  Future<TripListPage> list({int page = 1, int pageSize = 20, String state = 'upcoming'}) async {
-    final data = _data(await withRetry(() => ApiService.get('/trips', params: {
+  // No signal: one try, so the saved copy shows at once.
+  static Future<T> _read<T>(Future<T> Function() request) =>
+      Get.isRegistered<LocationController>() && Get.find<LocationController>().isOffline.value ? request() : withRetry(request);
+
+  Future<TripListPage> list({int page = 1, int pageSize = 20, String state = TripListStates.active}) async {
+    final data = _data(await _read(() => ApiService.get('/trips', params: {
           'page': page,
           'pageSize': pageSize,
           'state': state,
         })));
     if (page == 1) StorageService.saveTripListCache(state, _stamp(data));
     return TripListPage.fromJson(data);
+  }
+
+  void forgetCached(String id) {
+    for (final state in const [TripListStates.active, TripListStates.past]) {
+      final json = StorageService.getTripListCache(state);
+      final items = json?['items'];
+      if (json == null || items is! List || !items.any((e) => e is Map && e['id'] == id)) continue;
+      StorageService.saveTripListCache(state, {
+        ...json,
+        'items': [for (final e in items) if (!(e is Map && e['id'] == id)) e],
+      });
+    }
   }
 
   TripCached<TripListPage>? cachedList(String state) {
@@ -181,7 +203,7 @@ class TripRepository {
     );
   }
 
-  Future<TripModel> get(String id) async => TripModel.fromJson(_data(await withRetry(() => ApiService.get('/trips/$id'))));
+  Future<TripModel> get(String id) async => TripModel.fromJson(_data(await _read(() => ApiService.get('/trips/$id'))));
 
   Future<TripModel> create({String? title, String? status, required TripPlan plan, String? clientTripId}) async =>
       TripModel.fromJson(_data(await ApiService.post('/trips', {

@@ -296,8 +296,19 @@ class _TripMapScreenState extends State<TripMapScreen> {
   bool _isStayPinSelected(int pinDay) => switch (_plan.mapFocus) {
         TripMapFocus.all => true,
         TripMapFocus.city => _plan.legIndexOf(pinDay) == _plan.selectedMapLeg.value,
-        TripMapFocus.day => _pinDayFor(_selected) == pinDay,
+        TripMapFocus.day => _pinDayFor(_selected) == pinDay || _startPinDay == pinDay,
       };
+
+  int? get _startPinDay {
+    final d = _selected;
+    if (_plan.mapFocus != TripMapFocus.day || d <= 1 || _plan.legIndexOf(d - 1) != _plan.legIndexOf(d)) return null;
+    return _pinDayFor(d - 1);
+  }
+
+  String _stayPinText(TripPlan p, int pinDay) {
+    if (_startPinDay == pinDay && _pinDayFor(_selected) != pinDay) return TripStrings.startsHere(_selected);
+    return p.days.length > 1 ? TripStrings.night(pinDay) : TripStrings.stay;
+  }
 
   bool get _hidesOtherLegs => _plan.isMultiCity && _plan.mapFocus == TripMapFocus.city;
 
@@ -332,7 +343,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
         iconImage: _stayPinImage,
         iconSize: 1,
         iconOpacity: opacity,
-        textField: p.days.length > 1 ? TripStrings.night(day.day) : TripStrings.stay,
+        textField: _stayPinText(p, day.day),
         fontNames: const ['Noto Sans Medium'],
         textSize: 11,
         textAnchor: 'top',
@@ -642,7 +653,11 @@ class _TripMapScreenState extends State<TripMapScreen> {
     final changed = <Symbol>[];
     for (final (s, o) in changes) {
       final next = s.options.copyWith(o);
-      if (next.iconOpacity == s.options.iconOpacity && next.textOpacity == s.options.textOpacity) continue;
+      if (next.iconOpacity == s.options.iconOpacity &&
+          next.textOpacity == s.options.textOpacity &&
+          next.textField == s.options.textField) {
+        continue;
+      }
       s.options = next;
       changed.add(s);
     }
@@ -743,9 +758,13 @@ class _TripMapScreenState extends State<TripMapScreen> {
         symbols.add((s, SymbolOptions(textOpacity: opacity)));
       }
     }
+    final p = _plan.plan.value;
     for (final e in _stayPins.entries) {
       final opacity = _stayPinOpacity(e.key);
-      symbols.add((e.value, SymbolOptions(iconOpacity: opacity, textOpacity: opacity)));
+      symbols.add((
+        e.value,
+        SymbolOptions(iconOpacity: opacity, textOpacity: opacity, textField: p == null ? null : _stayPinText(p, e.key)),
+      ));
     }
     for (final k in _drawnSegs) {
       final opacity = _segOpacity(k);

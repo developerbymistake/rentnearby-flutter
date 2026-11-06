@@ -3,9 +3,11 @@ import 'package:get/get.dart';
 import '../../../../config/app_colors.dart';
 import '../../../trip/controllers/trip_plan_controller.dart';
 import '../../../trip/models/trip_journey_model.dart';
+import '../../../trip/models/trip_plan_model.dart';
 import '../../../trip/trip_colors.dart';
 import '../../../trip/trip_navigation.dart';
 import '../../../trip/trip_strings_mcb_a3.dart';
+import '../../../trip/utils/trip_travel_rules.dart';
 import '../../../trip/widgets/trip_taxi_booking_sheet.dart';
 import '../journey_models.dart';
 
@@ -76,15 +78,20 @@ class JourneyCarBookRow extends StatelessWidget {
     if (c == null || leg.driver.taxiId.isEmpty || journey.isCompleted) return const SizedBox.shrink();
     return Obx(() {
       c.enquiryList.length;
+      c.plan.value;
       final cityLeg = c.plan.value?.segmentLegOf(journey.id);
-      if (cityLeg == null) return const SizedBox.shrink();
-      final booked = c.carBooking(cityLeg, leg.legIndex) != null;
+      final role = cityLeg != null
+          ? null
+          : TripStepRole.values.firstWhereOrNull((r) => c.journeyIdOf(role: r) == journey.id);
+      if (cityLeg == null && role == null) return const SizedBox.shrink();
+      final rows = c.journeyRowsOf(role: role, legIndex: cityLeg);
+      final booked = TripTravelRules.carBooking(leg.legIndex, rows) != null;
       if (booked && leg.isBooked) return const SizedBox.shrink();
-      return _row(context, booked, cityLeg);
+      return _row(context, booked, role, cityLeg);
     });
   }
 
-  Widget _row(BuildContext context, bool booked, int cityLeg) {
+  Widget _row(BuildContext context, bool booked, TripStepRole? role, int? cityLeg) {
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: booked
@@ -117,6 +124,7 @@ class JourneyCarBookRow extends StatelessWidget {
                 ),
                 onPressed: () => TripTaxiBookingSheet.showForJourneyCar(
                   context,
+                  role: role,
                   legIndex: cityLeg,
                   journeyId: journey.id,
                   carIndex: leg.legIndex,

@@ -12,8 +12,8 @@ import '../models/trip_plan_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_mca_a3.dart';
-import '../trip_strings_mcb_a1.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_wizard_rules.dart';
 import 'trip_journey_strip.dart';
 import 'trip_own_travel_sheet.dart';
 
@@ -31,6 +31,11 @@ class TripMapTravelBlock extends StatelessWidget {
       if (v != null) return v;
     }
     return null;
+  }
+
+  String _lineOf(TripPlanController c) {
+    final k = TripStepKey.parse('travel:$legIndex');
+    return (k == null ? null : c.stepInfo(k)?.line) ?? TripStringsMcaA3.notPlannedYet;
   }
 
   @override
@@ -53,7 +58,7 @@ class TripMapTravelBlock extends StatelessWidget {
           initial: null,
           icon: Iconsax.routing_2,
           title: TripStringsMcaA3.travelTo(leg.cityName),
-          subtitle: TripStringsMcaA3.notPlannedYet,
+          subtitle: _lineOf(c),
           phone: null,
         ));
       } else if (a.isJourney) {
@@ -84,7 +89,7 @@ class TripMapTravelBlock extends StatelessWidget {
             initial: null,
             icon: Iconsax.routing_2,
             title: TripStringsMcaA3.travelTo(leg.cityName),
-            subtitle: TripStringsMcbA1.stateLabel(c.travelStateOf(legIndex)),
+            subtitle: _lineOf(c),
             phone: null,
           ));
         }

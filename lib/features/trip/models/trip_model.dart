@@ -48,6 +48,7 @@ class TripModel {
   final int legCount;
   final List<String>? _legCities;
   final Map<String, dynamic>? raw;
+  final TripProgress? progress;
 
   const TripModel({
     required this.id,
@@ -74,6 +75,7 @@ class TripModel {
     this.legCount = 1,
     List<String>? legCities,
     this.raw,
+    this.progress,
   }) : _legCities = legCities;
 
   List<String> get legCities => _legCities ?? [cityName];
@@ -138,6 +140,7 @@ class TripModel {
         legCount: legCount,
         legCities: _legCities,
         raw: raw,
+        progress: progress,
       );
 
   factory TripModel.fromJson(Map<String, dynamic> json) => TripModel(
@@ -172,6 +175,7 @@ class TripModel {
         legCount: _legCountOf(json['legCount'], _legCitiesOf(json['legCities'])),
         legCities: _legCitiesOf(json['legCities']),
         raw: json,
+        progress: TripProgress.tryParse(json['progress']),
       );
 }
 
@@ -209,6 +213,77 @@ int _count(Object? raw) {
   return n < 0 ? 0 : n;
 }
 
+class TripNextStep {
+  final String kind;
+  final int? day;
+  final int? legIndex;
+  final String key;
+
+  const TripNextStep({required this.kind, this.day, this.legIndex, required this.key});
+
+  static TripNextStep? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final key = raw['key'];
+    final kind = raw['kind'];
+    if (key is! String || key.isEmpty) return null;
+    return TripNextStep(
+      kind: kind is String ? kind : key.split(':').first,
+      day: (raw['day'] as num?)?.toInt(),
+      legIndex: (raw['legIndex'] as num?)?.toInt(),
+      key: key,
+    );
+  }
+}
+
+class TripProgress {
+  final int total;
+  final int counted;
+  final int decided;
+  final int waitingForReply;
+  final int needYou;
+  final int attention;
+  final int percent;
+  final bool needsYou;
+  final TripNextStep? next;
+  final DateTime? lastEventAt;
+
+  const TripProgress({
+    this.total = 0,
+    this.counted = 0,
+    this.decided = 0,
+    this.waitingForReply = 0,
+    this.needYou = 0,
+    this.attention = 0,
+    this.percent = 0,
+    this.needsYou = false,
+    this.next,
+    this.lastEventAt,
+  });
+
+  bool get isReady => total > 0 && counted >= total;
+
+  static TripProgress? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final total = _count(raw['total']);
+    final counted = _count(raw['counted']);
+    final needsYou = raw['needsYou'] == true;
+    final needYou = raw['needYou'] is num ? _count(raw['needYou']) : (needsYou ? 1 : 0);
+    final pct = raw['percent'] is num ? _count(raw['percent']) : (total == 0 ? 0 : counted * 100 ~/ total);
+    return TripProgress(
+      total: total,
+      counted: counted > total ? total : counted,
+      decided: _count(raw['decided']),
+      waitingForReply: raw['waitingForReply'] is num ? _count(raw['waitingForReply']) : _count(raw['waiting']),
+      needYou: needYou,
+      attention: _count(raw['attention']),
+      percent: pct > 100 ? 100 : pct,
+      needsYou: needsYou || needYou > 0,
+      next: TripNextStep.tryParse(raw['next']),
+      lastEventAt: _instant(raw['lastEventAt']),
+    );
+  }
+}
+
 class TripSummaryModel {
   final String id;
   final String title;
@@ -242,6 +317,7 @@ class TripSummaryModel {
   final int travelSegments;
   final int travelSettled;
   final List<TripSummaryLegState> legs;
+  final TripProgress progress;
 
   const TripSummaryModel({
     required this.id,
@@ -276,6 +352,7 @@ class TripSummaryModel {
     this.travelSegments = 0,
     this.travelSettled = 0,
     this.legs = const [],
+    this.progress = const TripProgress(),
   }) : _legCities = legCities;
 
   List<String> get legCities => _legCities ?? [cityName];
@@ -294,6 +371,18 @@ class TripSummaryModel {
     final t = DateTime(today.year, today.month, today.day);
     final tomorrow = DateTime(t.year, t.month, t.day + 1);
     return (!t.isBefore(s) && !t.isAfter(end)) || s == tomorrow;
+  }
+
+  DateTime? get checkOutDate {
+    final s = startDate;
+    final end = endDate ?? (s == null ? null : DateTime(s.year, s.month, s.day + (dayCount < 1 ? 0 : dayCount - 1)));
+    return end == null ? null : DateTime(end.year, end.month, end.day + 1);
+  }
+
+  bool isCheckOutDay(DateTime today) {
+    final out = checkOutDate;
+    if (out == null || isCompleted) return false;
+    return out.year == today.year && out.month == today.month && out.day == today.day;
   }
 
   int? dayNumberOn(DateTime today) {
@@ -340,6 +429,7 @@ class TripSummaryModel {
         travelSegments: travelSegments,
         travelSettled: travelSettled,
         legs: legs,
+        progress: progress,
       );
 
   TripSummaryModel withMuted(DateTime? at) => _with(mutedAt: at, completedAt: completedAt);
@@ -380,6 +470,7 @@ class TripSummaryModel {
         travelSegments: _count(json['travelSegments']),
         travelSettled: _count(json['travelSettled']),
         legs: _legStatesOf(json['legs']),
+        progress: TripProgress.tryParse(json['progress']) ?? const TripProgress(),
       );
 }
 

@@ -1,11 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:get/get.dart';
+import '../../../services/storage_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../data/trip_repository.dart';
 import '../models/trip_model.dart';
 import '../trip_strings.dart';
+import '../utils/trip_bar_rules.dart';
 import '../utils/trip_clock.dart';
 
 class MyTripsController extends GetxController {
@@ -14,24 +16,33 @@ class MyTripsController extends GetxController {
       : Get.put(MyTripsController(), permanent: true);
 
   static const _pageSize = 20;
+  static const String activeState = 'active';
+  static const String pastState = 'past';
 
   final _repo = const TripRepository();
 
-  final items = <TripSummaryModel>[].obs;
+  final active = <TripSummaryModel>[].obs;
+  final past = <TripSummaryModel>[].obs;
   final isLoading = false.obs;
   final isLoadingMore = false.obs;
   final loadFailed = false.obs;
   final plannerOff = false.obs;
-  final hasMore = false.obs;
-  final state = 'upcoming'.obs;
+  final hasMoreActive = false.obs;
+  final hasMorePast = false.obs;
+  final pastOpen = false.obs;
+  final pastLoading = false.obs;
+  final pastFailed = false.obs;
   final counts = const TripListCounts().obs;
   final offlineCopyAt = Rxn<DateTime>();
-  final upcoming = <TripSummaryModel>[].obs;
-  int page = 1;
+  final hiddenVersion = 0.obs;
+  int _activePage = 1;
+  int _pastPage = 1;
   int _seq = 0;
+  int _pastSeq = 0;
   bool _loadedOnce = false;
   Future<void>? _ensuring;
   DateTime? _loadedDay;
+  DateTime? _loadedAt;
   final _doneIds = <String>{};
   AppLifecycleListener? _lifecycle;
 
@@ -49,53 +60,13 @@ class MyTripsController extends GetxController {
 
   static DateTime get _today => TripClock.today();
 
+  static const _resumeGap = Duration(seconds: 30);
+
   Future<void> refreshIfStale() {
     if (!_loadedOnce || isLoading.value) return Future.value();
-    if (_loadedDay == _today && state.value == _upcoming) return Future.value();
+    final at = _loadedAt;
+    if (_loadedDay == _today && at != null && DateTime.now().difference(at) < _resumeGap) return Future.value();
     return load();
-  }
-
-  void resetView() {
-    if (state.value == _upcoming) return;
-    state.value = _upcoming;
-    items.assignAll(upcoming);
-    hasMore.value = false;
-  }
-
-  void adoptCompleted(String id, DateTime? at) {
-    _doneIds.add(id);
-    final wasUpcoming = upcoming.any((t) => t.id == id);
-    if (wasUpcoming) upcoming.removeWhere((t) => t.id == id);
-    final index = items.indexWhere((t) => t.id == id);
-    if (index >= 0 && !items[index].isCompleted) {
-      if (state.value == _upcoming) {
-        items.removeAt(index);
-      } else {
-        items[index] = items[index].asCompleted(at);
-      }
-    }
-    if (wasUpcoming) {
-      _shiftCount(false, -1);
-      _shiftCount(true, 1);
-    }
-  }
-
-  void adoptMuted(String id, DateTime? at) {
-    final i = items.indexWhere((t) => t.id == id);
-    if (i >= 0 && items[i].mutedAt != at) items[i] = items[i].withMuted(at);
-    final u = upcoming.indexWhere((t) => t.id == id);
-    if (u >= 0 && upcoming[u].mutedAt != at) upcoming[u] = upcoming[u].withMuted(at);
-  }
-
-  TripSummaryModel? get runningTrip {
-    final now = TripClock.today();
-    final source = upcoming.isNotEmpty || _loadedDay != null
-        ? upcoming
-        : (_repo.cachedList(_upcoming)?.value.items ?? const <TripSummaryModel>[]);
-    for (final t in source) {
-      if (!_doneIds.contains(t.id) && t.isRunningOn(now)) return t;
-    }
-    return null;
   }
 
   Future<void> ensureLoaded() {
@@ -103,71 +74,149 @@ class MyTripsController extends GetxController {
     return _ensuring ??= load().whenComplete(() => _ensuring = null);
   }
 
-  static const String _upcoming = 'upcoming';
+  List<TripSummaryModel> get _barSource {
+    if (active.isNotEmpty || _loadedDay != null) return active;
+    return _repo.cachedList(activeState)?.value.items ?? const <TripSummaryModel>[];
+  }
+
+  List<TripSummaryModel> get _openTrips => _barSource.where((t) => !_doneIds.contains(t.id)).toList();
+
+  TripListGroups get groups => TripBarRules.group(active.where((t) => !_doneIds.contains(t.id)).toList(), _today);
+
+  TripSummaryModel? get runningTrip {
+    final now = _today;
+    for (final t in _openTrips) {
+      if (!TripBarRules.isPast(t, now) && (t.isRunningOn(now) || t.isCheckOutDay(now))) return t;
+    }
+    return null;
+  }
+
+  TripBarHide? hideOf(String tripId) {
+    final h = StorageService.getTripBarHidden(tripId);
+    return h == null ? null : TripBarHide(h.at, needYou: h.needYou);
+  }
+
+  TripBarPick? get barPick {
+    hiddenVersion.value;
+    if (plannerOff.value) return null;
+    final today = _today;
+    return TripBarRules.pick(_openTrips, today,
+        isHidden: (t) => TripBarRules.stillHidden(t, hideOf(t.id), today));
+  }
+
+  void hideBar(TripSummaryModel t) {
+    StorageService.saveTripBarHidden(t.id, DateTime.now(), needYou: t.progress.needYou);
+    hiddenVersion.value++;
+  }
+
+  void adoptCompleted(String id, DateTime? at) {
+    _doneIds.add(id);
+    final index = active.indexWhere((t) => t.id == id);
+    if (index < 0) return;
+    final done = active.removeAt(index).asCompleted(at);
+    if (pastOpen.value && !past.any((t) => t.id == id)) past.insert(0, done);
+    _shiftCount(false, -1);
+    _shiftCount(true, 1);
+  }
+
+  void adoptMuted(String id, DateTime? at) {
+    for (final list in [active, past]) {
+      final i = list.indexWhere((t) => t.id == id);
+      if (i >= 0 && list[i].mutedAt != at) list[i] = list[i].withMuted(at);
+    }
+  }
 
   Future<void> load() async {
     final seq = ++_seq;
-    final current = state.value;
     isLoading.value = true;
     loadFailed.value = false;
     plannerOff.value = false;
+    if (active.isEmpty) _activeFromCache();
     try {
-      final res = await _repo.list(page: 1, pageSize: _pageSize, state: current);
+      final res = await _repo.list(page: 1, pageSize: _pageSize, state: activeState);
       if (seq != _seq) return;
       _loadedOnce = true;
-      if (current == _upcoming) _loadedDay = _today;
+      _loadedDay = _today;
+      _loadedAt = DateTime.now();
       offlineCopyAt.value = null;
       counts.value = res.counts;
-      items.assignAll(res.items);
-      if (current == _upcoming) upcoming.assignAll(res.items);
-      hasMore.value = res.hasMore;
-      page = 1;
+      active.assignAll(res.items);
+      hasMoreActive.value = res.hasMore;
+      _activePage = 1;
     } catch (e) {
       if (seq != _seq) return;
       if (DioErrorMapper.errorType(e) == TripErrorTypes.plannerDisabled) {
         plannerOff.value = true;
       } else if (!(e is DioException && e.response?.statusCode == 401)) {
-        if (!(DioErrorMapper.isNetworkError(e) && _fromCache(current))) loadFailed.value = true;
+        if (!(DioErrorMapper.isNetworkError(e) && _activeFromCache())) loadFailed.value = true;
       }
     } finally {
       if (seq == _seq) isLoading.value = false;
     }
+    if (pastOpen.value && seq == _seq && !plannerOff.value) await loadPast();
   }
 
-  bool _fromCache(String current) {
-    final cached = _repo.cachedList(current);
+  bool _activeFromCache() {
+    final cached = _repo.cachedList(activeState);
     if (cached == null) return false;
     _loadedOnce = true;
     counts.value = cached.value.counts;
-    items.assignAll(cached.value.items);
-    if (current == _upcoming) upcoming.assignAll(cached.value.items);
-    hasMore.value = false;
-    page = 1;
+    active.assignAll(cached.value.items);
+    hasMoreActive.value = false;
+    _activePage = 1;
     offlineCopyAt.value = cached.savedAt ?? DateTime.now();
     return true;
   }
 
-  Future<void> selectState(String v) async {
-    if (state.value == v) return;
-    state.value = v;
-    items.clear();
-    hasMore.value = false;
-    await load();
+  Future<void> loadPast() async {
+    final seq = ++_pastSeq;
+    pastLoading.value = true;
+    pastFailed.value = false;
+    try {
+      final res = await _repo.list(page: 1, pageSize: _pageSize, state: pastState);
+      if (seq != _pastSeq) return;
+      past.assignAll(res.items);
+      hasMorePast.value = res.hasMore;
+      _pastPage = 1;
+    } catch (e) {
+      if (seq != _pastSeq) return;
+      final cached = DioErrorMapper.isNetworkError(e) ? _repo.cachedList(pastState) : null;
+      if (cached != null) {
+        past.assignAll(cached.value.items);
+        hasMorePast.value = false;
+      } else if (!(e is DioException && e.response?.statusCode == 401)) {
+        pastFailed.value = true;
+      }
+    } finally {
+      if (seq == _pastSeq) pastLoading.value = false;
+    }
+  }
+
+  Future<void> togglePast() async {
+    pastOpen.value = !pastOpen.value;
+    if (pastOpen.value && past.isEmpty) await loadPast();
   }
 
   Future<void> loadMore() async {
-    if (!hasMore.value || isLoading.value || isLoadingMore.value || offlineCopyAt.value != null) return;
-    final seq = _seq;
+    if (isLoading.value || isLoadingMore.value || offlineCopyAt.value != null) return;
+    final more = hasMoreActive.value ? activeState : (pastOpen.value && hasMorePast.value ? pastState : null);
+    if (more == null) return;
+    final seq = more == activeState ? _seq : _pastSeq;
     isLoadingMore.value = true;
     try {
-      final res = await _repo.list(page: page + 1, pageSize: _pageSize, state: state.value);
-      if (seq != _seq) return;
-      final known = items.map((t) => t.id).toSet();
-      final fresh = res.items.where((t) => known.add(t.id)).toList();
-      items.addAll(fresh);
-      if (state.value == _upcoming) upcoming.addAll(fresh);
-      hasMore.value = res.hasMore;
-      page++;
+      final page = (more == activeState ? _activePage : _pastPage) + 1;
+      final res = await _repo.list(page: page, pageSize: _pageSize, state: more);
+      if (seq != (more == activeState ? _seq : _pastSeq)) return;
+      final list = more == activeState ? active : past;
+      final known = list.map((t) => t.id).toSet();
+      list.addAll(res.items.where((t) => known.add(t.id)));
+      if (more == activeState) {
+        hasMoreActive.value = res.hasMore;
+        _activePage = page;
+      } else {
+        hasMorePast.value = res.hasMore;
+        _pastPage = page;
+      }
     } catch (_) {
       return;
     } finally {
@@ -176,35 +225,51 @@ class MyTripsController extends GetxController {
   }
 
   Future<bool> delete(String id) async {
-    final index = items.indexWhere((t) => t.id == id);
-    if (index < 0) return false;
-    final removed = items.removeAt(index);
-    upcoming.removeWhere((t) => t.id == id);
-    _shiftCount(removed.isCompleted, -1);
+    final inActive = active.indexWhere((t) => t.id == id);
+    final inPast = past.indexWhere((t) => t.id == id);
+    if (inActive < 0 && inPast < 0) return false;
+    final removed = inActive >= 0 ? active.removeAt(inActive) : past.removeAt(inPast);
+    final wasPast = inActive < 0;
+    _shiftCount(wasPast, -1);
     try {
       await _repo.delete(id);
+      StorageService.clearTripCache(id);
+      _repo.forgetCached(id);
       return true;
     } catch (e) {
-      if (DioErrorMapper.errorType(e) == TripErrorTypes.tripNotFound) return true;
-      items.insert(index.clamp(0, items.length), removed);
-      if (state.value == _upcoming) upcoming.insert(index.clamp(0, upcoming.length), removed);
-      _shiftCount(removed.isCompleted, 1);
+      if (DioErrorMapper.errorType(e) == TripErrorTypes.tripNotFound) {
+        StorageService.clearTripCache(id);
+        _repo.forgetCached(id);
+        return true;
+      }
+      if (wasPast) {
+        past.insert(inPast.clamp(0, past.length), removed);
+      } else {
+        active.insert(inActive.clamp(0, active.length), removed);
+      }
+      _shiftCount(wasPast, 1);
       AppToast.error(DioErrorMapper.toMessage(e, "Couldn't delete the trip."));
       return false;
     }
   }
 
   void removeLocal(String id) {
-    upcoming.removeWhere((t) => t.id == id);
-    final index = items.indexWhere((t) => t.id == id);
-    if (index < 0) return;
-    _shiftCount(items[index].isCompleted, -1);
-    items.removeAt(index);
+    _repo.forgetCached(id);
+    final a = active.indexWhere((t) => t.id == id);
+    if (a >= 0) {
+      active.removeAt(a);
+      _shiftCount(false, -1);
+    }
+    final p = past.indexWhere((t) => t.id == id);
+    if (p >= 0) {
+      past.removeAt(p);
+      _shiftCount(true, -1);
+    }
   }
 
-  void _shiftCount(bool completed, int by) {
+  void _shiftCount(bool past, int by) {
     final c = counts.value;
-    counts.value = completed
+    counts.value = past
         ? TripListCounts(upcoming: c.upcoming, completed: (c.completed + by).clamp(0, 1 << 30))
         : TripListCounts(upcoming: (c.upcoming + by).clamp(0, 1 << 30), completed: c.completed);
   }
@@ -212,13 +277,12 @@ class MyTripsController extends GetxController {
   Future<bool> markComplete(String id) async {
     try {
       final trip = await _repo.complete(id);
-      _doneIds.add(id);
-      upcoming.removeWhere((t) => t.id == id);
-      final index = items.indexWhere((t) => t.id == id);
-      if (index >= 0) {
-        items.removeAt(index);
-        _shiftCount(false, -1);
-        _shiftCount(true, 1);
+      if (active.any((t) => t.id == id)) {
+        adoptCompleted(id, trip.completedAt);
+      } else {
+        _doneIds.add(id);
+        final i = past.indexWhere((t) => t.id == id);
+        if (i >= 0) past[i] = past[i].asCompleted(trip.completedAt);
       }
       AppToast.success(TripStrings.tripCompleted);
       return trip.isCompleted;
@@ -228,18 +292,6 @@ class MyTripsController extends GetxController {
       } else {
         AppToast.error(DioErrorMapper.toMessage(e, TripStrings.couldNotLoad));
       }
-      return false;
-    }
-  }
-
-  Future<bool> toggleMute(String id, bool muted) async {
-    try {
-      final trip = await _repo.mute(id, muted: muted);
-      adoptMuted(id, trip.mutedAt);
-      AppToast.success(trip.isMuted ? TripStrings.remindersMuted : TripStrings.remindersOn);
-      return true;
-    } catch (e) {
-      AppToast.error(DioErrorMapper.toMessage(e, TripStrings.couldNotLoad));
       return false;
     }
   }

@@ -76,10 +76,87 @@ class StorageService {
 
   static Map<String, dynamic>? getTripSummaryCache(String tripId) => _readJsonMap('$_tripSummaryCachePrefix$tripId');
 
+  static const String _tripNewDraftKey = 'trip_new_draft';
+  static const String _tripPendingPrefix = 'trip_pending_';
+  static const String _tripWizardLastPrefix = 'trip_wizard_last_';
+  static const String _tripBarHiddenPrefix = 'trip_bar_hidden_';
+  static const String _tripMilestonesPrefix = 'trip_milestones_';
+
+  static void saveTripNewDraft(Map<String, dynamic> json) => _box.write(_tripNewDraftKey, jsonEncode(json));
+
+  static Map<String, dynamic>? getTripNewDraft() => _readJsonMap(_tripNewDraftKey);
+
+  static void clearTripNewDraft() => _box.remove(_tripNewDraftKey);
+
+  static void saveTripPending(String tripId, {required Map<String, dynamic> plan, DateTime? baseUpdatedAt}) =>
+      _box.write('$_tripPendingPrefix$tripId', jsonEncode({
+        'plan': plan,
+        'baseUpdatedAt': ?baseUpdatedAt?.toUtc().toIso8601String(),
+      }));
+
+  static ({Map<String, dynamic> plan, DateTime? baseUpdatedAt})? getTripPending(String tripId) {
+    final json = _readJsonMap('$_tripPendingPrefix$tripId');
+    final plan = json?['plan'];
+    if (json == null || plan is! Map) return null;
+    final base = json['baseUpdatedAt'];
+    return (
+      plan: Map<String, dynamic>.from(plan),
+      baseUpdatedAt: base is String ? DateTime.tryParse(base) : null,
+    );
+  }
+
+  static void clearTripPending(String tripId) => _box.remove('$_tripPendingPrefix$tripId');
+
+  static void saveTripWizardLast(String tripId, String stepKey) => _box.write('$_tripWizardLastPrefix$tripId', stepKey);
+
+  static String? getTripWizardLast(String tripId) => _box.read<String>('$_tripWizardLastPrefix$tripId');
+
+  static void saveTripBarHidden(String tripId, DateTime hiddenAt, {int? needYou}) => _box.write(
+      '$_tripBarHiddenPrefix$tripId', jsonEncode({'at': hiddenAt.toUtc().toIso8601String(), 'needYou': ?needYou}));
+
+  static ({DateTime at, int? needYou})? getTripBarHidden(String tripId) {
+    final raw = _box.read<String>('$_tripBarHiddenPrefix$tripId');
+    if (raw == null) return null;
+    final plain = DateTime.tryParse(raw);
+    if (plain != null) return (at: plain.toLocal(), needYou: null);
+    try {
+      final m = jsonDecode(raw);
+      if (m is! Map) return null;
+      final at = DateTime.tryParse(m['at']?.toString() ?? '');
+      final n = m['needYou'];
+      return at == null ? null : (at: at.toLocal(), needYou: n is num ? n.toInt() : null);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static void clearTripBarHidden(String tripId) => _box.remove('$_tripBarHiddenPrefix$tripId');
+
+  static List<String> getTripMilestones(String tripId) {
+    final raw = _box.read<String>('$_tripMilestonesPrefix$tripId');
+    if (raw == null) return const [];
+    try {
+      final list = jsonDecode(raw);
+      return list is List ? list.whereType<String>().toList() : const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  static void addTripMilestone(String tripId, String milestone) {
+    final current = getTripMilestones(tripId);
+    if (current.contains(milestone)) return;
+    _box.write('$_tripMilestonesPrefix$tripId', jsonEncode([...current, milestone]));
+  }
+
   static void clearTripCache(String tripId) {
     _box.remove('${AppConstants.tripTodayCacheKeyPrefix}$tripId');
     _box.remove('${AppConstants.tripResultCacheKeyPrefix}$tripId');
     _box.remove('$_tripSummaryCachePrefix$tripId');
+    _box.remove('$_tripPendingPrefix$tripId');
+    _box.remove('$_tripWizardLastPrefix$tripId');
+    _box.remove('$_tripBarHiddenPrefix$tripId');
+    _box.remove('$_tripMilestonesPrefix$tripId');
   }
 
   static List<Map<String, dynamic>> getTripProblemQueue() {
@@ -107,11 +184,16 @@ class StorageService {
         k.startsWith(AppConstants.tripTodayCacheKeyPrefix) ||
         k.startsWith(AppConstants.tripResultCacheKeyPrefix) ||
         k.startsWith(_tripListCachePrefix) ||
-        k.startsWith(_tripSummaryCachePrefix));
+        k.startsWith(_tripSummaryCachePrefix) ||
+        k.startsWith(_tripPendingPrefix) ||
+        k.startsWith(_tripWizardLastPrefix) ||
+        k.startsWith(_tripBarHiddenPrefix) ||
+        k.startsWith(_tripMilestonesPrefix));
     for (final k in keys.toList()) {
       _box.remove(k);
     }
     _box.remove(AppConstants.tripProblemQueueKey);
+    _box.remove(_tripNewDraftKey);
   }
 
   static Map<String, dynamic>? _readJsonMap(String key) {

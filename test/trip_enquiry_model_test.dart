@@ -543,4 +543,24 @@ void main() {
     expect(old.wrongDayCity, isNull);
     expect(old.outsideTrip, isFalse);
   });
+
+  test('journey row context carries the role; problem statuses are host or driver side only', () {
+    final e = TripEnquiryModel.fromJson({
+      'id': 'r1',
+      'tripId': 't1',
+      'kind': 'Taxi',
+      'day': 3,
+      'status': 'Asked',
+      'context': {'journeyId': 'j1', 'journeyLegIndex': 2, 'role': 'comingBack'},
+    });
+    expect(e.context.role, 'comingBack');
+    expect(e.isSegment, isTrue);
+    expect(TripEnquiryModel.fromJson({'id': 'x', 'context': {'role': ''}}).context.role, isNull);
+    for (final s in ['NotAvailable', 'Expired', 'Failed', 'CancelledByOwner']) {
+      expect(TripEnquiryModel(id: 'p', status: s).isProblem, isTrue, reason: s);
+    }
+    for (final s in ['Declined', 'CancelledByTraveller', 'Closed', 'Asked', 'ConfirmedByBoth']) {
+      expect(TripEnquiryModel(id: 'p', status: s).isProblem, isFalse, reason: s);
+    }
+  });
 }

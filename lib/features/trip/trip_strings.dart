@@ -1,3 +1,4 @@
+import 'trip_state_labels.dart';
 class TripStrings {
   static const String notReadyTitle = 'Not ready yet';
   static String notReadySubtitle(String city) => 'Trips for $city are coming soon';
@@ -26,6 +27,8 @@ class TripStrings {
   static const String planMyDays = 'Plan my days';
   static const String saveTrip = 'Save trip';
   static const String backToPlan = 'Back to plan';
+  static const String backToStep = 'Back to step';
+  static String stepOf(int i, int total, String title) => 'Step $i of $total · $title';
   static const String sameStay = 'Same stay';
   static const String estimate = 'estimate';
   static const String tooLong = 'too long';
@@ -48,6 +51,9 @@ class TripStrings {
   static const String checking = 'Checking...';
   static const String cityUnavailable = 'City not available';
   static const String popular = 'Popular';
+  static const String continueNewTrip = 'Continue your new trip';
+  static String draftPlaces(String city, int n) => '$city · $n ${n == 1 ? 'place' : 'places'}';
+  static const String startOver = 'Start over';
   static const String allCities = 'All cities';
   static const String popularDestinations = 'Popular destinations';
   static const String popularDestinationsSubtitle = 'Plan a trip in a tap';
@@ -112,6 +118,7 @@ class TripStrings {
   static const String mostlyOnPhone = 'Mostly on phone';
   static String listed(String monthYear) => 'Listed $monthYear';
   static String night(int n) => 'Night $n';
+  static String startsHere(int day) => 'Day $day starts here';
   static const String tapDayChip = 'Tap a day chip to focus it.';
   static const String oneStop = '1 stop';
   static const String stay = 'Stay';
@@ -217,7 +224,8 @@ class TripStrings {
   static const String sendOnWhatsApp = 'Send on WhatsApp';
   static const String editBooking = 'Edit booking';
   static const String bookingUpdated = 'Booking updated';
-  static String replaceNight(String d, String name) => '$d already has $name. Replace it?';
+  static String replaceNight(String d, String name) => '$d has $name · Replace it?';
+  static String replaceFor(String name, String d) => 'Replace $name for $d?';
   static String replaceTold(String name) => '$name is cancelled and the host is told.';
   static const String acceptOffer = 'Accept offer';
   static const String acceptQuestion = 'Accept this offer?';
@@ -283,11 +291,12 @@ class TripStrings {
   static const String couldNotLoad = 'Could not load';
   static const String noNetwork = 'No network. Try again.';
   static const String justChanged = 'This enquiry just changed.';
-  static String deleteTripTold(int h) => h == 1 ? '1 host is told that you cancelled.' : '$h hosts are told that you cancelled.';
   static const String deleteTrip = 'Delete this trip?';
-  static const String noStaysHere = 'No stays on Bakhli here yet';
-  static const String addOwnToKeep = 'Add your own booking to keep the plan complete.';
-  static const String notInDates = "NOT IN THIS TRIP'S DATES";
+  static String noStaysIn(String city) => city.isEmpty ? 'No stays listed here yet' : 'No stays listed in $city yet';
+  static const String staysPaused = 'Stays are paused right now';
+  static const String addOwnToKeep = 'Use your own stay, or come back later.';
+  static const String askAgainLater = 'Ask again later';
+  static String replacesWhenConfirmed(String name) => '$name stays booked until a new stay is confirmed';
   static String oldDates(String r, String p) => 'Old dates · $r · $p';
   static String dayN(int n) => 'Day $n';
   static const String askedWaitingShort = 'Asked · waiting';
@@ -365,7 +374,6 @@ class TripStrings {
   static const String askOtherStays = 'Ask other stays';
   static const String ifPaidFooter = 'If you already paid, sort it out with the host directly. Bakhli does not hold payment.';
   static const String holdExpired = 'Hold expired';
-  static const String holdExpiredNote = 'The room may have been released.';
   static String otherStaysReplied(int n, String names) => '$n other stays replied: $names';
 
   static String saysProofSent(String g) => '$g says the proof is sent';
@@ -561,8 +569,6 @@ class TripStrings {
   static const String problemQueued = 'No network. Saved; we send it when you are back online.';
   static const String noNetworkTitle = 'No network';
   static const String callHostOrDriver = 'Call the host or driver now.';
-  static const String bothConfirmedShort = 'both confirmed';
-  static const String bookedByYouShort = 'booked by you';
   static String pickupAt(String t) => 'Pickup $t';
   static const String whatHappened = 'What happened? (optional)';
   static const String lastDayDone = 'Last day done?';
@@ -579,18 +585,11 @@ class TripStrings {
   static const String myTrips = 'My Trips';
   static const String tripNotEnded = 'You can mark the trip complete from its last day.';
 
-  static String upcomingChip(int n) => 'Upcoming ($n)';
-  static String completedChip(int n) => 'Completed ($n)';
-  static const String noCompletedTrips = 'No completed trips yet';
   static const String noCompletedSub = 'Finished trips show here.';
-  static const String noUpcomingTrips = 'No upcoming trips';
   static const String stateDraft = 'Draft';
   static const String stateConfirming = 'Confirming';
   static const String stateReady = 'Ready';
   static const String stateCompleted = 'Completed';
-  static String stayCount(int c, int t) => 'Stay $c/$t both';
-  static String taxiCount(int c, int t) => 'Taxi $c/$t booked';
-  static String agreedChip(String p) => '$p agreed';
   static const String open = 'Open';
   static const String deleteConfirmBody = 'This cannot be undone.';
   static const String delete = 'Delete';
@@ -636,8 +635,7 @@ class TripStrings {
   static const String addOwnTaxi = 'Add your own taxi';
   static const String haveTaxi = 'I already have a taxi';
   static const String ownTaxiTitle = 'Own taxi';
-  static const String noStayTonight = 'No stay tonight';
-  static const String travelling = 'Travelling';
+  static const String noStayTonight = TripStateLabels.noStayTonight;
   static const String sameAsLastNight = 'Same stay as last night';
   static const String nightByNight = 'Night by night';
   static const String forThisNight = 'For this night';

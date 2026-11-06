@@ -16,6 +16,7 @@ import 'services/deep_link_service.dart';
 import 'services/map_pause_observer.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
+import 'services/top_route_observer.dart';
 import 'services/tour_dismiss_observer.dart';
 import 'utils/app_toast.dart';
 import 'widgets/global_location_gates.dart';
@@ -70,7 +71,7 @@ class BakhliApp extends StatelessWidget {
       getPages: AppRoutes.routes,
       defaultTransition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 300),
-      navigatorObservers: [MapPauseObserver(), TourDismissObserver()],
+      navigatorObservers: [MapPauseObserver(), TourDismissObserver(), TopRouteObserver()],
       builder: (context, child) => ToastificationWrapper(
         child: MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),

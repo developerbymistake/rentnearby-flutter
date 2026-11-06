@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -57,6 +58,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
   late final int _day;
   String? _tripId;
   String? _enquiryId;
+  String? _fromStep;
   bool _started = false;
 
   @override
@@ -70,6 +72,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     _day = (day is num ? day.toInt() : int.tryParse('${day ?? ''}')) ?? 1;
     _tripId = map['tripId']?.toString();
     _enquiryId = map['enquiryId']?.toString();
+    _fromStep = map['fromStep'] as String?;
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -77,6 +80,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
   void dispose() {
     if (Get.isRegistered<TripPlanController>() && identical(Get.find<TripPlanController>(), _c)) {
       _c.openPages--;
+      if (_c.openPages > 0) unawaited(_c.refreshEnquiries());
       _c.releaseIfIdle();
     }
     super.dispose();
@@ -440,7 +444,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
   Widget _askAnotherButton() => SizedBox(
         height: 48,
         child: OutlinedButton.icon(
-          onPressed: () => TripNavigation.openStay(_day),
+          onPressed: () => TripNavigation.openStay(_day, fromStep: _fromStep),
           icon: const Icon(Iconsax.add_circle, size: 18, color: TripColors.accentDark),
           label: const Text(
             TripStringsA5.askAnotherStay,
@@ -482,7 +486,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
               ),
             ),
             TextButton(
-              onPressed: () => TripNavigation.openStay(_day),
+              onPressed: () => TripNavigation.openStay(_day, fromStep: _fromStep),
               style: TextButton.styleFrom(minimumSize: const Size(0, 44), padding: const EdgeInsets.symmetric(horizontal: 12)),
               child: const Text(
                 TripStrings.findAnother,
@@ -678,7 +682,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
             color: AppColors.error);
       case TripDisplayStatus.confirmedByBoth:
         if (!_c.isReadOnly && TripEnquiryRules.isOutsideTrip(e!, _c.settings, _c.dayCount)) {
-          add(Iconsax.calendar_edit, TripStrings.sendChangeRequest, () => _sendChange(e!));
+          add(Iconsax.calendar_edit, TripStrings.sendChangeRequest, () => _sendChange(e));
         }
         add(Iconsax.close_circle, TripStrings.cancelBooking,
             () => TripCancelSheet.show(context, enquiry: e!, ownerSide: false),
@@ -690,7 +694,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
         }
       case TripDisplayStatus.holdExpired:
         if (_canAskAgain(x)) add(Iconsax.refresh, TripStrings.askAgain, _c.askBusy.value ? null : _askAgain);
-        add(Iconsax.building_4, TripStrings.askOtherStays, () => TripNavigation.openStay(_day));
+        add(Iconsax.building_4, TripStrings.askOtherStays, () => TripNavigation.openStay(_day, fromStep: _fromStep));
       default:
         if (_canAskAgain(x)) add(Iconsax.refresh, TripStrings.askAgain, _c.askBusy.value ? null : _askAgain);
         add(Iconsax.call_calling, TripStrings.iBookedByPhone, () => _phoneBooking(x));

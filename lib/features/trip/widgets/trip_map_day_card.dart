@@ -15,11 +15,14 @@ import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mcd_a2.dart';
+import '../trip_navigation.dart';
+import '../trip_strings_wizard.dart';
+import '../utils/trip_wizard_rules.dart';
 import '../utils/trip_format.dart';
-import 'trip_day_actions.dart';
 import 'trip_day_chips.dart';
 import 'trip_map_travel_block.dart';
 import 'trip_route_strip.dart';
+import 'trip_step_dot.dart';
 import 'trip_today_card.dart';
 
 enum _PageKind { all, city, day }
@@ -408,12 +411,72 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
             const SizedBox(height: 10),
             TripMapTravelBlock(legIndex: c.legIndexOf(day)),
           ],
-          const SizedBox(height: 12),
-          TripDayActions(day),
+          const SizedBox(height: 10),
+          _startLine(c, day),
+          for (final s in c.wizardSteps)
+            if (s.day == day && s.key.isDayStep) _stepLine(c, s),
           ..._contactRows(c, day),
         ],
       );
     });
+  }
+
+  Widget _startLine(TripPlanController c, int day) {
+    final s = c.startOf(day);
+    return Row(
+      children: [
+        const Icon(Iconsax.flag, size: 14, color: TripColors.accentDark),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            TripStringsWizard.startsAt(s.heading),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _stepLine(TripPlanController c, TripStepInfo s) {
+    final mark = TripStepMark.of(s.state);
+    final label = switch (s.key.kind) {
+      TripWizardStepKind.places => TripStringsWizard.places,
+      TripWizardStepKind.taxi => TripStringsWizard.sightseeingTaxi,
+      _ => TripStringsWizard.stay,
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          mark.badge(size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                    text: '$label · ',
+                    style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                TextSpan(text: s.line, style: TextStyle(color: mark.text)),
+              ]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12),
+            ),
+          ),
+          TextButton(
+            onPressed: () => TripNavigation.openStep(c.trip.value?.id ?? '', s.key.id),
+            style: TextButton.styleFrom(minimumSize: const Size(44, 40), padding: const EdgeInsets.symmetric(horizontal: 8)),
+            child: const Text(
+              TripStringsWizard.openStep,
+              maxLines: 1,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   static String? _phone(String? raw) => raw != null && ContactLauncher.tenDigits(raw).isNotEmpty ? raw : null;
@@ -450,7 +513,8 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
       final pickup = taxi.taxi?.pickupTime;
       final text = [
         if (pickup != null && pickup.isNotEmpty) TripStrings.pickupAt(TripFormat.time12(pickup)),
-        taxi.isConfirmedByBoth ? TripStrings.bothConfirmedShort : TripStrings.bookedByYouShort,
+        c.dayStatusLine(TripWizardStepKind.taxi, day) ??
+            (taxi.isConfirmedByBoth ? TripWizardCopy.confirmedShort : TripWizardCopy.bookedByYouDriver),
       ].join(' · ');
       rows.add(_contactRow(
         icon: Iconsax.car,

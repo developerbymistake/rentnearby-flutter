@@ -1,141 +1,26 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/module_palette.dart';
-import '../../../utils/dio_error_mapper.dart';
 import '../../../widgets/empty_state_view.dart';
+import '../../trip/trip_strings_steps_a3.dart';
 import '../../trip/widgets/trip_shimmers.dart';
 import '../taxi_option_sets.dart';
-import 'change_driver_sheet.dart';
+import 'journey_plan_controller.dart';
 import 'models/taxi_ways_models.dart';
-import 'taxi_ways_controller.dart';
 import 'taxi_ways_navigation.dart';
 import 'taxi_ways_strings.dart';
-import '../../trip/trip_strings_steps_a3.dart';
 import 'trip_strings_a6.dart';
-import 'trip_strings_mcb_a2.dart';
 import 'widgets/journey_rail.dart';
 import 'widgets/journey_total_bar.dart';
 
 class JourneyPlanScreen extends StatefulWidget {
   const JourneyPlanScreen({super.key});
 
-  @override
-  State<JourneyPlanScreen> createState() => _JourneyPlanScreenState();
-}
-
-class JourneyPlanLoader {
-  final TaxiWaysController c;
-  final String planKey;
-  final String tag;
-  bool loading = false;
-  bool failed = false;
-  bool offline = false;
-  bool refreshFailed = false;
-  WayPlan? plan;
-
-  JourneyPlanLoader(this.c, this.planKey, this.tag) : plan = c.planByKey(planKey);
-
-  static JourneyPlanLoader? fromArgs(Object? args) {
-    final a = TaxiWaysNavigation.planArgs(args);
-    if (a == null || !Get.isRegistered<TaxiWaysController>(tag: a.tag)) return null;
-    return JourneyPlanLoader(Get.find<TaxiWaysController>(tag: a.tag), a.planKey, a.tag);
-  }
-
-  Future<void> load(VoidCallback onChange) async {
-    loading = true;
-    failed = false;
-    offline = false;
-    refreshFailed = false;
-    onChange();
-    try {
-      final d = await c.openPlan(planKey);
-      if (d != null) plan = d;
-    } catch (e) {
-      failed = plan == null;
-      offline = DioErrorMapper.isNetworkError(e);
-      refreshFailed = plan != null && !offline;
-    } finally {
-      loading = false;
-      onChange();
-    }
-  }
-
-  static String carsChip(WayPlan p, Map<int, WayDriver> chosen, int people) {
-    final total = p.totalWith(chosen, people: people);
-    final cars = p.legs.isEmpty ? p.cars : p.legs.fold(0, (sum, l) => sum + l.carsWith(chosen[l.index], people));
-    return cars <= 1 ? TaxiWaysStrings.oneCarTotal(total) : TaxiWaysStrings.carsAbout(cars, total);
-  }
-
-  Future<void> changeDriver(BuildContext context, WayLeg leg) async {
-    final current = c.chosenFor(planKey, leg.index);
-    final picked = await ChangeDriverSheet.show(context, leg: leg, people: c.people.value, current: current);
-    if (picked != null) c.choose(planKey, leg.index, picked);
-  }
-}
-
-class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
-  static const double _maxWidth = 720;
-  JourneyPlanLoader? _l;
-
-  @override
-  void initState() {
-    super.initState();
-    _l = JourneyPlanLoader.fromArgs(Get.arguments);
-    _l?.load(_changed);
-  }
-
-  void _changed() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = _l;
-    if (l == null) {
-      return Scaffold(
-        backgroundColor: AppColors.scaffoldBg,
-        appBar: AppBar(title: const Text(TaxiWaysStrings.yourJourney)),
-        body: ListView(children: [
-          EmptyStateView(
-            icon: Iconsax.routing_2,
-            title: TripStringsA6.journeyGoneTitle,
-            subtitle: TripStringsA6.journeyGoneBody,
-            onRetry: () => Get.back(),
-            retryLabel: TripStringsA6.goBack,
-            palette: ModulePalette.taxi,
-          ),
-        ]),
-      );
-    }
-    final c = l.c;
-    final plan = l.plan;
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
-      body: Column(children: [
-        _header(context, l, plan),
-        Expanded(child: _content(context, l, plan)),
-        if (plan != null && plan.legs.isNotEmpty)
-          Obx(() {
-            final chosen = c.chosenOf(plan.planKey);
-            return JourneyTotalBar(
-              total: plan.totalWith(chosen, people: c.people.value),
-              askLabel: JourneyAskButton.labelFor(plan.legs.length),
-              busy: c.busyPlans.contains(plan.planKey),
-              onAsk: () => c.askDrivers(context, plan),
-              onSave: () => c.saveJourney(plan),
-              onUse: c.forTrip || c.forSegment ? () => c.useForTrip(plan, context: context) : null,
-              useLabel: c.forSegment ? TripStringsMcbA2.saveToTrip : TripStringsStepsA3.useForMyTrip,
-            );
-          }),
-      ]),
-    );
-  }
-
-  Widget _header(BuildContext context, JourneyPlanLoader l, WayPlan? plan) {
+  static Widget header(BuildContext context, {required String title, String? subtitle, Widget? below}) {
     final top = MediaQuery.paddingOf(context).top;
-    final c = l.c;
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -145,29 +30,29 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
       padding: EdgeInsets.fromLTRB(8, top + 6, 16, 14),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _maxWidth),
+          constraints: const BoxConstraints(maxWidth: 720),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               SizedBox(
                 width: 44,
                 height: 44,
                 child: IconButton(
-                  onPressed: () => Get.back(),
+                  onPressed: () => Navigator.maybePop(context),
                   icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
                 ),
               ),
               const SizedBox(width: 2),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text(
-                    TaxiWaysStrings.yourJourney,
+                  Text(
+                    title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white),
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white),
                   ),
-                  if (plan != null)
+                  if (subtitle != null)
                     Text(
-                      '${TaxiWaysStrings.subtitle(plan.from.name, plan.to.name)} · ${TaxiWaysStrings.dateChip(c.date.value)}',
+                      subtitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Colors.white.withValues(alpha: 0.9)),
@@ -175,22 +60,121 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
                 ]),
               ),
             ]),
-            if (plan != null) ...[
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.only(left: 10),
-                child: Obx(() => Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                      _chip(JourneyPlanLoader.carsChip(plan, c.chosenOf(plan.planKey), c.people.value)),
-                      _chip(
-                        '${TaxiWaysStrings.viewOnRoad} ›',
-                        onTap: () => TaxiWaysNavigation.openRoad(planKey: l.planKey, controllerTag: l.tag),
-                      ),
-                    ])),
-              ),
-            ],
+            ?below,
           ]),
         ),
       ),
+    );
+  }
+
+  static Widget invalidBody(Object? raw) {
+    final feed = JourneyOpenArgs.feedOf(raw);
+    return ListView(children: [
+      EmptyStateView(
+        icon: Iconsax.routing_2,
+        title: TripStringsA6.journeyGoneTitle,
+        subtitle: TripStringsA6.journeyGoneBody,
+        onRetry: feed == null ? () => Get.back() : () => TaxiWaysNavigation.replaceWithFeed(feed),
+        retryLabel: feed == null ? TripStringsA6.goBack : TripStringsA6.backToWays,
+        palette: ModulePalette.taxi,
+      ),
+    ]);
+  }
+
+  static void logInvalid(String screen, Object? raw) {
+    if (kDebugMode) debugPrint('$screen: invalid arguments, ${JourneyOpenArgs.invalidReason(raw)}');
+  }
+
+  @override
+  State<JourneyPlanScreen> createState() => _JourneyPlanScreenState();
+}
+
+class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
+  static const double _maxWidth = 720;
+
+  JourneyPlanController? _c;
+  String? _tag;
+  Object? _raw;
+  bool _read = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_read) return;
+    _read = true;
+    final route = ModalRoute.of(context);
+    _raw = route?.settings.arguments;
+    final args = JourneyOpenArgs.of(_raw);
+    if (args == null) {
+      JourneyPlanScreen.logInvalid('JourneyPlanScreen', _raw);
+      return;
+    }
+    _tag = 'journey-plan-${identityHashCode(route)}';
+    _c = Get.put(JourneyPlanController(args), tag: _tag);
+  }
+
+  @override
+  void dispose() {
+    if (_tag != null) Get.delete<JourneyPlanController>(tag: _tag);
+    super.dispose();
+  }
+
+  Future<void> _openRoad(JourneyPlanController c) async {
+    final r = await TaxiWaysNavigation.openRoad(c.currentArgs);
+    if (r is Map<int, WayDriver>) c.setChosen(r);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _c;
+    if (c == null) {
+      return Scaffold(
+        backgroundColor: AppColors.scaffoldBg,
+        body: Column(children: [
+          JourneyPlanScreen.header(context, title: TaxiWaysStrings.yourJourney),
+          Expanded(child: JourneyPlanScreen.invalidBody(_raw)),
+        ]),
+      );
+    }
+    return Scaffold(
+      backgroundColor: AppColors.scaffoldBg,
+      body: Obx(() {
+        final plan = c.plan.value;
+        return Column(children: [
+          _header(context, c, plan),
+          Expanded(child: _content(context, c, plan)),
+          if (plan.legs.isNotEmpty)
+            JourneyTotalBar(
+              total: plan.totalWith(c.chosen, people: c.args.people),
+              askLabel: JourneyAskButton.labelFor(plan.legs.length),
+              busy: c.isBusy,
+              onAsk: () => c.askDrivers(context),
+              onSave: c.args.inTrip ? null : c.saveJourney,
+              onUse: c.args.inTrip ? () => c.useForTrip(context) : null,
+              useLabel: TripStringsStepsA3.useForMyTrip,
+            ),
+        ]);
+      }),
+    );
+  }
+
+  Widget _header(BuildContext context, JourneyPlanController c, WayPlan plan) {
+    final a = c.args;
+    final from = plan.legs.isEmpty ? a.from.name : plan.from.name;
+    final to = plan.legs.isEmpty ? a.to.name : plan.to.name;
+    return JourneyPlanScreen.header(
+      context,
+      title: TaxiWaysStrings.yourJourney,
+      subtitle: '${TaxiWaysStrings.subtitle(from, to)} · ${TaxiWaysStrings.dateChip(a.date)}',
+      below: plan.legs.isEmpty
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(left: 10, top: 10),
+              child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                _chip(JourneyPlanController.carsChip(plan, c.chosen, a.people)),
+                _chip('${TaxiWaysStrings.viewOnRoad} ›', onTap: () => _openRoad(c)),
+              ]),
+            ),
     );
   }
 
@@ -220,9 +204,9 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
         ),
       );
 
-  Widget _content(BuildContext context, JourneyPlanLoader l, WayPlan? plan) {
-    if (plan == null) {
-      if (l.loading) {
+  Widget _content(BuildContext context, JourneyPlanController c, WayPlan plan) {
+    if (plan.legs.isEmpty) {
+      if (c.loading.value) {
         return ListView(padding: const EdgeInsets.all(16), children: [
           TripShimmers.rowBox(height: 48),
           const SizedBox(height: 12),
@@ -231,25 +215,24 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
           TripShimmers.rowBox(height: 150),
         ]);
       }
+      if (c.notFound.value) {
+        return ListView(children: [
+          EmptyStateView(
+            icon: Iconsax.routing_2,
+            title: TripStringsA6.planGoneTitle,
+            subtitle: TripStringsA6.planGoneBody,
+            onRetry: () => Get.back(),
+            retryLabel: TripStringsA6.backToWays,
+            palette: ModulePalette.taxi,
+          ),
+        ]);
+      }
       return ListView(children: [
         EmptyStateView(
-          icon: l.offline ? Iconsax.wifi_square : Iconsax.cloud_cross,
-          title: l.offline ? TaxiWaysStrings.offlineTitle : TaxiWaysStrings.loadFailed,
-          subtitle: TaxiWaysStrings.offlineBody,
-          onRetry: () => l.load(_changed),
-          retryLabel: TaxiWaysStrings.retry,
-          palette: ModulePalette.taxi,
-        ),
-      ]);
-    }
-    final c = l.c;
-    if (plan.legs.isEmpty) {
-      return ListView(children: [
-        EmptyStateView(
-          icon: Iconsax.routing_2,
-          title: TripStringsA6.planEmptyTitle,
-          subtitle: TripStringsA6.planEmptyBody,
-          onRetry: () => l.load(_changed),
+          icon: c.offline.value ? Iconsax.wifi_square : Iconsax.routing_2,
+          title: c.offline.value ? TaxiWaysStrings.offlineTitle : TripStringsA6.planEmptyTitle,
+          subtitle: c.offline.value ? TaxiWaysStrings.offlineBody : TripStringsA6.planEmptyBody,
+          onRetry: c.load,
           retryLabel: TaxiWaysStrings.retry,
           palette: ModulePalette.taxi,
         ),
@@ -257,7 +240,7 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
     }
     return RefreshIndicator(
       color: TaxiColors.accent,
-      onRefresh: () => l.load(_changed),
+      onRefresh: c.load,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -266,24 +249,24 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: _maxWidth),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                if (l.loading) ...[
+                if (c.loading.value) ...[
                   const LinearProgressIndicator(minHeight: 2, color: TaxiColors.accent, backgroundColor: Colors.transparent),
                   const SizedBox(height: 10),
                 ],
-                if (l.offline) ...[
+                if (c.offline.value) ...[
                   _offline(),
                   const SizedBox(height: 12),
                 ],
-                if (l.refreshFailed && !l.loading) ...[
-                  _refreshFailed(l),
+                if (c.refreshFailed.value && !c.loading.value) ...[
+                  _refreshFailed(c),
                   const SizedBox(height: 12),
                 ],
-                Obx(() => JourneyRail(
-                      plan: plan,
-                      chosen: c.chosenOf(plan.planKey),
-                      date: c.date.value,
-                      onChangeDriver: (leg) => l.changeDriver(context, leg),
-                    )),
+                JourneyRail(
+                  plan: plan,
+                  chosen: c.chosen,
+                  date: c.args.date,
+                  onChangeDriver: (leg) => c.changeDriver(context, leg),
+                ),
               ]),
             ),
           ),
@@ -292,25 +275,29 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
     );
   }
 
-  Widget _refreshFailed(JourneyPlanLoader l) => Container(
-        padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
-        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
-        child: Row(children: [
-          const Icon(Iconsax.info_circle, size: 18, color: AppColors.warningText),
-          const SizedBox(width: 8),
-          const Expanded(
-            child: Text(
-              TripStringsA6.refreshFailedTitle,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
-            ),
+  Widget _refreshFailed(JourneyPlanController c) {
+    final gone = c.notFound.value;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+      decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+      child: Row(children: [
+        const Icon(Iconsax.info_circle, size: 18, color: AppColors.warningText),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            gone ? TripStringsA6.planGoneTitle : TripStringsA6.refreshFailedTitle,
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
           ),
-          TextButton(
-            onPressed: () => l.load(_changed),
-            style: TextButton.styleFrom(minimumSize: const Size(44, 44), foregroundColor: TaxiColors.accentDark),
-            child: const Text(TaxiWaysStrings.retry, style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700)),
-          ),
-        ]),
-      );
+        ),
+        TextButton(
+          onPressed: gone ? () => Get.back() : c.load,
+          style: TextButton.styleFrom(minimumSize: const Size(44, 44), foregroundColor: TaxiColors.accentDark),
+          child: Text(gone ? TripStringsA6.backToWays : TaxiWaysStrings.retry,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700)),
+        ),
+      ]),
+    );
+  }
 
   Widget _offline() => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

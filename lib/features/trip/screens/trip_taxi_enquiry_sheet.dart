@@ -18,6 +18,7 @@ import '../trip_strings.dart';
 import '../trip_strings_a3.dart';
 import '../data/trip_enquiry_repository.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_wizard_rules.dart';
 import '../widgets/trip_back_to_plan_bar.dart';
 import '../widgets/trip_payment_line.dart';
 import '../widgets/trip_sheet_frame.dart';
@@ -55,6 +56,7 @@ class TripTaxiEnquirySheet {
     BuildContext context, {
     required List<TripTaxiShortlistItem> drivers,
     required int day,
+    String? fromStep,
   }) async {
     if (drivers.isEmpty) return null;
     final known = {for (final e in TripPlanController.to.enquiryList) e.id};
@@ -85,7 +87,7 @@ class TripTaxiEnquirySheet {
     for (final m in skipped) {
       AppToast.warning(m);
     }
-    TripBackToPlanBar.backToPlan();
+    TripBackToStepBar.back(fromStep);
     return batch;
   }
 
@@ -115,6 +117,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
   late final Set<String> _ids;
   late TimeOfDay _time;
   late final TextEditingController _place;
+  bool _placeTyped = false;
   bool _sending = false;
   bool _limited = false;
   String? _limitBody;
@@ -130,7 +133,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
       whole: widget.drivers.any((d) => d.wholeTrip),
       taxiIds: _ids,
     ).toSet();
-    _place = TextEditingController(text: _c.settings.pickupPlace ?? _stayName() ?? '');
+    _place = TextEditingController(text: _startName() ?? _c.settings.pickupPlace ?? '');
   }
 
   @override
@@ -139,13 +142,16 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
     super.dispose();
   }
 
-  String? _stayName() {
+  // The first chosen day starts at last night's stay.
+  String? _startName() {
     if (_days.isEmpty) return null;
-    final first = (_days.toList()..sort()).first;
-    final stay = _c.plan.value?.dayAt(first)?.stay;
-    if (stay == null || stay.isSkipped) return null;
-    final name = stay.name.trim();
-    return name.isEmpty ? null : name;
+    final p = _c.plan.value;
+    return p == null ? null : TripWizardRules.pickupPlaceOf(p, (_days.toList()..sort()).first);
+  }
+
+  void _followStart() {
+    if (_placeTyped) return;
+    _place.text = _startName() ?? _c.settings.pickupPlace ?? '';
   }
 
   TimeOfDay? _parseTime(String? hhmm) {
@@ -172,6 +178,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
       if (_days.length >= TripConstants.maxLeadDays) return;
       setState(() => _days.add(day));
     }
+    _followStart();
   }
 
   Future<void> _pickTime() async {
@@ -191,8 +198,11 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
       _limited = false;
       _limitBody = null;
     });
-    if (s.pickupTime != time || (s.pickupPlace ?? '') != place) {
-      await _c.saveSettings(s.copyWith(pickupTime: time, pickupPlace: place.isEmpty ? null : place));
+    final perDay = _startName() != null;
+    if (s.pickupTime != time || (!perDay && (s.pickupPlace ?? '') != place)) {
+      await _c.saveSettings(perDay
+          ? s.copyWith(pickupTime: time)
+          : s.copyWith(pickupTime: time, pickupPlace: place.isEmpty ? null : place));
     }
     final ctrl = TripEnquiryController.to;
     final batch = await ctrl.sendLead(
@@ -295,6 +305,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           _label(TripStrings.pickupPlace),
           TextField(
             controller: _place,
+            onChanged: (_) => _placeTyped = true,
             textCapitalization: TextCapitalization.words,
             inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.pickupPlaceMax)],
             style: _inputStyle,

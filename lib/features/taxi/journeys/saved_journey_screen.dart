@@ -35,13 +35,22 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
   static const List<Color> _legColors = [AppColors.tripDark, AppColors.taxiDark, AppColors.primary];
 
   final _ctrl = JourneysController.ensure();
-  late final String? _id = widget.journeyId ?? _argId();
+  String? _id;
+  bool _idRead = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _open());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_idRead) return;
+    _idRead = true;
+    _id = widget.journeyId ?? _argId(ModalRoute.of(context)?.settings.arguments);
   }
 
   @override
@@ -55,8 +64,7 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
     if (state == AppLifecycleState.resumed) _autoRefresh();
   }
 
-  String? _argId() {
-    final a = Get.arguments;
+  static String? _argId(Object? a) {
     if (a is Map) return (a['journeyId'] ?? a['id'])?.toString();
     return a is String && a.isNotEmpty ? a : null;
   }
@@ -64,7 +72,7 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
   Future<void> _open() async {
     final id = _id;
     if (id == null) return;
-    if (_ctrl.byId(id) == null) await _ctrl.load();
+    if (_ctrl.byId(id) == null) await _ctrl.load(force: true);
     if (!mounted) return;
     _autoRefresh();
   }
@@ -182,11 +190,12 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
         ]),
       );
     }
-    return const SingleChildScrollView(
+    return SingleChildScrollView(
       child: EmptyStateView(
         icon: Icons.alt_route_rounded,
         title: JourneyStrings.notFoundTitle,
         subtitle: JourneyStrings.notFoundBody,
+        onRetry: _id == null ? null : () => _ctrl.load(force: true).then((_) => _autoRefresh()),
         palette: TaxiColors.palette,
       ),
     );
@@ -228,7 +237,7 @@ class _SavedJourneyScreenState extends State<SavedJourneyScreen> with WidgetsBin
                 onChangeDriver: () => JourneyActions.changeDriver(context, j, leg),
                 onReplace: (backup) => _ctrl.replaceDriver(j.id, leg.legIndex, backup.taxiId),
               ),
-              if (j.isSegment) JourneyCarBookRow(journey: j, leg: leg),
+              if (j.tripId != null) JourneyCarBookRow(journey: j, leg: leg),
             ]),
           ),
         ));

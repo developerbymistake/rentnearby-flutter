@@ -1,5 +1,4 @@
 class TripStringsMcdA1 {
-  static String travelCount(int settled, int total) => 'Travel $settled of $total';
 
   static String legSection(String city, String? dates) {
     final head = city.toUpperCase();

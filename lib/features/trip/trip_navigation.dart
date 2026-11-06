@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../config/app_routes.dart';
 import '../../utils/app_toast.dart';
 import '../taxi/ways/taxi_ways_navigation.dart';
 import 'controllers/trip_plan_controller.dart';
+import 'controllers/trip_wizard_controller.dart';
 import 'models/trip_city_model.dart';
 import 'models/trip_enquiry_model.dart';
 import 'models/trip_plan_model.dart';
@@ -17,11 +19,12 @@ class TripNavigation {
   static Future<void> start(BuildContext context) async {
     final pick = await TripCitySheet.pick(context);
     if (pick == null) return;
-    await startWith(pick.city, next: pick.next);
+    await startWith(pick.city, next: pick.next, draftIds: pick.draftIds);
   }
 
-  static Future<void>? startWith(TripCityModel city, {TripCityModel? next}) =>
-      Get.toNamed(AppRoutes.tripSpots, arguments: {'city': city, 'next': ?next});
+  static Future<void>? startWith(TripCityModel city, {TripCityModel? next, List<String> draftIds = const []}) =>
+      Get.toNamed(AppRoutes.tripSpots,
+          arguments: {'city': city, 'next': ?next, if (draftIds.isNotEmpty) 'draftIds': draftIds});
 
   static Future<void>? openSpots(
     TripCityModel city, {
@@ -29,6 +32,8 @@ class TripNavigation {
     Set<String> existingIds = const {},
     int? legIndex,
     bool newLeg = false,
+    int? pickDay,
+    String? replaceSpotId,
   }) =>
       Get.toNamed(
         AppRoutes.tripSpots,
@@ -39,6 +44,8 @@ class TripNavigation {
           'adding': true,
           'legIndex': ?legIndex,
           'newLeg': newLeg,
+          'pickDay': ?pickDay,
+          'replaceSpotId': ?replaceSpotId,
         },
       );
 
@@ -67,30 +74,63 @@ class TripNavigation {
     return c.legs.any((l) => l.cityKey == city.cityKey) ? TripLegEditBlock.none : null;
   }
 
-  static Future<void>? openPlan({String? tripId, bool fresh = false}) =>
-      Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId, 'fresh': fresh});
+  static Future<void>? openPlan({String? tripId, bool fresh = false, String? step}) =>
+      Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId, 'fresh': fresh, 'step': ?step});
 
-  static Future<void>? openTaxi(int day, {double? nearLat, double? nearLng}) => Get.toNamed(
+  static Future<void>? openContinue(String tripId, String? stepKey) =>
+      Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId, 'step': ?stepKey});
+
+  static Future<void>? openStep(String tripId, String stepKey) {
+    if (Get.currentRoute != AppRoutes.tripPlan) {
+      Get.until((r) => r.settings.name == AppRoutes.tripStep || r.settings.name == AppRoutes.tripPlan || r.isFirst);
+    }
+    final top = Get.currentRoute == AppRoutes.tripStep ? TripWizardController.onTop(tripId) : null;
+    if (top != null) {
+      top.openKey(stepKey);
+      return null;
+    }
+    return Get.toNamed(AppRoutes.tripStep, arguments: {'tripId': tripId, 'key': stepKey});
+  }
+
+  static void backToList() =>
+      Get.until((r) => r.settings.name == AppRoutes.tripPlan || r.settings.name == AppRoutes.main || r.isFirst);
+
+  static Future<void>? openTaxi(int day, {double? nearLat, double? nearLng, String? fromStep}) => Get.toNamed(
         AppRoutes.tripTaxi,
-        arguments: {'day': day, 'nearLat': ?nearLat, 'nearLng': ?nearLng},
+        arguments: {'day': day, 'nearLat': ?nearLat, 'nearLng': ?nearLng, 'fromStep': ?fromStep},
       );
 
-  static Future<void>? openStay(int day, {double? nearLat, double? nearLng}) => Get.toNamed(
+  static Future<void>? openStay(
+    int day, {
+    double? nearLat,
+    double? nearLng,
+    String? fromStep,
+    String? replaceEnquiryId,
+  }) =>
+      Get.toNamed(
         AppRoutes.tripStay,
-        arguments: {'day': day, 'nearLat': ?nearLat, 'nearLng': ?nearLng},
+        arguments: {
+          'day': day,
+          'nearLat': ?nearLat,
+          'nearLng': ?nearLng,
+          'fromStep': ?fromStep,
+          'replaceEnquiryId': ?replaceEnquiryId,
+        },
       );
 
   static Future<void>? openMap({int? day, String? tripId}) =>
       Get.toNamed(AppRoutes.tripMap, arguments: {'day': day, 'tripId': tripId});
 
-  static Future<void>? openReplies(int day, {String? enquiryId}) {
+  static Future<void>? openReplies(int day, {String? enquiryId, String? fromStep}) {
     final tripId = TripPlanController.to.trip.value?.id;
-    return Get.toNamed(AppRoutes.tripReplies, arguments: {'tripId': tripId, 'day': day, 'enquiryId': enquiryId});
+    return Get.toNamed(AppRoutes.tripReplies,
+        arguments: {'tripId': tripId, 'day': day, 'enquiryId': enquiryId, 'fromStep': ?fromStep});
   }
 
-  static Future<void>? openTaxiReplies(int day, {String? enquiryId}) {
+  static Future<void>? openTaxiReplies(int day, {String? enquiryId, String? fromStep}) {
     final tripId = TripPlanController.to.trip.value?.id;
-    return Get.toNamed(AppRoutes.tripTaxiReplies, arguments: {'tripId': tripId, 'day': day, 'enquiryId': enquiryId});
+    return Get.toNamed(AppRoutes.tripTaxiReplies,
+        arguments: {'tripId': tripId, 'day': day, 'enquiryId': enquiryId, 'fromStep': ?fromStep});
   }
 
   static Future<void>? openChatForEnquiry(TripEnquiryModel e) {
@@ -112,18 +152,27 @@ class TripNavigation {
     });
   }
 
-  static Future<void>? openWays(TripStepRole role) {
+  static Future<void> openWays(TripStepRole role, {String? fromStep}) async {
     final c = TripPlanController.to;
-    final start = c.startFrom;
+    final start = c.steps.endOf(role);
     if (start == null) {
       AppToast.warning(TripStringsStepsA1.pickStartFirst);
-      return null;
+      return;
+    }
+    if (!c.hasDates) {
+      final ctx = Get.context;
+      if (ctx == null) {
+        AppToast.warning(TripStringsMcbA1.addDatesFirst);
+        return;
+      }
+      await TripDetailsSheet.edit(ctx, heading: TripStringsMcbA1.addDatesFirst);
+      return;
     }
     final going = role == TripStepRole.gettingThere;
     final city = going ? c.cityPlace : c.lastCityPlace;
-    if (city == null) return null;
+    if (city == null) return;
     final people = c.settings.peopleCount;
-    return TaxiWaysNavigation.openFeed(
+    await TaxiWaysNavigation.openFeed(
       from: going ? start.place : city,
       to: going ? city : start.place,
       date: c.stepDate(role),
@@ -131,10 +180,11 @@ class TripNavigation {
       fromTrip: true,
       tripId: c.trip.value?.id,
       tripRole: role.name,
+      fromStep: fromStep,
     );
   }
 
-  static Future<void> openSegmentWays(int legIndex) async {
+  static Future<void> openSegmentWays(int legIndex, {String? fromStep}) async {
     final c = TripPlanController.to;
     switch (c.findWayBlock(legIndex)) {
       case TravelFindBlock.none:
@@ -176,10 +226,14 @@ class TripNavigation {
       people: c.travelPeople,
       tripId: c.trip.value?.id,
       tripLegIndex: legIndex,
+      fromStep: fromStep,
     );
   }
 
-  static Future<void>? openJourney(String journeyId) => TaxiWaysNavigation.openSavedJourney(journeyId);
+  static Future<void> openJourney(String journeyId) async {
+    await TaxiWaysNavigation.openSavedJourney(journeyId);
+    if (Get.isRegistered<TripPlanController>()) unawaited(TripPlanController.to.refreshEnquiries());
+  }
 
   static Future<void>? openSummary(String tripId) => Get.toNamed(AppRoutes.tripSummary, arguments: {'tripId': tripId});
 

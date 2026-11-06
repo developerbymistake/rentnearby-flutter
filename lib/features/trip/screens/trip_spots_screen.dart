@@ -16,8 +16,11 @@ import '../models/trip_plan_model.dart';
 import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_colors.dart';
+import '../trip_constants.dart';
 import '../trip_strings.dart';
+import '../trip_strings_wizard.dart';
 import '../trip_strings_mca_a2.dart';
+import '../utils/trip_format.dart';
 import '../widgets/trip_city_sheet.dart';
 import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_spot_row.dart';
@@ -36,12 +39,15 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   late final bool _adding;
   late final bool _newLeg;
   late final int? _legIndex;
+  late final int? _pickDay;
+  late final String? _replaceId;
   late final Set<String> _existingIds;
   late final TripSpotsController _ctrl;
   late final TripPlanController _plan;
   final _scroll = ScrollController();
   bool _picking = false;
   bool _starting = false;
+  Worker? _draftWorker;
 
   bool get _intoTrip => _adding || _newLeg;
 
@@ -53,6 +59,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     _newLeg = args['newLeg'] == true;
     _adding = !_newLeg && args['adding'] == true;
     _legIndex = args['legIndex'] as int?;
+    _pickDay = _adding ? args['pickDay'] as int? : null;
+    _replaceId = _pickDay == null ? null : args['replaceSpotId'] as String?;
     _existingIds = (args['existingIds'] as Set<String>?) ?? const <String>{};
     _plan = TripPlanController.to;
     final next = args['next'] as TripCityModel?;
@@ -67,6 +75,18 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
           );
     _plan.openPages++;
     _scroll.addListener(_onScroll);
+    if (!_intoTrip) {
+      final draft = args['draftIds'];
+      if (draft is List) {
+        for (final id in draft.whereType<String>()) {
+          if (_ctrl.selected.length >= TripConstants.maxSpots) break;
+          _ctrl.selected.add(id);
+        }
+      }
+      _draftWorker = ever(_ctrl.selected, (_) {
+        if (!_starting) TripNewDraft.save(_city, _next, _ctrl.selected);
+      });
+    }
     if (_newLeg) WidgetsBinding.instance.addPostFrameCallback((_) => _consumePendingNext());
   }
 
@@ -77,6 +97,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
 
   @override
   void dispose() {
+    _draftWorker?.dispose();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     final tag = '${_city.cityKey}';
@@ -131,6 +152,59 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     _starting = false;
   }
 
+  Future<void> _pickOne(TripSpotModel spot) async {
+    final day = _pickDay;
+    final p = _plan.plan.value;
+    if (day == null || p == null || _starting) return;
+    final replaceId = _replaceId;
+    final replacing = replaceId != null && p.spotById(replaceId) != null;
+    if (!replacing && p.spotCount >= TripConstants.maxSpots) {
+      AppToast.warning(TripStringsMcaA2.maxPlaces);
+      return;
+    }
+    final over = _plan.pickLoadMinutes(spot, day, replaceId: replacing ? replaceId : null) - _plan.dayLimitMinutes;
+    if (over > 0) {
+      _starting = true;
+      final ok = await _confirmOver(over);
+      _starting = false;
+      if (!ok || !mounted) return;
+    }
+    _starting = true;
+    final leg = p.legIndexOf(day);
+    if (replacing) _plan.removeSpot(replaceId, keepEmptyDays: true);
+    _plan.addSpots([spot], legIndex: leg, day: day);
+    Get.back();
+  }
+
+  Future<bool> _confirmOver(int over) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(TripStringsWizard.overLimitTitle,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+        content: Text(TripStringsWizard.overLimitBody(TripFormat.duration(over)),
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+            child: const Text(TripStringsWizard.pickAnother,
+                style: TextStyle(fontFamily: 'Poppins', color: AppColors.textMedium)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+            child: const Text(TripStringsWizard.addAnyway,
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
   Future<void> _planMyDays() async {
     if (_starting) return;
     final chosen = _ctrl.chosen;
@@ -147,7 +221,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     }
     final settings = await TripDetailsSheet.collect(
       context,
-      initial: const TripSettings(),
+      initial: TripNewDraft.settingsFor(_city) ?? const TripSettings(),
       dayCount: 1,
       spotCount: chosen.length,
     );
@@ -155,6 +229,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       _starting = false;
       return;
     }
+    TripNewDraft.save(_city, _next, chosen.map((s) => s.id), settings: settings);
     unawaited(_plan.startFromSelection(_city, chosen, settings: settings, queuedNext: _next));
     Get.offNamed(AppRoutes.tripPlan);
   }
@@ -172,6 +247,15 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       ),
       bottomNavigationBar: _buildBottomBar(context),
     );
+  }
+
+  String _pickHeading(int day) {
+    final p = _plan.plan.value;
+    final replaceId = _replaceId;
+    final replaced = replaceId == null ? null : p?.spotById(replaceId);
+    var left = _plan.dayMinutesLeft(day) + (replaced?.visitMinutes ?? 0);
+    if (left < 0) left = 0;
+    return '${TripStringsWizard.pickOneFor(day)} · ${TripStringsWizard.timeLeftToday(TripFormat.duration(left))}';
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -200,6 +284,19 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
                 ),
                 const SizedBox(height: 2),
+                if (_pickDay case final day?)
+                  Text(
+                    _pickHeading(day),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
+                  )
+                else
                 Obx(() {
                   final total = _ctrl.total.value;
                   final loaded = !_ctrl.isLoading.value &&
@@ -370,7 +467,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
               key: ValueKey(s.id),
               spot: s,
               selected: existing || selected.contains(s.id),
-              onToggle: existing ? null : () => _ctrl.toggle(s.id),
+              onToggle: existing ? null : (_pickDay != null ? () => _pickOne(s) : () => _ctrl.toggle(s.id)),
             ),
           );
         },
@@ -383,7 +480,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   Widget _buildBottomBar(BuildContext context) {
     return Obx(() {
       final n = _ctrl.selected.length;
-      if (n == 0 || _ctrl.plannerOff.value) return const SizedBox.shrink();
+      if (n == 0 || _ctrl.plannerOff.value || _pickDay != null) return const SizedBox.shrink();
       return Container(
         padding: EdgeInsets.fromLTRB(16, 10, 16, AppInsets.bottomViewPadding(context) + 10),
         decoration: BoxDecoration(

@@ -6,24 +6,20 @@ import '../trip_constants.dart';
 class TripStepRules {
   const TripStepRules._();
 
-  static TripStepDisplay display(TripStep step, TripJourney? journey) => switch (step.status) {
-        TripStepStatus.own => TripStepDisplay.own,
-        TripStepStatus.skipped => TripStepDisplay.skipped,
-        TripStepStatus.notNeeded => TripStepDisplay.notNeeded,
-        TripStepStatus.notStarted => TripStepDisplay.notStarted,
-        TripStepStatus.booked =>
-          step.hasJourney && journey != null && journey.id == step.journeyId ? TripStepDisplay.booked : TripStepDisplay.notStarted,
-        TripStepStatus.chosen => !step.hasJourney || journey == null || journey.id != step.journeyId
-            ? TripStepDisplay.notStarted
-            : (journey.isAsked ? TripStepDisplay.asked : TripStepDisplay.chosen),
-      };
-
-  static bool isSorted(TripStepDisplay d) => d != TripStepDisplay.notStarted;
-
   static DateTime? expectedDate(TripStepRole role, TripStep step, TripSettings settings, int dayCount) {
     final own = step.date;
     if (own != null) return DateTime(own.year, own.month, own.day);
-    return role == TripStepRole.gettingThere ? settings.startDate : settings.checkOutDate(dayCount);
+    if (role == TripStepRole.gettingThere) return settings.startDate;
+    return step.leaveOnOrDefault == TripLeaveOn.lastDayEvening
+        ? settings.endDate(dayCount)
+        : settings.checkOutDate(dayCount);
+  }
+
+  // The journey still fits the other leave time, so only "When do you leave?" moved it.
+  static bool leaveMoved(TripStep step, DateTime travel, TripSettings settings, int dayCount) {
+    final other = step.leaveOnOrDefault == TripLeaveOn.lastDayEvening ? TripLeaveOn.checkOut : TripLeaveOn.lastDayEvening;
+    final was = expectedDate(TripStepRole.comingBack, step.copyWith(leaveOn: other, clearDate: true), settings, dayCount);
+    return was != null && !dateChanged(was, travel);
   }
 
   static bool dateChanged(DateTime? expected, DateTime travel) =>
@@ -68,37 +64,5 @@ class TripStepRules {
         .difference(DateTime.utc(today.year, today.month, today.day))
         .inDays;
     return left >= 0 && left <= TripConstants.stepNudgeDays;
-  }
-
-  static int sortedCount(List<TripStepDisplay> five) => five.where(isSorted).length;
-
-  static TripSteps withAutoNotNeeded(
-    TripSteps steps,
-    double? firstLat,
-    double? firstLon, [
-    double? lastLat,
-    double? lastLon,
-  ]) {
-    final hasLast = lastLat != null && lastLon != null;
-    final insideFirst = insideCity(steps.startFrom, firstLat, firstLon);
-    final insideLast = hasLast ? insideCity(steps.startFrom, lastLat, lastLon) : insideFirst;
-    var out = steps;
-    for (final r in TripStepRole.values) {
-      final inside = r == TripStepRole.gettingThere ? insideFirst : insideLast;
-      final s = out.of(r);
-      if (inside && s.status == TripStepStatus.notStarted && s.journeyId == null) {
-        out = out.withStep(r, s.copyWith(status: TripStepStatus.notNeeded, clearDate: true));
-      } else if (!inside && s.status == TripStepStatus.notNeeded) {
-        out = out.withStep(r, s.copyWith(status: TripStepStatus.notStarted));
-      }
-    }
-    return out;
-  }
-
-  static TripStepDisplay groupDisplay({required int total, required int sorted, required int skipped, required int own}) {
-    if (total < 1 || sorted < total) return TripStepDisplay.notStarted;
-    if (skipped == total) return TripStepDisplay.skipped;
-    if (own == total) return TripStepDisplay.own;
-    return TripStepDisplay.chosen;
   }
 }

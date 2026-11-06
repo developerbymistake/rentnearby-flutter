@@ -14,11 +14,11 @@ import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
 import '../trip_strings_mcd_k1.dart';
-import '../trip_strings_steps_a1.dart';
 import '../trip_strings_steps_a3.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_summary_source.dart';
 import '../utils/trip_summary_text.dart';
+import '../utils/trip_wizard_rules.dart';
 import '../widgets/trip_journey_compact.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_payment_line.dart';
@@ -258,16 +258,11 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
   }
 
   Widget _stepCard(TripSummaryRecord r, TripStepRole role) {
-    final display = TripSummaryText.stepDisplay(r, role);
+    final info = TripSummaryText.stepInfo(r, role);
     final j = TripSummaryText.journeyOf(r, role);
-    final own = display == TripStepDisplay.own;
-    final status = switch (display) {
-      TripStepDisplay.own => TripDisplayStatus.own,
-      TripStepDisplay.booked => TripDisplayStatus.bookedByYou,
-      TripStepDisplay.asked => TripDisplayStatus.asked,
-      _ => TripDisplayStatus.none,
-    };
-    final pill = TripStatusPill(status, taxi: true, label: TripStringsStepsA1.stepLabel(display));
+    final own = info?.state == TripStepState.own;
+    final status = TripSummaryText.pillStatus(info?.state);
+    final pill = TripStatusPill(status, taxi: true, label: info?.line);
     if (own || j == null) {
       final note = (r.steps.of(role).note ?? '').trim();
       return TripStatusCard(

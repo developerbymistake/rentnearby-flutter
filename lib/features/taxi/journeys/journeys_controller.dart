@@ -49,6 +49,7 @@ class JourneysController extends GetxController {
 
   String? _userId;
   int _requestId = 0;
+  final _committedDuringLoad = <String, SavedJourney>{};
   DateTime? _syncedAt;
   Future<void>? _running;
   bool _saving = false;
@@ -96,6 +97,7 @@ class JourneysController extends GetxController {
   }
 
   Future<void> _commit(SavedJourney journey) async {
+    if (isLoading.value) _committedDuringLoad[journey.id] = journey;
     await JourneyLocalStore.upsert(journey);
     _assign(await JourneyLocalStore.read());
     if (Get.isRegistered<TripPlanController>()) {
@@ -149,6 +151,7 @@ class JourneysController extends GetxController {
   bool createdForTrip(String journeyId, String tripId) => _createdForTrip[journeyId] == tripId;
 
   Future<void> _drop(String id) async {
+    _committedDuringLoad.remove(id);
     journeys.removeWhere((j) => j.id == id);
     await JourneyLocalStore.remove(id);
   }
@@ -170,6 +173,7 @@ class JourneysController extends GetxController {
 
   Future<void> _load(bool force) async {
     final id = ++_requestId;
+    _committedDuringLoad.clear();
     isLoading.value = true;
     loadFailed.value = false;
     try {
@@ -182,7 +186,12 @@ class JourneysController extends GetxController {
       try {
         final remote = await _repo.list();
         if (id != _requestId) return;
-        await JourneyLocalStore.replaceAll(remote);
+        final remoteIds = {for (final j in remote) j.id};
+        await JourneyLocalStore.replaceAll([
+          ...remote,
+          for (final j in _committedDuringLoad.values)
+            if (!remoteIds.contains(j.id)) j,
+        ]);
         _assign(await JourneyLocalStore.read());
         _syncedAt = DateTime.now();
         isOffline.value = false;
@@ -455,6 +464,10 @@ class JourneysController extends GetxController {
     }).toList();
     final status = j.status == JourneyStatus.notAsked ? JourneyStatus.ready : j.status;
     unawaited(_commit(j.copyWith(legs: legs, status: status)));
+    if (Get.isRegistered<TripPlanController>()) {
+      final c = Get.find<TripPlanController>();
+      if (c.trip.value?.journeys.any((x) => x.id == journeyId) ?? false) unawaited(c.refreshEnquiries());
+    }
   }
 
   LegStatus _legStatusOf(String status) => switch (status) {

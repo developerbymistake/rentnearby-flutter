@@ -3,19 +3,22 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../config/app_colors.dart';
+import '../../../config/app_routes.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/empty_state_view.dart';
-import '../../../widgets/selectable_chip.dart';
 import '../controllers/my_trips_controller.dart';
 import '../models/trip_model.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_bar.dart';
+import '../utils/trip_bar_rules.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_summary_source.dart';
 import '../utils/trip_summary_text.dart';
 import '../widgets/trip_card.dart';
+import '../widgets/trip_lifecycle_actions.dart';
 import '../widgets/trip_shimmers.dart';
 
 class MyTripsScreen extends StatefulWidget {
@@ -26,15 +29,14 @@ class MyTripsScreen extends StatefulWidget {
 }
 
 class _MyTripsScreenState extends State<MyTripsScreen> {
-  static int _open = 0;
   late final MyTripsController _ctrl;
   final _scroll = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _open++;
     _ctrl = MyTripsController.to;
+    _ctrl.pastOpen.value = false;
     _ctrl.load();
     _scroll.addListener(_onScroll);
   }
@@ -43,8 +45,6 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
   void dispose() {
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
-    _open--;
-    if (_open == 0) Get.delete<MyTripsController>();
     super.dispose();
   }
 
@@ -55,6 +55,16 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
 
   void _openPlan(TripSummaryModel t) {
     TripNavigation.openPlan(tripId: t.id)?.then((_) {
+      if (mounted) _ctrl.load();
+    });
+  }
+
+  void _onAction(TripSummaryModel t, {bool past = false}) {
+    if (past || TripBarRules.isReady(t)) {
+      TripNavigation.openSummary(t.id);
+      return;
+    }
+    Get.toNamed(AppRoutes.tripPlan, arguments: TripBarRules.continueArgs(t))?.then((_) {
       if (mounted) _ctrl.load();
     });
   }
@@ -137,58 +147,108 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
         gradient: TripColors.gradient,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
-      padding: EdgeInsets.fromLTRB(12, top + 8, 20, 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: EdgeInsets.fromLTRB(12, top + 8, 20, 14),
+      child: Row(
         children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 2),
-              const Expanded(
-                child: Text(
-                  TripStrings.myTrips,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-              ),
-            ],
+          IconButton(
+            onPressed: () => Get.back(),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
           ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: Obx(() {
-              final c = _ctrl.counts.value;
-              const chipPad = EdgeInsets.symmetric(vertical: 13, horizontal: 14);
-              return Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
-                  SelectableChip(
-                    label: TripStrings.upcomingChip(c.upcoming),
-                    selected: _ctrl.state.value == 'upcoming',
-                    activeColor: TripColors.accentDark,
-                    padding: chipPad,
-                    onTap: () => _ctrl.selectState('upcoming'),
-                  ),
-                  SelectableChip(
-                    label: TripStrings.completedChip(c.completed),
-                    selected: _ctrl.state.value == 'completed',
-                    activeColor: TripColors.accentDark,
-                    padding: chipPad,
-                    onTap: () => _ctrl.selectState('completed'),
-                  ),
-                ],
-              );
-            }),
+          const SizedBox(width: 2),
+          const Expanded(
+            child: Text(
+              TripStrings.myTrips,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _card(TripSummaryModel t, {bool past = false}) => TripCard(
+        key: ValueKey('${past ? 'p' : 'a'}${t.id}'),
+        trip: t,
+        past: past,
+        onOpen: () => _openPlan(t),
+        onAction: () => _onAction(t, past: past),
+        onShare: t.spotCount > 0 ? () => _share(t) : null,
+        onDelete: () => _delete(t),
+        onMarkComplete: past && !t.isCompleted ? () => TripLifecycleActions.markCompleteFromList(context, t) : null,
+      );
+
+  Widget _groupLabel(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 18, 4, 8),
+        child: Text(
+          text,
+          style: const TextStyle(
+              fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: AppColors.textLight),
+        ),
+      );
+
+  Widget _pastToggle(int n) => InkWell(
+        onTap: _ctrl.togglePast,
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    TripStringsBar.pastTrips(n),
+                    style: const TextStyle(
+                        fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+                  ),
+                ),
+                AnimatedRotation(
+                  turns: _ctrl.pastOpen.value ? 0.25 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: const Icon(Icons.chevron_right_rounded, color: TripColors.accentDark),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  List<Widget> _pastSection() {
+    final known = _ctrl.counts.value.completed;
+    final n = known > _ctrl.past.length ? known : _ctrl.past.length;
+    if (n == 0 && !_ctrl.pastOpen.value) return const [];
+    final out = <Widget>[const SizedBox(height: 12), _pastToggle(n)];
+    if (!_ctrl.pastOpen.value) return out;
+    if (_ctrl.past.isEmpty) {
+      if (_ctrl.pastLoading.value) {
+        out.add(const TripCardSkeleton());
+      } else if (_ctrl.pastFailed.value) {
+        out.add(EmptyStateView(
+          icon: Iconsax.cloud_cross,
+          title: TripStrings.tripsFailed,
+          subtitle: TripStrings.checkConnection,
+          onRetry: _ctrl.loadPast,
+          palette: TripColors.palette,
+        ));
+      } else {
+        out.add(const EmptyStateView(
+          icon: Iconsax.routing_2,
+          title: TripStringsBar.noPastTrips,
+          subtitle: TripStringsBar.noPastSub,
+          palette: TripColors.palette,
+        ));
+      }
+      return out;
+    }
+    for (final t in _ctrl.past) {
+      out
+        ..add(const SizedBox(height: 4))
+        ..add(_card(t, past: true))
+        ..add(const SizedBox(height: 8));
+    }
+    return out;
   }
 
   Widget _buildBody(BuildContext context) {
@@ -203,71 +263,58 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
           ),
         );
       }
-      final items = _ctrl.items;
-      if (items.isEmpty) {
-        if (_ctrl.isLoading.value) {
-          return SliverPadding(
-            padding: EdgeInsets.fromLTRB(_sidePad(context), 16, _sidePad(context), 0),
-            sliver: SliverList.separated(
-              itemCount: 3,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (_, _) => const TripCardSkeleton(),
-            ),
-          );
-        }
-        final failed = _ctrl.loadFailed.value;
-        final completed = _ctrl.state.value == 'completed';
-        return SliverToBoxAdapter(
-          child: failed
-              ? EmptyStateView(
-                  icon: Iconsax.cloud_cross,
-                  title: TripStrings.tripsFailed,
-                  subtitle: TripStrings.checkConnection,
-                  onRetry: _ctrl.load,
-                  palette: TripColors.palette,
-                )
-              : completed
-                  ? const EmptyStateView(
-                      icon: Iconsax.routing_2,
-                      title: TripStrings.noCompletedTrips,
-                      subtitle: TripStrings.noCompletedSub,
-                      palette: TripColors.palette,
-                    )
-                  : EmptyStateView(
-                      icon: Iconsax.routing_2,
-                      title: TripStrings.noUpcomingTrips,
-                      subtitle: TripStrings.noTripsSubtitle,
-                      onRetry: () => TripNavigation.start(context),
-                      retryLabel: TripStrings.planATrip,
-                      palette: TripColors.palette,
-                    ),
+      final side = _sidePad(context);
+      if (_ctrl.active.isEmpty && _ctrl.isLoading.value) {
+        return SliverPadding(
+          padding: EdgeInsets.fromLTRB(side, 16, side, 0),
+          sliver: SliverList.separated(
+            itemCount: 3,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (_, _) => const TripCardSkeleton(),
+          ),
         );
       }
-      return SliverPadding(
-        padding: EdgeInsets.fromLTRB(_sidePad(context), 16, _sidePad(context), 0),
-        sliver: SliverList.separated(
-          itemCount: items.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (_, i) {
-            final t = items[i];
-            return TripCard(
-              key: ValueKey(t.id),
-              trip: t,
-              onOpen: () => _openPlan(t),
-              onSummary: () => TripNavigation.openSummary(t.id),
-              onShare: t.spotCount > 0 ? () => _share(t) : null,
-              onDelete: () => _delete(t),
-            );
-          },
-        ),
-      );
+      final groups = _ctrl.groups;
+      final children = <Widget>[];
+      if (groups.inProgress.isEmpty && groups.ready.isEmpty) {
+        children.add(_ctrl.loadFailed.value
+            ? EmptyStateView(
+                icon: Iconsax.cloud_cross,
+                title: TripStrings.tripsFailed,
+                subtitle: TripStrings.checkConnection,
+                onRetry: _ctrl.load,
+                palette: TripColors.palette,
+              )
+            : EmptyStateView(
+                icon: Iconsax.routing_2,
+                title: TripStringsBar.noActiveTrips,
+                subtitle: TripStrings.noTripsSubtitle,
+                onRetry: () => TripNavigation.start(context),
+                retryLabel: TripStrings.planATrip,
+                palette: TripColors.palette,
+              ));
+      }
+      for (final (label, list) in [
+        (TripStringsBar.inProgress, groups.inProgress),
+        (TripStringsBar.ready, groups.ready),
+      ]) {
+        if (list.isEmpty) continue;
+        children.add(_groupLabel(TripStringsBar.groupHeader(label, list.length)));
+        for (final t in list) {
+          children
+            ..add(_card(t))
+            ..add(const SizedBox(height: 12));
+        }
+      }
+      children.addAll(_pastSection());
+      return SliverPadding(padding: EdgeInsets.fromLTRB(side, 4, side, 0), sliver: SliverList.list(children: children));
     });
   }
 
   Widget _buildOfflineStrip(BuildContext context) {
     return Obx(() {
       final at = _ctrl.offlineCopyAt.value;
-      if (at == null || _ctrl.items.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+      if (at == null || _ctrl.active.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
       return SliverToBoxAdapter(
         child: Padding(
           padding: EdgeInsets.fromLTRB(_sidePad(context), 12, _sidePad(context), 0),

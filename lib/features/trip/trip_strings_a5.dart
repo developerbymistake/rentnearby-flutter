@@ -1,3 +1,4 @@
+import 'trip_state_labels.dart';
 class TripStringsA5 {
   static const String itinerary = 'Itinerary';
   static const String staysSection = 'Stays';
@@ -9,7 +10,7 @@ class TripStringsA5 {
   static const String share = 'Share';
   static const String shareTrip = 'Share trip';
   static const String shareFailed = 'Could not share. Try again.';
-  static const String noStayTonight = 'No stay tonight';
+  static const String noStayTonight = TripStateLabels.noStayTonight;
   static const String noStayTravelling = 'No stay (travelling)';
   static const String ownFooter = 'Own bookings were arranged by you.';
   static const String planOnlyFooter = 'Made with Bakhli Trip Planner.';
@@ -29,8 +30,6 @@ class TripStringsA5 {
     return parts.join(' · ');
   }
 
-  static String cardMeta(int days, int spots) =>
-      '$days ${days == 1 ? 'day' : 'days'} · $spots ${spots == 1 ? 'spot' : 'spots'}';
 
   static String nightOf(int k, int n, String? total) =>
       total == null ? 'Night $k of $n' : 'Night $k of $n · $total total';

@@ -22,6 +22,7 @@ import '../trip_strings_fin_b1.dart';
 import '../trip_strings_mca_a3.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_clock.dart';
+import '../widgets/trip_back_to_plan_bar.dart';
 import '../widgets/trip_filter_chips.dart';
 import '../widgets/trip_night_chooser.dart';
 import '../widgets/trip_page_header.dart';
@@ -46,6 +47,8 @@ class _TripStayScreenState extends State<TripStayScreen> {
   final _groundOnly = false.obs;
   final _offStays = <String>{}.obs;
   final _checkedStays = <String>{};
+  String? _fromStep;
+  String? _replaceId;
 
   @override
   void initState() {
@@ -56,6 +59,8 @@ class _TripStayScreenState extends State<TripStayScreen> {
     final args = Get.arguments;
     final map = args is Map ? args : const {};
     final day = map['day'] as int?;
+    _fromStep = map['fromStep'] as String?;
+    _replaceId = map['replaceEnquiryId'] as String?;
     final lat = (map['nearLat'] as num?)?.toDouble();
     final lng = (map['nearLng'] as num?)?.toDouble();
     if (day != null) _supply.setDay(day);
@@ -68,6 +73,11 @@ class _TripStayScreenState extends State<TripStayScreen> {
   }
 
   void _changeDay(int d) {
+    final from = _fromStep;
+    if (from != null) {
+      final next = _plan.stepKeyForDay(from, d);
+      if (next != null && next != from) setState(() => _fromStep = next);
+    }
     _supply.setDay(d);
     _supply.ensureStays();
   }
@@ -83,9 +93,22 @@ class _TripStayScreenState extends State<TripStayScreen> {
 
   bool _locked(int day) => _plan.isReadOnly || _plan.isDayPast(day);
 
+  void _exit() {
+    if (_fromStep == null) {
+      Get.back();
+    } else {
+      TripBackToStepBar.back(_fromStep);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: _fromStep == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _exit();
+      },
+      child: Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: Column(
         children: [
@@ -95,13 +118,14 @@ class _TripStayScreenState extends State<TripStayScreen> {
             return TripPageHeader(
               title: _title(d),
               subtitle: _subtitle(d),
-              onBack: () => Get.back(),
+              onBack: _exit,
               gradient: StayColors.gradient,
               bottom: TripTaxiStayToggle(
                 selected: TripSupplyKind.stay,
                 day: d,
                 onHeader: true,
                 activeColor: StayColors.accent,
+                fromStep: _fromStep,
               ),
             );
           }),
@@ -118,9 +142,9 @@ class _TripStayScreenState extends State<TripStayScreen> {
       ),
       bottomNavigationBar: Obx(() {
         final d = _supply.day.value;
-        return TripShortlistBar(key: ValueKey('shortlist-$d'), day: d);
+        return TripShortlistBar(key: ValueKey('shortlist-$d'), day: d, fromStep: _fromStep);
       }),
-    );
+    ));
   }
 
   String _title(int d) {
@@ -201,6 +225,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
       final listMode = TripNightChooser.modeOf(_plan, d) == TripNightMode.nightByNight;
       final showChips = listMode && !_noSupply() && (_supply.stays.isNotEmpty || _hasFilters);
       final chooser = TripNightChooser.visible(_plan, d);
+      final replacing = _replacing();
       return Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
@@ -209,6 +234,14 @@ class _TripStayScreenState extends State<TripStayScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (_fromStep != null) ...[
+                  TripBackToStepBar(fromStep: _fromStep!),
+                  const SizedBox(height: 8),
+                ],
+                if (replacing != null) ...[
+                  _replaceLine(replacing),
+                  const SizedBox(height: 8),
+                ],
                 TripRouteStrip(
                   day: d,
                   onDayChanged: _changeDay,
@@ -238,12 +271,76 @@ class _TripStayScreenState extends State<TripStayScreen> {
         ),
       );
 
-  Widget _noSupplyView() => const EmptyStateView(
-        icon: Iconsax.building_4,
-        title: TripStrings.noStaysHere,
-        subtitle: TripStrings.addOwnToKeep,
-        palette: StayColors.palette,
+  TripEnquiryModel? _replacing() {
+    final id = _replaceId;
+    if (id == null) return null;
+    final e = _plan.enquiryList.firstWhereOrNull((x) => x.id == id);
+    return e != null && e.isBooked ? e : null;
+  }
+
+  Widget _replaceLine(TripEnquiryModel e) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          children: [
+            const Icon(Iconsax.repeat, size: 16, color: StayColors.accentDark),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(TripStrings.replacesWhenConfirmed(e.listingName),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+            ),
+          ],
+        ),
       );
+
+  Widget _noSupplyView() {
+    final d = _supply.day.value;
+    final paused = _plan.stayTabOff.value;
+    final city = _plan.isMultiCity ? _plan.cityNameOf(d) : _plan.cityName;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 40, 32, 0),
+      child: Column(
+        children: [
+          const Icon(Iconsax.building_4, size: 40, color: AppColors.textHint),
+          const SizedBox(height: 10),
+          Text(paused ? TripStrings.staysPaused : TripStrings.noStaysIn(city),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+          const SizedBox(height: 4),
+          const Text(TripStrings.addOwnToKeep,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+          if (!_locked(d)) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: _modeButton(TripStrings.haveStay, () => TripShortlistBar.openOwn(context, d)),
+            ),
+            if (_plan.plan.value?.dayAt(d)?.stay?.isSkipped != true) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: _modeButton(TripStrings.noStayTonight, () async {
+                  if (await TripNightChooser.noStay(context, d) && mounted) TripBackToStepBar.back(_fromStep);
+                }),
+              ),
+            ],
+          ],
+          const SizedBox(height: 4),
+          TextButton(
+            onPressed: () => TripBackToStepBar.back(_fromStep),
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+            child: const Text(TripStrings.askAgainLater,
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _skeletons() => SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -289,7 +386,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
                           style: const TextStyle(
                               fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                       const SizedBox(height: 2),
-                      Text(skipped ? TripStringsA2.travellingBody : TripStringsA2.sameStayBody(name),
+                      Text(skipped ? TripStringsA2.noStayBody : TripStringsA2.sameStayBody(name),
                           style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.35)),
                       for (final line in base ?? const <String>[]) ...[
                         const SizedBox(height: 4),
@@ -308,7 +405,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(child: _modeButton(TripStringsFinB1.keepIt, () => Get.back())),
+                  Expanded(child: _modeButton(TripStringsFinB1.keepIt, _exit)),
                   const SizedBox(width: 8),
                   Expanded(child: _modeButton(TripStringsFinB1.newStay, () => _plan.clearStay(d))),
                 ],

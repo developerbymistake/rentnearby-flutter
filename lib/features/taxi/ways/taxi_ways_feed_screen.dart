@@ -11,13 +11,14 @@ import '../../trip/models/trip_plan_model.dart';
 import '../../trip/trip_colors.dart';
 import '../../trip/trip_strings_final_aa.dart';
 import '../../trip/trip_strings_steps_a3.dart';
+import '../../trip/widgets/trip_journey_card.dart';
 import '../../trip/widgets/trip_own_travel_sheet.dart';
-import '../../trip/widgets/trip_step_skip_sheet.dart';
 import '../../trip/widgets/trip_shimmers.dart';
 import '../journeys/journey_models.dart';
 import '../journeys/journeys_controller.dart';
 import '../taxi_option_sets.dart';
 import 'destination_section.dart';
+import 'journey_plan_screen.dart';
 import 'models/taxi_ways_models.dart';
 import 'taxi_ways_controller.dart';
 import 'taxi_ways_navigation.dart';
@@ -40,21 +41,24 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
   static const double _maxWidth = 720;
 
   TaxiWaysController? _c;
-  late final String _tag;
-  bool _fromTrip = false;
+  String? _tag;
+  bool _read = false;
 
   @override
-  void initState() {
-    super.initState();
-    _tag = 'ways-${DateTime.now().microsecondsSinceEpoch}';
-    final args = Get.arguments;
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_read) return;
+    _read = true;
+    final route = ModalRoute.of(context);
+    final args = route?.settings.arguments;
     if (args is Map && args['from'] is PlaceResult && args['to'] is PlaceResult) {
       final date = args['date'];
       final people = args['people'];
       final tripId = args['tripId'];
       final tripRole = args['tripRole'];
       final tripLegIndex = args['tripLegIndex'];
-      _fromTrip = args['fromTrip'] == true || tripId is String;
+      final fromStep = args['fromStep'];
+      _tag = 'ways-${identityHashCode(route)}';
       _c = Get.put(
         TaxiWaysController(
           from: args['from'] as PlaceResult,
@@ -65,6 +69,8 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
           tripId: tripId is String ? tripId : null,
           tripRole: tripRole is String ? tripRole : null,
           tripLegIndex: tripLegIndex is int && tripLegIndex >= 2 ? tripLegIndex : null,
+          fromTrip: args['fromTrip'] == true || tripId is String,
+          fromStep: fromStep is String && fromStep.isNotEmpty ? fromStep : null,
         ),
         tag: _tag,
       );
@@ -74,7 +80,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
 
   @override
   void dispose() {
-    if (_c != null) Get.delete<TaxiWaysController>(tag: _tag);
+    if (_tag != null) Get.delete<TaxiWaysController>(tag: _tag);
     super.dispose();
   }
 
@@ -88,15 +94,19 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     if (c == null) {
       return Scaffold(
         backgroundColor: AppColors.scaffoldBg,
-        appBar: AppBar(title: const Text(TaxiWaysStrings.title)),
-        body: ListView(children: [
-          EmptyStateView(
-            icon: Iconsax.routing_2,
-            title: TaxiWaysStrings.noWays,
-            subtitle: TripStringsA6.journeyGoneBody,
-            onRetry: () => Get.back(),
-            retryLabel: TripStringsA6.goBack,
-            palette: ModulePalette.taxi,
+        body: Column(children: [
+          JourneyPlanScreen.header(context, title: TaxiWaysStrings.title),
+          Expanded(
+            child: ListView(children: [
+              EmptyStateView(
+                icon: Iconsax.routing_2,
+                title: TaxiWaysStrings.noWays,
+                subtitle: TripStringsA6.waysGoneBody,
+                onRetry: () => Get.back(),
+                retryLabel: TripStringsA6.goBack,
+                palette: ModulePalette.taxi,
+              ),
+            ]),
           ),
         ]),
       );
@@ -118,8 +128,15 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     );
   }
 
+  Future<void> _arrangeMyself(BuildContext context, TaxiWaysController c) async {
+    final leg = c.forSegment ? c.tripLegIndex : null;
+    final role = leg == null ? c.actions.role : null;
+    if (leg == null && role == null) return;
+    if (!Get.isRegistered<TripPlanController>()) return;
+    if (await TripJourneyCard.arrangeMyself(context, role: role, legIndex: leg)) await c.actions.arrangedMyself();
+  }
+
   Widget _arrangeBar(BuildContext context, TaxiWaysController c) {
-    final kind = c.tripRole == TripStepRole.comingBack.name ? TripStepKind.comingBack : TripStepKind.gettingThere;
     return Container(
       color: Colors.white,
       padding: EdgeInsets.fromLTRB(16, 6, 16, 6 + AppInsets.bottomViewPadding(context)),
@@ -128,13 +145,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _maxWidth),
           child: TextButton(
-            onPressed: () async {
-              final leg = c.tripLegIndex;
-              final done = c.forSegment && leg != null
-                  ? await TripOwnTravelSheet.show(context, leg)
-                  : await TripStepSkipSheet.show(context, step: kind);
-              if (done) await c.arrangedMyself();
-            },
+            onPressed: () => _arrangeMyself(context, c),
             style: TextButton.styleFrom(
               foregroundColor: TaxiColors.accentDark,
               minimumSize: const Size(double.infinity, 48),
@@ -179,7 +190,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
               ),
-              if (_fromTrip)
+              if (c.inTrip)
                 Obx(() => Text(
                       TripStringsA6.feedSubtitle(c.date.value, c.people.value),
                       maxLines: 1,
@@ -308,6 +319,21 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
 
   Widget _peopleStepper(TaxiWaysController c) {
     final n = c.people.value;
+    if (c.lockedPeople) {
+      return _pill(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Iconsax.people, size: 16, color: Colors.white),
+            const SizedBox(width: 6),
+            Text(
+              TaxiWaysStrings.people(n),
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: Colors.white),
+            ),
+          ]),
+        ),
+      );
+    }
     Widget btn(IconData icon, bool enabled, VoidCallback onTap) => SizedBox(
           width: 44,
           height: 44,
@@ -444,16 +470,18 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
       final ask = _askTheseButton(context, c, r);
       if (ask != null) children.add(ask);
     }
-    children.add(const SizedBox(height: 24));
-    children.add(AtDestinationSection(
-      cityName: r.to.name.isNotEmpty ? r.to.name : c.to.value.name,
-      date: c.date.value,
-      people: c.people.value,
-      localTaxis: r.localTaxis,
-      stays: r.stays,
-      reachFirstPlace: c.forSegment ? null : r.reachFirstPlace,
-      hasWays: r.hasWays,
-    ));
+    if (!c.inTrip) {
+      children.add(const SizedBox(height: 24));
+      children.add(AtDestinationSection(
+        cityName: r.to.name.isNotEmpty ? r.to.name : c.to.value.name,
+        date: c.date.value,
+        people: c.people.value,
+        localTaxis: r.localTaxis,
+        stays: r.stays,
+        reachFirstPlace: r.reachFirstPlace,
+        hasWays: r.hasWays,
+      ));
+    }
     children.add(Padding(
       padding: const EdgeInsets.fromLTRB(8, 20, 8, 0),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -480,7 +508,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     final hub = c.gapHub;
     if (Get.isRegistered<TripPlanController>()) TripPlanController.to.markTravelGap(k, hub);
     if (await TripOwnTravelSheet.show(context, k, initialHow: TripTravelHow.train, hubName: hub)) {
-      await c.arrangedMyself();
+      await c.actions.arrangedMyself();
     }
   }
 
@@ -651,7 +679,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
           plan: row,
           planIndex: r.plans.indexOf(row),
           bestReason: reason,
-          onOpen: () => TaxiWaysNavigation.openPlan(planKey: row.planKey, controllerTag: _tag),
+          onOpen: () => TaxiWaysNavigation.openPlan(c.openArgs(row)),
         ));
       }
     }
@@ -699,7 +727,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
 
   void _openDriver(TaxiWaysController c, TaxiWaysResult r, WayDriver d) {
     final plan = c.singlePlan(_companions(r, d));
-    TaxiWaysNavigation.openPlan(planKey: plan.planKey, controllerTag: _tag);
+    TaxiWaysNavigation.openPlan(c.openArgs(plan, synthetic: true));
   }
 
   Widget? _askTheseButton(BuildContext context, TaxiWaysController c, TaxiWaysResult r) {
@@ -711,7 +739,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
       child: JourneyAskButton(
         label: JourneyAskButton.labelFor(drivers.length, these: true),
         busy: busy,
-        onPressed: () => c.askDrivers(context, c.singlePlan(drivers)),
+        onPressed: () => c.actions.askDrivers(context, c.singlePlan(drivers)),
       ),
     );
   }

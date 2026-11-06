@@ -32,17 +32,34 @@ TripJourney _journey(List<TripJourneyLeg> legs, {DateTime? date}) => TripJourney
       travelDay: 2,
     );
 
-TripEnquiryModel _row(int car, String status, {String journeyId = 'j1'}) => TripEnquiryModel(
-      id: 'e$car$status',
+TripEnquiryModel _row(int car, String status, {String journeyId = 'j1', String? taxiId}) => TripEnquiryModel(
+      id: 'e$car$status${taxiId ?? ''}',
       tripId: 't1',
       kind: TripEnquiryKinds.taxi,
+      listingId: taxiId ?? 'taxi$car',
       day: 2,
       status: status,
       context: TripEnquiryContext(journeyId: journeyId, journeyLegIndex: car),
     );
 
 TripTravelState _state(TripJourney? j, {List<TripEnquiryModel> rows = const [], TripTravel? arrival = _arrival, bool gap = false}) =>
-    TripTravelRules.stateOf(arrival: arrival, journey: j, journeyRows: rows, travelDate: _travelDate, gap: gap);
+    TripTravelRules.stateOf(
+      role: TripJourneyRole.segment,
+      arrival: arrival,
+      journey: j,
+      journeyRows: rows,
+      travelDate: _travelDate,
+      gap: gap,
+    );
+
+TripTravelState _stepState(TripStep step, TripJourney? j, {List<TripEnquiryModel> rows = const []}) =>
+    TripTravelRules.stateOf(
+      role: TripJourneyRole.gettingThere,
+      step: step,
+      journey: j,
+      journeyRows: rows,
+      travelDate: _travelDate,
+    );
 
 void main() {
   group('travel state table (D7)', () {
@@ -71,6 +88,16 @@ void main() {
       expect(_state(_journey([_car(1), _car(2, status: 'NotFree', asked: 'x')])), TripTravelState.carMissing);
       final j = _journey([_car(1, asked: 'a'), _car(2)]);
       expect(_state(j, rows: [_row(1, 'NotAvailable'), _row(1, 'Expired')]), TripTravelState.carMissing);
+    });
+
+    test('6b only the current driver counts; no reply is not a refusal', () {
+      final j = _journey([_car(1, asked: 'a'), _car(2)]);
+      expect(_state(j, rows: [_row(1, 'NotAvailable', taxiId: 'old')]), isNot(TripTravelState.carMissing));
+      expect(TripTravelRules.carMissing(j, 1, [_row(1, 'NotAvailable', taxiId: 'old')]), isFalse);
+      expect(TripTravelRules.carNoReply(j, 1, [_row(1, 'Expired')]), isTrue);
+      expect(TripTravelRules.carNoReply(j, 1, [_row(1, 'NotAvailable')]), isFalse);
+      final lines = TripTravelRules.carLines(j, [_row(1, 'Expired')], const []);
+      expect((lines.first.state, lines.first.noReply), (TripCarState.notAvailable, true));
     });
 
     test('7 a paused driver on an unbooked car is driver unavailable; a booked car stays booked', () {
@@ -120,6 +147,69 @@ void main() {
       ]);
       expect(rows, isEmpty);
       expect(_state(j, rows: rows), TripTravelState.asked);
+    });
+  });
+
+  group('step roles and own cars', () {
+    const chosen = TripStep(status: TripStepStatus.chosen, journeyId: 'j1');
+
+    test('own, legacy skipped, not started and a step without a journey', () {
+      expect(_stepState(const TripStep(status: TripStepStatus.own), null), TripTravelState.own);
+      expect(_stepState(const TripStep(status: TripStepStatus.skipped), null), TripTravelState.own);
+      expect(_stepState(const TripStep(), _journey([_car(1)])), TripTravelState.notPlanned);
+      expect(_stepState(const TripStep(status: TripStepStatus.notNeeded), _journey([_car(1)])), TripTravelState.notPlanned);
+      expect(_stepState(chosen, null), TripTravelState.notPlanned);
+    });
+
+    test('step journey rows with a trip id drive the state like a segment', () {
+      final j = _journey([_car(1, asked: 'a'), _car(2, asked: 'b')]);
+      expect(_stepState(chosen, j), TripTravelState.asked);
+      expect(
+        _stepState(chosen, j, rows: [_row(1, TripEnquiryStatuses.confirmedByBoth), _row(2, TripEnquiryStatuses.confirmedByBoth)]),
+        TripTravelState.confirmed,
+      );
+      expect(_stepState(chosen, _journey([_car(1)], date: DateTime(2030, 11, 5))), TripTravelState.dateChanged);
+    });
+
+    test('an own car settles its seat', () {
+      final j = _journey([_car(1, asked: 'a'), _car(2, status: 'NotFree', asked: 'b')]);
+      const own2 = TripStep(status: TripStepStatus.chosen, journeyId: 'j1', ownCars: [2]);
+      expect(_stepState(chosen, j, rows: [_row(1, TripEnquiryStatuses.confirmedByBoth)]), TripTravelState.carMissing);
+      expect(_stepState(own2, j, rows: [_row(1, TripEnquiryStatuses.confirmedByBoth)]), TripTravelState.confirmed);
+      const arrival = TripTravel.journey(fromName: 'Haridwar', journeyId: 'j1', cars: 2, ownCars: [2]);
+      expect(_state(j, rows: [_row(1, TripEnquiryStatuses.bookedByTraveller)], arrival: arrival), TripTravelState.booked);
+    });
+
+    test('car lines: own > confirmed > booked by you > not available > paused > free > asked > not asked', () {
+      final j = _journey([
+        _car(1, asked: 'a'),
+        _car(2, asked: 'b'),
+        _car(3, status: 'NotFree', asked: 'c'),
+      ]);
+      final lines = TripTravelRules.carLines(j, [
+        _row(1, TripEnquiryStatuses.confirmedByBoth),
+        _row(2, TripEnquiryStatuses.bookedByTraveller),
+      ], const []);
+      expect(lines.map((c) => c.state), [TripCarState.confirmed, TripCarState.bookedByYou, TripCarState.notAvailable]);
+      final more = TripTravelRules.carLines(
+        _journey([_car(1, available: false), _car(2, status: 'Free', asked: 'b'), _car(3)]),
+        const [],
+        const [1],
+      );
+      expect(more.map((c) => c.state), [TripCarState.own, TripCarState.free, TripCarState.notAsked]);
+      expect(
+        TripTravelRules.carLines(_journey([_car(1, available: false), _car(2, asked: 'x')]), const [], const [])
+            .map((c) => c.state),
+        [TripCarState.paused, TripCarState.asked],
+      );
+      expect(TripTravelRules.carLines(null, const [], const []), isEmpty);
+    });
+
+    test('roles parse and map to step roles', () {
+      expect(TripJourneyRole.parse('comingBack'), TripJourneyRole.comingBack);
+      expect(TripJourneyRole.parse('x'), isNull);
+      expect(TripJourneyRole.segment.stepRole, isNull);
+      expect(TripJourneyRole.of(TripStepRole.gettingThere), TripJourneyRole.gettingThere);
     });
   });
 

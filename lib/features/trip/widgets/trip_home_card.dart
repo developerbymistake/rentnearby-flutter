@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
+import '../../../config/app_routes.dart';
 import '../../../config/app_shadows.dart';
 import '../controllers/my_trips_controller.dart';
 import '../models/trip_model.dart';
@@ -8,6 +9,8 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
+import '../trip_strings_bar.dart';
+import '../utils/trip_bar_rules.dart';
 import '../utils/trip_clock.dart';
 
 class TripHomeCard extends StatefulWidget {
@@ -31,8 +34,7 @@ class _TripHomeCardState extends State<TripHomeCard> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      _trips.items.length;
-      _trips.upcoming.length;
+      _trips.active.length;
       final running = _trips.runningTrip;
       if (running == null) {
         return _card(
@@ -42,11 +44,12 @@ class _TripHomeCardState extends State<TripHomeCard> {
           onTap: () => TripNavigation.start(context),
         );
       }
+      final next = TripBarRules.nextTitle(running);
       return _card(
         title: _runningTitle(running),
-        subtitle: TripStringsA4.runningBody,
-        action: TripStringsA4.open,
-        onTap: () => TripNavigation.openPlan(tripId: running.id, fresh: true),
+        subtitle: next == null ? TripStringsA4.runningBody : TripStringsBar.next(next),
+        action: next == null ? TripStringsA4.open : TripStringsBar.continueAction,
+        onTap: () => Get.toNamed(AppRoutes.tripPlan, arguments: {...TripBarRules.continueArgs(running), 'fresh': true}),
       );
     });
   }
@@ -56,6 +59,7 @@ class _TripHomeCardState extends State<TripHomeCard> {
     if (start == null) return TripStringsA4.tomorrowTitle(t.routeLine);
     final n = TripClock.daysBetween(start, TripClock.today()) + 1;
     if (n < 1) return TripStringsA4.tomorrowTitle(t.routeLine);
+    if (n > t.dayCount) return TripStrings.joinDots([TripStringsBar.checkOutToday, t.routeLine]);
     return TripStringsA4.runningTitle(n, t.dayCount, t.routeLine);
   }
 

@@ -21,6 +21,13 @@ class TripEnquiryStatuses {
   static const String fareSent = 'FareSent';
   static const String bookedByTraveller = 'BookedByTraveller';
   static const String closed = 'Closed';
+  static const String notAvailable = 'NotAvailable';
+  static const String expired = 'Expired';
+  static const String declined = 'Declined';
+  static const String cancelledByTraveller = 'CancelledByTraveller';
+  static const String cancelledByOwner = 'CancelledByOwner';
+  static const String failed = 'Failed';
+  static const List<String> problem = [notAvailable, expired, failed, cancelledByOwner];
   static const List<String> open = [
     asked,
     offered,
@@ -41,6 +48,14 @@ class TripAdvanceStatuses {
   static const String proofSent = 'ProofSent';
   static const String received = 'Received';
   static const String holdExpired = 'HoldExpired';
+  static const String driverPaused = 'DriverPaused';
+}
+
+class TripFailReasons {
+  static const String hostDenied = 'HostDenied';
+  static const String driverDenied = 'DriverDenied';
+  static const String holdExpired = 'HoldExpired';
+  static const String driverPaused = 'DriverPaused';
 }
 
 class TripEnquiryKinds {
@@ -61,14 +76,16 @@ class TripContextDay {
   final DateTime? date;
   final int minutes;
   final List<String> spots;
+  final String? start;
 
-  const TripContextDay({required this.day, this.date, this.minutes = 0, this.spots = const []});
+  const TripContextDay({required this.day, this.date, this.minutes = 0, this.spots = const [], this.start});
 
   factory TripContextDay.fromJson(Map<String, dynamic> json) => TripContextDay(
         day: (json['day'] as num?)?.toInt() ?? 0,
         date: tripDate(json['date']),
         minutes: (json['minutes'] as num?)?.toInt() ?? 0,
         spots: ((json['spots'] as List?) ?? const []).whereType<String>().toList(),
+        start: json['start'] as String?,
       );
 }
 
@@ -85,6 +102,7 @@ class TripEnquiryContext {
   final String text;
   final String? journeyId;
   final int? journeyLegIndex;
+  final String? role;
 
   const TripEnquiryContext({
     this.city = '',
@@ -99,6 +117,7 @@ class TripEnquiryContext {
     this.text = '',
     this.journeyId,
     this.journeyLegIndex,
+    this.role,
   });
 
   String? get peopleLabel {
@@ -132,6 +151,7 @@ class TripEnquiryContext {
       text: json['text'] as String? ?? '',
       journeyId: (json['journeyId'] as String?)?.isEmpty ?? true ? null : json['journeyId'] as String,
       journeyLegIndex: (json['journeyLegIndex'] as num?)?.toInt(),
+      role: (json['role'] as String?)?.isEmpty ?? true ? null : json['role'] as String,
     );
   }
 }
@@ -448,7 +468,7 @@ class TripEnquiryModel {
       counterCount < TripConstants.maxCounters &&
       conversationId != null;
 
-  bool get canChangeRequest => !isTaxi && isConfirmedByBoth && pendingChange == null && acceptedOffer != null;
+  bool get canChangeRequest => !isTaxi && isConfirmedByBoth && pendingChange == null && (acceptedOffer != null || isPhoneBooking);
 
   bool get hasPendingRevised => pendingRevised != null;
 
@@ -508,6 +528,8 @@ class TripEnquiryModel {
       status == TripEnquiryStatuses.countered;
 
   bool get isRed => display.isRed;
+
+  bool get isProblem => TripEnquiryStatuses.problem.contains(status);
 
   bool get isPhoneBooking => phoneBooking != null;
 

@@ -23,7 +23,7 @@ import '../widgets/trip_sheet_frame.dart';
 import 'trip_details_sheet.dart';
 
 class TripStayEnquirySheet {
-  static Future<TripEnquiryBatch?> show(BuildContext context, {required int day}) async {
+  static Future<TripEnquiryBatch?> show(BuildContext context, {required int day, String? fromStep}) async {
     final c = TripPlanController.to;
     if (c.sendableShortlist(day).isEmpty) return null;
     final names = <String, String>{
@@ -39,7 +39,7 @@ class TripStayEnquirySheet {
     }
     final first = batch.items.first;
     if (batch.skipped.isEmpty && batch.items.length == 1 && first.conversationId != null) {
-      TripBackToPlanBar.backToPlan();
+      TripBackToStepBar.back(fromStep);
       TripNavigation.openChatForEnquiry(first);
       return batch;
     }
@@ -48,7 +48,7 @@ class TripStayEnquirySheet {
     } else if (context.mounted) {
       await TripSendResultSheet.show(context, batch: batch, names: names);
     }
-    TripBackToPlanBar.backToPlan();
+    TripBackToStepBar.back(fromStep);
     return batch;
   }
 }

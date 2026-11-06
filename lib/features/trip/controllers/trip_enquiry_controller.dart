@@ -322,6 +322,24 @@ class TripEnquiryController extends GetxController {
     return res;
   }
 
+  // Saves the plan first: the server rebuilds the driver's lead from the saved plan.
+  Future<bool> updateLead(String enquiryId) async {
+    final p = _plan;
+    if (p != null && !await p.flushPendingSave()) return false;
+    final e = await _guard(enquiryId, () => _repo.updateLead(enquiryId));
+    if (e != null) _applyToPlan([e]);
+    return e != null;
+  }
+
+  // Sends the stay host the day's current places; the server allows three real refreshes per row.
+  Future<bool> refreshContext(String enquiryId) async {
+    final p = _plan;
+    if (p != null && !await p.flushPendingSave()) return false;
+    final e = await _guard(enquiryId, () => _repo.refreshContext(enquiryId));
+    if (e != null) _applyToPlan([e]);
+    return e != null;
+  }
+
   Future<bool> withdraw(String enquiryId) async {
     final e = await _guard(enquiryId, () => _repo.withdraw(enquiryId));
     if (e != null) _applyToPlan([e]);

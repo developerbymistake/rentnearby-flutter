@@ -30,7 +30,7 @@ class TripStringsA2 {
 
   static const String forThisNight = 'For this night';
   static const String noBaseStay = 'Pick a stay for last night first';
-  static const String travellingBody = 'Travelling. No stay is needed this night.';
+  static const String noStayBody = 'You chose no stay for this night.';
   static String sameStayBody(String name) => '$name. Tap Night by night to change it.';
   static const String nightPassed = 'This night has passed';
   static const String tripLocked = 'Plan changes are off for this trip.';

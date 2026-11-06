@@ -6,7 +6,7 @@ import '../../../config/app_insets.dart';
 import '../../../config/module_palette.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../trip/widgets/trip_shimmers.dart';
-import '../taxi_option_sets.dart';
+import 'journey_plan_controller.dart';
 import 'journey_plan_screen.dart';
 import 'models/taxi_ways_models.dart';
 import 'taxi_ways_strings.dart';
@@ -28,98 +28,80 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> {
   static const double _sheetMin = 0.22;
   static const double _sheetStart = 0.4;
 
-  JourneyPlanLoader? _l;
+  JourneyPlanController? _c;
+  String? _tag;
+  Object? _raw;
+  bool _read = false;
   int? _selected;
 
   @override
-  void initState() {
-    super.initState();
-    _l = JourneyPlanLoader.fromArgs(Get.arguments);
-    _l?.load(_changed);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_read) return;
+    _read = true;
+    final route = ModalRoute.of(context);
+    _raw = route?.settings.arguments;
+    final args = JourneyOpenArgs.of(_raw);
+    if (args == null) {
+      JourneyPlanScreen.logInvalid('JourneyRoadScreen', _raw);
+      return;
+    }
+    _tag = 'journey-road-${identityHashCode(route)}';
+    _c = Get.put(JourneyPlanController(args), tag: _tag);
   }
 
-  void _changed() {
-    if (mounted) setState(() {});
+  @override
+  void dispose() {
+    if (_tag != null) Get.delete<JourneyPlanController>(tag: _tag);
+    super.dispose();
   }
 
   void _select(int legIndex) => setState(() => _selected = _selected == legIndex ? null : legIndex);
 
+  void _close() {
+    final c = _c;
+    Get.back(result: c == null ? null : Map<int, WayDriver>.from(c.chosen));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final l = _l;
-    final plan = l?.plan;
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
-      body: Column(children: [
-        _header(context, plan),
-        Expanded(child: l == null ? _invalid() : _body(context, l, plan)),
-      ]),
-    );
-  }
-
-  Widget _invalid() => ListView(children: [
-        EmptyStateView(
-          icon: Iconsax.routing_2,
-          title: TripStringsA6.journeyGoneTitle,
-          subtitle: TripStringsA6.journeyGoneBody,
-          onRetry: () => Get.back(),
-          retryLabel: TripStringsA6.goBack,
-          palette: ModulePalette.taxi,
-        ),
-      ]);
-
-  Widget _header(BuildContext context, WayPlan? plan) {
-    final top = MediaQuery.paddingOf(context).top;
-    final sub = plan == null
-        ? null
-        : '${TaxiWaysStrings.subtitle(plan.from.name, plan.to.name)} · '
-            '${TaxiWaysStrings.carsCount(plan.carHires)}';
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: TaxiColors.gradient,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(8, top + 6, 16, 14),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _maxWidth),
-          child: Row(children: [
-            SizedBox(
-              width: 44,
-              height: 44,
-              child: IconButton(
-                onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-              ),
+    final c = _c;
+    if (c == null) {
+      return Scaffold(
+        backgroundColor: AppColors.scaffoldBg,
+        body: Column(children: [
+          JourneyPlanScreen.header(context, title: TaxiWaysStrings.onTheRoad),
+          Expanded(child: JourneyPlanScreen.invalidBody(_raw)),
+        ]),
+      );
+    }
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _close();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.scaffoldBg,
+        body: Obx(() {
+          final plan = c.plan.value;
+          return Column(children: [
+            JourneyPlanScreen.header(
+              context,
+              title: TaxiWaysStrings.onTheRoad,
+              subtitle: plan.legs.isEmpty
+                  ? TaxiWaysStrings.subtitle(c.args.from.name, c.args.to.name)
+                  : '${TaxiWaysStrings.subtitle(plan.from.name, plan.to.name)} · ${TaxiWaysStrings.carsCount(plan.carHires)}',
             ),
-            const SizedBox(width: 2),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text(
-                  TaxiWaysStrings.onTheRoad,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-                if (sub != null)
-                  Text(
-                    sub,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: Colors.white.withValues(alpha: 0.9)),
-                  ),
-              ]),
-            ),
-          ]),
-        ),
+            Expanded(child: _body(context, c, plan)),
+          ]);
+        }),
       ),
     );
   }
 
-  Widget _body(BuildContext context, JourneyPlanLoader l, WayPlan? plan) {
-    if (plan == null) {
-      if (l.loading) {
+  Widget _body(BuildContext context, JourneyPlanController c, WayPlan plan) {
+    if (plan.legs.isEmpty) {
+      if (c.loading.value) {
         return ListView(padding: const EdgeInsets.all(16), children: [
           TripShimmers.rowBox(height: 60),
           const SizedBox(height: 12),
@@ -130,16 +112,15 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> {
       }
       return ListView(children: [
         EmptyStateView(
-          icon: l.offline ? Iconsax.wifi_square : Iconsax.cloud_cross,
-          title: l.offline ? TaxiWaysStrings.offlineTitle : TaxiWaysStrings.loadFailed,
+          icon: c.offline.value ? Iconsax.wifi_square : Iconsax.cloud_cross,
+          title: c.offline.value ? TaxiWaysStrings.offlineTitle : TaxiWaysStrings.loadFailed,
           subtitle: TaxiWaysStrings.offlineBody,
-          onRetry: () => l.load(_changed),
+          onRetry: c.load,
           retryLabel: TaxiWaysStrings.retry,
           palette: ModulePalette.taxi,
         ),
       ]);
     }
-    final c = l.c;
     return LayoutBuilder(builder: (context, box) {
       final reserve = box.maxHeight * _sheetMin + 16;
       return Stack(children: [
@@ -152,8 +133,8 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> {
                   constraints: const BoxConstraints(maxWidth: _maxWidth),
                   child: Obx(() => RoadView(
                         plan: plan,
-                        chosen: c.chosenOf(plan.planKey),
-                        people: c.people.value,
+                        chosen: Map<int, WayDriver>.from(c.chosen),
+                        people: c.args.people,
                         selectedLeg: _selected,
                         onSelectLeg: _select,
                       )),
@@ -166,14 +147,13 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> {
           initialChildSize: _sheetStart,
           minChildSize: _sheetMin,
           maxChildSize: 0.9,
-          builder: (context, scroll) => _sheet(context, l, plan, scroll),
+          builder: (context, scroll) => _sheet(context, c, plan, scroll),
         ),
       ]);
     });
   }
 
-  Widget _sheet(BuildContext context, JourneyPlanLoader l, WayPlan plan, ScrollController scroll) {
-    final c = l.c;
+  Widget _sheet(BuildContext context, JourneyPlanController c, WayPlan plan, ScrollController scroll) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -181,8 +161,8 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> {
         boxShadow: [BoxShadow(color: AppColors.textDark.withValues(alpha: 0.10), blurRadius: 18, offset: const Offset(0, -4))],
       ),
       child: Obx(() {
-        final chosen = c.chosenOf(plan.planKey);
-        final busy = c.busyPlans.contains(plan.planKey);
+        final chosen = c.chosen;
+        final busy = c.isBusy;
         return ListView(
           controller: scroll,
           padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + AppInsets.bottomViewPadding(context)),
@@ -212,14 +192,14 @@ class _JourneyRoadScreenState extends State<JourneyRoadScreen> {
                           onTap: () => _select(leg.index),
                           otherCount: leg.otherCount,
                           seatsNote: TripStringsA6.legSeats(leg),
-                          onChange: () => l.changeDriver(context, leg),
+                          onChange: () => c.changeDriver(context, leg),
                         ),
                       ),
                   const SizedBox(height: 4),
                   JourneyAskButton(
                     label: JourneyAskButton.labelFor(plan.legs.length),
                     busy: busy,
-                    onPressed: () => c.askDrivers(context, plan),
+                    onPressed: () => c.askDrivers(context),
                   ),
                   const SizedBox(height: 8),
                   const Text(

@@ -17,10 +17,12 @@ import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_g3.dart';
 import '../trip_strings_steps_a2.dart';
+import '../trip_strings_wizard.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_clock.dart';
 import '../widgets/trip_change_request_sheet.dart';
-import '../widgets/trip_step_card.dart';
+import '../widgets/trip_cancel_sheet.dart';
+import '../widgets/trip_journey_card.dart';
 import '../widgets/trip_status.dart';
 
 class TripDetailsSheet {
@@ -57,12 +59,13 @@ class TripDetailsSheet {
     final moved = result.startFromTouched && await c.setStartFrom(result.startFrom);
     if (!context.mounted) return false;
     final saved = await _saveSettings(context, c, old, result.settings);
-    if (moved && context.mounted) await TripStepCard.askSearchAgain(context);
+    if (moved && context.mounted) await TripJourneyCard.askSearchAgain(context);
     return saved;
   }
 
   static Future<bool> _saveSettings(BuildContext context, TripPlanController c, TripSettings old, TripSettings result) async {
     final newStart = result.startDate;
+    if (newStart == null && old.startDate != null && !await _clearDatesOk(context, c)) return false;
     final daysCut = result.maxDays != old.maxDays && c.daysAfterLimit(result.maxDays) < c.dayCount;
     if (newStart != null && (newStart != old.startDate || daysCut)) {
       final impact = c.dateChangeImpact(newStart, days: c.daysAfterLimit(result.maxDays));
@@ -72,13 +75,98 @@ class TripDetailsSheet {
         if (change != true) return false;
       }
     }
+    final own = old.startDate != null && newStart != null && newStart != old.startDate ? c.ownBookings : const <({int day, bool stay, String name})>[];
+    var clearOwn = false;
+    if (own.isNotEmpty) {
+      if (!context.mounted) return false;
+      final choice = await _confirmOwn(context, own);
+      if (choice == null) return false;
+      clearOwn = choice;
+    }
     final res = await c.saveSettings(result);
     if (!res.saved) return false;
+    if (clearOwn) c.clearOwnBookings(own);
     if (res.openAffected.isNotEmpty) AppToast.info(TripStringsA4.openSentOld);
     if (res.confirmedAffected.isNotEmpty && context.mounted) {
       await _askChangeRequest(context, old, result, res.confirmedAffected);
     }
     return true;
+  }
+
+  static Future<bool?> _confirmOwn(BuildContext context, List<({int day, bool stay, String name})> own) => showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(TripStringsWizard.ownDatesTitle,
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(TripStringsWizard.ownDatesBody,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium)),
+              const SizedBox(height: 8),
+              for (final o in own)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(TripStringsWizard.ownDatesRow(o.day, o.stay, o.name),
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                ),
+            ],
+          ),
+          actionsOverflowDirection: VerticalDirection.down,
+          actionsOverflowButtonSpacing: 4,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+              child: const Text(TripStringsWizard.clearOwn,
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.error)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+              child: const Text(TripStringsWizard.keepOwnPlans,
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+            ),
+          ],
+        ),
+      );
+
+  static Future<bool> _clearDatesOk(BuildContext context, TripPlanController c) async {
+    final booked = c.clearDatesImpact().booked;
+    if (booked.isEmpty) return true;
+    if (!context.mounted) return false;
+    final cancel = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(TripStringsWizard.bookingsOnDates(booked.length),
+            style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17)),
+        actionsOverflowDirection: VerticalDirection.down,
+        actionsOverflowButtonSpacing: 4,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+            child: const Text(TripStringsWizard.keepDates,
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+            child: const Text(TripStringsWizard.cancelAndClear,
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+    if (cancel != true) return false;
+    for (final e in booked) {
+      if (!context.mounted) return false;
+      if (!await TripCancelSheet.show(context, enquiry: e, ownerSide: false)) return false;
+    }
+    return c.clearDatesImpact().booked.isEmpty;
   }
 
   static Future<void> _askChangeRequest(

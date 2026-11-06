@@ -1,25 +1,11 @@
-import 'dart:async';
-import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import '../../../config/app_routes.dart';
 import '../../../models/place_result_model.dart';
-import '../../../utils/app_toast.dart';
 import '../../../utils/dio_error_mapper.dart';
 import '../../trip/controllers/trip_plan_controller.dart';
 import '../../trip/data/trip_segment_geometry_cache.dart';
-import '../../trip/models/trip_plan_model.dart';
-import '../../trip/trip_strings_steps_a1.dart';
-import '../../trip/trip_strings_steps_k3.dart';
-import '../../trip/utils/trip_travel_rules.dart';
-import '../journeys/journey_models.dart';
-import '../journeys/journeys_controller.dart';
-import 'ask_drivers_sheet.dart';
 import 'models/taxi_ways_models.dart';
-import 'taxi_ways_navigation.dart';
 import 'taxi_ways_repository.dart';
-import 'widgets/travel_confirm_sheet.dart';
-
-enum _SegmentLink { linked, plain, failed }
+import 'way_actions.dart';
 
 class TaxiWaysController extends GetxController {
   static const maxPeople = 12;
@@ -34,9 +20,12 @@ class TaxiWaysController extends GetxController {
     this.tripId,
     this.tripRole,
     this.tripLegIndex,
+    this.fromTrip = false,
+    this.fromStep,
   })  : from = Rx<PlaceResult>(from),
         to = Rx<PlaceResult>(to),
         fromMyLocation = (tripLegIndex == null && fromMyLocation).obs,
+        datePassed = date != null,
         date = Rx<DateTime>(_clampDate(date ?? _today().add(const Duration(days: 1)))),
         people = (people ?? 2).clamp(1, maxPeople).toInt().obs;
 
@@ -48,14 +37,32 @@ class TaxiWaysController extends GetxController {
   final String? tripId;
   final String? tripRole;
   final int? tripLegIndex;
+  final bool fromTrip;
+  final String? fromStep;
+  final bool datePassed;
 
-  bool get forTrip => tripId != null && TripStepRole.values.any((r) => r.name == tripRole);
+  late final WayActions actions = WayActions(
+    tripId: tripId,
+    tripRole: tripRole,
+    tripLegIndex: tripLegIndex,
+    fromStep: fromStep,
+    date: () => date.value,
+    people: () => people.value,
+    chosenOf: chosenOf,
+    busy: busyPlans,
+  );
 
-  bool get forSegment => tripId != null && tripLegIndex != null;
+  bool get forTrip => actions.forTrip;
 
-  bool get lockedEnds => forSegment;
+  bool get forSegment => actions.forSegment;
 
-  bool get lockedDate => forSegment;
+  bool get inTrip => fromTrip || forSegment;
+
+  bool get lockedEnds => inTrip;
+
+  bool get lockedDate => inTrip && datePassed;
+
+  bool get lockedPeople => inTrip;
 
   TripPlanController? get _tripController =>
       Get.isRegistered<TripPlanController>() && TripPlanController.to.trip.value?.id == tripId ? TripPlanController.to : null;
@@ -76,8 +83,6 @@ class TaxiWaysController extends GetxController {
   final busyPlans = <String>{}.obs;
 
   final _repo = const TaxiWaysRepository();
-  final _details = <String, WayPlanDetail>{};
-  final _synthetic = <String, WayPlan>{};
   int _gen = 0;
 
   static DateTime _today() {
@@ -127,8 +132,6 @@ class TaxiWaysController extends GetxController {
         toName: _cut(t.name),
       );
       if (myGen != _gen) return;
-      _details.clear();
-      _synthetic.clear();
       chosen.clear();
       result.value = r;
       for (final p in r.plans) {
@@ -186,6 +189,7 @@ class TaxiWaysController extends GetxController {
   }
 
   void setPeople(int n) {
+    if (lockedPeople) return;
     final v = n.clamp(1, maxPeople).toInt();
     if (v == people.value) return;
     people.value = v;
@@ -194,25 +198,11 @@ class TaxiWaysController extends GetxController {
 
   void setSort(WaysSort s) => sort.value = s;
 
-  WayPlan? planByKey(String planKey) {
-    final d = _details[planKey];
-    if (d != null) return d;
-    final s = _synthetic[planKey];
-    if (s != null) return s;
-    for (final p in result.value?.plans ?? const <WayPlan>[]) {
-      if (p.planKey == planKey) return p;
-    }
-    return null;
-  }
-
-  bool isSynthetic(String planKey) => _synthetic.containsKey(planKey);
-
   WayPlan singlePlan(List<WayDriver> drivers) {
     final r = result.value;
     final f = r?.from ?? _placeOf(from.value);
     final t = r?.to ?? _placeOf(to.value);
     final plan = WayPlan.single(f, t, drivers);
-    _synthetic[plan.planKey] = plan;
     if (drivers.isNotEmpty) choose(plan.planKey, 1, drivers.first);
     return plan;
   }
@@ -220,43 +210,23 @@ class TaxiWaysController extends GetxController {
   static WayPlace _placeOf(PlaceResult p) =>
       WayPlace(key: '', name: p.name, lat: p.latLng.latitude, lng: p.latLng.longitude, resolved: false);
 
-  Future<WayPlanDetail?> openPlan(String planKey) async {
-    final cached = _details[planKey];
-    if (cached != null) {
-      _fillChosen(cached);
-      return cached;
-    }
-    final base = planByKey(planKey);
-    if (base != null) _fillChosen(base);
-    try {
-      final d = await _repo.plan(planKey, people: people.value, date: date.value);
-      if (d.legs.isEmpty) throw StateError('empty plan');
-      _details[planKey] = d;
-      TripSegmentGeometryCache.putPlan(d);
-      _fillChosen(d);
-      return d;
-    } catch (e) {
-      final s = _synthetic[planKey];
-      if (s != null) return s;
-      if (DioErrorMapper.errorType(e) == 'PlanNotFound') load();
-      rethrow;
-    }
-  }
-
-  void _fillChosen(WayPlan plan) {
-    final current = Map<int, WayDriver>.from(chosen[plan.planKey] ?? const {});
-    for (final leg in plan.legs) {
-      final all = leg.allDrivers;
-      if (all.isEmpty) continue;
-      final had = current[leg.index];
-      if (had == null) {
-        current[leg.index] = all.first;
-      } else if (!had.hasContact) {
-        final richer = all.firstWhereOrNull((d) => d.taxiId == had.taxiId && d.hasContact);
-        if (richer != null) current[leg.index] = richer;
-      }
-    }
-    chosen[plan.planKey] = current;
+  JourneyOpenArgs openArgs(WayPlan plan, {bool synthetic = false}) {
+    final r = result.value;
+    return JourneyOpenArgs(
+      plan: plan,
+      planKey: plan.planKey,
+      from: r != null && r.from.name.isNotEmpty ? r.from : _placeOf(from.value),
+      to: r != null && r.to.name.isNotEmpty ? r.to : _placeOf(to.value),
+      date: date.value,
+      people: people.value,
+      tripId: tripId,
+      tripRole: tripRole,
+      tripLegIndex: tripLegIndex,
+      chosen: Map.unmodifiable(chosenOf(plan.planKey)),
+      fromStep: fromStep,
+      synthetic: synthetic,
+      fromMyLocation: fromMyLocation.value,
+    );
   }
 
   Map<int, WayDriver> chosenOf(String planKey) => chosen[planKey] ?? const {};
@@ -267,211 +237,5 @@ class TaxiWaysController extends GetxController {
     final current = Map<int, WayDriver>.from(chosen[planKey] ?? const {});
     current[legIndex] = driver;
     chosen[planKey] = current;
-  }
-
-  Future<SavedJourney?> saveIfNeeded(WayPlan plan, {bool quiet = false}) => JourneysController.ensure().saveIfNeeded(
-        quiet: quiet,
-        plan: plan,
-        chosen: chosenOf(plan.planKey),
-        date: date.value,
-        people: people.value,
-        fromName: plan.from.name,
-        fromLat: plan.from.lat,
-        fromLng: plan.from.lng,
-        toName: plan.to.name,
-        toLat: plan.to.lat,
-        toLng: plan.to.lng,
-        forTripId: forTrip || forSegment ? tripId : null,
-        forTripLegIndex: forSegment && _tripController != null ? tripLegIndex : null,
-      );
-
-  int? roadMinutesOf(WayPlan plan) {
-    var total = 0;
-    for (final leg in plan.legs) {
-      final m = leg.driverFor(chosenFor(plan.planKey, leg.index))?.minutes;
-      if (m == null || m <= 0) return null;
-      total += m;
-    }
-    return plan.legs.isEmpty ? null : total;
-  }
-
-  Future<({bool go, bool replaceBooked})> _segmentGate(BuildContext? context, WayPlan plan) async {
-    final c = _tripController;
-    final k = tripLegIndex;
-    if (c == null || k == null) return (go: true, replaceBooked: false);
-    final block = await c.prepareSegmentLink(k);
-    if (block != null) {
-      AppToast.warning(block);
-      return (go: false, replaceBooked: false);
-    }
-    final booked = c.travelImpact(k).bookedRows;
-    if (booked == 0 || c.travelMatches(k, plan.planKey, date.value, people.value)) {
-      return (go: true, replaceBooked: false);
-    }
-    if (context == null || !context.mounted) return (go: false, replaceBooked: false);
-    final ok = await TravelConfirmSheet.replaceTravel(context, booked);
-    return (go: ok, replaceBooked: ok);
-  }
-
-  Future<void> _releaseUnsaved(WayPlan plan) async {
-    final c = _tripController;
-    final j = JourneysController.ensure().findByPlan(plan.planKey, date.value, people: people.value, forTripId: tripId);
-    if (c != null && j != null && j.tripId == tripId) await c.releaseJourneyLink(j.id);
-  }
-
-  Future<void> saveJourney(WayPlan plan) async {
-    if (busyPlans.contains(plan.planKey)) return;
-    busyPlans.add(plan.planKey);
-    try {
-      final saved = await saveIfNeeded(plan);
-      if (saved != null) TaxiWaysNavigation.openSavedJourney(saved.id);
-    } finally {
-      busyPlans.remove(plan.planKey);
-    }
-  }
-
-  Future<bool> _linkToTrip(SavedJourney saved) async {
-    final role = TripStepRole.values.firstWhereOrNull((r) => r.name == tripRole);
-    if (role != null && Get.isRegistered<TripPlanController>() && TripPlanController.to.trip.value?.id == tripId) {
-      final c = TripPlanController.to;
-      c.linkJourney(role, saved);
-      if (c.stepOf(role).journeyId == saved.id) {
-        if (await c.flushPendingSave()) {
-          AppToast.success(TripStringsStepsA1.savedToTrip);
-        } else {
-          AppToast.warning(TripStringsStepsK3.notSavedToTrip);
-        }
-        return true;
-      }
-    }
-    AppToast.success(TripStringsStepsA1.savedToJourneys);
-    return false;
-  }
-
-  Future<_SegmentLink> _linkSegment(
-    BuildContext? context,
-    SavedJourney saved,
-    WayPlan plan, {
-    bool replaceBooked = false,
-  }) async {
-    final c = _tripController;
-    final k = tripLegIndex;
-    if (c == null || k == null) {
-      AppToast.success(TripStringsStepsA1.savedToJourneys);
-      return _SegmentLink.plain;
-    }
-    final minutes = roadMinutesOf(plan);
-    var r = await c.linkSegmentJourney(k, saved, replaceBooked: replaceBooked, roadMinutes: minutes);
-    if (r == TripLinkResult.needsConfirm && context != null && context.mounted) {
-      final booked = c.travelImpact(k).bookedRows;
-      if (await TravelConfirmSheet.replaceTravel(context, booked)) {
-        r = await c.linkSegmentJourney(k, saved, replaceBooked: true, roadMinutes: minutes);
-      }
-    }
-    switch (r) {
-      case TripLinkResult.saved:
-        AppToast.success(TripStringsStepsA1.savedToTrip);
-        return _SegmentLink.linked;
-      case TripLinkResult.notSaved:
-        AppToast.warning(TripStringsStepsK3.notSavedToTrip);
-        await c.releaseJourneyLink(saved.id);
-        return _SegmentLink.failed;
-      case TripLinkResult.needsConfirm:
-        await c.releaseJourneyLink(saved.id);
-        return _SegmentLink.failed;
-    }
-  }
-
-  Future<void> arrangedMyself() async {
-    if (Get.isRegistered<TripPlanController>()) await TripPlanController.to.flushPendingSave();
-    backToPlan();
-  }
-
-  void backToPlan() => Get.until((r) => r.settings.name == AppRoutes.tripPlan || r.isFirst);
-
-  Future<void> useForTrip(WayPlan plan, {BuildContext? context}) async {
-    if (busyPlans.contains(plan.planKey)) return;
-    busyPlans.add(plan.planKey);
-    try {
-      var replaceBooked = false;
-      if (forSegment) {
-        final gate = await _segmentGate(context, plan);
-        if (!gate.go) return;
-        replaceBooked = gate.replaceBooked;
-      }
-      final saved = await saveIfNeeded(plan, quiet: true);
-      if (saved == null) {
-        if (forSegment) await _releaseUnsaved(plan);
-        return;
-      }
-      if (forSegment) {
-        final link = await _linkSegment(context, saved, plan, replaceBooked: replaceBooked);
-        if (link == _SegmentLink.linked) {
-          backToPlan();
-        } else if (link == _SegmentLink.plain) {
-          TaxiWaysNavigation.openSavedJourney(saved.id);
-        }
-        return;
-      }
-      if (await _linkToTrip(saved)) {
-        backToPlan();
-      } else {
-        TaxiWaysNavigation.openSavedJourney(saved.id);
-      }
-    } finally {
-      busyPlans.remove(plan.planKey);
-    }
-  }
-
-  Future<void> askDrivers(BuildContext context, WayPlan plan) async {
-    if (busyPlans.contains(plan.planKey)) return;
-    busyPlans.add(plan.planKey);
-    try {
-      var replaceBooked = false;
-      if (forSegment) {
-        final gate = await _segmentGate(context, plan);
-        if (!gate.go) return;
-        replaceBooked = gate.replaceBooked;
-      }
-      final journey = await saveIfNeeded(plan, quiet: forTrip || forSegment);
-      if (journey == null) {
-        if (forSegment) await _releaseUnsaved(plan);
-        return;
-      }
-      final bool linked;
-      if (forSegment) {
-        if (!context.mounted) {
-          await _tripController?.releaseJourneyLink(journey.id);
-          return;
-        }
-        final link = await _linkSegment(context, journey, plan, replaceBooked: replaceBooked);
-        if (link == _SegmentLink.failed) return;
-        linked = link == _SegmentLink.linked;
-      } else {
-        linked = forTrip && await _linkToTrip(journey);
-      }
-      if (!context.mounted) return;
-      final res = await AskDriversSheet.show(
-        context,
-        plan: plan,
-        chosen: chosenOf(plan.planKey),
-        date: date.value,
-        people: people.value,
-        journeyId: journey.id,
-        fromName: plan.from.name,
-        toName: plan.to.name,
-      );
-      if (res == null) return;
-      JourneysController.ensure().recordAsk(journey.id, res);
-      if (linked) {
-        final t = forSegment ? _tripController : null;
-        if (t != null) unawaited(t.refreshEnquiries());
-        backToPlan();
-      } else {
-        TaxiWaysNavigation.openSavedJourney(journey.id);
-      }
-    } finally {
-      busyPlans.remove(plan.planKey);
-    }
   }
 }

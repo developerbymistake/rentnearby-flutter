@@ -24,6 +24,7 @@ import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_clock.dart';
 import '../utils/trip_travel_rules.dart';
+import '../utils/trip_wizard_rules.dart';
 import 'trip_own_travel_sheet.dart';
 import 'trip_problem_sheet.dart';
 
@@ -130,7 +131,7 @@ class TripTodayCard extends StatelessWidget {
 
   static bool _problemAllowed(TripPlanController c) {
     final first = c.dateOf(1);
-    final out = c.checkOutDate;
+    final out = c.stepDate(TripStepRole.comingBack) ?? c.checkOutDate;
     if (first == null || out == null) return false;
     final t = _todayDate;
     return !t.isBefore(DateTime(first.year, first.month, first.day)) && !t.isAfter(DateTime(out.year, out.month, out.day));
@@ -258,7 +259,7 @@ class TripTodayCard extends StatelessWidget {
         if (booking == null) _carState(cl),
       ]),
       actionLabel: phone == null ? null : TripStrings.call,
-      onAction: phone == null ? null : () => ContactLauncher.call(phone!),
+      onAction: phone == null ? null : () => ContactLauncher.call(phone),
     );
   }
 
@@ -305,7 +306,7 @@ class TripTodayCard extends StatelessWidget {
         title: TripStringsMcaA3.ownTravelLine(how, a.leavesAt),
         subtitle: a.ownName ?? (hub != null && hub.isNotEmpty ? TripStringsMcbA2.reachHub(hub) : ''),
         actionLabel: phone == null ? null : TripStrings.call,
-        onAction: phone == null ? null : () => ContactLauncher.call(phone!),
+        onAction: phone == null ? null : () => ContactLauncher.call(phone),
       ));
     } else if (j == null) {
       out.add(_Row(
@@ -365,7 +366,8 @@ class TripTodayCard extends StatelessWidget {
         if (city.isNotEmpty) city,
         if (room.isNotEmpty) room,
         TripStringsA5.nightOf(night.k, night.total, e.agreedTotal == null ? null : BrowseItem.inr(e.agreedTotal!)),
-        e.isConfirmedByBoth ? TripStrings.bothConfirmedShort : TripStrings.confirmedByYou,
+        c.dayStatusLine(TripWizardStepKind.stay, n) ??
+            (e.isConfirmedByBoth ? TripWizardCopy.confirmedShort : TripWizardCopy.bookedByYouHost),
       ].join(' · ');
       final stayName = e.listingName.isEmpty ? TripStrings.stay : e.listingName;
       return [
@@ -409,7 +411,8 @@ class TripTodayCard extends StatelessWidget {
       final pickup = e.taxi?.pickupTime;
       final sub = [
         if (pickup != null && pickup.isNotEmpty) TripStrings.pickupAt(TripFormat.time12(pickup)),
-        e.isConfirmedByBoth ? TripStrings.bothConfirmedShort : TripStrings.bookedByYouShort,
+        c.dayStatusLine(TripWizardStepKind.taxi, n) ??
+            (e.isConfirmedByBoth ? TripWizardCopy.confirmedShort : TripWizardCopy.bookedByYouDriver),
       ].join(' · ');
       final phone = _validPhone(e.owner.phone);
       return [
