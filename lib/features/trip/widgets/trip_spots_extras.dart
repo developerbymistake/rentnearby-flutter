@@ -97,21 +97,7 @@ class TripMustSeeRail extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (s.isFeatured)
-                            Positioned(
-                              left: 8,
-                              top: 8,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.45), borderRadius: BorderRadius.circular(999)),
-                                child: const Text(
-                                  TripStringsSpotsX.featured,
-                                  style: TextStyle(
-                                      fontFamily: _poppins, fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
-                                ),
-                              ),
-                            ),
+                          if (s.isFeatured) const Positioned(left: 8, top: 8, child: TripFeaturedChip()),
                           Positioned(
                             left: 10,
                             right: 50,

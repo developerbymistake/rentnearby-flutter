@@ -5,6 +5,7 @@ import '../../../config/app_shadows.dart';
 import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_colors.dart';
+import '../trip_strings_spots_x.dart';
 import '../utils/trip_format.dart';
 import 'trip_spot_detail_sheet.dart';
 
@@ -47,7 +48,17 @@ class TripSpotRow extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(left: 10, top: 10, child: _chip(TripSpotCategory.label(spot.category))),
+              Positioned(
+                left: 10,
+                top: 10,
+                right: extra > 0 ? 60 : 10,
+                child: Row(
+                  children: [
+                    if (spot.isFeatured) ...[const TripFeaturedChip(), const SizedBox(width: 6)],
+                    Flexible(child: _chip(TripSpotCategory.label(spot.category))),
+                  ],
+                ),
+              ),
               if (extra > 0)
                 Positioned(right: 10, top: 10, child: _chip('+$extra', icon: Icons.photo_library_outlined)),
               Positioned(
@@ -107,6 +118,23 @@ class TripSpotRow extends StatelessWidget {
           ],
         ),
       );
+}
+
+class TripFeaturedChip extends StatelessWidget {
+  const TripFeaturedChip({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: TripColors.accentDark, borderRadius: BorderRadius.circular(999)),
+      child: const Text(
+        '★ ${TripStringsSpotsX.featured}',
+        maxLines: 1,
+        style: TextStyle(fontFamily: 'Poppins', fontSize: 9.5, fontWeight: FontWeight.w700, color: Colors.white),
+      ),
+    );
+  }
 }
 
 class TripSpotAddButton extends StatelessWidget {

@@ -10,6 +10,7 @@ import '../data/trip_repository.dart';
 import '../data/trip_today_cache.dart';
 import '../models/trip_summary_model.dart';
 import 'trip_day_load.dart';
+import 'trip_day_timeline.dart';
 
 class TripSummarySnapshot {
   final TripSummaryRecord record;
@@ -38,12 +39,23 @@ class TripSummarySource {
   static TripSummaryRecord _withRoadTime(TripSummaryRecord r) {
     final live = Get.isRegistered<TripPlanController>() ? Get.find<TripPlanController>() : null;
     final byDay = <int, int>{};
+    final starts = <int, List<int>>{};
     if (live != null && live.trip.value?.id == r.tripId) {
       for (final d in r.days) {
         final m = live.roadDayMinutes(d.day, d.spots);
         if (m != null && m > 0) byDay[d.day] = m;
+        final pd = live.plan.value?.dayAt(d.day);
+        if (m != null && pd != null && pd.spots.isNotEmpty) {
+          starts[d.day] = TripDayTimeline.starts(
+            visits: [for (final s in pd.spots) s.visitMinutes],
+            roads: [
+              for (var i = 0; i < pd.spots.length; i++) i == pd.spots.length - 1 ? null : live.legFrom(d.day, pd.spots[i].id)?.minutes,
+            ],
+            reserved: live.dayReservedMinutes(d.day),
+          );
+        }
       }
-      return r.withDayMinutes(byDay);
+      return r.withDayMinutes(byDay, starts: starts);
     }
     final plan = TripTodayCache.trip(r.tripId)?.plan;
     final result = TripTodayCache.result(r.tripId);
@@ -57,8 +69,16 @@ class TripSummarySource {
       if (!listEquals([for (final s in pd.spots) s.id], rd.spotIds)) continue;
       if (!listEquals([for (final s in pd.spots) s.name], d.spots)) continue;
       byDay[d.day] = minutes;
+      final k = plan.legIndexOf(d.day);
+      starts[d.day] = TripDayTimeline.starts(
+        visits: [for (final s in pd.spots) s.visitMinutes],
+        roads: [
+          for (var i = 0; i < pd.spots.length; i++) i == pd.spots.length - 1 ? null : rd.legFrom(pd.spots[i].id)?.minutes,
+        ],
+        reserved: plan.isTravelDay(d.day) ? plan.legAt(k)?.arrival?.roadMinutes ?? 0 : 0,
+      );
     }
-    return r.withDayMinutes(byDay);
+    return r.withDayMinutes(byDay, starts: starts);
   }
 
   static TripSummarySnapshot? cached(String tripId) {

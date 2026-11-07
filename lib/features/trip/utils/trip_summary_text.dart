@@ -12,6 +12,7 @@ import '../trip_strings_mcd_a1.dart';
 import '../trip_strings_steps_a3.dart';
 import '../trip_strings_v2_easy.dart';
 import '../widgets/trip_status.dart';
+import 'trip_day_timeline.dart';
 import 'trip_format.dart';
 
 class TripSummaryText {
@@ -185,10 +186,19 @@ class TripSummaryText {
 
   static String checkOutOf(DateTime? date) => date == null ? '' : TripFormat.shortDate(DateTime(date.year, date.month, date.day + 1));
 
+  static String spotLine(TripSummaryDay d, int i) =>
+      d.hasTimes ? '${TripDayTimeline.clock(d.starts[i])} ${d.spots[i]}' : d.spots[i];
+
   static String dayRoute(TripSummaryDay d) {
-    final route = d.spots.join(' → ');
+    final String route;
+    if (d.hasTimes) {
+      route = [for (var i = 0; i < d.spots.length; i++) spotLine(d, i)].join('\n');
+    } else {
+      route = d.spots.join(' → ');
+    }
     if (d.minutes <= 0) return route;
-    return '$route (${TripStringsA5.aboutDuration(TripFormat.duration(d.minutes))})';
+    final about = TripStringsA5.aboutDuration(TripFormat.duration(d.minutes));
+    return d.hasTimes ? '$route\n($about)' : '$route ($about)';
   }
 
   static String footer(TripSummaryRecord r) {

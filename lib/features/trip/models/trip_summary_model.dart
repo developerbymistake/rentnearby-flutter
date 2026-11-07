@@ -170,8 +170,11 @@ class TripSummaryDay {
   final String? city;
   final List<String> spots;
   final int minutes;
+  final List<int> starts;
 
-  const TripSummaryDay({required this.day, this.date, this.city, this.spots = const [], this.minutes = 0});
+  const TripSummaryDay({required this.day, this.date, this.city, this.spots = const [], this.minutes = 0, this.starts = const []});
+
+  bool get hasTimes => starts.isNotEmpty && starts.length == spots.length;
 
   factory TripSummaryDay.fromJson(Map<String, dynamic> json) => TripSummaryDay(
         day: (json['day'] as num?)?.toInt() ?? 0,
@@ -181,7 +184,11 @@ class TripSummaryDay {
         minutes: (json['minutes'] as num?)?.toInt() ?? 0,
       );
 
-  TripSummaryDay withMinutes(int value) => TripSummaryDay(day: day, date: date, city: city, spots: spots, minutes: value);
+  TripSummaryDay withMinutes(int value) =>
+      TripSummaryDay(day: day, date: date, city: city, spots: spots, minutes: value, starts: starts);
+
+  TripSummaryDay withStarts(List<int> value) =>
+      TripSummaryDay(day: day, date: date, city: city, spots: spots, minutes: minutes, starts: value);
 }
 
 class TripSummaryTravelModes {
@@ -473,8 +480,8 @@ class TripSummaryRecord {
 
   bool get isMultiCity => legs.length > 1;
 
-  TripSummaryRecord withDayMinutes(Map<int, int> byDay) {
-    if (byDay.isEmpty) return this;
+  TripSummaryRecord withDayMinutes(Map<int, int> byDay, {Map<int, List<int>> starts = const {}}) {
+    if (byDay.isEmpty && starts.isEmpty) return this;
     return TripSummaryRecord(
       tripId: tripId,
       title: title,
@@ -488,7 +495,14 @@ class TripSummaryRecord {
       generatedAt: generatedAt,
       nights: nights,
       taxis: taxis,
-      days: [for (final d in days) byDay[d.day] == null ? d : d.withMinutes(byDay[d.day]!)],
+      days: [
+        for (final d in days)
+          () {
+            final m = byDay[d.day] == null ? d : d.withMinutes(byDay[d.day]!);
+            final s = starts[d.day];
+            return s == null ? m : m.withStarts(s);
+          }(),
+      ],
       steps: steps,
       gettingThere: gettingThere,
       comingBack: comingBack,

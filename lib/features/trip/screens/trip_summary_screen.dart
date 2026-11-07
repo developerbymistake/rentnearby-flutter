@@ -16,6 +16,7 @@ import '../trip_strings_a5.dart';
 import '../trip_strings_mcd_k1.dart';
 import '../trip_strings_steps_a3.dart';
 import '../trip_strings_v2_easy.dart';
+import '../utils/trip_day_timeline.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_summary_source.dart';
 import '../utils/trip_summary_text.dart';
@@ -400,6 +401,13 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                         style: const TextStyle(
                             fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: TripColors.accentDark)),
                   ),
+                  if (d.hasTimes)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Text(TripDayTimeline.clock(d.starts[i]),
+                          style: const TextStyle(
+                              fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+                    ),
                   Expanded(
                     child: Text(d.spots[i],
                         style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textDark)),

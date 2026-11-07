@@ -126,6 +126,30 @@ void main() {
     expect(text, isNot(contains(TripStrings.summaryFooter)));
   });
 
+  test('day with times lists each place with its start time, without times keeps the route', () {
+    final json = record(nights: [], taxis: [])
+      ..['days'] = [
+        day(1, ['Naini Lake', 'Lal Tibba']),
+      ];
+    final plain = TripSummaryRecord.fromJson(json);
+    expect(TripSummaryText.build(plain), contains('Naini Lake → Lal Tibba'));
+    expect(plain.days.first.hasTimes, isFalse);
+
+    final timed = TripSummaryRecord.fromJson(json).withDayMinutes(const {}, starts: {
+      1: [570, 700],
+    });
+    final text = TripSummaryText.build(timed);
+    expect(timed.days.first.hasTimes, isTrue);
+    expect(text, contains('9:30 am Naini Lake\n11:40 am Lal Tibba'));
+    expect(text, isNot(contains('→')));
+
+    final mismatched = TripSummaryRecord.fromJson(json).withDayMinutes(const {}, starts: {
+      1: [570],
+    });
+    expect(mismatched.days.first.hasTimes, isFalse);
+    expect(TripSummaryText.build(mismatched), contains('Naini Lake → Lal Tibba'));
+  });
+
   test('check-out is the morning after the night', () {
     final r = TripSummaryRecord.fromJson(record(nights: [night(3)]));
     expect(TripSummaryText.checkOutOf(r.nights.first.date), 'Wed 04 Nov');
