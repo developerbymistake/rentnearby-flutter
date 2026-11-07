@@ -75,6 +75,7 @@ class AuthController extends GetxController {
   bool get staysEnabled => canListStays.value && _tabs.isStaysActive;
   bool get taxisEnabled => canListTaxis.value && _tabs.isTaxiActive;
   bool get jobsEnabled => staysEnabled && _tabs.isJobsActive;
+  bool get jobsBrowseEnabled => _tabs.isStaysActive && _tabs.isJobsActive;
   bool get effectiveIsOwner => staysEnabled || taxisEnabled;
 
   bool get roleTabActive {

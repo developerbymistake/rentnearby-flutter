@@ -60,16 +60,6 @@ void main() {
           ],
           'text': 'Hi, trip to Nainital.',
         },
-        'phoneBooking': null,
-        'hostConfirm': {
-          'linkSent': true,
-          'linkCount': 1,
-          'canResendAt': '2026-10-29T10:15:00Z',
-          'answeredAt': null,
-          'answer': null,
-          'answeredVia': null,
-          'canOverrideUntil': null,
-        },
         'advance': {'status': 'None'},
         'taxi': null,
         'traveller': {'id': 'u1', 'name': 'Rahul', 'phone': null},
@@ -95,9 +85,6 @@ void main() {
     expect(e.context.adults, 2);
     expect(e.traveller.name, 'Rahul');
     expect(e.owner.phone, '9876543210');
-    expect(e.hostConfirm.linkSent, isTrue);
-    expect(e.hostConfirm.linkCount, 1);
-    expect(e.phoneBooking, isNull);
   });
 
   test('parses the open offer', () {
@@ -116,7 +103,6 @@ void main() {
     expect(e.id, 'e2');
     expect(e.openOffer, isNull);
     expect(e.acceptedOffer, isNull);
-    expect(e.phoneBooking, isNull);
     expect(e.display, TripDisplayStatus.none);
   });
 
@@ -157,31 +143,16 @@ void main() {
     expect(e.nights, 2);
   });
 
-  test('phone booking and cancelled fields', () {
+  test('cancelled fields', () {
     final j = full()
       ..['status'] = 'CancelledByOwner'
       ..['displayStatus'] = 'cancelled'
       ..['cancelledBy'] = 'owner'
-      ..['cancelReason'] = 'Water issue'
-      ..['phoneBooking'] = {
-        'hostName': 'Ramesh Bisht',
-        'hostPhone': '9876543210',
-        'roomName': 'Deluxe',
-        'nights': 1,
-        'agreedTotal': 3000,
-        'advancePaid': false,
-        'advanceAmount': null,
-        'note': null,
-        'recordedAt': '2026-10-28T10:15:00Z',
-        'updatedAt': null,
-      };
+      ..['cancelReason'] = 'Water issue';
     final e = TripEnquiryModel.fromJson(j);
     expect(e.display, TripDisplayStatus.cancelled);
     expect(e.cancelledBy, 'owner');
     expect(e.cancelReason, 'Water issue');
-    expect(e.phoneBooking!.hostName, 'Ramesh Bisht');
-    expect(e.phoneBooking!.agreedTotal, 3000);
-    expect(e.phoneBooking!.advancePaid, isFalse);
   });
 
   test('batch parses items, skipped and veryShortNotice', () {
@@ -233,17 +204,6 @@ void main() {
     expect(p.hasMore, isTrue);
     expect(p.counts.newCount, 2);
     expect(p.counts.closed, 7);
-  });
-
-  test('phone booking result parses link and text', () {
-    final r = TripPhoneBookingResult.fromJson({
-      'enquiry': full(),
-      'confirmLink': 'https://developerbymistake.tech/go/confirm/abc',
-      'whatsAppText': 'Namaste',
-    });
-    expect(r.enquiry.id, 'e1');
-    expect(r.confirmLink, endsWith('/abc'));
-    expect(r.whatsAppText, 'Namaste');
   });
 
   Map<String, dynamic> taxi() => full()

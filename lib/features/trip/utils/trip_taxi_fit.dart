@@ -7,14 +7,16 @@ class TripTaxiNeed {
   final int dayKm;
   final double? lat;
   final double? lng;
+  final double radiusKm;
 
-  const TripTaxiNeed({this.people = 0, this.dayKm = 0, this.lat, this.lng});
+  const TripTaxiNeed({this.people = 0, this.dayKm = 0, this.lat, this.lng, this.radiusKm = 0});
 
-  factory TripTaxiNeed.of({required int people, required double km, double? lat, double? lng}) => TripTaxiNeed(
+  factory TripTaxiNeed.of({required int people, required double km, double? lat, double? lng, double radiusKm = 0}) => TripTaxiNeed(
         people: people.clamp(0, maxPeople).toInt(),
         dayKm: km.isFinite && km > 0 ? km.ceil().clamp(0, maxDayKm).toInt() : 0,
         lat: lat,
         lng: lng,
+        radiusKm: radiusKm,
       );
 
   bool get hasPoint =>
@@ -27,9 +29,10 @@ class TripTaxiNeed {
         if (dayKm > 0) 'dayKm': dayKm,
         if (hasPoint) 'lat': lat,
         if (hasPoint) 'lng': lng,
+        if (hasPoint && radiusKm > 0) 'radiusKm': radiusKm,
       };
 
-  String get key => isEmpty ? '' : '$people|$dayKm|${hasPoint ? '${lat!.toStringAsFixed(4)},${lng!.toStringAsFixed(4)}' : ''}';
+  String get key => isEmpty ? '' : '$people|$dayKm|${hasPoint ? '${lat!.toStringAsFixed(4)},${lng!.toStringAsFixed(4)}|$radiusKm' : ''}';
 }
 
 // The server's fit of one driver to the day (TaxiBrowseDto trip* fields); null fields = not sent.

@@ -153,91 +153,6 @@ class TripEnquiryContext {
   }
 }
 
-class TripPhoneBookingModel {
-  final String hostName;
-  final String? hostPhone;
-  final String roomName;
-  final int nights;
-  final int agreedTotal;
-  final bool advancePaid;
-  final int? advanceAmount;
-  final String? note;
-  final DateTime? recordedAt;
-  final DateTime? updatedAt;
-
-  const TripPhoneBookingModel({
-    this.hostName = '',
-    this.hostPhone,
-    this.roomName = '',
-    this.nights = 1,
-    this.agreedTotal = 0,
-    this.advancePaid = false,
-    this.advanceAmount,
-    this.note,
-    this.recordedAt,
-    this.updatedAt,
-  });
-
-  factory TripPhoneBookingModel.fromJson(Map<String, dynamic> json) => TripPhoneBookingModel(
-        hostName: json['hostName'] as String? ?? '',
-        hostPhone: json['hostPhone'] as String?,
-        roomName: json['roomName'] as String? ?? '',
-        nights: (json['nights'] as num?)?.toInt() ?? 1,
-        agreedTotal: (json['agreedTotal'] as num?)?.toInt() ?? 0,
-        advancePaid: json['advancePaid'] == true,
-        advanceAmount: (json['advanceAmount'] as num?)?.toInt(),
-        note: json['note'] as String?,
-        recordedAt: tripInstant(json['recordedAt']),
-        updatedAt: tripInstant(json['updatedAt']),
-      );
-}
-
-class TripHostConfirmModel {
-  final bool linkSent;
-  final int linkCount;
-  final DateTime? canResendAt;
-  final DateTime? answeredAt;
-  final String? answer;
-  final String? answeredVia;
-  final DateTime? canOverrideUntil;
-
-  const TripHostConfirmModel({
-    this.linkSent = false,
-    this.linkCount = 0,
-    this.canResendAt,
-    this.answeredAt,
-    this.answer,
-    this.answeredVia,
-    this.canOverrideUntil,
-  });
-
-  bool get answeredByLink => answeredVia == 'Link';
-
-  bool canResend(DateTime now) {
-    if (!linkSent || answeredAt != null) return false;
-    final at = canResendAt;
-    return linkCount < 2 && (at == null || !at.isAfter(now));
-  }
-
-  bool canOverride(DateTime now) {
-    final until = canOverrideUntil;
-    return answeredByLink && until != null && until.isAfter(now);
-  }
-
-  factory TripHostConfirmModel.fromJson(Map<String, dynamic>? json) {
-    if (json == null) return const TripHostConfirmModel();
-    return TripHostConfirmModel(
-      linkSent: json['linkSent'] == true,
-      linkCount: (json['linkCount'] as num?)?.toInt() ?? 0,
-      canResendAt: tripInstant(json['canResendAt']),
-      answeredAt: tripInstant(json['answeredAt']),
-      answer: json['answer'] as String?,
-      answeredVia: json['answeredVia'] as String?,
-      canOverrideUntil: tripInstant(json['canOverrideUntil']),
-    );
-  }
-}
-
 class TripAdvanceModel {
   final String status;
   final int? amount;
@@ -381,8 +296,6 @@ class TripEnquiryModel {
   final TripOfferModel? openOffer;
   final int offerCount;
   final TripEnquiryContext context;
-  final TripPhoneBookingModel? phoneBooking;
-  final TripHostConfirmModel hostConfirm;
   final TripAdvanceModel advance;
   final TripPartyModel traveller;
   final TripPartyModel owner;
@@ -431,8 +344,6 @@ class TripEnquiryModel {
     this.openOffer,
     this.offerCount = 0,
     this.context = const TripEnquiryContext(),
-    this.phoneBooking,
-    this.hostConfirm = const TripHostConfirmModel(),
     this.advance = const TripAdvanceModel(),
     this.traveller = const TripPartyModel(),
     this.owner = const TripPartyModel(),
@@ -467,7 +378,7 @@ class TripEnquiryModel {
       counterCount < TripConstants.maxCounters &&
       conversationId != null;
 
-  bool get canChangeRequest => !isTaxi && isConfirmedByBoth && pendingChange == null && (acceptedOffer != null || isPhoneBooking);
+  bool get canChangeRequest => !isTaxi && isConfirmedByBoth && pendingChange == null && acceptedOffer != null;
 
   bool get hasPendingRevised => pendingRevised != null;
 
@@ -530,7 +441,6 @@ class TripEnquiryModel {
 
   bool get isProblem => TripEnquiryStatuses.problem.contains(status);
 
-  bool get isPhoneBooking => phoneBooking != null;
 
   int get nights {
     final a = checkIn;
@@ -584,7 +494,6 @@ class TripEnquiryModel {
       return raw is Map<String, dynamic> ? TripOfferModel.fromJson(raw) : null;
     }
 
-    final pb = json['phoneBooking'];
     final tx = json['taxi'];
     final dayList = ((json['days'] as List?) ?? const []).whereType<num>().map((n) => n.toInt()).toList()..sort();
     return TripEnquiryModel(
@@ -612,8 +521,6 @@ class TripEnquiryModel {
       openOffer: offer('openOffer'),
       offerCount: (json['offerCount'] as num?)?.toInt() ?? 0,
       context: TripEnquiryContext.fromJson(json['context'] as Map<String, dynamic>?),
-      phoneBooking: pb is Map<String, dynamic> ? TripPhoneBookingModel.fromJson(pb) : null,
-      hostConfirm: TripHostConfirmModel.fromJson(json['hostConfirm'] as Map<String, dynamic>?),
       advance: TripAdvanceModel.fromJson(json['advance'] as Map<String, dynamic>?),
       traveller: TripPartyModel.fromJson(json['traveller'] as Map<String, dynamic>?),
       owner: TripPartyModel.fromJson(json['owner'] as Map<String, dynamic>?),
@@ -680,20 +587,6 @@ class TripEnquiryBatch {
       );
 
   bool isUpdated(String enquiryId) => updated.contains(enquiryId);
-}
-
-class TripPhoneBookingResult {
-  final TripEnquiryModel enquiry;
-  final String confirmLink;
-  final String whatsAppText;
-
-  const TripPhoneBookingResult({required this.enquiry, required this.confirmLink, required this.whatsAppText});
-
-  factory TripPhoneBookingResult.fromJson(Map<String, dynamic> json) => TripPhoneBookingResult(
-        enquiry: TripEnquiryModel.fromJson((json['enquiry'] as Map<String, dynamic>?) ?? const {}),
-        confirmLink: json['confirmLink'] as String? ?? '',
-        whatsAppText: json['whatsAppText'] as String? ?? '',
-      );
 }
 
 class TripOwnerCounts {

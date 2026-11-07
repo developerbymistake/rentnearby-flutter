@@ -20,8 +20,6 @@ class TripChatCallbacks {
   final void Function(String enquiryId, String offerId)? onAccept;
   final void Function(String enquiryId, String offerId)? onDecline;
   final VoidCallback? onAskNewOffer;
-  final void Function(String enquiryId)? onHostYes;
-  final void Function(String enquiryId)? onHostNotMe;
   final void Function(String phone)? onCall;
   final void Function(String enquiryId)? onProofSent;
   final void Function(String enquiryId)? onMarkReceived;
@@ -47,8 +45,6 @@ class TripChatCallbacks {
     this.onAccept,
     this.onDecline,
     this.onAskNewOffer,
-    this.onHostYes,
-    this.onHostNotMe,
     this.onCall,
     this.onProofSent,
     this.onMarkReceived,
@@ -71,7 +67,7 @@ class TripChatCallbacks {
     this.agreedTotal,
   });
 
-  bool get ownerActionsEnabled => onHostYes != null;
+  bool get ownerActionsEnabled => onAcceptPrice != null;
 }
 
 class TripChatCards {
@@ -79,7 +75,6 @@ class TripChatCards {
     'trip_enquiry',
     'trip_offer',
     'trip_offer_response',
-    'trip_phone_booking',
     TripAdvanceCards.requestType,
     TripAdvanceCards.proofType,
     TripOfferCards.counterType,
@@ -114,8 +109,6 @@ class TripChatCards {
         return _offer(context, message, p, isOwner, accent, cb);
       case 'trip_offer_response':
         return _bubble(message, _offerResponseText(p), accent);
-      case 'trip_phone_booking':
-        return _phoneBooking(context, message, p, isOwner, accent, cb);
       case TripAdvanceCards.requestType:
         return TripAdvanceCards.request(context, message, isOwner: isOwner, accent: accent, callbacks: cb);
       case TripAdvanceCards.proofType:
@@ -271,56 +264,6 @@ class TripChatCards {
         style: const TextStyle(
             fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark, height: 1.35),
       ),
-    );
-  }
-
-  // ── phone booking ────────────────────────────────────────────────────────
-
-  static Widget _phoneBooking(BuildContext context, MessageModel m, Map<String, dynamic> p, bool isOwner,
-      Color accent, TripChatCallbacks cb) {
-    final status = _str(p, 'status') ?? 'pending';
-    final enquiryId = _str(p, 'enquiryId');
-    final total = _num(p, 'agreedTotal');
-    final range = _range(p);
-    final room = _str(p, 'roomName');
-    final note = _str(p, 'note');
-    final advancePaid = p['advancePaid'] == true;
-    final advance = _num(p, 'advanceAmount');
-    final price = total == null ? '' : BrowseItem.inr(total);
-    final canAct = isOwner && status == 'pending' && enquiryId != null;
-
-    final pill = switch (status) {
-      'confirmed' => const TripStatusPill(TripDisplayStatus.confirmedByBoth, label: TripStrings.confirmedBothPill),
-      'denied' => const TripStatusPill(TripDisplayStatus.notMe, label: TripStrings.hostSaysNotMe),
-      _ => TripStatusPill(TripDisplayStatus.confirmedByYou, ownerSide: isOwner),
-    };
-
-    return _card(
-      context,
-      mine: m.isMine,
-      readAt: m.readAt,
-      accent: accent,
-      icon: Icons.phone_in_talk_outlined,
-      title: TripStrings.bookingByPhone,
-      pill: pill,
-      children: [
-        Text(isOwner ? TripStrings.saysYouAgreed(price, range ?? '') : [price, if (range != null) range].join(' · '),
-            style: _body),
-        if (room != null && room.isNotEmpty) ...[const SizedBox(height: 6), _kv(TripStrings.room, room)],
-        if (advancePaid) _kv(TripStrings.advancePaid, advance == null ? TripStrings.yes : BrowseItem.inr(advance)),
-        if (note != null && note.isNotEmpty) ...[const SizedBox(height: 6), Text(note, style: _small)],
-        if (canAct) ...[
-          const SizedBox(height: 12),
-          _button(TripStrings.yesConfirm,
-              primary: true, accent: accent, onTap: cb.onHostYes == null ? null : () => cb.onHostYes!(enquiryId)),
-          const SizedBox(height: 8),
-          _button(TripStrings.notMe,
-              primary: false,
-              accent: accent,
-              negative: true,
-              onTap: cb.onHostNotMe == null ? null : () => cb.onHostNotMe!(enquiryId)),
-        ],
-      ],
     );
   }
 

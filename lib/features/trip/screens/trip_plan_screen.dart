@@ -470,18 +470,20 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
                     onPressed: () => _c.planStep.value = 1,
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(52),
+                      padding: EdgeInsets.zero,
                       side: BorderSide(color: TripColors.accent.withValues(alpha: 0.6)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     child: const Text(
                       TripStringsV2Plan.previous,
+                      maxLines: 1,
+                      softWrap: false,
                       style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  flex: 2,
                   child: GradientButton(
                     label: TripStringsV2Plan.done,
                     height: 52,

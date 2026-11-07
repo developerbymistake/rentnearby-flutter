@@ -23,9 +23,6 @@ class StayEnquiryBucket {
     return DateTime(out.year, out.month, out.day).isBefore(DateTime(now.year, now.month, now.day));
   }
 
-  static bool awaitingAnswer(TripEnquiryModel e) =>
-      e.status == TripEnquiryStatuses.confirmedByTraveller && e.hostConfirm.answeredAt == null;
-
   static String of(TripEnquiryModel e) {
     final bucket = switch (e.status) {
       TripEnquiryStatuses.asked || TripEnquiryStatuses.countered => newOnes,
@@ -34,7 +31,7 @@ class StayEnquiryBucket {
       _ => closed,
     };
     if (bucket == confirmed && hasEnded(e)) return closed;
-    return awaitingAnswer(e) ? newOnes : bucket;
+    return bucket;
   }
 }
 
@@ -217,15 +214,6 @@ class StayEnquiriesController extends GetxController {
 
   Future<bool> notAvailable(String enquiryId) async =>
       await _act<TripEnquiryModel>(enquiryId, () => _repo.notAvailable(enquiryId), TripStrings.couldNotLoad, (r) => r) != null;
-
-  Future<bool> hostConfirm(String enquiryId, {required bool confirm}) async =>
-      await _act<TripEnquiryModel>(
-        enquiryId,
-        () => _repo.hostConfirm(enquiryId, confirm: confirm),
-        TripStrings.couldNotLoad,
-        (r) => r,
-      ) !=
-      null;
 
   Future<bool> askAdvance(
     String id, {

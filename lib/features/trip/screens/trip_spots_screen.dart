@@ -25,10 +25,8 @@ import '../utils/trip_spot_picks.dart';
 import '../utils/trip_days_rules.dart';
 import '../widgets/trip_city_sheet.dart';
 import '../widgets/trip_shimmers.dart';
-import '../widgets/trip_spot_detail_sheet.dart';
 import '../widgets/trip_spot_row.dart';
 import '../widgets/trip_spots_extras.dart';
-import '../widgets/trip_spots_map_view.dart';
 
 class TripSpotsScreen extends StatefulWidget {
   const TripSpotsScreen({super.key});
@@ -235,11 +233,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   bool _lockedFor(TripSpotModel s) =>
       !_existingIds.contains(s.id) && !_ctrl.selected.contains(s.id) && (_pickDay != null ? _pickFull : _ctrl.atLimit);
 
-  void _openDetail(TripSpotModel s) {
-    final on = _existingIds.contains(s.id) || _ctrl.selected.contains(s.id);
-    TripSpotDetailSheet.show(context, spot: s, selected: on, locked: _lockedFor(s), onToggle: _toggleFor(s));
-  }
-
   void _applyBundle(TripQuickStart b) {
     final added = _ctrl.addBundle(b);
     if (added.isEmpty) {
@@ -257,16 +250,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   Widget _buildOffline() => Obx(() => _ctrl.offline.value && !_ctrl.isLoading.value
       ? TripOfflineBanner(onTap: _ctrl.load)
       : const SizedBox.shrink());
-
-  Widget _buildViewSwitch() => Obx(() {
-        final show = !_ctrl.plannerOff.value &&
-            !_ctrl.isLoading.value &&
-            !_ctrl.isNotReady &&
-            !(_ctrl.loadFailed.value && _ctrl.items.isEmpty) &&
-            _ctrl.items.isNotEmpty;
-        if (!show) return const SizedBox.shrink();
-        return TripSpotsViewSwitch(map: _ctrl.mapMode.value, onChanged: (v) => _ctrl.mapMode.value = v);
-      });
 
   void _toggle(String id) {
     if (_ctrl.toggle(id)) return;
@@ -332,6 +315,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     Get.offNamedUntil(
       AppRoutes.tripPlan,
       (r) => r.settings.name != AppRoutes.tripSpots,
+      arguments: {'fresh': true},
     );
   }
 
@@ -345,7 +329,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
           _buildCityChips(),
           _buildOffline(),
           _buildChips(),
-          _buildViewSwitch(),
           _buildLimitNotice(),
           Expanded(child: _buildBody()),
         ],
@@ -586,9 +569,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
           subtitle: TripStrings.notReadySubtitle(_city.name),
           palette: TripColors.palette,
         ));
-      }
-      if (_ctrl.mapMode.value) {
-        return TripSpotsMapView(controller: _ctrl, onOpen: _openDetail);
       }
       final visible = _ctrl.visible;
       final loadingMore = _ctrl.isLoadingMore.value;

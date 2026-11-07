@@ -25,7 +25,6 @@ class TripStayRow extends StatelessWidget {
     this.onOpenChat,
     this.readOnly = false,
     this.onCall,
-    this.onWhatsApp,
     this.onAsk,
     this.fit,
   });
@@ -38,7 +37,6 @@ class TripStayRow extends StatelessWidget {
   final bool readOnly;
   final VoidCallback onOpen;
   final VoidCallback? onCall;
-  final VoidCallback? onWhatsApp;
   final VoidCallback? onAsk;
 
   static const double thumb = 56;
@@ -284,23 +282,6 @@ class TripStayRow extends StatelessWidget {
                 side: BorderSide(color: StayColors.accent.withValues(alpha: 0.6)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              onPressed: onWhatsApp,
-              tooltip: TripStrings.whatsApp,
-              style: IconButton.styleFrom(
-                side: BorderSide(color: AppColors.whatsApp.withValues(alpha: 0.5)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: Image.asset('assets/images/whatsapp_icon.png',
-                  width: 20,
-                  height: 20,
-                  errorBuilder: (_, _, _) => const Icon(Icons.chat, size: 20, color: AppColors.whatsApp)),
             ),
           ),
           const SizedBox(width: 8),

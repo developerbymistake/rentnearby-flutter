@@ -58,11 +58,7 @@ class TripStringsV2Find {
       [nightsText(nights), ?range, ?people].join(' · ');
   static const splitNote = 'Each night is asked on its own. Nothing is booked.';
   static const nightByNight = 'Night by night';
-  static const alreadyBookedByPhone = 'Already booked by phone?';
-  static const whichStay = 'Which stay?';
-  static const pickBookedStay = 'Pick the stay you booked.';
   static String nightsLeft(int n) => '$n ${n == 1 ? 'night' : 'nights'} left to ask';
-  static String sameStayFor(int nights) => nights == 2 ? 'Same stay for both nights' : 'Same stay for all nights';
   static String nightLabel(int n, String? date) => date == null ? 'Night $n' : 'Night $n · $date';
   static const noStaysTitle = 'No stays here yet';
   static String noStaysBody(String city) => 'No stays listed in $city yet. Use your own stay, or come back later.';

@@ -106,10 +106,6 @@ class TripStrings {
   static const String done = 'Done';
   static const String offerReceived = 'Offer received';
   static const String confirmedByYou = 'Confirmed by you';
-  static const String hostNotConfirmed = 'Host has not confirmed yet';
-  static const String resendLink = 'Resend link';
-  static const String copyLink = 'Copy link';
-  static const String linkCopied = 'Link copied';
   static const String notAvailable = 'Not available';
   static const String noReplyInTime = 'No reply in time';
   static const String hostSaysNotMe = 'Host says not me';
@@ -128,7 +124,6 @@ class TripStrings {
   static String offeredValid(String p, String t) => 'Offered $p · valid $t';
   static String closesIn(String t) => 'Closes in $t (12 h before the trip is the limit)';
   static const String openChat = 'Open chat';
-  static const String iBookedByPhone = 'I booked by phone';
   static const String cancelBooking = 'Cancel booking';
   static const String cancelBookingQuestion = 'Cancel this booking?';
   static const String cancelHostTold = 'The host is told. Any advance and refund are between you and the host: Bakhli does not hold payment.';
@@ -136,17 +131,12 @@ class TripStrings {
   static const String keepBooking = 'Keep booking';
   static const String tellHostBeforeLeaving = 'Tell the host before you leave.';
   static const String reasonOptional = 'Reason (optional)';
-  static const String phoneBookingTitle = 'I booked by phone';
   static const String dates = 'Dates';
   static const String room = 'Room';
   static const String other = 'Other';
-  static const String agreedPrice = 'Agreed price';
-  static const String advancePaid = 'Advance paid';
   static const String no = 'No';
   static const String yes = 'Yes';
   static const String amount = 'Amount';
-  static const String phoneBookingFooter = 'Saved as Confirmed by you (orange). The host gets one WhatsApp link to confirm it. Until he does it stays orange.';
-  static const String sendOnWhatsApp = 'Send on WhatsApp';
   static const String editBooking = 'Edit booking';
   static const String bookingUpdated = 'Booking updated';
   static String replaceNight(String d, String name) => '$d has $name · Replace it?';
@@ -196,8 +186,6 @@ class TripStrings {
   static const String pausedHere = 'New enquiries are paused in your area.';
   static const String byGuest = 'By guest';
   static const String newPill = 'New';
-  static String saysYouAgreed(String p, String d) => 'Says you agreed $p for $d by phone';
-  static String saysYouBooked(String d) => 'Says you booked $d by phone';
   static const String chat = 'Chat';
   static const String roomLines = 'Rooms';
   static const String units = 'Units';
@@ -219,7 +207,6 @@ class TripStrings {
   static const String guestCancelled = 'Guest cancelled';
   static const String guestDeclined = 'Guest declined';
 
-  static const String bookingByPhone = 'Booking recorded by phone';
   static const String offerDeclined = 'Offer declined';
   static const String declineQuestion = 'Decline this offer?';
   static const String declineNote = 'The host is told. You can still call.';

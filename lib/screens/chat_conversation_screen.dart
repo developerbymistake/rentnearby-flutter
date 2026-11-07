@@ -1,13 +1,11 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import '../config/app_colors.dart';
 import '../config/app_routes.dart';
 import '../controllers/chat_controller.dart';
-import '../features/stay/enquiries/host_confirm_dialog.dart';
 import '../features/stay/enquiries/stay_enquiries_controller.dart';
 import '../features/stay/enquiries/stay_enquiry_actions.dart';
 import '../features/stay/enquiries/trip_owner_action_bar.dart';
@@ -289,25 +287,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
     switch (id) {
       case TripStripAction.withdraw:
         if (await TripWithdrawSheet.show(context, enquiry: e)) _refreshEnquiry();
-      case TripStripAction.phoneBooking:
-      case TripStripAction.editBooking:
-        await _openReplies(e);
-      case TripStripAction.copyLink when _cachedLink(e.id) != null:
-        await Clipboard.setData(ClipboardData(text: _cachedLink(e.id)!.confirmLink));
-        AppToast.success(TripStrings.linkCopied);
-      case TripStripAction.resendLink:
-      case TripStripAction.copyLink:
-        final res = await TripEnquiryController.to.resendLink(e.id);
-        if (res == null) return;
-        if (Get.isRegistered<TripPlanController>()) Get.find<TripPlanController>().rememberLink(res);
-        _refreshEnquiry();
-        final phone = e.phoneBooking?.hostPhone;
-        if (id == TripStripAction.resendLink && phone != null && phone.isNotEmpty) {
-          await ContactLauncher.whatsApp(phone, message: res.whatsAppText);
-        } else {
-          await Clipboard.setData(ClipboardData(text: res.confirmLink));
-          AppToast.success(TripStrings.linkCopied);
-        }
       case TripStripAction.cancel:
         if (await TripCancelSheet.show(context, enquiry: e, ownerSide: false)) _refreshEnquiry();
       case TripStripAction.callHost:
@@ -321,9 +300,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
         if (await TripChangeRequestSheet.show(context, enquiry: e)) _refreshEnquiry();
     }
   }
-
-  TripPhoneBookingResult? _cachedLink(String enquiryId) =>
-      Get.isRegistered<TripPlanController>() ? Get.find<TripPlanController>().confirmLinks[enquiryId] : null;
 
   Future<void> _reportHost(String? listingId, {String? enquiryId}) async {
     if (listingId == null || listingId.isEmpty) {
@@ -497,21 +473,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       );
       if (ok != true || !mounted) return;
       if (await TripEnquiryController.to.decline(enquiryId, offerId)) _refreshEnquiry();
-    } finally {
-      _pendingActionMessageIds.remove(messageId);
-    }
-  }
-
-  Future<void> _hostAnswer(String messageId, String enquiryId, bool confirm) async {
-    if (!_pendingActionMessageIds.add(messageId)) return;
-    try {
-      final cached = _enquiry.value;
-      final enq = cached != null && cached.id == enquiryId ? cached : await TripEnquiryController.to.refreshOne(enquiryId);
-      if (enq == null || !mounted) return;
-      final ok = await HostConfirmDialog.show(context, confirm: confirm, enquiry: enq);
-      if (ok != true) return;
-      final done = await StayEnquiriesController.ensure().hostConfirm(enquiryId, confirm: confirm);
-      if (done) _refreshEnquiry();
     } finally {
       _pendingActionMessageIds.remove(messageId);
     }
@@ -992,7 +953,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
           enquiry: e,
           ownerSide: _isOwner,
           onTap: () => _openStrip(e),
-          actions: _isOwner ? const [] : TripStripAction.forTraveller(e, linkCached: _cachedLink(e.id) != null),
+          actions: _isOwner ? const [] : TripStripAction.forTraveller(e),
           onAction: _isOwner ? null : (id) => _onStripAction(id, e),
         );
       });
@@ -1511,8 +1472,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen>
       onAccept: enabled && !_isOwner ? (e, o) => _acceptOffer(m.id, e, o) : null,
       onDecline: enabled && !_isOwner ? (e, o) => _declineOffer(m.id, e, o) : null,
       onAskNewOffer: active && !_isOwner ? _openPlusMenu : null,
-      onHostYes: enabled && _isOwner ? (e) => _hostAnswer(m.id, e, true) : null,
-      onHostNotMe: enabled && _isOwner ? (e) => _hostAnswer(m.id, e, false) : null,
       onProofSent: enabled && !_isOwner ? _proofSent : null,
       onMarkReceived: enabled && _isOwner ? _markReceived : null,
       onNotYet: enabled && _isOwner ? _notYet : null,

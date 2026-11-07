@@ -93,7 +93,6 @@ class TripPlanController extends GetxController {
   final enquiriesLoading = false.obs;
   final enquiriesFailed = false.obs;
   final startChangedNotes = <int, String>{}.obs;
-  final confirmLinks = <String, TripPhoneBookingResult>{};
   final offline = false.obs;
   final problemBusy = false.obs;
   final askBusy = false.obs;
@@ -1719,7 +1718,6 @@ class TripPlanController extends GetxController {
     enquiriesFailed.value = false;
     startChangedNotes.clear();
     _pendingRetry = null;
-    confirmLinks.clear();
     offline.value = false;
     picked = null;
     taxiSupplyByLeg.clear();
@@ -3949,10 +3947,6 @@ class TripPlanController extends GetxController {
     if (identical(next, p)) return;
     plan.value = next;
     scheduleSave();
-  }
-
-  void rememberLink(TripPhoneBookingResult r) {
-    if (r.enquiry.id.isNotEmpty && r.confirmLink.isNotEmpty) confirmLinks[r.enquiry.id] = r;
   }
 
   void applyEnquiries(Iterable<TripEnquiryModel> items) {

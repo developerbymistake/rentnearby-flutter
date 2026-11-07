@@ -241,15 +241,6 @@ class TripEnquiryRules {
     );
   }
 
-  static Map<String, dynamic> keepStoredNights(TripEnquiryModel? stored, Map<String, dynamic> fields) {
-    final n = fields['nights'];
-    if (stored == null || n is! int || n != stored.nights) return fields;
-    return {
-      for (final f in fields.entries)
-        if (f.key != 'nights' && f.key != 'allNights') f.key: f.value,
-    };
-  }
-
   static bool isOutsideTrip(TripEnquiryModel e, TripSettings settings, int dayCount) {
     final start = settings.startDate;
     if (e.isSegment || start == null) return false;

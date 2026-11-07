@@ -136,11 +136,6 @@ class TripOwnerActionBar extends StatelessWidget {
           button(label, StayEnquiryButtonKind.primary, () => StayEnquiryActions.sendOffer(context, enquiry)),
           button(TripStrings.notAvailableAction, StayEnquiryButtonKind.negative, () => StayEnquiryActions.notAvailable(context, enquiry)),
         ];
-      case TripDisplayStatus.confirmedByYou:
-        return [
-          button(TripStrings.yesConfirm, StayEnquiryButtonKind.positive, () => StayEnquiryActions.hostConfirm(context, enquiry, confirm: true)),
-          button(TripStrings.notMe, StayEnquiryButtonKind.negative, () => StayEnquiryActions.hostConfirm(context, enquiry, confirm: false)),
-        ];
       case TripDisplayStatus.confirmedByBoth:
         final adv = enquiry.advance;
         final change = enquiry.pendingChange;

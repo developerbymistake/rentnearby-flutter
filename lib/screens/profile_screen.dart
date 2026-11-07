@@ -155,7 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // (reports), grouped together and separate from the pure app-meta
             // Support section below.
             _sectionGroup('ACTIVITY', [
-              Obx(() => _auth.jobsEnabled
+              Obx(() => _auth.jobsBrowseEnabled
                   ? Column(children: [
                       _legalTile(icon: Iconsax.briefcase, label: 'Jobs', onTap: () => Get.toNamed(AppRoutes.jobs)),
                       Divider(height: 1, indent: 56, color: AppColors.divider),

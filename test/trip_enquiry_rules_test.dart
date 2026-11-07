@@ -197,15 +197,6 @@ void main() {
       expect(gone.dayCity, 'Haridwar');
     });
 
-    test('phone booking edit keeps the stored nights when the length is unchanged', () {
-      final e = stay(1, 3);
-      expect(TripEnquiryRules.keepStoredNights(e, {'allNights': true, 'nights': 3, 'price': 100}), {'price': 100});
-      expect(TripEnquiryRules.keepStoredNights(e, {'allNights': false, 'nights': 1, 'price': 100}),
-          {'allNights': false, 'nights': 1, 'price': 100});
-      expect(TripEnquiryRules.keepStoredNights(null, {'nights': 3}), {'nights': 3});
-      expect(TripEnquiryRules.keepStoredNights(e, {'price': 100}), {'price': 100});
-    });
-
     test('taxi dates follow the day gaps', () {
       final p = legs();
       final taxi = TripEnquiryModel(

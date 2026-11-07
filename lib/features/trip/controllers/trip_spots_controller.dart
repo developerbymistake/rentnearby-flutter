@@ -39,7 +39,6 @@ class TripSpotsController extends GetxController {
   final _askedMinutes = <String>{};
   bool _minutesOff = false;
   Worker? _routeWorker;
-  final mapMode = false.obs;
   String? nextCursor;
   int _seq = 0;
   bool _loadingAll = false;

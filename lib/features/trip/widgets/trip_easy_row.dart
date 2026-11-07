@@ -182,12 +182,10 @@ class _TripEasyRowState extends State<TripEasyRow> {
       case TripRowState.todo || TripRowState.attention:
         if (_loadFailed) return const SizedBox.shrink();
         final noSupply = _noSupply;
-        return Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (!noSupply)
+            if (!noSupply) ...[
               SizedBox(
               height: 38,
               child: ElevatedButton(
@@ -203,7 +201,10 @@ class _TripEasyRowState extends State<TripEasyRow> {
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
               ),
             ),
-            SizedBox(
+              const SizedBox(height: 8),
+            ],
+            Row(children: [
+            Expanded(child: SizedBox(
               height: 38,
               child: noSupply
                   ? ElevatedButton(
@@ -223,27 +224,29 @@ class _TripEasyRowState extends State<TripEasyRow> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: TripColors.accentDark,
                         side: const BorderSide(color: AppColors.divider),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       child: const Text(TripStringsV2Easy.arrangeMyself,
                           style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
                     ),
-            ),
-            SizedBox(
+            )),
+            const SizedBox(width: 8),
+            Expanded(child: SizedBox(
               height: 38,
               child: OutlinedButton(
                 onPressed: _busy ? null : _skip,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.success,
                   side: const BorderSide(color: AppColors.success),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 child: const Text(TripStringsV2Easy.skip,
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
               ),
-            ),
+            )),
+            ]),
           ],
         );
       case TripRowState.own:
@@ -304,7 +307,7 @@ class _TripEasyRowState extends State<TripEasyRow> {
           constraints: const BoxConstraints(minHeight: 32),
           child: Container(
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 6),
             decoration: BoxDecoration(color: AppColors.errorSurface, borderRadius: BorderRadius.circular(20)),
             child: const Text(TripStringsV2Easy.retry,
                 style: TextStyle(

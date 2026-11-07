@@ -375,20 +375,12 @@ class _EnquiryCard extends StatelessWidget {
 
   List<Widget> _detail(TripEnquiryModel e) {
     final lines = <String>[];
-    final pb = e.phoneBooking;
     switch (e.display) {
-      case TripDisplayStatus.confirmedByYou:
-        if (pb != null) {
-          lines.add(pb.agreedTotal > 0
-              ? TripStrings.saysYouAgreed(BrowseItem.inr(pb.agreedTotal), e.datesLabel)
-              : TripStrings.saysYouBooked(e.datesLabel));
-          if (pb.roomName.isNotEmpty) lines.add('${TripStrings.room}: ${pb.roomName}');
-        }
       case TripDisplayStatus.offered:
         final o = e.openOffer;
         if (o != null) lines.add(StayEnquiryStrings.offerPrice(BrowseItem.inr(o.total)));
       case TripDisplayStatus.confirmedByBoth:
-        final t = e.agreedTotal ?? pb?.agreedTotal;
+        final t = e.agreedTotal;
         if (t != null) lines.add('${TripStrings.total} ${BrowseItem.inr(t)}');
       default:
     }
@@ -404,7 +396,6 @@ class _EnquiryCard extends StatelessWidget {
     } else if (e.pendingRevised != null && e.display == TripDisplayStatus.confirmedByBoth) {
       lines.add('${TripStrings.revisedOffer} · ${TripStrings.notAcceptedYet}');
     }
-    if (e.hostConfirm.answeredByLink) lines.add(StayEnquiryStrings.answeredByLink);
     if (lines.isEmpty) return const [];
     return [
       const SizedBox(height: 8),
@@ -439,7 +430,6 @@ class _EnquiryCard extends StatelessWidget {
 
   List<Widget> _actions(BuildContext context, TripEnquiryModel e) {
     final buttons = <Widget>[];
-    final canOverride = e.hostConfirm.canOverride(DateTime.now());
     Widget btn(String label, StayEnquiryButtonKind kind, Future<bool> Function() run, {IconData? icon}) {
       return Obx(() => StayEnquiryButton(
             label: label,
@@ -468,10 +458,6 @@ class _EnquiryCard extends StatelessWidget {
           buttons.add(btn(label, StayEnquiryButtonKind.primary, () => StayEnquiryActions.sendOffer(context, e)));
         }
         buttons.add(btn(TripStrings.notAvailableAction, StayEnquiryButtonKind.negative, () => StayEnquiryActions.notAvailable(context, e)));
-      case TripDisplayStatus.confirmedByYou:
-        if (chat != null) buttons.add(chat);
-        buttons.add(btn(TripStrings.yesConfirm, StayEnquiryButtonKind.positive, () => StayEnquiryActions.hostConfirm(context, e, confirm: true)));
-        buttons.add(btn(TripStrings.notMe, StayEnquiryButtonKind.negative, () => StayEnquiryActions.hostConfirm(context, e, confirm: false)));
       case TripDisplayStatus.confirmedByBoth:
         if (chat != null) buttons.add(chat);
         final adv = e.advance;
@@ -496,9 +482,6 @@ class _EnquiryCard extends StatelessWidget {
         if (canRevise && !(adv.isPending || adv.isProofSent)) {
           buttons.add(btn(TripStrings.revisedOffer, StayEnquiryButtonKind.plain, () => StayEnquiryActions.revisedOffer(context, e)));
         }
-        if (canOverride && !adv.hasRequest) {
-          buttons.add(btn(TripStrings.notMe, StayEnquiryButtonKind.negative, () => StayEnquiryActions.hostConfirm(context, e, confirm: false)));
-        }
         if (!StayEnquiryBucket.hasEnded(e)) {
           buttons.add(btn(TripStrings.cancelBooking, StayEnquiryButtonKind.negative, () => StayEnquiryActions.cancel(context, e)));
         }
@@ -509,10 +492,6 @@ class _EnquiryCard extends StatelessWidget {
           if ((e.traveller.phone ?? '').isNotEmpty) {
             buttons.add(StayEnquiryButton(label: TripStrings.callGuest, onTap: () => StayEnquiryActions.callGuest(e)));
           }
-        }
-      case TripDisplayStatus.notMe:
-        if (canOverride) {
-          buttons.add(btn(TripStrings.yesConfirm, StayEnquiryButtonKind.positive, () => StayEnquiryActions.hostConfirm(context, e, confirm: true)));
         }
       default:
     }

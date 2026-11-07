@@ -5,7 +5,6 @@ import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
-import '../../../utils/app_toast.dart';
 import '../../../utils/contact_launcher.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../controllers/trip_enquiry_controller.dart';
@@ -28,12 +27,10 @@ import '../widgets/trip_cancel_sheet.dart';
 import '../widgets/trip_change_request_sheet.dart';
 import '../widgets/trip_counter_sheet.dart';
 import '../widgets/trip_not_found_view.dart';
-import '../widgets/trip_phone_booking_sheet.dart';
 import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_status.dart';
 import '../widgets/trip_status_card.dart';
 import '../widgets/trip_withdraw_sheet.dart';
-import 'trip_dates_sheet.dart';
 import 'trip_replies_leg_parts.dart';
 
 class TripRepliesScreen extends StatefulWidget {
@@ -206,40 +203,6 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
       TripDisplayStatus.holdExpired => TripStrings.hostDidNotConfirm,
       _ => e.datesLabel,
     };
-  }
-
-  Future<bool> _datesGate() async {
-    if (_c.hasDates) return true;
-    await TripDatesSheet.ensure(context, heading: TripStrings.addYourDates);
-    return mounted && _c.hasDates;
-  }
-
-  Future<void> _phoneBooking(_Entry x, {TripEnquiryModel? existing}) async {
-    if (!await _datesGate() || !mounted) return;
-    final r = await TripPhoneBookingSheet.show(
-      context,
-      stayId: x.stayId,
-      stayName: x.name,
-      hostName: existing?.phoneBooking?.hostName ?? x.enquiry?.owner.name,
-      hostPhone: existing?.phoneBooking?.hostPhone ?? _phone(x),
-      day: existing == null ? _day : (_c.dayOfDate(existing.checkIn) ?? existing.day ?? _day),
-      existing: existing,
-    );
-    if (r == null || !mounted) return;
-    _c.rememberLink(r);
-    if (existing == null && r.confirmLink.isNotEmpty) await TripConfirmLinkSheet.show(context, r);
-  }
-
-  Future<void> _resend(TripEnquiryModel e) async {
-    final r = await TripEnquiryController.to.resendLink(e.id);
-    if (r == null || !mounted) return;
-    _c.rememberLink(r);
-    await TripConfirmLinkSheet.show(context, r);
-  }
-
-  Future<void> _copy(TripPhoneBookingResult r) async {
-    await Clipboard.setData(ClipboardData(text: r.confirmLink));
-    AppToast.success(TripStrings.linkCopied);
   }
 
   Future<void> _decline(TripEnquiryModel e) async {
@@ -553,13 +516,6 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
           ],
           if (status == TripDisplayStatus.confirmedByBoth && e != null && e.advance.isPending && (e.advance.amount ?? 0) > 0)
             _advanceSteps(e.advance.amount!),
-          if (status == TripDisplayStatus.confirmedByYou && (e?.hostConfirm.answeredAt == null)) ...[
-            const SizedBox(height: 2),
-            const Text(TripStrings.hostNotConfirmed,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          ],
           if (closes != null) ...[
             const SizedBox(height: 2),
             Text(closes,
@@ -743,7 +699,6 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     final busy = e != null && TripEnquiryController.to.busyIds.contains(e.id);
     final phone = _phone(x);
     final offer = e?.openOffer;
-    final link = e == null ? null : _c.confirmLinks[e.id];
     final buttons = <Widget>[];
     void add(IconData icon, String label, VoidCallback? onTap, {Color color = TripColors.accentDark}) =>
         buttons.add(_ActionButton(icon: icon, label: label, color: color, onTap: busy ? null : onTap));
@@ -773,19 +728,13 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
           add(Iconsax.refresh, TripStringsA2.refresh, () => _c.refreshEnquiries());
         }
         counter();
-        add(Iconsax.call_calling, TripStrings.iBookedByPhone, () => _phoneBooking(x));
         add(Iconsax.undo, TripStrings.withdraw, () => TripWithdrawSheet.show(context, enquiry: e!), color: AppColors.error);
       case TripDisplayStatus.asked:
         counter();
-        add(Iconsax.call_calling, TripStrings.iBookedByPhone, () => _phoneBooking(x));
         add(Iconsax.undo, TripStrings.withdraw, () => TripWithdrawSheet.show(context, enquiry: e!), color: AppColors.error);
       case TripDisplayStatus.confirmedByYou:
-        add(Iconsax.edit_2, TripStrings.editBooking, () => _phoneBooking(x, existing: e));
-        add(Iconsax.refresh, TripStrings.resendLink,
-            e!.hostConfirm.canResend(DateTime.now()) ? () => _resend(e) : null);
-        if (link != null) add(Iconsax.copy, TripStrings.copyLink, () => _copy(link));
         add(Iconsax.close_circle, TripStrings.cancelBooking,
-            () => TripCancelSheet.show(context, enquiry: e, ownerSide: false),
+            () => TripCancelSheet.show(context, enquiry: e!, ownerSide: false),
             color: AppColors.error);
       case TripDisplayStatus.confirmedByBoth:
         if (!_c.isReadOnly && TripEnquiryRules.isOutsideTrip(e!, _c.settings, _c.dayCount)) {
@@ -797,7 +746,6 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
       case TripDisplayStatus.holdExpired:
         add(Iconsax.building_4, TripStrings.askOtherStays, () => TripNavigation.openStay(_legIndex));
       default:
-        add(Iconsax.call_calling, TripStrings.iBookedByPhone, () => _phoneBooking(x));
     }
     return LayoutBuilder(builder: (context, box) {
       final w = box.maxWidth;

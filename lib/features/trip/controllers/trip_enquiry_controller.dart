@@ -8,7 +8,6 @@ import '../models/trip_enquiry_model.dart';
 import '../models/trip_offer_model.dart';
 import '../trip_strings.dart';
 import '../trip_strings_v2_find.dart';
-import '../utils/trip_enquiry_rules.dart';
 import 'trip_plan_controller.dart';
 
 class TripEnquiryController extends GetxController {
@@ -289,50 +288,6 @@ class TripEnquiryController extends GetxController {
     final e = await _guard(enquiryId, () => _repo.advanceNotYet(enquiryId));
     if (e != null) _applyToPlan([e]);
     return e != null;
-  }
-
-  Future<TripPhoneBookingResult?> savePhoneBooking({
-    required String stayId,
-    required int day,
-    required bool allNights,
-    int? nights,
-    required Map<String, dynamic> fields,
-    String? replaceEnquiryId,
-    bool closeOthers = true,
-  }) async {
-    final tripId = await _tripId();
-    if (tripId == null) return null;
-    final res = await _guard(
-      null,
-      () => _repo.createPhoneBooking(tripId, {
-        'stayId': stayId,
-        'day': day,
-        'allNights': allNights,
-        'nights': ?nights,
-        ...fields,
-        'closeOthers': closeOthers,
-        'replaceEnquiryId': ?replaceEnquiryId,
-      }),
-    );
-    if (res != null) {
-      _applyToPlan([res.enquiry]);
-      if (closeOthers || replaceEnquiryId != null) unawaited(_plan?.refreshEnquiries());
-    }
-    return res;
-  }
-
-  Future<TripPhoneBookingResult?> editPhoneBooking(String enquiryId, Map<String, dynamic> fields) async {
-    final stored = _plan?.enquiryList.firstWhereOrNull((e) => e.id == enquiryId);
-    final body = TripEnquiryRules.keepStoredNights(stored, fields);
-    final res = await _guard(enquiryId, () => _repo.editPhoneBooking(enquiryId, body));
-    if (res != null) _applyToPlan([res.enquiry]);
-    return res;
-  }
-
-  Future<TripPhoneBookingResult?> resendLink(String enquiryId) async {
-    final res = await _guard(enquiryId, () => _repo.resendHostLink(enquiryId));
-    if (res != null) _applyToPlan([res.enquiry]);
-    return res;
   }
 
   // Saves the plan first: the server rebuilds the driver's lead from the saved plan.

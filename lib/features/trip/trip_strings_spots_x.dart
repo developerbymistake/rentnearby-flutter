@@ -10,8 +10,6 @@ class TripStringsSpotsX {
   static const String addToWishlist = 'Add to wishlist';
   static const String dismiss = 'No thanks';
   static const String offline = 'Offline. Showing your saved list.';
-  static const String list = 'List';
-  static const String map = 'Map';
   static const String undo = 'Undo';
   static String bundleAdded(int n) => 'Added $n ${n == 1 ? 'place' : 'places'}';
   static String fewPlaces(int n) => 'Only $n ${n == 1 ? 'place' : 'places'} here so far.';

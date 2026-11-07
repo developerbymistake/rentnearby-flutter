@@ -33,7 +33,7 @@ class TripTodayCard extends StatelessWidget {
   static String? _validPhone(String? raw) =>
       raw != null && ContactLauncher.tenDigits(raw).isNotEmpty ? raw : null;
 
-  static String? stayPhone(TripEnquiryModel e) => _validPhone(e.owner.phone) ?? _validPhone(e.phoneBooking?.hostPhone);
+  static String? stayPhone(TripEnquiryModel e) => _validPhone(e.owner.phone);
 
   @override
   Widget build(BuildContext context) {
@@ -334,9 +334,7 @@ class TripTodayCard extends StatelessWidget {
     final city = c.isMultiCity ? c.cityNameOf(n) : '';
     final e = c.todayStay(n);
     if (e != null) {
-      final room = e.phoneBooking?.roomName.isNotEmpty == true
-          ? e.phoneBooking!.roomName
-          : (e.acceptedOffer?.lines.firstOrNull?.roomName ?? '');
+      final room = e.acceptedOffer?.lines.firstOrNull?.roomName ?? '';
       final night = _nightOf(e);
       final sub = [
         if (city.isNotEmpty) city,

@@ -108,6 +108,7 @@ class TripSupplyController extends GetxController {
       km: _plan.dayKm(d),
       lat: start?.lat ?? first?.latitude,
       lng: start?.lng ?? first?.longitude,
+      radiusKm: TripConstants.taxiRadiusKm,
     );
   }
 
@@ -279,7 +280,7 @@ class TripSupplyController extends GetxController {
   String? _loadKey(int legIndex) {
     final c = _centre(legIndex);
     if (c == null) return null;
-    return '${c.lat.toStringAsFixed(5)},${c.lng.toStringAsFixed(5)}#${_partyParams(legIndex)}';
+    return '${c.lat.toStringAsFixed(5)},${c.lng.toStringAsFixed(5)}#${_stayRadius(_legNight(legIndex), c).toStringAsFixed(1)}#${_partyParams(legIndex)}';
   }
 
   Map<String, dynamic> _partyParams(int legIndex) {
@@ -289,6 +290,19 @@ class TripSupplyController extends GetxController {
       if (guests > 0) 'guests': guests.clamp(1, TripConstants.stayGuestsMax).toInt(),
       if (guests > 0) 'nights': nights < 1 ? 1 : nights,
     };
+  }
+
+  double _stayRadius(TripStayNight? night, TripPoint? centre) {
+    var far = 0.0;
+    if (night != null && centre != null) {
+      for (final s in night.spots) {
+        final d = TripGeo.km(centre, s);
+        if (d > far) far = d;
+      }
+    }
+    return (far + TripConstants.stayRouteMarginKm)
+        .clamp(TripConstants.stayRadiusKm + 1, TripConstants.stayQueryRadiusMaxKm)
+        .toDouble();
   }
 
   Future<void> loadStays() async {
@@ -315,6 +329,7 @@ class TripSupplyController extends GetxController {
     stayFailed.value = false;
     final night = _legNight(k);
     final centre = _centre(k);
+    final radius = _stayRadius(night, centre);
     _staysWhere = _loadKey(k);
     if (night == null || centre == null) return;
     stayLoading.value = true;
@@ -322,7 +337,7 @@ class TripSupplyController extends GetxController {
       final res = await withRetry(() => ApiService.get('/stays/nearby', params: {
             'latitude': centre.lat,
             'longitude': centre.lng,
-            'radius': TripConstants.stayQueryRadiusMaxKm,
+            'radius': radius,
             'districtId': districtId,
             ..._partyParams(k),
           }));
@@ -339,7 +354,7 @@ class TripSupplyController extends GetxController {
           good.add(r);
         } catch (_) {}
       }
-      final ranked = TripStayRank.rank(good, night, double.infinity);
+      final ranked = TripStayRank.rank(good, night, radius);
       _stayFits
         ..clear()
         ..addEntries(ranked.map((f) => MapEntry(f.id, f)));

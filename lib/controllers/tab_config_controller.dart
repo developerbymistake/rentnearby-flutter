@@ -92,7 +92,10 @@ class TabConfigController extends GetxController {
     return !_displayNames.containsKey(tabKey) || _activeKeys.contains(tabKey);
   }
 
-  bool isActiveForIndex(int tabIndex) => tabIndex == AppTabs.trips || isActive(AppTabs.tabKeys[tabIndex] ?? '');
+  bool isActiveForIndex(int tabIndex) {
+    version.value;
+    return tabIndex == AppTabs.trips || isActive(AppTabs.tabKeys[tabIndex] ?? '');
+  }
 
   String displayName(String tabKey, String fallback) {
     version.value;

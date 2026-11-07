@@ -55,7 +55,6 @@ class ChatMessageBubble extends StatelessWidget {
       case 'trip_enquiry':
       case 'trip_offer':
       case 'trip_offer_response':
-      case 'trip_phone_booking':
       case 'trip_advance_request':
       case 'trip_advance_proof_sent':
       case TripOfferCards.counterType:

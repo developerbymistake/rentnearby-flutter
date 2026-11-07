@@ -8,7 +8,6 @@ import '../../trip/models/trip_enquiry_model.dart';
 import '../../trip/models/trip_offer_model.dart';
 import '../../trip/trip_strings.dart';
 import '../../trip/widgets/trip_cancel_sheet.dart';
-import 'host_confirm_dialog.dart';
 import 'stay_enquiries_controller.dart';
 import 'stay_enquiry_strings.dart';
 import 'trip_ask_advance_sheet.dart';
@@ -172,12 +171,6 @@ class StayEnquiryActions {
     );
     if (ok != true) return false;
     return StayEnquiriesController.ensure().notAvailable(e.id);
-  }
-
-  static Future<bool> hostConfirm(BuildContext context, TripEnquiryModel e, {required bool confirm}) async {
-    final ok = await HostConfirmDialog.show(context, confirm: confirm, enquiry: e);
-    if (ok != true) return false;
-    return StayEnquiriesController.ensure().hostConfirm(e.id, confirm: confirm);
   }
 
   static Future<bool> cancel(BuildContext context, TripEnquiryModel e) async {

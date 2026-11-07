@@ -157,7 +157,6 @@ class TripPlanHeader extends StatelessWidget {
     final progress = c.stepProgress;
     final step = c.isCompleted ? 2 : c.planStep.value;
     final hint = hintOf(c, rows);
-    final state = stateOf(c);
     final editable = !c.isReadOnly && !c.needsUpdate.value;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -209,15 +208,7 @@ class TripPlanHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              TripBookingStatePill(state),
-              const SizedBox(height: 6),
-              _paceChip(context, c, editable),
-            ],
-          ),
+          _paceChip(context, c, editable),
         ],
       ),
       ),

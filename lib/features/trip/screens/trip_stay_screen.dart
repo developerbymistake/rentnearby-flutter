@@ -24,11 +24,9 @@ import '../utils/trip_format.dart';
 import '../widgets/trip_arrange_confirm.dart';
 import '../widgets/trip_filter_chips.dart';
 import '../widgets/trip_page_header.dart';
-import '../widgets/trip_phone_booking_sheet.dart';
 import '../widgets/trip_sheet_frame.dart';
 import '../widgets/trip_status.dart';
 import '../widgets/trip_stay_row.dart';
-import 'trip_dates_sheet.dart';
 import 'trip_stay_enquiry_sheet.dart';
 
 class TripStayScreen extends StatefulWidget {
@@ -145,7 +143,15 @@ class _TripStayScreenState extends State<TripStayScreen> {
 
   List<TripFilterChip> _chips() {
     final max = _supply.maxPrice.value;
+    final canSplit = _only.isEmpty && _nights - _pastNights > 1 && !_plan.isReadOnly;
     return [
+      if (canSplit)
+        TripFilterChip(
+          label: TripStringsV2Find.nightByNight,
+          selected: _split.value,
+          icon: Iconsax.calendar_1,
+          onTap: () => _split.value = !_split.value,
+        ),
       TripFilterChip(
         label: max == null ? TripStringsA2.maxPrice : TripStringsA2.underPrice(BrowseItem.inr(max)),
         selected: max != null,
@@ -239,64 +245,8 @@ class _TripStayScreenState extends State<TripStayScreen> {
     );
   }
 
-  Widget _splitBar() {
-    final on = _split.value;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton.icon(
-          onPressed: () => _split.value = !on,
-          style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-          icon: Icon(on ? Iconsax.building_4 : Iconsax.calendar_1, size: 16, color: StayColors.accentDark),
-          label: Text(on ? TripStringsV2Find.sameStayFor(_nights - _pastNights) : TripStringsV2Find.nightByNight,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _phoneBooked() async {
-    if (!await TripDatesSheet.ensure(context, heading: TripStrings.addYourDates) || !_plan.hasDates || !mounted) return;
-    final stay = await TripSheetFrame.show<StayNearbyModel>(context, _PickStaySheet(stays: _supply.stays.toList()));
-    if (stay == null || !mounted) return;
-    final phone = ContactLauncher.tenDigits(stay.ownerPhone ?? '');
-    final r = await TripPhoneBookingSheet.show(
-      context,
-      stayId: stay.id,
-      stayName: stay.name ?? '',
-      hostName: stay.ownerName,
-      hostPhone: phone.length == 10 ? phone : null,
-      day: _only.isNotEmpty ? _only.first : _firstDay,
-    );
-    if (r == null || !mounted) return;
-    _plan.rememberLink(r);
-    if (r.confirmLink.isNotEmpty) await TripConfirmLinkSheet.show(context, r);
-    TripNavigation.backToPlan();
-  }
-
-  Widget _phoneLink() => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: _phoneBooked,
-            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-            child: const Text(TripStringsV2Find.alreadyBookedByPhone,
-                style: TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
-          ),
-        ),
-      );
-
   Widget _top() => Obx(() {
         _plan.plan.value;
-        final showSplit = _only.isEmpty && _nights - _pastNights > 1 && !_noSupply && !_plan.isReadOnly && !_split.value;
-        final showPhone = !_noSupply &&
-            !_plan.isReadOnly &&
-            _plan.confirmedRowOf(_key) == null &&
-            _supply.stays.isNotEmpty;
         final showChips = !_noSupply && (_supply.stays.isNotEmpty || _supply.hasStayFilters);
         return Center(
           child: ConstrainedBox(
@@ -304,8 +254,6 @@ class _TripStayScreenState extends State<TripStayScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (showSplit) _splitBar(),
-                if (showPhone) _phoneLink(),
                 if (showChips)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -354,12 +302,6 @@ class _TripStayScreenState extends State<TripStayScreen> {
     };
   }
 
-  String _whatsAppText(int day, int nights) {
-    final first = _plan.dateOf(day);
-    final range = first == null ? null : TripFormat.dateRange(first, DateTime(first.year, first.month, first.day + nights));
-    return TripStrings.stayWhatsAppText(_city, range, _plan.settings.peopleSummary);
-  }
-
   Widget _row(StayNearbyModel s, int day, int nights, TripEnquiryModel? asked) {
     final rawPhone = s.ownerPhone;
     final phone = (rawPhone == null || ContactLauncher.tenDigits(rawPhone).isEmpty) ? null : rawPhone;
@@ -376,7 +318,6 @@ class _TripStayScreenState extends State<TripStayScreen> {
           readOnly: _plan.isReadOnly,
           onOpen: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, 'distanceKm': s.distanceKm}),
           onCall: phone == null ? null : () => ContactLauncher.call(phone),
-          onWhatsApp: phone == null ? null : () => ContactLauncher.whatsApp(phone, message: _whatsAppText(day, nights)),
           onAsk: () => TripStayEnquirySheet.show(context, stay: s, day: day, nights: nights),
         ),
       ),
@@ -466,7 +407,6 @@ class _TripStayScreenState extends State<TripStayScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (!_plan.isReadOnly && _only.isEmpty) _splitBar(),
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Text(TripStringsV2Find.splitNote,
@@ -607,58 +547,4 @@ class _PriceBody extends StatelessWidget {
       ],
     );
   }
-}
-
-class _PickStaySheet extends StatelessWidget {
-  const _PickStaySheet({required this.stays});
-
-  final List<StayNearbyModel> stays;
-
-  @override
-  Widget build(BuildContext context) {
-    return TripSheetFrame(
-      title: TripStringsV2Find.whichStay,
-      description: TripStringsV2Find.pickBookedStay,
-      children: [
-        for (final s in stays)
-          InkWell(
-            onTap: () => Navigator.pop(context, s),
-            borderRadius: BorderRadius.circular(12),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 52),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(s.name ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                          if (_area(s).isNotEmpty)
-                            Text(_area(s),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right, size: 20, color: AppColors.textHint),
-                  ],
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  static String _area(StayNearbyModel s) => [
-        if ((s.stayTypeName ?? '').isNotEmpty) s.stayTypeName!,
-        if (s.distanceKm > 0) '${s.distanceKm.toStringAsFixed(1)} km',
-      ].join(' · ');
 }

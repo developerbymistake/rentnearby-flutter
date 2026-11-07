@@ -5,7 +5,9 @@ class TripConstants {
   static const int defaultVisitMinutes = 60;
   static const double stayRadiusKm = 5;
   static const double stayQueryRadiusMinKm = 1;
-  static const double stayQueryRadiusMaxKm = 50;
+  static const double stayQueryRadiusMaxKm = 20;
+  static const double stayRouteMarginKm = 6;
+  static const double taxiRadiusKm = 25;
   static const int stayGuestsMax = 100;
   static const double stayRadiusWideKm = 12;
   static const int spotsPageSize = 20;
@@ -29,7 +31,6 @@ class TripConstants {
   static const int offerHours = 24;
   static const int offerUrgentHours = 2;
   static const int urgentHours = 72;
-  static const int hostLinkResendHours = 24;
   static const int hostNameMax = 60;
   static const int roomNameMax = 40;
   static const int cancelReasonMax = 300;

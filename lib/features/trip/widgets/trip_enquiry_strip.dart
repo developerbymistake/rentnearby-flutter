@@ -9,10 +9,6 @@ import 'trip_status.dart';
 
 class TripStripAction {
   static const withdraw = 'withdraw';
-  static const phoneBooking = 'phoneBooking';
-  static const editBooking = 'editBooking';
-  static const resendLink = 'resendLink';
-  static const copyLink = 'copyLink';
   static const cancel = 'cancel';
   static const report = 'report';
   static const callHost = 'callHost';
@@ -26,7 +22,7 @@ class TripStripAction {
 
   const TripStripAction(this.id, this.label, {this.destructive = false, this.enabled = true});
 
-  static List<TripStripAction> forTraveller(TripEnquiryModel e, {bool linkCached = false}) {
+  static List<TripStripAction> forTraveller(TripEnquiryModel e, ) {
     const reportAction = TripStripAction(report, TripStrings.report);
     switch (e.display) {
       case TripDisplayStatus.asked:
@@ -34,16 +30,6 @@ class TripStripAction {
         return [
           if (e.canCounter) const TripStripAction(counter, TripStrings.proposePrice),
           const TripStripAction(withdraw, TripStrings.withdraw),
-          const TripStripAction(phoneBooking, TripStrings.iBookedByPhone),
-          reportAction,
-        ];
-      case TripDisplayStatus.confirmedByYou:
-        final canResend = e.hostConfirm.canResend(DateTime.now());
-        return [
-          const TripStripAction(editBooking, TripStrings.editBooking),
-          TripStripAction(resendLink, TripStrings.resendLink, enabled: canResend),
-          TripStripAction(copyLink, TripStrings.copyLink, enabled: canResend || linkCached),
-          const TripStripAction(cancel, TripStrings.cancelBooking, destructive: true),
           reportAction,
         ];
       case TripDisplayStatus.confirmedByBoth:

@@ -11,9 +11,6 @@ class TripEnquiryErrorTypes {
   static const String offerExpired = 'OfferExpired';
   static const String offerNotPending = 'OfferNotPending';
   static const String enquiryClosed = 'TripEnquiryClosed';
-  static const String phoneBookingPaused = 'PhoneBookingPaused';
-  static const String resendTooSoon = 'HostLinkResendTooSoon';
-  static const String linkLimit = 'HostLinkLimit';
   static const String executionDisabled = 'TripExecutionDisabled';
   static const String concurrent = 'CONCURRENT_UPDATE';
   static const String notOwner = 'NotEnquiryOwner';
@@ -124,15 +121,6 @@ class TripEnquiryRepository {
   Future<TripEnquiryModel> advanceNotYet(String enquiryId) async =>
       _one(await ApiService.post('/trips/enquiries/$enquiryId/advance/not-yet', const {}));
 
-  Future<TripPhoneBookingResult> createPhoneBooking(String tripId, Map<String, dynamic> body) async =>
-      TripPhoneBookingResult.fromJson(_data(await ApiService.post('/trips/$tripId/phone-bookings', body)));
-
-  Future<TripPhoneBookingResult> editPhoneBooking(String enquiryId, Map<String, dynamic> body) async =>
-      TripPhoneBookingResult.fromJson(_data(await ApiService.put('/trips/enquiries/$enquiryId/phone-booking', body)));
-
-  Future<TripPhoneBookingResult> resendHostLink(String enquiryId) async => TripPhoneBookingResult.fromJson(
-      _data(await ApiService.post('/trips/enquiries/$enquiryId/host-confirm-link/resend', const {})));
-
   Future<TripEnquiryModel> updateLead(String enquiryId) async =>
       _one(await ApiService.post('/trips/enquiries/$enquiryId/lead-update', const {}));
 
@@ -218,7 +206,4 @@ class TripEnquiryRepository {
 
   Future<TripEnquiryModel> notAvailable(String enquiryId) async =>
       _one(await ApiService.post('/trips/enquiries/$enquiryId/not-available', const {}));
-
-  Future<TripEnquiryModel> hostConfirm(String enquiryId, {required bool confirm}) async =>
-      _one(await ApiService.post('/trips/enquiries/$enquiryId/host-confirm', {'confirm': confirm}));
 }
