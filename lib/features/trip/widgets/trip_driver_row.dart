@@ -6,7 +6,6 @@ import '../../../models/browse_item.dart';
 import '../../taxi/models/taxi_browse_item.dart';
 import '../../taxi/taxi_option_sets.dart';
 import '../trip_colors.dart';
-import '../trip_strings.dart';
 import '../trip_strings_a3.dart';
 import '../trip_strings_algo_aa.dart';
 import '../trip_strings_final_aa.dart';
@@ -20,7 +19,6 @@ class TripDriverRow extends StatelessWidget {
     required this.item,
     required this.onOpen,
     required this.onCall,
-    required this.onWhatsApp,
     required this.onAsk,
     required this.onMenu,
     this.status,
@@ -39,7 +37,6 @@ class TripDriverRow extends StatelessWidget {
   final bool contactBusy;
   final VoidCallback onOpen;
   final VoidCallback onCall;
-  final VoidCallback onWhatsApp;
   final VoidCallback onAsk;
   final ValueChanged<int> onMenu;
   final List<PopupMenuEntry<int>> menuItems;
@@ -198,22 +195,6 @@ class TripDriverRow extends StatelessWidget {
       color: TaxiColors.accentDark,
       onTap: contactBusy ? null : onCall,
     );
-    final wa = SizedBox(
-      width: 44,
-      height: 44,
-      child: IconButton(
-        onPressed: contactBusy ? null : onWhatsApp,
-        tooltip: TripStrings.whatsApp,
-        style: IconButton.styleFrom(
-          side: BorderSide(color: AppColors.whatsApp.withValues(alpha: 0.5)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        icon: Image.asset('assets/images/whatsapp_icon.png',
-            width: 20,
-            height: 20,
-            errorBuilder: (_, _, _) => const Icon(Icons.chat, color: AppColors.whatsApp, size: 20)),
-      ),
-    );
     final asked = status != null;
     final ask = SizedBox(
       height: 44,
@@ -239,8 +220,6 @@ class TripDriverRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(child: call),
-        const SizedBox(width: 8),
-        wa,
         const SizedBox(width: 8),
         Expanded(child: ask),
       ],

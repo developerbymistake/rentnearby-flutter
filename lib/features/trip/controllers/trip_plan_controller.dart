@@ -41,6 +41,7 @@ import '../trip_strings_steps_a3.dart';
 import '../trip_strings_steps_k3.dart';
 import '../trip_strings_v2_create.dart';
 import '../trip_strings_v2_plan.dart';
+import '../utils/trip_supply_area.dart';
 import '../utils/trip_clock.dart';
 import '../utils/trip_easy_rules.dart';
 import '../utils/trip_days_rules.dart';
@@ -547,8 +548,9 @@ class TripPlanController extends GetxController {
   }
 
   bool? staySupplyFor(int day) {
-    final d = districtIdOf(day);
-    return d == null ? null : staySupplyByDistrict[d];
+    final p = plan.value;
+    final d = p?.districtIdOf(day);
+    return d == null ? null : staySupplyByDistrict[TripSupplyArea.keyOf(d, p!.legAt(p.legIndexOf(day)))];
   }
 
   bool canFindStayOn(int day) => supplyAvailableFor(day) && !stayTabOff.value && !isReadOnly && staySupplyFor(day) != false;
@@ -560,20 +562,21 @@ class TripPlanController extends GetxController {
     final d = p.districtIdOf(day);
     final leg = p.legAt(p.legIndexOf(day));
     if (d == null || leg == null || !leg.hasPoint) return;
-    if (staySupplyByDistrict.containsKey(d) || !_stayProbing.add(d)) return;
+    final key = TripSupplyArea.keyOf(d, leg);
+    if (staySupplyByDistrict.containsKey(key) || !_stayProbing.add(key)) return;
     try {
       final res = await ApiService.get('/stays/nearby', params: {
         'latitude': leg.latitude,
         'longitude': leg.longitude,
-        'radius': TripConstants.stayRadiusWideKm,
+        'radius': TripConstants.cityRadiusKm,
         'districtId': d,
       });
       final data = res['data'];
       final items = data is Map<String, dynamic> ? (data['items'] as List?) ?? const [] : const [];
-      staySupplyByDistrict[d] = items.isNotEmpty;
+      staySupplyByDistrict[key] = items.isNotEmpty;
     } catch (_) {
     } finally {
-      _stayProbing.remove(d);
+      _stayProbing.remove(key);
     }
   }
 
@@ -586,8 +589,9 @@ class TripPlanController extends GetxController {
       unawaited(checkSupply());
       return;
     }
-    final d = plan.value?.legAt(k)?.districtId;
-    if (d != null) _supplyTried.remove(d);
+    final leg = plan.value?.legAt(k);
+    final d = leg?.districtId;
+    if (d != null) _supplyTried.remove(TripSupplyArea.keyOf(d, leg));
     taxiSupplyByLeg.remove(k);
     unawaited(ensureSupply(k));
   }
@@ -2903,7 +2907,8 @@ class TripPlanController extends GetxController {
         continue;
       }
       final d = l.districtId;
-      if (d != null && _supplyByDistrict.containsKey(d)) next[l.index] = _supplyByDistrict[d];
+      final key = d == null ? null : TripSupplyArea.keyOf(d, l);
+      if (key != null && _supplyByDistrict.containsKey(key)) next[l.index] = _supplyByDistrict[key];
     }
     taxiSupplyByLeg.assignAll(next);
   }
@@ -2919,16 +2924,17 @@ class TripPlanController extends GetxController {
       if (!_legUnsaved(leg.cityKey)) taxiSupplyByLeg[legIndex] = false;
       return;
     }
-    final cached = _supplyByDistrict[districtId];
+    final key = TripSupplyArea.keyOf(districtId, leg);
+    final cached = _supplyByDistrict[key];
     if (cached != null) {
       taxiSupplyByLeg[legIndex] = cached;
       return;
     }
-    if (taxiTabOff.value || !_supplyTried.add(districtId)) {
+    if (taxiTabOff.value || !_supplyTried.add(key)) {
       if (!taxiSupplyByLeg.containsKey(legIndex)) taxiSupplyByLeg[legIndex] = null;
       return;
     }
-    final has = await _browseDistrict(districtId);
+    final has = await _browseLeg(districtId, leg);
     if (has == null) {
       if (!taxiSupplyByLeg.containsKey(legIndex)) taxiSupplyByLeg[legIndex] = null;
       if (!taxiTabOff.value) supplyCheckFailed.add(legIndex);
@@ -2941,23 +2947,30 @@ class TripPlanController extends GetxController {
     supplyCheckFailed.remove(k);
   }
 
-  Future<bool?> _browseDistrict(String districtId) {
-    final running = _supplyInFlight[districtId];
+  Future<bool?> _browseLeg(String districtId, TripCityLeg? leg) {
+    final key = TripSupplyArea.keyOf(districtId, leg);
+    final running = _supplyInFlight[key];
     if (running != null) return running;
     final f = () async {
       try {
-        final page = await const TaxiBrowseRepository().browseLocal(districtId: districtId, localRate: true, pageSize: 1);
+        final page = await const TaxiBrowseRepository().browseLocal(
+          districtId: districtId,
+          localRate: true,
+          pageSize: 1,
+          centre: TripSupplyArea.centreOf(leg),
+          radiusKm: TripConstants.cityRadiusKm,
+        );
         final has = page.items.isNotEmpty;
-        _supplyByDistrict[districtId] = has;
+        _supplyByDistrict[key] = has;
         return has;
       } catch (e) {
         if (DioErrorMapper.errorType(e) == ApiService.tabInactiveType) taxiTabOff.value = true;
         return null;
       } finally {
-        _supplyInFlight.remove(districtId);
+        _supplyInFlight.remove(key);
       }
     }();
-    _supplyInFlight[districtId] = f;
+    _supplyInFlight[key] = f;
     return f;
   }
 
@@ -4043,15 +4056,23 @@ class TripPlanController extends GetxController {
       return;
     }
     if (taxiTabOff.value) return;
-    taxiSupply.value = _supplyByDistrict[districtId];
+    final leg1 = p.legAt(1);
+    final key = TripSupplyArea.keyOf(districtId, leg1);
+    taxiSupply.value = _supplyByDistrict[key];
     taxiSupplyByLeg[1] = taxiSupply.value;
     try {
-      final page = await const TaxiBrowseRepository().browseLocal(districtId: districtId, localRate: true, pageSize: 1);
+      final page = await const TaxiBrowseRepository().browseLocal(
+        districtId: districtId,
+        localRate: true,
+        pageSize: 1,
+        centre: TripSupplyArea.centreOf(leg1),
+        radiusKm: TripConstants.cityRadiusKm,
+      );
       if (seq != _supplySeq) return;
       cityHasTaxis.value = page.items.isNotEmpty;
       taxiSupply.value = page.items.isNotEmpty;
       taxiSupplyByLeg[1] = page.items.isNotEmpty;
-      _supplyByDistrict[districtId] = page.items.isNotEmpty;
+      _supplyByDistrict[key] = page.items.isNotEmpty;
       supplyCheckFailed.remove(1);
     } catch (e) {
       if (seq != _supplySeq) return;
@@ -4067,8 +4088,9 @@ class TripPlanController extends GetxController {
   void _recheckLegs(List<int> legs) {
     for (final k in legs) {
       if (taxiSupplyByLeg[k] != null) continue;
-      final d = plan.value?.legAt(k)?.districtId;
-      if (d != null) _supplyTried.remove(d);
+      final leg = plan.value?.legAt(k);
+      final d = leg?.districtId;
+      if (d != null) _supplyTried.remove(TripSupplyArea.keyOf(d, leg));
       taxiSupplyByLeg.remove(k);
       unawaited(ensureSupply(k));
     }

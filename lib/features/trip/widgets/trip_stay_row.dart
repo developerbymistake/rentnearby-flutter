@@ -218,6 +218,19 @@ class TripStayRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                       fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+              if (stay.locality.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Row(children: [
+                  const Icon(Iconsax.location, size: 12, color: AppColors.textLight),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text(stay.locality,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                  ),
+                ]),
+              ],
               if (facts != null && !_paused) ...[
                 const SizedBox(height: 2),
                 Text(facts,

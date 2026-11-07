@@ -9,8 +9,8 @@ import '../../taxi/models/taxi_browse_item.dart';
 import '../trip_constants.dart';
 import '../trip_strings_a2.dart';
 import '../utils/trip_geo.dart';
-import '../utils/trip_stay_base.dart';
 import '../utils/trip_stay_rank.dart';
+import '../utils/trip_supply_area.dart';
 import '../utils/trip_taxi_fit.dart';
 import 'trip_plan_controller.dart';
 
@@ -100,15 +100,13 @@ class TripSupplyController extends GetxController {
 
   TripTaxiNeed _taxiNeed(int d) {
     final p = _plan.plan.value;
-    final spots = p?.dayAt(d)?.spots ?? const [];
-    final first = spots.isEmpty ? null : spots.first;
-    final start = p == null ? null : TripStayBase.startOf(p, d, _plan.enquiryList);
+    final centre = p == null ? null : TripSupplyArea.centreOf(p.legAt(p.legIndexOf(d)));
     return TripTaxiNeed.of(
       people: _plan.settings.peopleCount,
       km: _plan.dayKm(d),
-      lat: start?.lat ?? first?.latitude,
-      lng: start?.lng ?? first?.longitude,
-      radiusKm: TripConstants.taxiRadiusKm,
+      lat: centre?.lat,
+      lng: centre?.lng,
+      radiusKm: TripConstants.cityRadiusKm,
     );
   }
 
@@ -252,35 +250,12 @@ class TripSupplyController extends GetxController {
     _near = point != null && TripGeo.valid(point) ? point : null;
   }
 
-  TripStayNight? _legNight(int legIndex) {
-    final near = _near;
-    if (near != null) return TripStayNight(spots: [near]);
-    final p = _plan.plan.value;
-    final leg = p?.legAt(legIndex);
-    if (p == null || leg == null) return null;
-    final spots = <TripPoint>[
-      for (final d in p.daysOf(legIndex))
-        for (final s in d.spots) (lat: s.latitude, lng: s.longitude),
-    ].where(TripGeo.valid).toList();
-    final centre = (lat: leg.latitude, lng: leg.longitude);
-    if (spots.isNotEmpty) return TripStayNight(spots: spots);
-    return TripGeo.valid(centre) ? TripStayNight(spots: [centre]) : null;
-  }
-
-  TripPoint? _centre(int legIndex) {
-    if (_near != null) return _near;
-    final leg = _plan.plan.value?.legAt(legIndex);
-    if (leg != null && leg.hasPoint) {
-      final c = (lat: leg.latitude, lng: leg.longitude);
-      if (TripGeo.valid(c)) return c;
-    }
-    return _legNight(legIndex)?.spots.first;
-  }
+  TripPoint? _centre(int legIndex) => _near ?? TripSupplyArea.centreOf(_plan.plan.value?.legAt(legIndex));
 
   String? _loadKey(int legIndex) {
     final c = _centre(legIndex);
     if (c == null) return null;
-    return '${c.lat.toStringAsFixed(5)},${c.lng.toStringAsFixed(5)}#${_stayRadius(_legNight(legIndex), c).toStringAsFixed(1)}#${_partyParams(legIndex)}';
+    return '${c.lat.toStringAsFixed(5)},${c.lng.toStringAsFixed(5)}#${_partyParams(legIndex)}';
   }
 
   Map<String, dynamic> _partyParams(int legIndex) {
@@ -290,19 +265,6 @@ class TripSupplyController extends GetxController {
       if (guests > 0) 'guests': guests.clamp(1, TripConstants.stayGuestsMax).toInt(),
       if (guests > 0) 'nights': nights < 1 ? 1 : nights,
     };
-  }
-
-  double _stayRadius(TripStayNight? night, TripPoint? centre) {
-    var far = 0.0;
-    if (night != null && centre != null) {
-      for (final s in night.spots) {
-        final d = TripGeo.km(centre, s);
-        if (d > far) far = d;
-      }
-    }
-    return (far + TripConstants.stayRouteMarginKm)
-        .clamp(TripConstants.stayRadiusKm + 1, TripConstants.stayQueryRadiusMaxKm)
-        .toDouble();
   }
 
   Future<void> loadStays() async {
@@ -327,11 +289,11 @@ class TripSupplyController extends GetxController {
     _stayFits.clear();
     hostelAvailable.value = false;
     stayFailed.value = false;
-    final night = _legNight(k);
     final centre = _centre(k);
-    final radius = _stayRadius(night, centre);
     _staysWhere = _loadKey(k);
-    if (night == null || centre == null) return;
+    if (centre == null) return;
+    final night = TripStayNight(spots: [centre]);
+    const radius = TripConstants.cityRadiusKm;
     stayLoading.value = true;
     try {
       final res = await withRetry(() => ApiService.get('/stays/nearby', params: {

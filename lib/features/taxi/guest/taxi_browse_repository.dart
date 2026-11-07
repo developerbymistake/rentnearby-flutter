@@ -29,6 +29,8 @@ class TaxiBrowseRepository {
     bool localRate = false,
     int page = 1,
     int pageSize = 20,
+    ({double lat, double lng})? centre,
+    double? radiusKm,
   }) async =>
       _page(await ApiService.get('/taxis/browse', params: {
         'districtId': districtId,
@@ -38,6 +40,9 @@ class TaxiBrowseRepository {
         'localRate': ?(localRate ? 'true' : null),
         'page': page,
         'pageSize': pageSize,
+        if (centre != null) 'lat': centre.lat,
+        if (centre != null) 'lng': centre.lng,
+        if (centre != null && radiusKm != null) 'radiusKm': radiusKm,
       }));
 
   Future<TaxiBrowsePage> search({

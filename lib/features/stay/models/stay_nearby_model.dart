@@ -20,6 +20,8 @@ class StayNearbyModel {
   final bool hasGroundFloorRoom;
   final String? bestRoomName;
   final int? bestRoomGuests;
+  final String? cityName;
+  final String? districtName;
 
   StayNearbyModel({
     required this.id,
@@ -41,7 +43,18 @@ class StayNearbyModel {
     this.hasGroundFloorRoom = false,
     this.bestRoomName,
     this.bestRoomGuests,
+    this.cityName,
+    this.districtName,
   });
+
+  String get locality {
+    final parts = <String>[];
+    for (final n in [cityName, districtName]) {
+      final v = n?.trim() ?? '';
+      if (v.isNotEmpty && !parts.any((p) => p.toLowerCase() == v.toLowerCase())) parts.add(v);
+    }
+    return parts.join(', ');
+  }
 
   String get title => (name == null || name!.isEmpty) ? 'Stay' : name!;
 
@@ -69,5 +82,7 @@ class StayNearbyModel {
         hasGroundFloorRoom: json['hasGroundFloorRoom'] == true,
         bestRoomName: json['bestRoomName'] as String?,
         bestRoomGuests: (json['bestRoomGuests'] as num?)?.toInt(),
+        cityName: json['cityName'] as String?,
+        districtName: json['districtName'] as String?,
       );
 }

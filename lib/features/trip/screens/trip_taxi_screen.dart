@@ -168,14 +168,10 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
     }
   }
 
-  Future<void> _contact(TaxiBrowseItem t, {required bool whatsApp}) async {
+  Future<void> _call(TaxiBrowseItem t) async {
     final c = _contacts[t.id] ?? await _loadContact(t);
     if (c == null) return;
-    if (whatsApp) {
-      await ContactLauncher.whatsApp(c.whatsApp, message: _plan.whatsAppMessage(_firstDay, t.driverName));
-    } else {
-      await ContactLauncher.call(c.phone);
-    }
+    await ContactLauncher.call(c.phone);
   }
 
   TripEnquiryModel? _askedOf(String taxiId) {
@@ -457,8 +453,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
                     days: n,
                     contactBusy: _contactBusy.contains(t.id),
                     onOpen: () => _open(t),
-                    onCall: () => _contact(t, whatsApp: false),
-                    onWhatsApp: () => _contact(t, whatsApp: true),
+                    onCall: () => _call(t),
                     onAsk: () => _ask(t),
                     menuItems: _menu(),
                     onMenu: (v) => v == 1 ? _book(t) : _open(t),
