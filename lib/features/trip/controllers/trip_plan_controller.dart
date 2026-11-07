@@ -80,6 +80,7 @@ class TripPlanController extends GetxController {
   final saveFailed = false.obs;
   final lastSavedAt = Rxn<DateTime>();
   final taxiTabOff = false.obs;
+  final taxiChecking = false.obs;
   final stayTabOff = false.obs;
   final cityHasTaxis = Rxn<bool>();
   final taxiSupply = Rxn<bool>();
@@ -953,11 +954,7 @@ class TripPlanController extends GetxController {
 
   final planStep = 1.obs;
 
-  int get initialStep {
-    final t = trip.value;
-    if (t != null && ((t.progress?.done ?? 0) > 0 ||enquiryList.isNotEmpty)) return 2;
-    return easyRows.any((r) => r.state != TripRowState.todo) ? 2 : 1;
-  }
+  int get initialStep => pendingStep;
 
   int get pendingStep => spotCount == 0 ? 1 : 2;
 
@@ -1994,8 +1991,8 @@ class TripPlanController extends GetxController {
         offline.value = false;
         // A save from the copy already reached the server: this answer is older, so only the rows are refreshed.
         if (gen != _saveGen || _saving != null) {
-          checkSupply();
           _adoptDistrict(t);
+          checkSupply();
           unawaited(refreshEnquiries());
           return;
         }
@@ -2005,8 +2002,8 @@ class TripPlanController extends GetxController {
       enquiryList.assignAll(t.enquiries);
       final resend = _adoptPendingCopy(t);
       picked = _firstCity(t);
-      checkSupply();
       _adoptDistrict(t);
+      checkSupply();
       reconcileSteps(t);
       reconcileTravel(t);
       if (resend) unawaited(saveNow());
@@ -4046,16 +4043,24 @@ class TripPlanController extends GetxController {
     final districtId = p.districtId;
     final recheck = [for (final k in taxiSupplyByLeg.keys) if (k >= 2) k];
     if (districtId == null) {
+      taxiChecking.value = false;
       cityHasTaxis.value = null;
-      taxiSupply.value = trip.value == null ? null : false;
-      taxiSupplyByLeg[1] = taxiSupply.value;
+      taxiSupply.value = null;
+      taxiSupplyByLeg[1] = null;
       _recheckLegs(recheck);
       return;
     }
-    if (taxiTabOff.value) return;
+    if (taxiTabOff.value) {
+      taxiChecking.value = false;
+      return;
+    }
+    taxiSupply.value = _supplyByDistrict[districtId];
+    taxiSupplyByLeg[1] = taxiSupply.value;
+    taxiChecking.value = taxiSupply.value == null;
     try {
       final page = await const TaxiBrowseRepository().browseLocal(districtId: districtId, localRate: true, pageSize: 1);
       if (seq != _supplySeq) return;
+      taxiChecking.value = false;
       cityHasTaxis.value = page.items.isNotEmpty;
       taxiSupply.value = page.items.isNotEmpty;
       taxiSupplyByLeg[1] = page.items.isNotEmpty;
@@ -4063,6 +4068,7 @@ class TripPlanController extends GetxController {
       supplyCheckFailed.remove(1);
     } catch (e) {
       if (seq != _supplySeq) return;
+      taxiChecking.value = false;
       if (DioErrorMapper.errorType(e) == ApiService.tabInactiveType) {
         taxiTabOff.value = true;
       } else {

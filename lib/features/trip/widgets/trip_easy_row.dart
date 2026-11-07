@@ -181,6 +181,17 @@ class _TripEasyRowState extends State<TripEasyRow> {
     switch (_i.state) {
       case TripRowState.todo || TripRowState.attention:
         if (_loadFailed) return const SizedBox.shrink();
+        if (_taxiChecking) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Row(children: [
+              SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: TripColors.accent)),
+              SizedBox(width: 10),
+              Text(TripStringsV2Easy.checkingTaxis,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textMedium)),
+            ]),
+          );
+        }
         final noSupply = _noSupply;
         return Wrap(
           spacing: 8,
@@ -230,7 +241,20 @@ class _TripEasyRowState extends State<TripEasyRow> {
                           style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
                     ),
             ),
-            _link(TripStringsV2Easy.skip, _skip, color: AppColors.textMedium),
+            SizedBox(
+              height: 38,
+              child: OutlinedButton(
+                onPressed: _busy ? null : _skip,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.success,
+                  side: const BorderSide(color: AppColors.success),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text(TripStringsV2Easy.skip,
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600)),
+              ),
+            ),
           ],
         );
       case TripRowState.own:
@@ -241,6 +265,9 @@ class _TripEasyRowState extends State<TripEasyRow> {
         return const SizedBox.shrink();
     }
   }
+
+  bool get _taxiChecking =>
+      _i.key.kind == TripEasyRowKind.taxi && _i.state == TripRowState.todo && _c.taxiChecking.value && !_c.taxiTabOff.value;
 
   bool get _noSupply {
     final p = _c.plan.value;

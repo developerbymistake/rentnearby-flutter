@@ -1582,4 +1582,24 @@ void main() {
       expect(TripDaysRules.canAddOnDay(c.plan.value!, 2), isTrue);
     });
   });
+  group('taxi supply check', () {
+    TripPlanController ctl(TripPlan p) {
+      final c = TripPlanController();
+      addTearDown(c.onClose);
+      c.plan.value = p;
+      c.trip.value = _trip(p);
+      return c;
+    }
+
+    test('a plan without a district keeps taxi supply unknown, never "no taxis"', () async {
+      final c = ctl(_plan());
+      expect(c.plan.value!.districtId, isNull);
+      c.taxiSupply.value = false;
+      c.taxiSupplyByLeg[1] = false;
+      await c.checkSupply();
+      expect(c.taxiSupply.value, isNull);
+      expect(c.taxiSupplyByLeg[1], isNull);
+      expect(c.cityHasTaxis.value, isNull);
+    });
+  });
 }

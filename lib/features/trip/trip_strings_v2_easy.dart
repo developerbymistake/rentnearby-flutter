@@ -14,6 +14,7 @@ class TripStringsV2Easy {
   static const String helpMeFind = 'Help me find';
   static const String arrangeMyself = "I'll arrange myself";
   static const String skip = 'Skip';
+  static const String checkingTaxis = 'Checking taxis…';
   static const String undo = 'Undo';
   static const String change = 'Change';
   static const String replies = 'Replies';

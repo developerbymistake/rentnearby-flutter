@@ -353,12 +353,17 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
         ),
       );
 
-  Widget _skipButton() => TextButton(
-        onPressed: _skip,
-        style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-        child: const Text(TripStringsV2Find.skip,
-            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
-      );
+  Widget _skipButton() => OutlinedButton(
+          onPressed: _skip,
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 48),
+            foregroundColor: AppColors.success,
+            side: const BorderSide(color: AppColors.success),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Text(TripStringsV2Find.skip, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+        );
 
   Widget _shimmerList() => SliverPadding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -520,12 +525,17 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
                 gradient: TaxiColors.gradient,
                 trailing: _plan.isReadOnly
                     ? null
-                    : TextButton(
+                    : OutlinedButton(
                         onPressed: _skip,
-                        style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 36),
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        ),
                         child: const Text(TripStringsV2Find.skip,
-                            style: TextStyle(
-                                fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                            style: TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700)),
                       ),
               );
             }),
