@@ -7,6 +7,14 @@ import '../models/trip_spot_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings_mca_a2.dart';
 
+class TripCreateSession extends GetxController {
+  final days = 1.obs;
+
+  TripCreateSession(int start) {
+    days.value = start;
+  }
+}
+
 class TripSpotsController extends GetxController {
   final int cityKey;
   final Set<String> existingIds;
@@ -28,6 +36,7 @@ class TripSpotsController extends GetxController {
   final cityName = ''.obs;
   final selected = <String>{}.obs;
   final filter = Rxn<String>();
+  final limit = (-1).obs;
   String? nextCursor;
   int _seq = 0;
   bool _loadingAll = false;
@@ -48,8 +57,10 @@ class TripSpotsController extends GetxController {
 
   List<TripSpotModel> get visible {
     final f = filter.value;
-    return f == null ? items : items.where((s) => s.category == f).toList();
+    return TripSpotModel.photoFirst(f == null ? items.toList() : items.where((s) => s.category == f).toList());
   }
+
+  bool get atLimit => limit.value >= 0 && selected.length >= limit.value;
 
   List<TripSpotModel> get chosen => items.where((s) => selected.contains(s.id)).toList();
 
@@ -125,20 +136,36 @@ class TripSpotsController extends GetxController {
     }
   }
 
+  // Picks restored from a saved draft may sit on a page that is not loaded yet.
+  Future<void> ensureSelectedLoaded() async {
+    while (isLoading.value) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    while (hasMore.value && selected.any((id) => !items.any((s) => s.id == id))) {
+      if (_moreInFlight) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        continue;
+      }
+      if (!await loadMore()) break;
+    }
+  }
+
   void setFilter(String? c) {
     filter.value = c;
     if (c != null && hasMore.value) loadAll();
   }
 
-  void toggle(String id) {
+  bool toggle(String id) {
     if (selected.contains(id)) {
       selected.remove(id);
-      return;
+      return true;
     }
+    if (atLimit) return false;
     if (selected.length + existingIds.length + otherSpots >= TripConstants.maxSpots) {
       AppToast.warning(TripStringsMcaA2.maxPlaces);
-      return;
+      return false;
     }
     selected.add(id);
+    return true;
   }
 }

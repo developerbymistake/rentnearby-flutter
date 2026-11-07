@@ -78,7 +78,6 @@ class StorageService {
 
   static const String _tripNewDraftKey = 'trip_new_draft';
   static const String _tripPendingPrefix = 'trip_pending_';
-  static const String _tripWizardLastPrefix = 'trip_wizard_last_';
   static const String _tripBarHiddenPrefix = 'trip_bar_hidden_';
   static const String _tripMilestonesPrefix = 'trip_milestones_';
 
@@ -107,9 +106,7 @@ class StorageService {
 
   static void clearTripPending(String tripId) => _box.remove('$_tripPendingPrefix$tripId');
 
-  static void saveTripWizardLast(String tripId, String stepKey) => _box.write('$_tripWizardLastPrefix$tripId', stepKey);
 
-  static String? getTripWizardLast(String tripId) => _box.read<String>('$_tripWizardLastPrefix$tripId');
 
   static void saveTripBarHidden(String tripId, DateTime hiddenAt, {int? needYou}) => _box.write(
       '$_tripBarHiddenPrefix$tripId', jsonEncode({'at': hiddenAt.toUtc().toIso8601String(), 'needYou': ?needYou}));
@@ -154,7 +151,6 @@ class StorageService {
     _box.remove('${AppConstants.tripResultCacheKeyPrefix}$tripId');
     _box.remove('$_tripSummaryCachePrefix$tripId');
     _box.remove('$_tripPendingPrefix$tripId');
-    _box.remove('$_tripWizardLastPrefix$tripId');
     _box.remove('$_tripBarHiddenPrefix$tripId');
     _box.remove('$_tripMilestonesPrefix$tripId');
   }
@@ -186,7 +182,6 @@ class StorageService {
         k.startsWith(_tripListCachePrefix) ||
         k.startsWith(_tripSummaryCachePrefix) ||
         k.startsWith(_tripPendingPrefix) ||
-        k.startsWith(_tripWizardLastPrefix) ||
         k.startsWith(_tripBarHiddenPrefix) ||
         k.startsWith(_tripMilestonesPrefix));
     for (final k in keys.toList()) {

@@ -6,7 +6,7 @@ class TripStringsMcdA3 {
   static const String travelDayCaps = 'TRAVEL DAY';
   static String carRow(String name, int i) => '$name · Car $i';
   static String toPlace(String place) => 'to $place';
-  static String checkOut(String name) => 'Check out · $name';
+  static String checkOut(String name) => 'Check-out today · $name';
   static const String thisMorning = 'This morning';
   static String tonightTitle(String name) => 'Tonight · $name';
   static const String todaysRoad = "Today's road";
@@ -18,6 +18,5 @@ class TripStringsMcdA3 {
   static String travelHeadOwn(String to) => '→ $to · Own travel';
   static String travelLine(String date) => 'Travel · $date';
   static String carCandidate(int i, String name) => 'Car $i · $name';
-  static const String ownTravel = 'Own travel';
   static const String travelHeadFallback = 'Travel';
 }

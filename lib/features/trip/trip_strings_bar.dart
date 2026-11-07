@@ -9,26 +9,10 @@ class TripStringsBar {
   static const String noPastTrips = 'No past trips yet';
   static const String noPastSub = 'Finished trips show here.';
 
-  static const String tripBasics = 'Trip basics';
-  static const String gettingThere = 'Getting there';
-  static const String comingBack = 'Coming back';
-  static const String cityChange = 'City change';
-  static String places(int day) => 'Day $day · Places';
-  static String taxi(int day) => 'Day $day · Sightseeing taxi';
-  static String stay(int day) => 'Day $day · Stay';
   static String move(String from, String to) => '$from → $to';
 
-  static String start(String next) => 'Start: $next';
-  static String continueTo(String next) => 'Continue · $next';
   static const String continueAction = 'Continue';
-  static const String readySummary = 'Your trip is ready · Summary';
-  static const String summary = 'Summary';
 
-  static String waitingForReply(int n) => '$n waiting for a reply';
-  static String needYou(int n) => n == 1 ? '1 needs you' : '$n need you';
-  static String stepsOf(int counted, int total) => '$counted of $total steps';
-
-  static const String draftNoDates = 'Draft · dates not set';
   static const String startsToday = 'Starts today';
   static const String startsTomorrow = 'Starts tomorrow';
   static String startsIn(int days) => 'Starts in $days days';

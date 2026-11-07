@@ -7,6 +7,7 @@ import '../data/trip_enquiry_repository.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_offer_model.dart';
 import '../trip_strings.dart';
+import '../trip_strings_v2_find.dart';
 import '../utils/trip_enquiry_rules.dart';
 import 'trip_plan_controller.dart';
 
@@ -74,6 +75,10 @@ class TripEnquiryController extends GetxController {
             type == TripEnquiryErrorTypes.offerNotPending ||
             type == TripEnquiryErrorTypes.enquiryClosed)) {
       unawaited(refreshOne(enquiryId));
+    }
+    if (type == TripEnquiryErrorTypes.dayInPast) {
+      AppToast.warning(TripStringsV2Find.pastNight);
+      return;
     }
     if (type == TripEnquiryErrorTypes.enquiryLimit) {
       AppToast.warning('${TripStrings.askLimitTitle}. ${TripStrings.askLimitBody(lastRetryAfterMinutes ?? 1)}');
@@ -348,6 +353,15 @@ class TripEnquiryController extends GetxController {
     return e != null;
   }
 
+  Future<void> refreshStayContexts(List<String> ids) async {
+    for (final id in ids) {
+      try {
+        final e = await _repo.refreshContext(id);
+        _applyToPlan([e]);
+      } catch (_) {}
+    }
+  }
+
   Future<bool> withdraw(String enquiryId) async {
     final e = await _guard(enquiryId, () => _repo.withdraw(enquiryId));
     if (e != null) _applyToPlan([e]);
@@ -437,6 +451,11 @@ class TripEnquiryController extends GetxController {
     required int rooms,
     String? note,
   }) async {
+    final p = _plan;
+    if (p != null && !await p.flushPendingSave()) {
+      AppToast.warning(TripStrings.notSavedCheckConnection);
+      return null;
+    }
     final trimmed = note?.trim();
     const copy = {
       TripEnquiryErrorTypes.nothingChanged: TripStrings.nothingChanged,
@@ -466,20 +485,6 @@ class TripEnquiryController extends GetxController {
       accept(enquiryId, offerId, closeOthers: false);
 
   Future<bool> keepPrice(String enquiryId, String offerId) => decline(enquiryId, offerId);
-
-  Future<TripEnquiryBatch?> askAgain({required String kind, required int day}) async {
-    final tripId = await _tripId();
-    if (tripId == null) return null;
-    const copy = {TripEnquiryErrorTypes.askAgainNothing: TripStrings.askAgainNothing};
-    final batch = await _guard(null, () => _repo.askAgain(tripId, kind: kind, day: day), silent: copy.keys.toSet());
-    _readBatch(batch);
-    if (batch == null) {
-      _mapped(copy);
-      return null;
-    }
-    _applyToPlan(batch.items);
-    return batch;
-  }
 
   static String _isoDate(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

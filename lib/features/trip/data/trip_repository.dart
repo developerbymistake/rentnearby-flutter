@@ -31,6 +31,8 @@ class TripErrorTypes {
   static const String journeyNotFound = 'JourneyNotFound';
   static const String noStayNight = 'NoStayNight';
   static const String daysAcrossCities = 'DaysAcrossCities';
+  static const String tooManySpotsPerDay = 'TooManySpotsPerDay';
+  static const String tooManySpotsForDays = 'TooManySpotsForDays';
 }
 
 class TripCitySupply {

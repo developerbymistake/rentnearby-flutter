@@ -89,7 +89,6 @@ class _OfferBodyState extends State<_OfferBody> {
   final _cancel = TextEditingController();
   final _inclusions = TextEditingController();
   final _reason = TextEditingController();
-  final _needs = <String>{};
   bool _gst = false;
   bool _saving = false;
   String? _serverError;
@@ -322,7 +321,6 @@ class _OfferBodyState extends State<_OfferBody> {
       body['reason'] = _reason.text.trim();
       body['changeRequestId'] = widget.changeRequest?.id;
     } else {
-      body['needsEchoed'] = _needs.toList();
       if (widget.counter != null) body['counterOfferId'] = widget.counter!.id;
     }
     setState(() {
@@ -424,11 +422,6 @@ class _OfferBodyState extends State<_OfferBody> {
         _field(_inclusions, StayEnquiryStrings.inclusions, maxLength: 200, hint: StayEnquiryStrings.optional),
         const SizedBox(height: 8),
         _gstRow(),
-        if (!revised && e.context.needs.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          _heading(StayEnquiryStrings.needsCovered),
-          for (final need in e.context.needs) _needRow(need),
-        ],
         if (!revised) ...[
           const SizedBox(height: 12),
           Row(children: [
@@ -658,25 +651,6 @@ class _OfferBodyState extends State<_OfferBody> {
             activeThumbColor: AppColors.success,
             activeTrackColor: AppColors.successTrack,
           ),
-        ]),
-      ),
-    );
-  }
-
-  Widget _needRow(String need) {
-    final on = _needs.contains(need);
-    return InkWell(
-      onTap: _saving ? null : () => setState(() => on ? _needs.remove(need) : _needs.add(need)),
-      borderRadius: BorderRadius.circular(12),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: Row(children: [
-          Checkbox(
-            value: on,
-            activeColor: StayColors.accent,
-            onChanged: _saving ? null : (v) => setState(() => v == true ? _needs.add(need) : _needs.remove(need)),
-          ),
-          Expanded(child: Text(TripNeeds.label(need), style: const TextStyle(fontSize: 14, color: AppColors.textDark))),
         ]),
       ),
     );

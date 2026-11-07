@@ -42,8 +42,6 @@ class TripSummaryNight {
   final DateTime? date;
   final String listingName;
   final String? enquiryId;
-  final bool isOwn;
-  final String? ownPhone;
   final String displayStatus;
   final List<TripSummaryRoom> roomLines;
   final int? agreedTotal;
@@ -60,8 +58,6 @@ class TripSummaryNight {
     this.date,
     this.listingName = '',
     this.enquiryId,
-    this.isOwn = false,
-    this.ownPhone,
     this.displayStatus = 'none',
     this.roomLines = const [],
     this.agreedTotal,
@@ -79,8 +75,6 @@ class TripSummaryNight {
         date: tripDate(json['date']),
         listingName: json['listingName'] as String? ?? '',
         enquiryId: json['enquiryId'] as String?,
-        isOwn: json['isOwn'] == true,
-        ownPhone: json['ownPhone'] as String?,
         displayStatus: json['displayStatus'] as String? ?? 'none',
         roomLines: _list(json['roomLines'], TripSummaryRoom.fromJson),
         agreedTotal: (json['agreedTotal'] as num?)?.toInt(),
@@ -122,8 +116,6 @@ class TripSummaryTaxi {
   final List<int> days;
   final DateTime? checkIn;
   final DateTime? checkOut;
-  final bool isOwn;
-  final String? ownPhone;
   final String displayStatus;
   final int? agreedFare;
   final bool tollExtra;
@@ -140,8 +132,6 @@ class TripSummaryTaxi {
     this.days = const [],
     this.checkIn,
     this.checkOut,
-    this.isOwn = false,
-    this.ownPhone,
     this.displayStatus = 'none',
     this.agreedFare,
     this.tollExtra = false,
@@ -159,8 +149,6 @@ class TripSummaryTaxi {
         days: ((json['days'] as List?) ?? const []).whereType<num>().map((e) => e.toInt()).toList(),
         checkIn: tripDate(json['checkIn']),
         checkOut: tripDate(json['checkOut']),
-        isOwn: json['isOwn'] == true,
-        ownPhone: json['ownPhone'] as String?,
         displayStatus: json['displayStatus'] as String? ?? 'none',
         agreedFare: (json['agreedFare'] as num?)?.toInt(),
         tollExtra: json['tollExtra'] == true,
@@ -179,19 +167,21 @@ class TripSummaryTaxi {
 class TripSummaryDay {
   final int day;
   final DateTime? date;
+  final String? city;
   final List<String> spots;
   final int minutes;
 
-  const TripSummaryDay({required this.day, this.date, this.spots = const [], this.minutes = 0});
+  const TripSummaryDay({required this.day, this.date, this.city, this.spots = const [], this.minutes = 0});
 
   factory TripSummaryDay.fromJson(Map<String, dynamic> json) => TripSummaryDay(
         day: (json['day'] as num?)?.toInt() ?? 0,
         date: tripDate(json['date']),
+        city: (json['city'] as String?)?.trim().isEmpty ?? true ? null : (json['city'] as String).trim(),
         spots: ((json['spots'] as List?) ?? const []).whereType<String>().toList(),
         minutes: (json['minutes'] as num?)?.toInt() ?? 0,
       );
 
-  TripSummaryDay withMinutes(int value) => TripSummaryDay(day: day, date: date, spots: spots, minutes: value);
+  TripSummaryDay withMinutes(int value) => TripSummaryDay(day: day, date: date, city: city, spots: spots, minutes: value);
 }
 
 class TripSummaryTravelModes {
@@ -279,11 +269,6 @@ class TripSummaryTravel {
   final int carCount;
   final int? listedTotal;
   final List<TripSummaryTravelCar> cars;
-  final String? how;
-  final String? ownName;
-  final String? ownPhone;
-  final String? leavesAt;
-  final String? hubName;
   final int? roadMinutes;
   final String? journeyId;
 
@@ -297,11 +282,6 @@ class TripSummaryTravel {
     this.carCount = 0,
     this.listedTotal,
     this.cars = const [],
-    this.how,
-    this.ownName,
-    this.ownPhone,
-    this.leavesAt,
-    this.hubName,
     this.roadMinutes,
     this.journeyId,
   });
@@ -324,11 +304,6 @@ class TripSummaryTravel {
       carCount: own ? 0 : ((json['carCount'] as num?)?.toInt() ?? cars.length),
       listedTotal: (json['listedTotal'] as num?)?.toInt(),
       cars: own ? const [] : cars,
-      how: _text(json['how']),
-      ownName: _text(json['ownName']),
-      ownPhone: _text(json['ownPhone']),
-      leavesAt: _text(json['leavesAt']),
-      hubName: _text(json['hubName']),
       roadMinutes: (json['roadMinutes'] as num?)?.toInt(),
       journeyId: _text(json['journeyId']),
     );
@@ -344,14 +319,6 @@ class TripSummaryTravel {
         fromName,
         if (cars.isEmpty) toName else ...cars.map((c) => c.toName),
       ].where((p) => p.isNotEmpty).toList();
-
-  String? get howLabel => switch (how) {
-        'car' => TripStringsMcaA3.car,
-        'bus' => TripStringsMcaA3.bus,
-        'train' => TripStringsMcaA3.train,
-        'other' => TripStringsMcaA3.other,
-        _ => null,
-      };
 }
 
 class TripSummaryLeg {
@@ -398,6 +365,34 @@ class TripSummaryLeg {
   }
 }
 
+class TripSummaryArrangement {
+  final TripEasyRowKey key;
+  final String title;
+  final TripRowState state;
+  final String? detail;
+
+  const TripSummaryArrangement({
+    required this.key,
+    this.title = '',
+    this.state = TripRowState.todo,
+    this.detail,
+  });
+
+  static TripSummaryArrangement? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final id = raw['key'];
+    final key = TripEasyRowKey.parse(id is String ? id : null);
+    if (key == null) return null;
+    final detail = raw['detail'];
+    return TripSummaryArrangement(
+      key: key,
+      title: raw['title'] as String? ?? '',
+      state: TripRowState.parse(raw['state']),
+      detail: detail is String && detail.trim().isNotEmpty ? detail.trim() : null,
+    );
+  }
+}
+
 class TripSummaryRecord {
   final String tripId;
   final String title;
@@ -417,6 +412,7 @@ class TripSummaryRecord {
   final TripJourney? comingBack;
   final List<String>? _cities;
   final List<TripSummaryLeg> legs;
+  final List<TripSummaryArrangement> arrangements;
 
   const TripSummaryRecord({
     required this.tripId,
@@ -437,6 +433,7 @@ class TripSummaryRecord {
     this.comingBack,
     List<String>? cities,
     this.legs = const [],
+    this.arrangements = const [],
   }) : _cities = cities;
 
   List<String> get cities => _cities ?? [city];
@@ -467,6 +464,11 @@ class TripSummaryRecord {
             : null,
         cities: _citiesOf(json['legCities']),
         legs: _list(json['legs'], TripSummaryLeg.fromJson)..sort((a, b) => a.index.compareTo(b.index)),
+        arrangements: [
+          if (json['arrangements'] is List)
+            for (final a in json['arrangements'] as List)
+              if (TripSummaryArrangement.tryParse(a) case final m?) m,
+        ],
       );
 
   bool get isMultiCity => legs.length > 1;
@@ -492,6 +494,7 @@ class TripSummaryRecord {
       comingBack: comingBack,
       cities: _cities,
       legs: legs,
+      arrangements: arrangements,
     );
   }
 
@@ -506,7 +509,7 @@ class TripSummaryRecord {
       steps.gettingThere.status == TripStepStatus.own ||
       steps.comingBack.status == TripStepStatus.own;
 
-  bool get isEmpty => nights.isEmpty && taxis.isEmpty && !hasTravel;
+  bool get isEmpty => nights.isEmpty && taxis.isEmpty && arrangements.isEmpty && !hasTravel;
 
   bool get hasItinerary => days.any((d) => d.spots.isNotEmpty);
 

@@ -4,7 +4,6 @@ import '../config/app_colors.dart';
 import '../features/stay/enquiries/stay_enquiry_actions.dart';
 import '../features/trip/controllers/trip_enquiry_controller.dart';
 import '../features/trip/models/trip_enquiry_model.dart';
-import '../features/trip/trip_constants.dart';
 import '../features/trip/trip_strings.dart';
 import '../features/trip/trip_strings_a5.dart';
 import '../features/trip/trip_strings_f2.dart';
@@ -593,7 +592,6 @@ class _EnquiryCardState extends State<_EnquiryCard> {
     final adults = TripChatCards._int(p, 'adults');
     final kids = TripChatCards._int(p, 'kids') ?? 0;
     final rooms = TripChatCards._int(p, 'rooms');
-    final needs = TripChatCards._list(p, 'needs').whereType<String>().map(TripNeeds.label).toList();
     final text = TripChatCards._str(p, 'text');
     final title =
         cb.listingTitle.isEmpty ? TripStringsF2.stayEnquiry : '${TripStringsF2.stayEnquiry} · ${cb.listingTitle}';
@@ -617,7 +615,6 @@ class _EnquiryCardState extends State<_EnquiryCard> {
                   : TripFormat.shortDate(checkOut)),
         if (adults != null) TripChatCards._kv(TripStrings.people, TripStrings.peopleCount(adults + kids)),
         if (rooms != null) TripChatCards._kv(TripStrings.rooms, TripStringsF2.roomsCount(rooms)),
-        if (needs.isNotEmpty) TripChatCards._kv(TripStrings.needs, needs.join(' · ')),
         if (text != null && text.isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(text, maxLines: 6, overflow: TextOverflow.ellipsis, style: TripChatCards._small),

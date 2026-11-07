@@ -2,16 +2,11 @@ import 'utils/trip_travel_rules.dart';
 
 class TripStringsMcbA1 {
   static const String travelRemoved = 'Travel removed';
-  static const String travelReplaced = 'Travel replaced';
-  static const String carBooked = 'Car booked';
   static const String bookFailed = "Couldn't save the booking. Try again.";
-  static const String saveTripFirst = 'Your trip is still saving. Try again.';
   static const String pickDateWithinYear = 'Pick a date within the next 365 days';
   static const String connectToFindWay = 'Connect to find a way';
   static const String addDatesFirst = 'Add your trip dates first';
   static const String taxiOffHere = 'Taxi not available here · add your own travel';
-
-  static String journeyRemovedFromTrip(String city) => "It is also removed from your trip's travel to $city.";
 
   static String stateLabel(TripTravelState s) => switch (s) {
         TripTravelState.notPlanned => 'Not planned yet',

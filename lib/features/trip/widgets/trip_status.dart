@@ -198,7 +198,7 @@ class TripBookingStateVisuals {
 
   static String label(TripBookingState s) => switch (s) {
         TripBookingState.draft => TripStrings.stateDraft,
-        TripBookingState.planOnly => TripStrings.planOnly,
+        TripBookingState.planOnly => TripStrings.stateDraft,
         TripBookingState.confirming => TripStrings.stateConfirming,
         TripBookingState.ready => TripStrings.stateReady,
         TripBookingState.completed => TripStrings.stateCompleted,

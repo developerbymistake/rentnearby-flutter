@@ -20,12 +20,11 @@ import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mcb_a1.dart';
 import '../trip_strings_mcd_a3.dart';
 import '../trip_strings_steps_a3.dart';
+import '../trip_strings_v2_plan.dart';
 import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_clock.dart';
 import '../utils/trip_travel_rules.dart';
-import '../utils/trip_wizard_rules.dart';
-import 'trip_own_travel_sheet.dart';
 import 'trip_problem_sheet.dart';
 
 class TripTodayCard extends StatelessWidget {
@@ -206,13 +205,6 @@ class TripTodayCard extends StatelessWidget {
     return (k: k, total: total, checkOut: out);
   }
 
-  static ({int k, int total, int last}) _ownNight(TripPlanController c, int day) {
-    final days = c.plan.value?.days ?? const <TripDay>[];
-    final base = days.firstWhereOrNull((d) => d.day == day)?.stay?.sameAsDay ?? day;
-    final chain = days.where((d) => d.day == base || d.stay?.sameAsDay == base).map((d) => d.day).toList()..sort();
-    return (k: chain.indexOf(day) + 1, total: chain.length, last: chain.last);
-  }
-
   static Widget _caps(String text) => Text(
         text,
         maxLines: 1,
@@ -286,7 +278,7 @@ class TripTodayCard extends StatelessWidget {
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textDark),
         ),
     ];
-    final j = a != null && a.isJourney ? c.segmentJourney(k) : null;
+    final j = a != null ? c.segmentJourney(k) : null;
     if (a == null) {
       out.add(_Row(
         icon: Iconsax.routing_2,
@@ -294,19 +286,6 @@ class TripTodayCard extends StatelessWidget {
         surface: TaxiColors.surface,
         title: TripStringsMcaA3.travelTo(to),
         subtitle: TripStringsMcaA3.notPlannedYet,
-      ));
-    } else if (a.isOwn) {
-      final how = a.how == null ? null : TripOwnTravelSheet.howLabel(a.how!);
-      final phone = _validPhone(a.ownPhone);
-      final hub = a.hubName;
-      out.add(_Row(
-        icon: Iconsax.routing_2,
-        accent: TaxiColors.accent,
-        surface: TaxiColors.surface,
-        title: TripStringsMcaA3.ownTravelLine(how, a.leavesAt),
-        subtitle: (a.ownName?.trim().isNotEmpty ?? false ? a.ownName!.trim() : null) ?? (hub != null && hub.isNotEmpty ? TripStringsMcbA2.reachHub(hub) : ''),
-        actionLabel: phone == null ? null : TripStrings.call,
-        onAction: phone == null ? null : () => ContactLauncher.call(phone),
       ));
     } else if (j == null) {
       out.add(_Row(
@@ -336,10 +315,7 @@ class TripTodayCard extends StatelessWidget {
       name = e.listingName.isEmpty ? TripStrings.stay : e.listingName;
       phone = stayPhone(e);
     } else {
-      final own = c.ownStayOf(n - 1);
-      if (own == null) return const [];
-      name = own.name.trim().isEmpty ? 'Own stay' : own.name.trim();
-      phone = _validPhone(own.ownPhone);
+      return const [];
     }
     return [
       _Row(
@@ -347,7 +323,7 @@ class TripTodayCard extends StatelessWidget {
         accent: StayColors.accent,
         surface: StayColors.surface,
         title: TripStringsMcdA3.checkOut(name),
-        subtitle: TripStringsMcdA3.thisMorning,
+        subtitle: '',
         actionLabel: phone == null ? null : TripStrings.call,
         onAction: phone == null ? null : () => ContactLauncher.call(phone!),
       ),
@@ -366,8 +342,7 @@ class TripTodayCard extends StatelessWidget {
         if (city.isNotEmpty) city,
         if (room.isNotEmpty) room,
         TripStringsA5.nightOf(night.k, night.total, (e.agreedTotal ?? 0) <= 0 ? null : BrowseItem.inr(e.agreedTotal!)),
-        c.dayStatusLine(TripWizardStepKind.stay, n) ??
-            (e.isConfirmedByBoth ? TripWizardCopy.confirmedShort : TripWizardCopy.bookedByYouHost),
+        e.isConfirmedByBoth ? TripStringsV2Plan.confirmedShort : TripStringsV2Plan.bookedByYouHost,
       ].join(' · ');
       final stayName = e.listingName.isEmpty ? TripStrings.stay : e.listingName;
       return [
@@ -382,38 +357,17 @@ class TripTodayCard extends StatelessWidget {
         ),
       ];
     }
-    final own = c.ownStayOf(n);
-    if (own == null) return const [];
-    final ownTitle = own.name.trim().isEmpty ? 'Own stay' : own.name.trim();
-    final phone = _validPhone(own.ownPhone);
-    final chain = _ownNight(c, n);
-    final lastDate = c.dateOf(chain.last);
-    final ownSub = TripStringsA5.nightOf(chain.k, chain.total, null);
-    final checkOut = lastDate == null
-        ? null
-        : _checkOutLine(DateTime(lastDate.year, lastDate.month, lastDate.day + 1));
-    return [
-      _Row(
-        icon: Iconsax.building_4,
-        accent: StayColors.accent,
-        surface: StayColors.surface,
-        title: travelDay ? TripStringsMcdA3.tonightTitle(ownTitle) : ownTitle,
-        subtitle: [if (city.isNotEmpty) city, TripStrings.ownBookingShort, ownSub].join(' · ') +
-            (checkOut == null ? '' : '\n$checkOut'),
-        actionLabel: phone == null ? null : TripStrings.call,
-        onAction: () => ContactLauncher.call(phone!),
-      ),
-    ];
+    return const [];
   }
 
   List<Widget> _taxiRow(TripPlanController c, int n) {
     final e = c.todayTaxi(n);
     if (e != null) {
       final pickup = e.taxi?.pickupTime;
+      final hasPickup = pickup != null && pickup.isNotEmpty;
       final sub = [
-        if (pickup != null && pickup.isNotEmpty) TripStrings.pickupAt(TripFormat.time12(pickup)),
-        c.dayStatusLine(TripWizardStepKind.taxi, n) ??
-            (e.isConfirmedByBoth ? TripWizardCopy.confirmedShort : TripWizardCopy.bookedByYouDriver),
+        if (hasPickup && e.listingName.isNotEmpty) e.listingName,
+        e.isConfirmedByBoth ? TripStringsV2Plan.confirmedShort : TripStringsV2Plan.bookedByYouDriver,
       ].join(' · ');
       final phone = _validPhone(e.owner.phone);
       return [
@@ -421,32 +375,16 @@ class TripTodayCard extends StatelessWidget {
           icon: Iconsax.car,
           accent: TaxiColors.accent,
           surface: TaxiColors.surface,
-          title: e.listingName.isEmpty ? TripStrings.driver : e.listingName,
+          title: pickup != null && pickup.isNotEmpty
+              ? TripStrings.pickupAt(TripFormat.time12(pickup))
+              : (e.listingName.isEmpty ? TripStrings.driver : e.listingName),
           subtitle: sub,
           actionLabel: phone == null ? null : TripStrings.call,
-          onAction: () => ContactLauncher.call(phone!),
+          onAction: phone == null ? null : () => ContactLauncher.call(phone),
         ),
       ];
     }
-    final own = c.ownTaxiOf(n);
-    if (own == null) return const [];
-    final phone = _validPhone(own.ownPhone);
-    final pickup = own.booking?.pickupTime;
-    final sub = [
-      if (pickup != null && pickup.isNotEmpty) TripStrings.pickupAt(TripFormat.time12(pickup)),
-      TripStrings.ownBookingShort,
-    ].join(' · ');
-    return [
-      _Row(
-        icon: Iconsax.car,
-        accent: TaxiColors.accent,
-        surface: TaxiColors.surface,
-        title: own.name.trim().isEmpty ? 'Own taxi' : own.name.trim(),
-        subtitle: sub,
-        actionLabel: phone == null ? null : TripStrings.call,
-        onAction: () => ContactLauncher.call(phone!),
-      ),
-    ];
+    return const [];
   }
 
   List<Widget> _routeRow(TripPlanController c, int n, bool offline, {bool travelDay = false}) {

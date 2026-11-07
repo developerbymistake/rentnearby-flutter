@@ -230,4 +230,53 @@ void main() {
       expect(TripEnquiryRules.isOutsideTrip(range(DateTime(2030, 10, 31), DateTime(2030, 11, 1), 'Haridwar'), p.settings, 3), isTrue);
     });
   });
+
+  group('TripDatesRules.isStale', () {
+    final today = DateTime(2026, 11, 7);
+    test('past start with nothing open is stale', () {
+      expect(TripDatesRules.isStale(DateTime(2026, 11, 1), today, false), isTrue);
+    });
+    test('past start with an open row is kept', () {
+      expect(TripDatesRules.isStale(DateTime(2026, 11, 1), today, true), isFalse);
+    });
+    test('today, future and missing start are not stale', () {
+      expect(TripDatesRules.isStale(today, today, false), isFalse);
+      expect(TripDatesRules.isStale(DateTime(2026, 12, 1), today, false), isFalse);
+      expect(TripDatesRules.isStale(null, today, false), isFalse);
+    });
+  });
+
+  group('TripEnquiryRules.contextStale', () {
+    TripSpotRef spot(String name) => TripSpotRef(id: name, name: name, latitude: 0, longitude: 0, category: 'x', visitMinutes: 30);
+    TripPlan planOf(List<List<String>> days) => TripPlan(
+          legs: const [],
+          days: [
+            for (var i = 0; i < days.length; i++) TripDay(day: i + 1, spots: [for (final n in days[i]) spot(n)]),
+          ],
+        );
+    TripEnquiryModel row(List<List<String>> days, {String status = TripEnquiryStatuses.asked, String kind = TripEnquiryKinds.stay}) =>
+        TripEnquiryModel(
+          id: 'e',
+          kind: kind,
+          status: status,
+          context: TripEnquiryContext(days: [
+            for (var i = 0; i < days.length; i++) TripContextDay(day: i + 1, spots: days[i]),
+          ]),
+        );
+
+    test('unchanged spots are not stale', () {
+      expect(TripEnquiryRules.contextStale(row([['A', 'B'], ['C']]), planOf([['A', 'B'], ['C']])), isFalse);
+    });
+    test('a moved spot is stale', () {
+      expect(TripEnquiryRules.contextStale(row([['A', 'B'], ['C']]), planOf([['A'], ['C', 'B']])), isTrue);
+      expect(TripEnquiryRules.contextStale(row([['A', 'B']]), planOf([['B', 'A']])), isTrue);
+    });
+    test('a removed spot is stale', () {
+      expect(TripEnquiryRules.contextStale(row([['A', 'B']]), planOf([['A']])), isTrue);
+    });
+    test('closed rows and taxis are never stale', () {
+      expect(TripEnquiryRules.contextStale(row([['A']], status: TripEnquiryStatuses.declined), planOf([['B']])), isFalse);
+      expect(TripEnquiryRules.contextStale(row([['A']], kind: TripEnquiryKinds.taxi), planOf([['B']])), isFalse);
+    });
+  });
 }

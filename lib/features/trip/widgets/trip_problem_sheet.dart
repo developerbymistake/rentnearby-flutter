@@ -64,19 +64,9 @@ class _ProblemBodyState extends State<_ProblemBody> {
     }
 
     final stay = c.todayStay(day);
-    if (stay != null) {
-      add(stay.listingName, TripTodayCard.stayPhone(stay));
-    } else {
-      final own = c.ownStayOf(day);
-      if (own != null) add(own.name, own.ownPhone);
-    }
+    if (stay != null) add(stay.listingName, TripTodayCard.stayPhone(stay));
     final taxi = c.todayTaxi(day);
-    if (taxi != null) {
-      add(taxi.listingName, taxi.owner.phone);
-    } else {
-      final own = c.ownTaxiOf(day);
-      if (own != null) add(own.name, own.ownPhone);
-    }
+    if (taxi != null) add(taxi.listingName, taxi.owner.phone);
     for (final e in _carRows(c)) {
       add(_carLabel(e), e.owner.phone);
     }
@@ -205,9 +195,9 @@ class _ProblemBodyState extends State<_ProblemBody> {
           TripNavigation.openMap(day: day);
         }
       case TripProblemKinds.driverNoShow:
-        TripNavigation.openTaxi(day, nearLat: loc?.latitude, nearLng: loc?.longitude);
+        TripNavigation.openTaxi(days: [day]);
       case TripProblemKinds.hostNoRoom:
-        TripNavigation.openStay(day, nearLat: loc?.latitude, nearLng: loc?.longitude);
+        TripNavigation.openStay(TripPlanController.to.plan.value?.legIndexOf(day) ?? 0, nearLat: loc?.latitude, nearLng: loc?.longitude);
       default:
         TripNavigation.openMap(day: day);
     }
@@ -223,11 +213,7 @@ class _ProblemBodyState extends State<_ProblemBody> {
       final contacts = offline ? _contacts() : const <({String name, String phone})>[];
       return TripSheetFrame(
         title: TripStrings.whatWentWrong,
-        footer: const Text(
-          TripStrings.problemFooter,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight, height: 1.4),
-        ),
+        description: TripStrings.problemFooter,
         children: [
           if (offline) ...[
             _offlineBlock(contacts),

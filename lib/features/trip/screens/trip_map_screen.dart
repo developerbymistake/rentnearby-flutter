@@ -11,12 +11,12 @@ import '../../../config/app_constants.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../../taxi/taxi_option_sets.dart';
-import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_plan_result_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
+import '../utils/trip_easy_rules.dart';
 import '../trip_strings_mca_a4.dart';
 import '../trip_strings_mcd_a2.dart';
 import '../trip_strings_steps_a3.dart';
@@ -114,6 +114,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
       _sync();
     }));
     _workers.add(ever(_plan.result, (_) => _sync()));
+    _workers.add(ever(_plan.enquiryList, (_) => _sync()));
     _workers.add(ever(_plan.isPlanning, (_) => _sync()));
     _workers.add(ever(_plan.planFailed, (failed) {
       if (!failed) _recalculateIfRouteMissing();
@@ -166,7 +167,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
     if (!p.isMultiCity) return days;
     final legs = [
       for (final l in p.legs)
-        '${l.cityKey}:${l.latitude}:${l.longitude}:${l.arrival?.journeyId}:${l.arrival?.mode}:${l.arrival?.cars}:'
+        '${l.cityKey}:${l.latitude}:${l.longitude}:${l.arrival?.journeyId}:${l.arrival?.cars}:'
             '${l.arrival?.planKey}:${l.index >= 2 ? _plan.segmentLine(l.index)?.length : null}',
     ].join('|');
     return '$days#$legs';
@@ -275,22 +276,31 @@ class _TripMapScreenState extends State<TripMapScreen> {
     await WidgetsBinding.instance.endOfFrame;
   }
 
-  String _staySignature(TripPlan p) => [
-        p.days.length,
-        for (final d in p.days)
-          '${d.day}:${d.stay?.stayId}:${d.stay?.sameAsDay}:${d.stay?.latitude}:${d.stay?.longitude}',
-      ].join('|');
-
-  TripStayChoice? _pinnedStay(TripDay day) {
-    final s = day.stay;
-    if (s == null || s.isSameStay || !s.hasCoordinates) return null;
-    return s;
+  List<({int pinDay, Set<int> days, double lat, double lon})> _stayPinData(TripPlan p) {
+    final out = <({int pinDay, Set<int> days, double lat, double lon})>[];
+    for (final e in _plan.enquiryList) {
+      final lat = e.listingLatitude;
+      final lon = e.listingLongitude;
+      if (e.isTaxi || !e.isConfirmedByBoth || lat == null || lon == null) continue;
+      final days = TripEasyRules.nightsOf(e, p);
+      if (days.isEmpty) continue;
+      final first = days.reduce((a, b) => a < b ? a : b);
+      if (out.any((x) => x.pinDay == first)) continue;
+      out.add((pinDay: first, days: days, lat: lat, lon: lon));
+    }
+    return out;
   }
 
+  String _staySignature(TripPlan p) =>
+      [for (final x in _stayPinData(p)) '${x.pinDay}:${x.days.length}:${x.lat}:${x.lon}'].join('|');
+
   int? _pinDayFor(int day) {
-    final s = _plan.plan.value?.dayAt(day)?.stay;
-    if (s == null) return null;
-    return s.sameAsDay ?? day;
+    final p = _plan.plan.value;
+    if (p == null) return null;
+    for (final x in _stayPinData(p)) {
+      if (x.days.contains(day)) return x.pinDay;
+    }
+    return null;
   }
 
   bool _isStayPinSelected(int pinDay) => switch (_plan.mapFocus) {
@@ -333,17 +343,15 @@ class _TripMapScreenState extends State<TripMapScreen> {
     if (!_stayPinReady) return;
     final days = <int>[];
     final options = <SymbolOptions>[];
-    for (final day in p.days) {
-      final s = _pinnedStay(day);
-      if (s == null) continue;
-      final opacity = _stayPinOpacity(day.day);
-      days.add(day.day);
+    for (final x in _stayPinData(p)) {
+      final opacity = _stayPinOpacity(x.pinDay);
+      days.add(x.pinDay);
       options.add(SymbolOptions(
-        geometry: LatLng(s.latitude!, s.longitude!),
+        geometry: LatLng(x.lat, x.lon),
         iconImage: _stayPinImage,
         iconSize: 1,
         iconOpacity: opacity,
-        textField: _stayPinText(p, day.day),
+        textField: _stayPinText(p, x.pinDay),
         fontNames: const ['Noto Sans Medium'],
         textSize: 11,
         textAnchor: 'top',
@@ -515,7 +523,6 @@ class _TripMapScreenState extends State<TripMapScreen> {
 
   String _badgeText(TripCityLeg leg) {
     final a = leg.arrival!;
-    if (a.isOwn) return TripStringsMcbA2.ownTag;
     final cars = a.cars ?? _plan.segmentJourney(leg.index)?.legs.length ?? 1;
     return TripStringsStepsA3.carsLine(cars < 1 ? 1 : cars);
   }

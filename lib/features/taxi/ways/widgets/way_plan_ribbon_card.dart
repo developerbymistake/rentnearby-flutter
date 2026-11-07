@@ -16,6 +16,9 @@ class WayPlanRibbonCard extends StatelessWidget {
   final int planIndex;
   final String? bestReason;
   final VoidCallback onOpen;
+  final VoidCallback? onUse;
+  final bool useBusy;
+  final bool useNote;
 
   const WayPlanRibbonCard({
     super.key,
@@ -23,6 +26,9 @@ class WayPlanRibbonCard extends StatelessWidget {
     required this.planIndex,
     required this.onOpen,
     this.bestReason,
+    this.onUse,
+    this.useBusy = false,
+    this.useNote = false,
   });
 
   @override
@@ -30,11 +36,27 @@ class WayPlanRibbonCard extends StatelessWidget {
     final screenW = MediaQuery.sizeOf(context).width;
     final scaled = MediaQuery.textScalerOf(context).scale(10) > 11.5;
     if (plan.legs.length != 2 || screenW < 360 || (scaled && screenW < 400)) {
-      return WayPlanStackCard(plan: plan, planIndex: planIndex, bestReason: bestReason, onOpen: onOpen);
+      return WayPlanStackCard(
+        plan: plan,
+        planIndex: planIndex,
+        bestReason: bestReason,
+        onOpen: onOpen,
+        onUse: onUse,
+        useBusy: useBusy,
+        useNote: useNote,
+      );
     }
     return LayoutBuilder(builder: (context, c) {
       if (c.maxWidth < _minRibbonWidth + 30) {
-        return WayPlanStackCard(plan: plan, planIndex: planIndex, bestReason: bestReason, onOpen: onOpen);
+        return WayPlanStackCard(
+        plan: plan,
+        planIndex: planIndex,
+        bestReason: bestReason,
+        onOpen: onOpen,
+        onUse: onUse,
+        useBusy: useBusy,
+        useNote: useNote,
+      );
       }
       final a = plan.legs[0];
       final b = plan.legs[1];
@@ -43,6 +65,9 @@ class WayPlanRibbonCard extends StatelessWidget {
         planIndex: planIndex,
         bestReason: bestReason,
         onOpen: onOpen,
+        onUse: onUse,
+        useBusy: useBusy,
+        useNote: useNote,
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _node(a.from.name),
           Expanded(child: _segment(a)),

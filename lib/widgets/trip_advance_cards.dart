@@ -339,7 +339,7 @@ class TripAdvanceCards {
     final day = cb.day;
     final loaded = Get.isRegistered<TripPlanController>() && Get.find<TripPlanController>().trip.value?.id == tripId;
     if (loaded && day != null) {
-      TripNavigation.openStay(day);
+      TripNavigation.openStay(Get.find<TripPlanController>().legIndexOf(day));
     } else if (tripId != null) {
       Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId});
     }

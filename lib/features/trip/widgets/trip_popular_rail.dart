@@ -96,7 +96,7 @@ class _TripPopularRailState extends State<TripPopularRail> {
     final ready = city.isReady;
     final dpr = MediaQuery.of(context).devicePixelRatio;
     return GestureDetector(
-      onTap: ready ? () => TripNavigation.startWith(city) : null,
+      onTap: ready ? () => TripNavigation.openDays([city]) : null,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: SizedBox(

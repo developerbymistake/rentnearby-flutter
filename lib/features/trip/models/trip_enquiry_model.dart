@@ -94,7 +94,6 @@ class TripEnquiryContext {
   final int? adults;
   final int? kids;
   final int? rooms;
-  final List<String> needs;
   final String? travellerName;
   final List<TripContextDay> days;
   final String? pickupTime;
@@ -109,7 +108,6 @@ class TripEnquiryContext {
     this.adults,
     this.kids,
     this.rooms,
-    this.needs = const [],
     this.travellerName,
     this.days = const [],
     this.pickupTime,
@@ -140,7 +138,6 @@ class TripEnquiryContext {
       adults: (json['adults'] as num?)?.toInt(),
       kids: (json['kids'] as num?)?.toInt(),
       rooms: (json['rooms'] as num?)?.toInt(),
-      needs: ((json['needs'] as List?) ?? const []).whereType<String>().toList(),
       travellerName: json['travellerName'] as String?,
       days: ((json['days'] as List?) ?? const [])
           .whereType<Map<String, dynamic>>()
@@ -406,6 +403,7 @@ class TripEnquiryModel {
   final int? wrongFirstDay;
   final String? wrongDayCity;
   final bool outsideTrip;
+  final int? cityLeg;
   final bool? _isSegment;
 
   const TripEnquiryModel({
@@ -455,6 +453,7 @@ class TripEnquiryModel {
     this.wrongFirstDay,
     this.wrongDayCity,
     this.outsideTrip = false,
+    this.cityLeg,
     bool? isSegment,
   }) : _isSegment = isSegment;
 
@@ -635,6 +634,7 @@ class TripEnquiryModel {
       wrongFirstDay: (json['wrongFirstDay'] as num?)?.toInt(),
       wrongDayCity: (json['wrongDayCity'] as String?)?.isEmpty ?? true ? null : json['wrongDayCity'] as String,
       outsideTrip: json['outsideTrip'] == true,
+      cityLeg: (json['cityLeg'] as num?)?.toInt(),
       isSegment: json['isSegment'] is bool ? json['isSegment'] as bool : null,
     );
   }

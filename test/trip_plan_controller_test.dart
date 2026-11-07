@@ -10,9 +10,9 @@ import 'package:bakhli/features/trip/models/trip_plan_result_model.dart';
 import 'package:bakhli/features/trip/models/trip_spot_model.dart';
 import 'package:bakhli/features/trip/trip_strings.dart';
 import 'package:bakhli/features/trip/trip_strings_mca_a1.dart';
+import 'package:bakhli/features/trip/utils/trip_days_rules.dart';
 import 'package:bakhli/features/trip/utils/trip_map_rules.dart';
 import 'package:bakhli/features/trip/utils/trip_travel_rules.dart';
-import 'package:bakhli/features/trip/utils/trip_wizard_rules.dart';
 import 'package:bakhli/models/browse_item.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 import 'package:get/get.dart';
@@ -48,68 +48,44 @@ TripModel _trip(TripPlan plan, {String status = TripStatuses.planned}) => TripMo
       updatedAt: DateTime(2026, 1, 1),
     );
 
-const _lastStay = TripStayChoice(stayId: 's9', name: 'Deodar Homestay', pricePerNight: 1900);
-
 TripPlan _plan({DateTime? start}) => TripPlan.singleCity(
       cityKey: 1,
       cityName: 'Nainital',
       settings: TripSettings(startDate: start),
       days: [
         TripDay(day: 1, spots: [_spot('a')]),
-        TripDay(
-          day: 2,
-          spots: [_spot('b')],
-          stay: _lastStay,
-          stayShortlist: const [TripStayShortlistItem(stayId: 's8', name: 'Pine Lodge')],
-        ),
+        TripDay(day: 2, spots: [_spot('b')]),
       ],
     );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('night rule: the last day keeps its night', () {
-    test('auto plan keeps the last-day stay and shortlist (#1, #34)', () {
+  group('days survive edits', () {
+    test('auto plan keeps the days and numbers them', () {
       final c = TripPlanController();
-      final withDays = TripPlanResult(
+      final r = TripPlanResult(
         days: [_resultDay(1, const ['a']), _resultDay(2, const ['b'])],
         warnings: const [],
         osrmAvailable: true,
-        dayLimitMinutes: 450,
+        dayLimitMinutes: 300,
       );
-      final out = c.applyAutoForTest(_plan(), 1, withDays);
-      expect(out.days.last.stay?.stayId, 's9');
-      expect(out.days.last.stayShortlist.single.stayId, 's8');
+      final out = c.applyAutoForTest(_plan(), 1, r);
+      expect(out.days.map((d) => d.day).toList(), [1, 2]);
+      expect(out.days.last.spots.single.id, 'b');
     });
 
-    test('renumber keeps the last-day stay (#1, #34)', () {
+    test('a one-day trip keeps its only day', () {
       final c = TripPlanController();
-      final out = c.renumberForTest(_plan().days);
-      expect(out.length, 2);
-      expect(out.last.stay?.stayId, 's9');
-      expect(out.last.stayShortlist, isNotEmpty);
+      final out = c.renumberForTest([TripDay(day: 1, spots: [_spot('a')])]);
+      expect(out.single.day, 1);
     });
 
-    test('a one-day trip keeps its only night', () {
-      final c = TripPlanController();
-      final out = c.renumberForTest([TripDay(day: 1, spots: [_spot('a')], stay: _lastStay)]);
-      expect(out.single.stay?.stayId, 's9');
-    });
-
-    test('a plan read from JSON keeps the last-day stay', () {
-      final t = TripModel.fromJson({
-        'id': 't1',
-        'cityKey': 1,
-        'plan': _plan().toJson(),
-      });
-      expect(t.plan.days.last.stay?.stayId, 's9');
-    });
-
-    test('keepEmptyDays keeps a trailing rest day with its booking', () {
+    test('keepEmptyDays keeps a trailing empty day', () {
       final c = TripPlanController();
       final days = [
         TripDay(day: 1, spots: [_spot('a'), _spot('b')]),
-        const TripDay(day: 2, stay: _lastStay),
+        const TripDay(day: 2),
       ];
       expect(c.renumberForTest(days).length, 1);
       expect(c.renumberForTest(days, keepEmptyDays: true).length, 2);
@@ -119,19 +95,11 @@ void main() {
       final c = TripPlanController();
       final days = [
         TripDay(day: 1, spots: [_spot('a'), _spot('b')]),
-        const TripDay(day: 2, stay: _lastStay, restDay: true),
+        const TripDay(day: 2, restDay: true),
       ];
       final out = c.renumberForTest(days);
       expect(out.length, 2);
       expect(out.last.restDay, isTrue);
-      expect(out.last.stay?.stayId, 's9');
-    });
-
-    test('a no-stay night keeps the leave-time undo across a save', () {
-      const night = TripStayChoice.skippedNight(note: 'bus', leaveMoved: true);
-      final back = TripStayChoice.fromJson(night.toJson());
-      expect((back.isSkipped, back.leaveMoved, back.note), (true, true, 'bus'));
-      expect(TripStayChoice.fromJson(const TripStayChoice(stayId: 's', name: 's').toJson()).leaveMoved, isFalse);
     });
   });
 
@@ -178,7 +146,6 @@ void main() {
           days: const [1, 2],
         ),
       ]);
-      expect(c.taxiEnquiriesForDay(1), isEmpty);
       expect(c.enquiriesOutsideDates.single.id, 't1');
     });
 
@@ -262,9 +229,7 @@ void main() {
       expect(s.journeyId, 'j1');
       expect(s.date, isNull);
       expect(c.journeyFor(TripStepRole.gettingThere)?.id, 'j1');
-      final info = c.stepInfo(TripStepKey.gettingThere)!;
-      expect(info.state, TripStepState.waiting);
-      expect(info.needsYou, isTrue);
+      expect(c.stepOf(TripStepRole.gettingThere).hasJourney, isTrue);
     });
 
     test('coming back default is check-out, another day is stored', () {
@@ -298,12 +263,11 @@ void main() {
       expect(c.stepOf(TripStepRole.comingBack).journeyId, 'j1');
     });
 
-    test('booked toggle, unlink and own clear the link; reset undoes own', () {
+    test('booked toggle, unlink and own clear the link; undo reverts own', () async {
       final c = withPlan(steps: const TripSteps(startFrom: delhi));
       c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
       c.markStepBooked(TripStepRole.gettingThere);
       expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.booked);
-      expect(c.stepInfo(TripStepKey.gettingThere)!.state, TripStepState.waiting);
       c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
       expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.booked);
       c.unmarkStepBooked(TripStepRole.gettingThere);
@@ -313,23 +277,15 @@ void main() {
       expect(c.journeys, isEmpty);
 
       c.linkJourney(TripStepRole.gettingThere, journey('j1', DateTime(2030, 11, 1)));
-      c.markStepOwn(TripStepRole.gettingThere, note: '  Own car  ');
+      const going = TripEasyRowKey(TripEasyRowKind.gettingThere);
+      final res = await c.markOwn(going);
+      expect(res, isA<TripMarked>());
       expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.own);
-      expect(c.stepOf(TripStepRole.gettingThere).note, 'Own car');
       expect(c.stepOf(TripStepRole.gettingThere).journeyId, isNull);
       expect(c.journeys, isEmpty);
-      expect(c.stepInfo(TripStepKey.gettingThere)!.state, TripStepState.own);
-      c.resetStep(TripStepRole.gettingThere);
+      expect(c.easyRowOf(going)!.state, TripRowState.own);
+      c.undoMark(going);
       expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notStarted);
-    });
-
-    test('a start inside the city never marks a step not needed', () async {
-      final c = withPlan();
-      await c.setStartFrom(const TripStartFrom(name: 'Nainital', lat: 29.401, lon: 79.401));
-      expect(c.startsInsideCity, isTrue);
-      expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notStarted);
-      expect(c.stepOf(TripStepRole.comingBack).status, TripStepStatus.notStarted);
-      expect(c.wizardSteps.length, 9);
     });
 
     test('a new start city flags a linked journey', () async {
@@ -338,7 +294,6 @@ void main() {
       expect(await c.setStartFrom(const TripStartFrom(name: 'Dehradun', lat: 30.3165, lon: 78.0322)), isTrue);
       expect(c.startChangedRole, TripStepRole.gettingThere);
       expect(c.stepNeedsAttention(TripStepRole.gettingThere), isTrue);
-      expect(c.stepInfo(TripStepKey.gettingThere)!.state, TripStepState.attention);
     });
 
     test('a start date change clears both step dates and flags the journey', () async {
@@ -355,6 +310,15 @@ void main() {
       await c.saveSettings(c.settings.copyWith(startDate: DateTime(2030, 11, 8)));
       expect(c.stepOf(TripStepRole.comingBack).date, isNull);
       expect(c.journeyFor(TripStepRole.gettingThere)?.dateChanged, isTrue);
+    });
+
+    test('lastSettingsChange tells a people-only edit from a date edit', () async {
+      final c = withPlan(steps: const TripSteps(startFrom: delhi));
+      await c.saveSettings(c.settings.copyWith(adults: 3, kids: 1));
+      expect(c.lastSettingsChange, (dates: false, people: true, days: false));
+      await c.saveSettings(c.settings.copyWith(startDate: DateTime(2030, 11, 9)));
+      expect(c.lastSettingsChange.dates, isTrue);
+      expect(c.lastSettingsChange.people, isFalse);
     });
 
     test('adopts server-dropped journeys only when the local step still holds them', () {
@@ -385,57 +349,6 @@ void main() {
       expect(c.stepOf(TripStepRole.gettingThere).status, TripStepStatus.notStarted);
     });
 
-    test('No taxi this day counts grey, keeps its note and costs nothing', () {
-      final c = withPlan();
-      expect(c.setSkippedTaxiDay(1, note: ' Walking day '), NoTaxiBlock.none);
-      expect(c.plan.value!.dayAt(1)!.taxi!.isSkipped, isTrue);
-      expect(c.plan.value!.dayAt(1)!.taxi!.note, 'Walking day');
-      final info = c.stepInfo(const TripStepKey.taxi(1, 1))!;
-      expect((info.state, info.counted, info.note), (TripStepState.skipped, true, 'Walking day'));
-      expect(TripWizardRules.runningCost(c.wizardSteps), 0);
-      expect(c.stepInfo(const TripStepKey.taxi(1, 2))!.state, TripStepState.todo);
-      c.clearSkippedTaxiDay(1);
-      expect(c.plan.value!.dayAt(1)!.taxi, isNull);
-    });
-
-    test('taxi skip guard returns every block', () {
-      final c = withPlan();
-      c.enquiryList.assignAll([
-        TripEnquiryModel(
-          id: 'lead',
-          tripId: 't1',
-          kind: TripEnquiryKinds.taxi,
-          checkIn: DateTime(2030, 11, 2),
-          days: const [2],
-          status: TripEnquiryStatuses.asked,
-        ),
-      ]);
-      expect(c.canSkipTaxiDay(1), NoTaxiBlock.none);
-      expect(c.canSkipTaxiDay(2), NoTaxiBlock.hasEnquiry);
-      expect(c.setSkippedTaxiDay(2), NoTaxiBlock.hasEnquiry);
-      c.setOwnTaxi(days: const [1], name: 'Ravi');
-      expect(c.canSkipTaxiDay(1), NoTaxiBlock.hasOwn);
-      expect(c.setSkippedTaxiDay(1), NoTaxiBlock.hasOwn);
-      expect(c.plan.value!.dayAt(1)!.taxi!.isOwn, isTrue);
-      expect(c.setSkippedTaxiDay(1, replaceOwn: true), NoTaxiBlock.none);
-      expect(c.plan.value!.dayAt(1)!.taxi!.isSkipped, isTrue);
-      c.trip.value = c.trip.value!.copyWith(status: TripStatuses.completed);
-      expect(c.canSkipTaxiDay(1), NoTaxiBlock.readOnly);
-    });
-
-    test('No stay tonight asks before replacing an own stay', () {
-      final c = withPlan();
-      c.setOwnStay(1, name: 'Uncle');
-      expect(c.canSkipNight(1), NoStayBlock.hasOwn);
-      expect(c.setSkippedNight(1), NoStayBlock.hasOwn);
-      expect(c.plan.value!.dayAt(1)!.stay!.isOwn, isTrue);
-      expect(c.setSkippedNight(1, note: 'Night bus', replaceOwn: true), NoStayBlock.none);
-      expect(c.plan.value!.dayAt(1)!.stay!.isSkipped, isTrue);
-      expect(c.plan.value!.dayAt(1)!.stay!.note, 'Night bus');
-      c.clearSkippedNight(1);
-      expect(c.plan.value!.dayAt(1)!.stay, isNull);
-    });
-
     test('own cars on a step and on a city change', () {
       final c = withPlan(steps: const TripSteps(startFrom: delhi));
       c.setOwnCar(TripStepRole.gettingThere, null, 2, true);
@@ -450,21 +363,8 @@ void main() {
       expect(c.stepOf(TripStepRole.gettingThere).ownCars, isEmpty);
     });
 
-    test('rest day reads as No places this day', () {
+    test('dismissing a problem is saved in the plan', () {
       final c = withPlan();
-      c.setRestDay(2, true);
-      expect(c.plan.value!.dayAt(2)!.restDay, isTrue);
-      expect(c.stepInfo(const TripStepKey.places(1, 2))!.state, TripStepState.skipped);
-      c.setRestDay(2, false);
-      expect(c.stepInfo(const TripStepKey.places(1, 2))!.state, TripStepState.todo);
-    });
-
-    test('dismissing a problem is saved in the plan and keeps the stay', () {
-      final c = withPlan();
-      c.plan.value = c.plan.value!.copyWith(days: [
-        const TripDay(day: 1, stay: TripStayChoice(stayId: 's1', name: 'Pine Lodge')),
-        const TripDay(day: 2),
-      ]);
       c.enquiryList.assignAll([
         TripEnquiryModel(
           id: 'e1',
@@ -479,9 +379,8 @@ void main() {
       c.dismissProblem('e1');
       expect(c.plan.value!.dismissedEnquiryIds, ['e1']);
       expect(c.plan.value!.toJson()['dismissedEnquiryIds'], ['e1']);
-      expect(c.plan.value!.dayAt(1)!.stay?.stayId, 's1');
       expect(c.isDismissed('e1'), isTrue);
-      expect(c.primaryEnquiry(1), isNull);
+      expect(c.easyRowOf(const TripEasyRowKey(TripEasyRowKind.stay, 1))!.state, TripRowState.todo);
     });
 
     test('clear dates impact and undated bookings', () {
@@ -509,52 +408,6 @@ void main() {
       expect(c.undatedBookedRows, isEmpty);
       c.plan.value = c.plan.value!.copyWith(settings: c.settings.copyWith(clearStartDate: true));
       expect(c.undatedBookedRows.map((e) => e.id), ['b']);
-    });
-
-    test('a date shift drops a stale stay and notes the lost start', () {
-      final c = withPlan();
-      c.plan.value = c.plan.value!.copyWith(days: [
-        const TripDay(day: 1, stay: TripStayChoice(stayId: 's1', name: 'Pine Lodge')),
-        const TripDay(day: 2),
-      ]);
-      c.enquiryList.assignAll([
-        TripEnquiryModel(
-          id: 'e1',
-          tripId: 't1',
-          listingId: 's1',
-          listingName: 'Pine Lodge',
-          checkIn: DateTime(2030, 11, 2),
-          checkOut: DateTime(2030, 11, 3),
-          status: TripEnquiryStatuses.confirmedByBoth,
-          displayStatusWire: 'confirmedByBoth',
-        ),
-      ]);
-      c.reconcilePlan();
-      final p = c.plan.value!;
-      expect(p.dayAt(1)!.stay, isNull);
-      expect(p.dayAt(2)!.stay?.stayId, 's1');
-      expect(c.startChangedNotes[2], isNotNull);
-      expect(c.startOf(2).changedNote, isNotNull);
-      c.clearStartNote(2);
-      expect(c.startOf(2).changedNote, isNull);
-    });
-
-    test('places changed after asking a driver', () {
-      final c = withPlan();
-      c.plan.value = c.plan.value!.copyWith(days: [
-        TripDay(day: 1, spots: [_spot('a'), _spot('b')]),
-        const TripDay(day: 2),
-      ]);
-      TripEnquiryModel lead(List<String> spots) => TripEnquiryModel(
-            id: 'l',
-            kind: TripEnquiryKinds.taxi,
-            checkIn: DateTime(2030, 11, 1),
-            days: const [1],
-            context: TripEnquiryContext(days: [TripContextDay(day: 1, date: DateTime(2030, 11, 1), spots: spots)]),
-          );
-      expect(c.placesChangedSince(lead(const ['a', 'b']), 1), isFalse);
-      expect(c.placesChangedSince(lead(const ['a']), 1), isTrue);
-      expect(c.placesChangedSince(lead(const ['a']), 2), isFalse);
     });
 
     test('journey today on the travel day', () {
@@ -637,16 +490,14 @@ void main() {
       expect(out.days.map((d) => d.day).toList(), [for (var i = 1; i <= out.days.length; i++) i]);
     });
 
-    test('renumber keeps one day per leg and clears a cross-leg sameAsDay', () {
+    test('renumber keeps one day per leg', () {
       final c = TripPlanController();
-      const stay = TripStayChoice(stayId: 's1', name: 'Hotel');
       final days = [
-        const TripDay(day: 1, leg: 1, stay: stay),
-        const TripDay(day: 2, leg: 2, stay: TripStayChoice(stayId: 's1', name: 'Hotel', sameAsDay: 1)),
+        const TripDay(day: 1, leg: 1),
+        const TripDay(day: 2, leg: 2),
       ];
       final out = c.renumberForTest(days);
       expect(out.map((d) => d.leg).toList(), [1, 2]);
-      expect(out.last.stay?.sameAsDay, isNull);
     });
 
     test('removeLeg without bookings shifts later legs', () {
@@ -738,108 +589,6 @@ void main() {
       c.unavailableCities.add(1);
       expect(c.legUnavailable(1), isTrue);
       expect(c.canAddPlaces(1), isFalse);
-    });
-
-    TripPlan stayAcrossLegs() => TripPlan.fromJson({
-          'version': 4,
-          'cityKey': 1,
-          'cityName': 'Haridwar',
-          'legs': [
-            {'index': 1, 'cityKey': 1, 'cityName': 'Haridwar', 'latitude': 29.95, 'longitude': 78.16},
-            {'index': 2, 'cityKey': 2, 'cityName': 'Badrinath', 'latitude': 30.74, 'longitude': 79.49},
-          ],
-          'settings': {'startDate': '2030-11-01'},
-          'days': [
-            {'day': 1, 'leg': 1, 'spots': [_spot('a').toJson()]},
-            {'day': 2, 'leg': 1, 'spots': []},
-            {'day': 3, 'leg': 2, 'spots': []},
-          ],
-        });
-
-    test('a booked stay running into the next city starts a new first night there (#MCA6)', () {
-      final c = withPlan(stayAcrossLegs());
-      c.enquiryList.assignAll([
-        TripEnquiryModel(
-          id: 'e1',
-          listingId: 's1',
-          listingName: 'Ganga View',
-          status: TripEnquiryStatuses.confirmedByBoth,
-          displayStatusWire: 'confirmedByBoth',
-          checkIn: DateTime(2030, 11, 1),
-          checkOut: DateTime(2030, 11, 4),
-          agreedTotal: 3000,
-        ),
-      ]);
-      c.reconcilePlan();
-      final p = c.plan.value!;
-      expect(p.dayAt(1)!.stay?.sameAsDay, isNull);
-      expect(p.dayAt(2)!.stay?.sameAsDay, 1);
-      expect(p.dayAt(3)!.stay?.stayId, 's1');
-      expect(p.dayAt(3)!.stay?.sameAsDay, isNull);
-    });
-
-    test('a booking never replaces an own or skipped night or day (two plans stay visible)', () {
-      final c = withPlan(stayAcrossLegs());
-      final p0 = c.plan.value!;
-      c.plan.value = p0.copyWith(days: [
-        for (final d in p0.days)
-          d.day == 1
-              ? d.copyWith(stay: const TripStayChoice(stayId: '', name: 'Uncle', isOwn: true), taxi: const TripTaxiChoice.skippedDay(note: 'walk'))
-              : d,
-      ]);
-      c.enquiryList.assignAll([
-        TripEnquiryModel(
-          id: 'e1',
-          listingId: 's1',
-          listingName: 'Ganga View',
-          status: TripEnquiryStatuses.confirmedByBoth,
-          displayStatusWire: 'confirmedByBoth',
-          checkIn: DateTime(2030, 11, 1),
-          checkOut: DateTime(2030, 11, 3),
-          agreedTotal: 3000,
-        ),
-        TripEnquiryModel(
-          id: 't1',
-          kind: TripEnquiryKinds.taxi,
-          listingId: 'x1',
-          listingName: 'Ravi',
-          status: TripEnquiryStatuses.confirmedByBoth,
-          displayStatusWire: 'confirmedByBoth',
-          checkIn: DateTime(2030, 11, 1),
-          days: const [1],
-          taxi: const TripTaxiModel(agreedFare: 2000),
-        ),
-      ]);
-      c.reconcilePlan();
-      final p = c.plan.value!;
-      expect(p.dayAt(1)!.stay?.isOwn, isTrue);
-      expect(p.dayAt(1)!.taxi?.isSkipped, isTrue);
-      expect(p.dayAt(1)!.taxi?.note, 'walk');
-      expect(p.dayAt(2)!.stay?.stayId, 's1');
-      expect(c.stepInfo(const TripStepKey.stay(1, 1))!.state, TripStepState.attention);
-      expect(c.stepInfo(const TripStepKey.taxi(1, 1))!.state, TripStepState.attention);
-    });
-
-    test('a booked taxi covering two cities is not written into the plan (MC-C D7)', () {
-      final c = withPlan(stayAcrossLegs());
-      c.enquiryList.assignAll([
-        TripEnquiryModel(
-          id: 't1',
-          kind: TripEnquiryKinds.taxi,
-          listingId: 'x1',
-          listingName: 'Ravi',
-          status: TripEnquiryStatuses.bookedByTraveller,
-          displayStatusWire: 'bookedByYou',
-          checkIn: DateTime(2030, 11, 2),
-          days: const [2, 3],
-          taxi: const TripTaxiModel(agreedFare: 4000),
-        ),
-      ]);
-      c.reconcilePlan();
-      final p = c.plan.value!;
-      expect(p.dayAt(2)!.taxi, isNull);
-      expect(p.dayAt(3)!.taxi, isNull);
-      expect(c.bookedTaxiEnquiryFor(2)?.id, 't1');
     });
 
     test('a journey to the old first city needs attention after a city move (#MCA7)', () {
@@ -946,7 +695,6 @@ void main() {
       final c = ctl(legsPlan(start: DateTime(2030, 11, 1)));
       expect(await c.linkSegmentJourney(2, saved('j3')), TripLinkResult.notSaved);
       final a = c.plan.value!.legAt(2)!.arrival!;
-      expect(a.isJourney, isTrue);
       expect(a.journeyId, 'j3');
       expect(a.fromName, 'Haridwar');
       expect(a.listedTotal, 7000);
@@ -1061,62 +809,19 @@ void main() {
       expect(c.plan.value!.legAt(2)!.arrival, isNull);
     });
 
-    test('segment rows stay out of the day taxi surfaces but count as dated bookings', () {
+    test('segment rows stay out of the taxi row but count as dated bookings', () {
       final c = ctl(
         legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival),
         journeys: [segJourney('j2', asked: true)],
         rows: [segRow('j2', TripEnquiryStatuses.bookedByTraveller)],
       );
-      expect(c.taxiEnquiriesForDay(2), isEmpty);
-      expect(c.hasTaxiActivity(2), isFalse);
-      expect(c.bookedTaxiEnquiryFor(2), isNull);
-      expect(c.stepInfo(const TripStepKey.taxi(1, 1))!.state, TripStepState.todo);
-      expect(c.stepInfo(const TripStepKey.taxi(2, 1))!.state, TripStepState.todo);
+      expect(c.easyRowOf(const TripEasyRowKey(TripEasyRowKind.taxi))!.state, TripRowState.todo);
       expect(c.segmentRows(2).length, 1);
       expect(c.carBooking(2, 1), isNotNull);
       expect(c.travelStateOf(2), TripTravelState.booked);
       expect(c.bookingsOutsideDates(DateTime(2030, 12, 1)).length, 1);
       expect(c.bookingsOutsideDates(DateTime(2030, 11, 1)), isEmpty);
       expect(c.enquiriesOutsideDates, isEmpty);
-      c.reconcilePlan();
-      expect(c.plan.value!.dayAt(2)!.taxi, isNull);
-    });
-
-    test('a journey travel day hides the local taxi; own travel keeps it', () {
-      final c = ctl(legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival), journeys: [segJourney('j2')]);
-      expect(c.hidesLocalTaxi(2), isTrue);
-      expect(c.hidesLocalTaxi(3), isFalse);
-      expect(c.hasLocalTaxiOn(2), isFalse);
-      final own = ctl(legsPlan(
-        start: DateTime(2030, 11, 1),
-        arrival: {'mode': 'own', 'fromName': 'Haridwar', 'how': 'bus'},
-      ));
-      expect(own.hidesLocalTaxi(2), isFalse);
-      expect(own.travelStateOf(2), TripTravelState.own);
-    });
-
-    test('a session gap shows until travel is saved', () {
-      final c = ctl(legsPlan(start: DateTime(2030, 11, 1)));
-      expect(c.travelStateOf(2), TripTravelState.notPlanned);
-      c.markTravelGap(2, 'Rishikesh');
-      expect(c.travelStateOf(2), TripTravelState.gap);
-      expect(c.travelGaps[2], 'Rishikesh');
-      c.clearTravelGap(2);
-      expect(c.travelStateOf(2), TripTravelState.notPlanned);
-    });
-
-    test('a journey travel day still offers the sightseeing taxi with a hint', () {
-      final p = legsPlan(start: DateTime(2030, 11, 1), arrival: journeyArrival);
-      final days = [
-        for (final d in p.days)
-          d.day == 2 ? d : d.copyWith(taxi: const TripTaxiChoice(taxiId: 'tx', name: 'Sunil', fare: 2000)),
-      ];
-      final c = ctl(p.copyWith(days: days), journeys: [segJourney('j2')]);
-      expect(c.stepInfo(const TripStepKey.taxi(2, 1))!.state, TripStepState.todo);
-      expect(c.journeyHintFor(2), isNotNull);
-      expect(c.journeyHintFor(3), isNull);
-      final chosen = c.stepInfo(const TripStepKey.taxi(1, 1))!;
-      expect((chosen.state, chosen.needsYou), (TripStepState.waiting, true));
     });
 
     test('a coming back car on the check-out date is never outside the dates', () {
@@ -1137,7 +842,6 @@ void main() {
       expect(c.enquiriesOutsideDates, isEmpty);
       expect(c.dateChangeImpact(DateTime(2030, 11, 1)).isEmpty, isTrue);
       expect(c.dateChangeImpact(DateTime(2030, 11, 2)).booked.single.id, 'back');
-      expect(c.taxiEnquiriesForDay(3), isEmpty);
     });
 
     test('journey arrival road minutes: given, clamped, else previous own or a whole day', () async {
@@ -1150,13 +854,6 @@ void main() {
       final none = ctl(legsPlan(start: DateTime(2030, 11, 1)));
       await none.linkSegmentJourney(2, saved('j3'));
       expect(none.plan.value!.legAt(2)!.arrival!.roadMinutes, 450);
-
-      final own = ctl(legsPlan(
-        start: DateTime(2030, 11, 1),
-        arrival: {'mode': 'own', 'fromName': 'Haridwar', 'how': 'bus', 'roadMinutes': 240},
-      ));
-      await own.linkSegmentJourney(2, saved('j3'));
-      expect(own.plan.value!.legAt(2)!.arrival!.roadMinutes, 240);
     });
 
     test('an unavailable city blocks the link before anything changes', () async {
@@ -1364,49 +1061,6 @@ void main() {
       expect(c.canRemoveLeg(2), TripLegEditBlock.none);
     });
 
-    test('No stay tonight is refused while the night has a stay, and clears the shortlist', () {
-      final p = legsPlan();
-      final days = [
-        for (final d in p.days)
-          d.day == 3 ? d.copyWith(stayShortlist: const [TripStayShortlistItem(stayId: 'x', name: 'X')]) : d,
-      ];
-      final c = ctl(p.copyWith(days: days), rows: [stayRow('s2', 2, TripEnquiryStatuses.asked, city: 'Badrinath')]);
-      expect(c.canSkipNight(2), NoStayBlock.hasEnquiry);
-      expect(c.setSkippedNight(2), NoStayBlock.hasEnquiry);
-      expect(c.plan.value!.dayAt(2)!.stay, isNull);
-      expect(c.canSkipNight(3), NoStayBlock.none);
-      expect(c.setSkippedNight(3), NoStayBlock.none);
-      expect(c.plan.value!.dayAt(3)!.stay?.isSkipped, isTrue);
-      expect(c.plan.value!.dayAt(3)!.stayShortlist, isEmpty);
-      expect(c.canSkipNight(9), NoStayBlock.readOnly);
-    });
-
-    test('the enquiry run stops before a skipped night and at the leg end', () {
-      final p = legsPlan(legOfDay: const [1, 1, 2, 2, 2]);
-      final days = [
-        for (final d in p.days) d.day == 4 ? d.copyWith(stay: const TripStayChoice.skippedNight()) : d,
-      ];
-      final c = ctl(p.copyWith(days: days));
-      expect(c.enquiryNightsRun(1), [1, 2]);
-      expect(c.enquiryNightsRun(3), [3]);
-      expect(c.enquiryNightsRun(5), [5]);
-    });
-
-    test('reconcile never copies a wrong-city stay into the plan choice', () {
-      final c = ctl(legsPlan(), rows: [
-        stayRow('home', 1, TripEnquiryStatuses.confirmedByBoth),
-        stayRow('wrong', 2, TripEnquiryStatuses.confirmedByBoth),
-      ]);
-      c.reconcilePlan();
-      final p = c.plan.value!;
-      expect(p.dayAt(1)!.stay?.stayId, 'l-home');
-      expect(p.dayAt(2)!.stay, isNull);
-      expect(c.wrongCityForDay(2)?.id, 'wrong');
-      expect(c.wrongCityForDay(1), isNull);
-      expect(c.wrongCityRows.map((e) => e.id), ['wrong']);
-      expect(c.wrongCityOf(c.enquiryList.firstWhere((e) => e.id == 'wrong'))?.dayCity, 'Badrinath');
-    });
-
     test('a one-city trip flags only a city that is not in the trip', () {
       final c = ctl(_plan(start: DateTime(2030, 11, 1)),
           rows: [stayRow('s', 2, TripEnquiryStatuses.confirmedByBoth, city: 'Nainital')]);
@@ -1425,7 +1079,6 @@ void main() {
       expect(c.removeLeg(1, keepBookings: true), TripLegEditBlock.none);
       final p = c.plan.value!;
       expect(p.legCount, 1);
-      expect(p.dayAt(1)!.stay, isNull);
       expect(c.wrongCityForDay(1)?.id, 'h');
       final info = c.wrongCityOf(c.enquiryList.single)!;
       expect(info.cityRemoved, isTrue);
@@ -1456,7 +1109,6 @@ void main() {
       expect(c.removeLegMode(2), TripLegRemoveMode.keepLaterDates);
       expect(c.removeLeg(2, keepBookings: true), TripLegEditBlock.none);
       expect(c.plan.value!.dayAt(2)!.leg, 1);
-      expect(c.plan.value!.dayAt(2)!.stay, isNull);
       expect(c.wrongCityForDay(2)?.id, 'h');
     });
 
@@ -1553,14 +1205,12 @@ void main() {
               'day': 1,
               'leg': 1,
               'spots': [spot('a', 29.96, 78.17)],
-              'stay': {'stayId': 's1', 'name': 'Ganga View', 'latitude': 29.94, 'longitude': 78.15},
             },
             {'day': 2, 'leg': 2, 'spots': []},
             {
               'day': 3,
               'leg': 2,
               'spots': [spot('b', 30.75, 79.50)],
-              'stay': {'stayId': 's2', 'name': 'Alaknanda View', 'latitude': 30.73, 'longitude': 79.48},
             },
           ],
         });
@@ -1573,12 +1223,10 @@ void main() {
             TripDay(
               day: 1,
               spots: [TripSpotRef.fromJson(spot('a', 29.38, 79.45)), TripSpotRef.fromJson(spot('b', 29.39, 79.46))],
-              stay: const TripStayChoice(stayId: 's1', name: 'Lake Inn', latitude: 29.37, longitude: 79.44),
             ),
             TripDay(
               day: 2,
               spots: [TripSpotRef.fromJson(spot('c', 29.40, 79.47))],
-              stay: const TripStayChoice(stayId: 's1', name: 'Lake Inn', sameAsDay: 1),
             ),
             TripDay(day: 3, spots: [TripSpotRef.fromJson(spot('d', 29.41, 79.48))]),
           ],
@@ -1600,14 +1248,6 @@ void main() {
         for (final s in all ? p.allSpots : (p.dayAt(selected)?.spots ?? const <TripSpotRef>[]))
           LatLng(s.latitude, s.longitude),
       ];
-      final stay = all ? null : p.dayAt(selected)?.stay;
-      final pinDay = all ? null : (stay == null ? null : (stay.sameAsDay ?? selected));
-      for (final day in p.days) {
-        if (!all && day.day != pinDay) continue;
-        final s = day.stay;
-        if (s == null || s.isSameStay || !s.hasCoordinates) continue;
-        points.add(LatLng(s.latitude!, s.longitude!));
-      }
       return points;
     }
 
@@ -1699,15 +1339,15 @@ void main() {
       }
     });
 
-    test('mapFocusPoints per leg: All adds centres, a city keeps its own, a travel day adds the road ends', () {
+    test('mapFocusPoints per leg: All adds centres, a city keeps its own centre, a travel day adds the road ends', () {
       final c = ctl(legsPlan());
       c.selectMapAll();
       final all = keys(c.mapFocusPoints());
-      expect(all.map((s) => s.split(',').map((x) => double.parse(x).toStringAsFixed(2)).join(',')), containsAll(['29.95,78.16', '30.74,79.49', '29.96,78.17', '30.75,79.50', '29.94,78.15', '30.73,79.48']));
+      expect(all.map((s) => s.split(',').map((x) => double.parse(x).toStringAsFixed(2)).join(',')), containsAll(['29.95,78.16', '30.74,79.49', '29.96,78.17', '30.75,79.50']));
       c.selectMapLeg(1);
-      expect(keys(c.mapFocusPoints()), keys([const LatLng(29.96, 78.17), const LatLng(29.94, 78.15)]));
+      expect(keys(c.mapFocusPoints()), keys([const LatLng(29.96, 78.17)]));
       c.selectMapLeg(2);
-      expect(keys(c.mapFocusPoints()), keys([const LatLng(30.75, 79.50), const LatLng(30.73, 79.48)]));
+      expect(keys(c.mapFocusPoints()), keys([const LatLng(30.75, 79.50)]));
       c.selectMapDay(2);
       expect(keys(c.mapFocusPoints()), keys([const LatLng(29.95, 78.16), const LatLng(30.74, 79.49)]));
     });
@@ -1737,8 +1377,6 @@ void main() {
       TripSegmentGeometryCache.putPlan(WayPlan(planKey: 'pk', cars: 2, total: 0, legs: [leg(1, 'Rishikesh', 30.1), leg(2, 'Badrinath', 30.7)]));
       expect(c.segmentChangePlaces(2).map((p) => p.name), ['Rishikesh']);
       expect(c.segmentChangePlaces(1), isEmpty);
-      const own = {'mode': 'own', 'fromName': 'Haridwar', 'how': 'bus', 'leavesAt': '06:00'};
-      expect(ctl(legsPlan(arrival: own)).segmentChangePlaces(2), isEmpty);
     });
 
     test('travel headline, km, minutes, travel days and road minutes', () {
@@ -1752,8 +1390,6 @@ void main() {
       expect(c.cityMinutes(2), c.dayTotalMinutes(2) + c.dayTotalMinutes(3));
       const noTotal = {'mode': 'journey', 'fromName': 'Haridwar', 'journeyId': 'j2', 'cars': 1};
       expect(ctl(legsPlan(arrival: noTotal)).travelHeadline(2), '1 car');
-      const own = {'mode': 'own', 'fromName': 'Haridwar', 'how': 'bus', 'leavesAt': '06:00'};
-      expect(ctl(legsPlan(arrival: own)).travelHeadline(2), 'Own travel · Bus · 6:00 am');
       expect(ctl(legsPlan()).travelHeadline(2), isNull);
       expect(ctl(oneLeg()).travelDays, 0);
     });
@@ -1817,6 +1453,133 @@ void main() {
       final p = c.plan.value!;
       expect((p.dayOfSpot('y'), p.dayOfSpot('z')), (2, 2));
       expect(p.dayAt(3)!.restDay, isTrue);
+    });
+  });
+
+  group('v2 rows, marks and days', () {
+    const stay1 = TripEasyRowKey(TripEasyRowKind.stay, 1);
+    const taxi = TripEasyRowKey(TripEasyRowKind.taxi);
+    const between2 = TripEasyRowKey(TripEasyRowKind.between, 2);
+
+    TripPlan plan6(List<int> perDay, {List<int>? legOfDay}) => TripPlan(
+          legs: [
+            const TripCityLeg(index: 1, cityKey: 1, cityName: 'Nainital', latitude: 29.4, longitude: 79.4),
+            if (legOfDay != null && legOfDay.contains(2))
+              const TripCityLeg(index: 2, cityKey: 2, cityName: 'Almora', latitude: 29.6, longitude: 79.6),
+          ],
+          days: [
+            for (var i = 0; i < perDay.length; i++)
+              TripDay(
+                day: i + 1,
+                leg: legOfDay == null ? 1 : legOfDay[i],
+                spots: [for (var k = 0; k < perDay[i]; k++) _spot('d${i + 1}s$k')],
+              ),
+          ],
+          settings: TripSettings(startDate: DateTime(2030, 11, 1)),
+        );
+
+    TripPlanController ctlOf(TripPlan p, {List<TripEnquiryModel> rows = const []}) {
+      final c = TripPlanController();
+      addTearDown(c.onClose);
+      c.plan.value = p;
+      c.trip.value = _trip(p);
+      c.enquiryList.assignAll(rows);
+      return c;
+    }
+
+    TripEnquiryModel stayAsk(String status) => TripEnquiryModel(
+          id: 'e1',
+          tripId: 't1',
+          listingId: 's1',
+          listingName: 'Deodar',
+          status: status,
+          displayStatusWire: status == TripEnquiryStatuses.confirmedByBoth ? 'confirmedByBoth' : 'asked',
+          checkIn: DateTime(2030, 11, 1),
+          checkOut: DateTime(2030, 11, 2),
+        );
+
+    test('own stay mark is written, undone, skipped and unskipped with only a status', () async {
+      final c = ctlOf(plan6([2, 2]));
+      expect(await c.markOwn(stay1), isA<TripMarked>());
+      expect(c.plan.value!.legAt(1)!.stayMark?.isOwn, isTrue);
+      expect(c.easyRowOf(stay1)!.state, TripRowState.own);
+      c.undoMark(stay1);
+      expect(c.plan.value!.legAt(1)!.stayMark, isNull);
+      expect(c.easyRowOf(stay1)!.state, TripRowState.todo);
+      c.skipRow(stay1);
+      expect(c.plan.value!.legAt(1)!.stayMark?.isSkipped, isTrue);
+      expect(c.easyRowOf(stay1)!.state, TripRowState.skipped);
+      c.unskipRow(stay1);
+      expect(c.plan.value!.legAt(1)!.stayMark, isNull);
+    });
+
+    test('one taxi row has one mark for the whole trip', () async {
+      final c = ctlOf(plan6([2, 2]));
+      expect(await c.markOwn(taxi), isA<TripMarked>());
+      expect(c.plan.value!.taxiMark?.isOwn, isTrue);
+      c.undoMark(taxi);
+      expect(c.plan.value!.taxiMark, isNull);
+      c.skipRow(taxi);
+      expect(c.plan.value!.taxiMark?.isSkipped, isTrue);
+    });
+
+    test('between cities mark lives on the next city and an undo clears it', () async {
+      final c = ctlOf(plan6([2, 2], legOfDay: const [1, 2]));
+      expect(await c.markOwn(between2), isA<TripMarked>());
+      expect(c.plan.value!.legAt(2)!.travelMark?.isOwn, isTrue);
+      expect(c.plan.value!.legAt(2)!.arrival, isNull);
+      expect(c.plan.value!.legAt(1)!.travelMark, isNull);
+      c.undoMark(between2);
+      expect(c.plan.value!.legAt(2)!.travelMark, isNull);
+    });
+
+    test('an open ask must be withdrawn first and nothing is stored meanwhile', () async {
+      final c = ctlOf(plan6([2, 2]), rows: [stayAsk(TripEnquiryStatuses.asked)]);
+      final r = await c.markOwn(stay1);
+      expect(r, isA<TripMarkNeedsWithdraw>());
+      expect((r as TripMarkNeedsWithdraw).open.single.id, 'e1');
+      expect(c.plan.value!.legAt(1)!.stayMark, isNull);
+      c.skipRow(stay1);
+      expect(c.plan.value!.legAt(1)!.stayMark, isNull);
+    });
+
+    test('a confirmed booking blocks the mark', () async {
+      final c = ctlOf(plan6([2, 2]), rows: [stayAsk(TripEnquiryStatuses.confirmedByBoth)]);
+      final r = await c.markOwn(stay1);
+      expect(r, isA<TripMarkBlocked>());
+      expect((r as TripMarkBlocked).confirmed.id, 'e1');
+      expect(c.plan.value!.legAt(1)!.stayMark, isNull);
+    });
+
+    test('add a day appends an empty day to the city', () {
+      final c = ctlOf(plan6([3, 2]));
+      c.addDay();
+      expect(c.plan.value!.days.length, 3);
+      expect(c.plan.value!.days.last.spots, isEmpty);
+      expect(c.plan.value!.days.map((d) => d.day).toList(), [1, 2, 3]);
+    });
+
+    test('remove day refuses the last day of a city and when places would not fit', () {
+      final one = ctlOf(plan6([2]));
+      expect(one.removeDay(1), TripDayRemoveBlock.lastDay);
+      final full = ctlOf(plan6([6, 1]));
+      expect(full.removeDay(2), TripDayRemoveBlock.placesDontFit);
+      expect(full.plan.value!.days.length, 2);
+    });
+
+    test('remove day moves its places to the neighbour', () {
+      final c = ctlOf(plan6([3, 2]));
+      expect(c.removeDay(2), TripDayRemoveBlock.none);
+      expect(c.plan.value!.days.length, 1);
+      expect(c.plan.value!.days.single.spots.length, 5);
+    });
+
+    test('add capacity counts the free places of the city', () {
+      final c = ctlOf(plan6([6, 4]));
+      expect(c.addCapacity(1), 2);
+      expect(ctlOf(plan6([6, 6])).addCapacity(1), 0);
+      expect(TripDaysRules.canAddOnDay(c.plan.value!, 1), isFalse);
+      expect(TripDaysRules.canAddOnDay(c.plan.value!, 2), isTrue);
     });
   });
 }

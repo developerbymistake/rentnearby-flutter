@@ -4,9 +4,7 @@ import 'package:bakhli/features/trip/data/trip_popular_routes.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/models/trip_summary_model.dart';
-import 'package:bakhli/features/trip/trip_constants.dart';
 import 'package:bakhli/features/trip/utils/trip_summary_text.dart';
-import 'package:bakhli/features/trip/utils/trip_wizard_rules.dart';
 import 'package:bakhli/models/browse_item.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -30,15 +28,6 @@ WayLeg _leg(int i, WayPlace from, WayPlace to, List<WayDriver> drivers) => WayLe
 
 TripCityModel _c(int key, String name, {String status = TripCityStatus.ready, bool popular = false}) =>
     TripCityModel(cityKey: key, name: name, latitude: 29, longitude: 79, status: status, isPopularDestination: popular);
-
-TripPlan _plan(String? stayName) => TripPlan.singleCity(
-      cityKey: 1,
-      cityName: 'Nainital',
-      days: [
-        TripDay(day: 1, stay: stayName == null ? null : TripStayChoice(stayId: 's', name: stayName)),
-        const TripDay(day: 2),
-      ],
-    );
 
 void main() {
   group('journey save body', () {
@@ -97,19 +86,6 @@ void main() {
     });
   });
 
-  group('pickupPlaceOf', () {
-    test('long names are clipped to the limit', () {
-      final long = 'H' * (TripConstants.pickupPlaceMax + 30);
-      final r = TripWizardRules.pickupPlaceOf(_plan(long), 2)!;
-      expect(r.length, TripConstants.pickupPlaceMax);
-    });
-
-    test('blank names give null', () {
-      expect(TripWizardRules.pickupPlaceOf(_plan('   '), 2), isNull);
-      expect(TripWizardRules.pickupPlaceOf(_plan(null), 2), isNull);
-    });
-  });
-
   group('TripPopularRoutes.resolve', () {
     test('empty catalog gives nothing', () {
       expect(TripPopularRoutes.resolve(const []), isEmpty);
@@ -135,49 +111,40 @@ void main() {
     });
   });
 
-  group('own arrangement with every field null', () {
-    test('own travel round trips with flight and with nothing', () {
-      const full = TripTravel.own(fromName: 'Delhi', how: TripTravelHow.flight);
-      final back = TripTravel.fromJson(full.toJson());
-      expect(back.isOwn, isTrue);
-      expect(back.how, TripTravelHow.flight);
-      expect(back.ownName, isNull);
-      expect(back.ownPhone, isNull);
-      expect(back.note, isNull);
-      expect(back.hasPhone, isFalse);
-      final bare = TripTravel.fromJson({'mode': 'own'});
-      expect(bare.isOwn, isTrue);
-      expect(bare.fromName, '');
-      expect(bare.toJson().containsKey('how'), isFalse);
+  group('own marks carry only a status', () {
+    test('own travel mark writes only the status and never an arrival', () {
+      final plan = TripPlan(
+        legs: const [
+          TripCityLeg(index: 1, cityKey: 1, cityName: 'Delhi', latitude: 28, longitude: 77),
+          TripCityLeg(index: 2, cityKey: 2, cityName: 'Nainital', latitude: 29, longitude: 79, travelMark: TripRowMark.own()),
+        ],
+        days: const [TripDay(day: 1), TripDay(day: 2, leg: 2)],
+      );
+      final leg = (plan.toJson()['legs'] as List)[1] as Map;
+      expect(leg['travelMark'], {'status': 'own'});
+      expect(leg.containsKey('arrival'), isFalse);
+      final back = TripPlan.fromJson(plan.toJson());
+      expect(back.legs[1].travelMark?.isOwn, isTrue);
+      expect(back.legs[1].arrival, isNull);
     });
 
-    test('own step with all null fields round trips', () {
+    test('own step with no other field round trips', () {
       const s = TripStep(status: TripStepStatus.own);
       final j = s.toJson();
-      expect(j['status'], 'own');
-      expect(j.containsKey('how'), isFalse);
-      final back = TripStep.fromJson(j);
-      expect(back.status, TripStepStatus.own);
-      expect(back.how, isNull);
-      expect(back.ownName, isNull);
-      const f = TripStep(status: TripStepStatus.own, how: TripTravelHow.flight);
-      expect(TripStep.fromJson(f.toJson()).how, TripTravelHow.flight);
+      expect(j, {'status': 'own'});
+      expect(TripStep.fromJson(j).status, TripStepStatus.own);
     });
 
-    test('own stay without name or phone round trips', () {
-      const st = TripStayChoice(stayId: '', name: '', isOwn: true);
-      final j = st.toJson();
-      expect(j.containsKey('stayId'), isFalse);
-      final back = TripStayChoice.fromJson(j);
-      expect(back.isOwn, isTrue);
-      expect(back.name, '');
-      expect(back.ownPhone, isNull);
-      expect(back.hasListing, isFalse);
+    test('own stay mark on a leg round trips with nothing else', () {
+      const leg = TripCityLeg(index: 1, cityKey: 1, cityName: 'Nainital', latitude: 29, longitude: 79, stayMark: TripRowMark.own());
+      final j = leg.toJson();
+      expect(j['stayMark'], {'status': 'own'});
+      expect(TripCityLeg.fromJson(j).stayMark?.isOwn, isTrue);
     });
   });
 
   group('summary text with zero amounts', () {
-    test('zero fares never print as a price and blank own names get labels', () {
+    test('zero fares never print as a price', () {
       final r = TripSummaryRecord.fromJson({
         'tripId': 't',
         'title': 'Nainital trip',
@@ -192,9 +159,8 @@ void main() {
           {
             'night': 1,
             'date': '2026-11-01',
-            'listingName': '',
-            'isOwn': true,
-            'displayStatus': 'own',
+            'listingName': 'Deodar',
+            'displayStatus': 'asked',
             'agreedTotal': 0,
             'advanceAmount': 0,
           },
@@ -202,19 +168,16 @@ void main() {
         'taxis': [
           {
             'enquiryId': 't1',
-            'listingName': '',
+            'listingName': 'Mohan',
             'days': [1],
             'checkIn': '2026-11-01',
             'checkOut': '2026-11-01',
-            'isOwn': true,
-            'displayStatus': 'own',
+            'displayStatus': 'asked',
             'agreedFare': 0,
           },
         ],
       });
       final text = TripSummaryText.build(r);
-      expect(text, contains('Own stay'));
-      expect(text, contains('Own taxi'));
       expect(text, isNot(contains(BrowseItem.inr(0))));
       expect(TripSummaryText.fareLine(r.taxis.first), '');
     });

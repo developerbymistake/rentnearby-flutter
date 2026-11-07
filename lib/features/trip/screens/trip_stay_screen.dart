@@ -1,11 +1,9 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
 import '../../../models/browse_item.dart';
-import '../../../services/api_service.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/contact_launcher.dart';
 import '../../../widgets/empty_state_view.dart';
@@ -19,20 +17,19 @@ import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
 import '../trip_strings_fin_b1.dart';
-import '../trip_strings_mca_a3.dart';
-import '../utils/trip_format.dart';
+import '../trip_strings_v2_easy.dart';
+import '../trip_strings_v2_find.dart';
 import '../utils/trip_clock.dart';
-import '../widgets/trip_back_to_plan_bar.dart';
+import '../utils/trip_format.dart';
+import '../widgets/trip_arrange_confirm.dart';
 import '../widgets/trip_filter_chips.dart';
-import '../widgets/trip_night_chooser.dart';
 import '../widgets/trip_page_header.dart';
-import '../widgets/trip_route_strip.dart';
+import '../widgets/trip_phone_booking_sheet.dart';
 import '../widgets/trip_sheet_frame.dart';
-import '../widgets/trip_shortlist_bar.dart';
 import '../widgets/trip_status.dart';
 import '../widgets/trip_stay_row.dart';
-import '../widgets/trip_taxi_stay_toggle.dart';
-import '../widgets/trip_withdraw_sheet.dart';
+import 'trip_dates_sheet.dart';
+import 'trip_stay_enquiry_sheet.dart';
 
 class TripStayScreen extends StatefulWidget {
   const TripStayScreen({super.key});
@@ -42,13 +39,15 @@ class TripStayScreen extends StatefulWidget {
 }
 
 class _TripStayScreenState extends State<TripStayScreen> {
+  static const double _maxWidth = 640;
+  static const int _nightPreview = 3;
+
   late final TripPlanController _plan;
   late final TripSupplyController _supply;
-  final _groundOnly = false.obs;
-  final _offStays = <String>{}.obs;
-  final _checkedStays = <String>{};
-  String? _fromStep;
-  String? _replaceId;
+  late final int _leg;
+  final _split = false.obs;
+  final _expanded = <int>{}.obs;
+  List<int> _only = const [];
   Worker? _planWorker;
 
   @override
@@ -59,29 +58,21 @@ class _TripStayScreenState extends State<TripStayScreen> {
     _supply = TripSupplyController.to;
     final args = Get.arguments;
     final map = args is Map ? args : const {};
-    final day = map['day'] as int?;
-    _fromStep = map['fromStep'] as String?;
-    _replaceId = map['replaceEnquiryId'] as String?;
-    final lat = (map['nearLat'] as num?)?.toDouble();
-    final lng = (map['nearLng'] as num?)?.toDouble();
-    if (day != null) _supply.setDay(day);
-    if (lat != null && lng != null) {
-      _supply.setSearchPoint(lat, lng);
-    } else {
-      _supply.clearSearchPoint();
+    _leg = (map['legIndex'] as int?) ?? 1;
+    final p = _plan.plan.value;
+    final from = p?.legStart(_leg) ?? 1;
+    final count = p?.legDayCount(_leg) ?? 1;
+    final only = map['onlyDays'];
+    if (only is List) {
+      _only = [
+        for (final d in only.whereType<int>().toSet())
+          if (d >= from && d < from + count && !_plan.isDayPast(d)) d,
+      ]..sort();
     }
-    _supply.ensureStays();
-    _planWorker = ever(_plan.plan, (_) => _supply.ensureStays());
-  }
-
-  void _changeDay(int d) {
-    final from = _fromStep;
-    if (from != null) {
-      final next = _plan.stepKeyForDay(from, d);
-      if (next != null && next != from) setState(() => _fromStep = next);
-    }
-    _supply.setDay(d);
-    _supply.ensureStays();
+    _split.value = _only.isNotEmpty || (map['split'] == true && count != 1);
+    _supply.setNear((map['nearLat'] as num?)?.toDouble(), (map['nearLng'] as num?)?.toDouble());
+    _supply.ensureStays(_leg);
+    _planWorker = ever(_plan.plan, (_) => _supply.ensureStays(_leg));
   }
 
   @override
@@ -94,79 +85,56 @@ class _TripStayScreenState extends State<TripStayScreen> {
     super.dispose();
   }
 
-  bool _locked(int day) => _plan.isReadOnly || _plan.isDayPast(day);
+  TripEasyRowKey get _key => TripEasyRowKey(TripEasyRowKind.stay, _leg);
 
-  void _exit() {
-    if (_fromStep == null) {
-      Get.back();
-    } else {
-      TripBackToStepBar.back(_fromStep);
+  int get _firstDay => _plan.plan.value?.legStart(_leg) ?? 1;
+
+  int get _nights => _plan.plan.value?.legDayCount(_leg) ?? 1;
+
+  int get _pastNights {
+    final today = TripClock.today();
+    var n = 0;
+    for (var i = 0; i < _nights - 1; i++) {
+      final d = _plan.dateOf(_firstDay + i);
+      if (d != null && d.isBefore(today)) n++;
     }
+    return n;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: _fromStep == null,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _exit();
-      },
-      child: Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
-      body: Column(
-        children: [
-          Obx(() {
-            final d = _supply.day.value;
-            _plan.plan.value;
-            return TripPageHeader(
-              title: _title(d),
-              subtitle: _subtitle(d),
-              onBack: _exit,
-              gradient: StayColors.gradient,
-              bottom: TripTaxiStayToggle(
-                selected: TripSupplyKind.stay,
-                day: d,
-                onHeader: true,
-                activeColor: StayColors.accent,
-                fromStep: _fromStep,
-              ),
-            );
-          }),
-          Expanded(
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(child: _buildTop()),
-                _buildBody(),
-                const SliverToBoxAdapter(child: SizedBox(height: 16)),
-              ],
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: Obx(() {
-        final d = _supply.day.value;
-        return TripShortlistBar(key: ValueKey('shortlist-$d'), day: d, fromStep: _fromStep);
-      }),
-    ));
+  String get _city {
+    final p = _plan.plan.value;
+    return p == null ? _plan.cityName : p.cityNameOf(_firstDay);
   }
 
-  String _title(int d) {
-    if (_plan.isMultiCity) return TripStringsMcaA3.stayIn(_plan.cityNameOf(d));
-    final date = _plan.dateOf(d);
-    final today = date != null && TripClock.daysBetween(date, TripClock.today()) == 0;
-    return TripStrings.nightTitle(d, today: today);
+  bool get _noSupply =>
+      _plan.stayTabOff.value || (!_plan.supplyAvailableFor(_firstDay) && !_plan.supplyPendingFor(_firstDay));
+
+  void _skip() {
+    _plan.skipRow(_key);
+    TripNavigation.backToPlan();
   }
 
-  String _subtitle(int d) {
-    final date = _plan.dateOf(d);
-    if (_plan.isMultiCity) {
-      return TripStringsMcaA3.nightLine(d, date, TripStrings.peopleText(_plan.settings.peopleCount));
+  Future<void> _arrange() async {
+    if (!await TripArrangeConfirm.show(context, _key) || !mounted) return;
+    final res = await TripArrangeConfirm.mark(context, _key);
+    if (res == null || !mounted) return;
+    if (res is TripMarkBlocked) {
+      AppToast.warning(TripStringsV2Find.cancelFirstStay);
+      return;
     }
-    return TripStrings.joinDots([
-      _plan.cityName,
-      date == null ? null : TripFormat.dayMonth(date),
-      TripStrings.peopleText(_plan.settings.peopleCount),
-    ]);
+    TripNavigation.backToPlan();
+  }
+
+  String _subtitle() {
+    if (_only.isNotEmpty) return TripStringsV2Find.nightsLeft(_only.length);
+    final p = _plan.plan.value;
+    final first = _plan.dateOf(_firstDay);
+    String? range;
+    if (first != null && p != null) {
+      range = TripStringsV2Easy.stayDates(first, DateTime(first.year, first.month, first.day + _nights));
+    }
+    final people = _plan.settings.peopleCount;
+    return TripStringsV2Find.staySubtitle(_nights, range, people > 0 ? TripStrings.peopleText(people) : null);
   }
 
   Future<void> _pickPrice() async {
@@ -185,11 +153,6 @@ class _TripStayScreenState extends State<TripStayScreen> {
         onTap: _pickPrice,
       ),
       TripFilterChip(
-        label: TripStringsFinB1.groundFloor,
-        selected: _groundOnly.value,
-        onTap: () => _groundOnly.toggle(),
-      ),
-      TripFilterChip(
         label: TripStringsA2.homestay,
         selected: _supply.onlyHomestay.value,
         onTap: () => _supply.onlyHomestay.toggle(),
@@ -200,407 +163,172 @@ class _TripStayScreenState extends State<TripStayScreen> {
           selected: _supply.onlyHostel.value,
           onTap: () => _supply.onlyHostel.toggle(),
         ),
-      if (_hasFilters)
+      if (_supply.hasStayFilters)
         TripFilterChip(
           label: TripStringsA2.clearFilters,
           selected: false,
           icon: Iconsax.filter_remove,
-          onTap: _clearFilters,
+          onTap: _supply.clearStayFilters,
         ),
     ];
   }
 
-  bool get _hasFilters => _supply.hasStayFilters || _groundOnly.value;
-
-  void _clearFilters() {
-    _supply.clearStayFilters();
-    _groundOnly.value = false;
-  }
-
-  bool _noSupply() =>
-      _plan.stayTabOff.value || (!_plan.supplyAvailableFor(_supply.day.value) && !_plan.supplyPendingFor(_supply.day.value));
-
-  Widget _buildTop() {
-    return Obx(() {
-      final d = _supply.day.value;
-      _plan.plan.value;
-      _plan.enquiryList.length;
-      final listMode = TripNightChooser.modeOf(_plan, d) == TripNightMode.nightByNight;
-      final showChips = listMode && !_noSupply() && (_supply.stays.isNotEmpty || _hasFilters);
-      final chooser = TripNightChooser.visible(_plan, d);
-      final replacing = _replacing();
-      return Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_fromStep != null) ...[
-                  TripBackToStepBar(fromStep: _fromStep!),
-                  const SizedBox(height: 8),
-                ],
-                if (replacing != null) ...[
-                  _replaceLine(replacing),
-                  const SizedBox(height: 8),
-                ],
-                TripRouteStrip(
-                  day: d,
-                  onDayChanged: _changeDay,
-                  showRoute: false,
-                  nights: true,
-                  accent: StayColors.accent,
-                ),
-                if (chooser) ...[
-                  const SizedBox(height: 8),
-                  TripNightChooser(day: d),
-                ],
-                if (showChips) ...[
-                  const SizedBox(height: 4),
-                  TripFilterChips(items: _chips(), accent: StayColors.accent),
-                ],
-              ],
-            ),
-          ),
-        ),
-      );
-    });
-  }
-
   Widget _box(Widget child) => SliverToBoxAdapter(
-        child: Center(
-          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: child),
-        ),
+        child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: _maxWidth), child: child)),
       );
-
-  TripEnquiryModel? _replacing() {
-    final id = _replaceId;
-    if (id == null) return null;
-    final e = _plan.enquiryList.firstWhereOrNull((x) => x.id == id);
-    return e != null && e.isBooked ? e : null;
-  }
-
-  Widget _replaceLine(TripEnquiryModel e) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: StayColors.surface, borderRadius: BorderRadius.circular(12)),
-        child: Row(
-          children: [
-            const Icon(Iconsax.repeat, size: 16, color: StayColors.accentDark),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(TripStrings.replacesWhenConfirmed(e.listingName),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
-            ),
-          ],
-        ),
-      );
-
-  Widget _noSupplyView() {
-    final d = _supply.day.value;
-    final paused = _plan.stayTabOff.value;
-    final city = _plan.isMultiCity ? _plan.cityNameOf(d) : _plan.cityName;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 40, 32, 0),
-      child: Column(
-        children: [
-          const Icon(Iconsax.building_4, size: 40, color: AppColors.textHint),
-          const SizedBox(height: 10),
-          Text(paused ? TripStrings.staysPaused : TripStrings.noStaysIn(city),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
-          const SizedBox(height: 4),
-          const Text(TripStrings.addOwnToKeep,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          if (!_locked(d)) ...[
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: _modeButton(TripStrings.haveStay, () => TripShortlistBar.openOwn(context, d)),
-            ),
-            if (_plan.plan.value?.dayAt(d)?.stay?.isSkipped != true) ...[
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: _modeButton(TripStrings.noStayTonight, () async {
-                  if (await TripNightChooser.noStay(context, d) && mounted) TripBackToStepBar.back(_fromStep);
-                }),
-              ),
-            ],
-          ],
-          const SizedBox(height: 4),
-          TextButton(
-            onPressed: () => TripBackToStepBar.back(_fromStep),
-            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-            child: const Text(TripStrings.askAgainLater,
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: StayColors.accentDark)),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _skeletons() => SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         sliver: SliverList.builder(
           itemCount: 4,
           itemBuilder: (_, _) => Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
+              constraints: const BoxConstraints(maxWidth: _maxWidth),
               child: const TripStayRowSkeleton(),
             ),
           ),
         ),
       );
 
-  Widget _modeCard(int d, TripNightMode mode) {
-    final skipped = mode == TripNightMode.none;
-    final stay = _plan.plan.value?.dayAt(d)?.stay;
-    final name = stay?.name ?? '';
-    final base = skipped || stay == null ? null : _baseLines(stay);
-    final actions = !skipped && !_locked(d);
+  Widget _noSupplyView() {
+    final paused = _plan.stayTabOff.value;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: StayColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: StayColors.accent.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(skipped ? Iconsax.car : Iconsax.building_4, size: 20, color: StayColors.accentDark),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(skipped ? TripStrings.noStayTonight : TripStrings.sameAsLastNight,
-                          style: const TextStyle(
-                              fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                      const SizedBox(height: 2),
-                      Text(skipped ? TripStringsA2.noStayBody : TripStringsA2.sameStayBody(name),
-                          style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.35)),
-                      for (final line in base ?? const <String>[]) ...[
-                        const SizedBox(height: 4),
-                        Text(line,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
-                      ],
-                    ],
-                  ),
+      padding: const EdgeInsets.fromLTRB(32, 40, 32, 0),
+      child: Column(
+        children: [
+          const Icon(Iconsax.building_4, size: 40, color: AppColors.textHint),
+          const SizedBox(height: 10),
+          Text(paused ? TripStringsV2Find.staysPaused : TripStringsV2Find.noStaysTitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+          const SizedBox(height: 4),
+          Text(TripStringsV2Find.noStaysBody(_city),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+          if (!_plan.isReadOnly) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _arrange,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  side: BorderSide(color: StayColors.accent.withValues(alpha: 0.6)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-              ],
-            ),
-            if (actions) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(child: _modeButton(TripStringsFinB1.keepIt, _exit)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _modeButton(TripStringsFinB1.newStay, () => _plan.clearStay(d))),
-                ],
+                child: const Text(TripStringsV2Find.arrangeMyself,
+                    style: TextStyle(
+                        fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
               ),
-            ],
+            ),
+            TextButton(
+              onPressed: _skip,
+              style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+              child: const Text(TripStringsV2Find.skip,
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+            ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _splitBar() {
+    final on = _split.value;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () => _split.value = !on,
+          style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+          icon: Icon(on ? Iconsax.building_4 : Iconsax.calendar_1, size: 16, color: StayColors.accentDark),
+          label: Text(on ? TripStringsV2Find.sameStayFor(_nights - _pastNights) : TripStringsV2Find.nightByNight,
+              style: const TextStyle(
+                  fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
         ),
       ),
     );
   }
 
-  Widget _modeButton(String label, VoidCallback onTap) => OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(0, 44),
-          side: BorderSide(color: StayColors.accent.withValues(alpha: 0.6)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: Text(label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
-      );
-
-  List<String>? _baseLines(TripStayChoice stay) {
-    final baseDay = stay.sameAsDay;
-    if (baseDay == null) return null;
-    if (stay.isOwn) return ['${TripStringsA2.nightChip(baseDay)} · ${TripStrings.ownBooking}'];
-    final e = _plan.enquiriesForNight(baseDay).firstWhereOrNull((x) => x.isBooked && x.listingId == stay.stayId);
-    if (e == null) return null;
-    final head = '${TripStringsA2.nightChip(baseDay)} · ${TripStatusVisuals.label(e.display)}';
-    final out = e.acceptedOffer?.checkOut ?? e.checkOut;
-    final first = _plan.dayOfDate(e.acceptedOffer?.checkIn ?? e.checkIn);
-    if (first == null || out == null) return [head];
-    final after = _plan.dayOfDate(out);
-    final last = after == null ? first + e.nights - 1 : after - 1;
-    return [head, TripStringsFinB1.baseStayLine(first, last < first ? first : last, TripFormat.shortDate(out))];
+  Future<void> _phoneBooked() async {
+    if (!await TripDatesSheet.ensure(context, heading: TripStrings.addYourDates) || !_plan.hasDates || !mounted) return;
+    final stay = await TripSheetFrame.show<StayNearbyModel>(context, _PickStaySheet(stays: _supply.stays.toList()));
+    if (stay == null || !mounted) return;
+    final phone = ContactLauncher.tenDigits(stay.ownerPhone ?? '');
+    final r = await TripPhoneBookingSheet.show(
+      context,
+      stayId: stay.id,
+      stayName: stay.name ?? '',
+      hostName: stay.ownerName,
+      hostPhone: phone.length == 10 ? phone : null,
+      day: _only.isNotEmpty ? _only.first : _firstDay,
+    );
+    if (r == null || !mounted) return;
+    _plan.rememberLink(r);
+    if (r.confirmLink.isNotEmpty) await TripConfirmLinkSheet.show(context, r);
+    TripNavigation.backToPlan();
   }
 
-  Widget _buildBody() {
-    return Obx(() {
-      final d = _supply.day.value;
-      _plan.plan.value;
-      _plan.enquiryList.length;
-      if (_noSupply()) return _box(_noSupplyView());
-      final mode = TripNightChooser.modeOf(_plan, d);
-      if (mode != TripNightMode.nightByNight) return _box(_modeCard(d, mode));
-      if (_plan.supplyPendingFor(_supply.day.value) || _supply.stayLoading.value || _supply.staysOutOfDate) return _skeletons();
-      final all = _supply.stays;
-      final ground = _groundOnly.value;
-      _offStays.length;
-      final items = [
-        for (final s in _supply.filteredStays)
-          if (!ground || s.hasGroundFloorRoom) s,
-      ];
-      final listed = {for (final s in _plan.plan.value?.dayAt(d)?.stayShortlist ?? const []) s.stayId};
-      final asked = <String, TripEnquiryModel>{
-        for (final e in _plan.enquiriesForNight(d).reversed)
-          if (e.isOpen) e.listingId: e,
-      };
-      final pinned = _pinned(d, all, items, asked);
-      if (pinned.isNotEmpty) _checkLater(pinned);
-      Widget? empty;
-      if (all.isEmpty) {
-        if (_supply.stayFailed.value) {
-          empty = EmptyStateView(
-            icon: Iconsax.cloud_cross,
-            title: TripStrings.staysFailed,
-            subtitle: TripStrings.checkConnection,
-            onRetry: () => _supply.loadStays(),
-            palette: StayColors.palette,
-          );
-        } else if (!_supply.canWidenRadius) {
-          empty = _noSupplyView();
-        } else {
-          empty = EmptyStateView(
-            icon: Iconsax.building_4,
-            title: TripStrings.noStays,
-            subtitle: 'Within ${TripFormat.km(_supply.stayRadiusKm.value)} of your Day $d spots',
-            onRetry: () => _supply.widenRadius(),
-            retryLabel: TripStrings.widerRadius,
-            palette: StayColors.palette,
-          );
-        }
-      } else if (items.isEmpty) {
-        empty = EmptyStateView(
-          icon: Iconsax.filter_remove,
-          title: TripStringsA2.noMatchTitle,
-          subtitle: TripStringsA2.noMatchBody,
-          onRetry: _clearFilters,
-          retryLabel: TripStringsA2.clearFilters,
-          palette: StayColors.palette,
+  Widget _phoneLink() => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _phoneBooked,
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+            child: const Text(TripStringsV2Find.alreadyBookedByPhone,
+                style: TextStyle(
+                    fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: StayColors.accentDark)),
+          ),
+        ),
+      );
+
+  Widget _top() => Obx(() {
+        _plan.plan.value;
+        final showSplit = _only.isEmpty && _nights - _pastNights > 1 && !_noSupply && !_plan.isReadOnly && !_split.value;
+        final showPhone = !_noSupply &&
+            !_plan.isReadOnly &&
+            _plan.confirmedRowOf(_key) == null &&
+            _supply.stays.isNotEmpty;
+        final showChips = !_noSupply && (_supply.stays.isNotEmpty || _supply.hasStayFilters);
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _maxWidth),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (showSplit) _splitBar(),
+                if (showPhone) _phoneLink(),
+                if (showChips)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TripFilterChips(items: _chips(), accent: StayColors.accent),
+                  ),
+              ],
+            ),
+          ),
         );
-      }
-      final emptyView = empty;
-      if (pinned.isEmpty && emptyView != null) return _box(emptyView);
-      final gap = emptyView == null ? 0 : 1;
-      final locked = _locked(d);
-      return SliverPadding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        sliver: SliverList.builder(
-          itemCount: pinned.length + gap + items.length,
-          itemBuilder: (_, i) {
-            if (emptyView != null && i == pinned.length) {
-              return Center(
-                child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 640), child: emptyView),
-              );
-            }
-            final s = i < pinned.length ? pinned[i] : items[i - pinned.length - gap];
-            return Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
-                child: _row(s, d, listed.contains(s.id), asked[s.id], locked),
-              ),
-            );
-          },
-        ),
-      );
-    });
-  }
+      });
 
-  List<StayNearbyModel> _pinned(
-    int d,
-    List<StayNearbyModel> all,
-    List<StayNearbyModel> shown,
-    Map<String, TripEnquiryModel> asked,
-  ) {
-    final off = {..._plan.unavailableStayIds, ..._offStays};
+  List<StayNearbyModel> _pinned(List<StayNearbyModel> shown, Map<String, TripEnquiryModel> asked) {
     final seen = {for (final s in shown) s.id};
-    final loaded = {for (final s in all) s.id: s};
+    final loaded = {for (final s in _supply.stays) s.id: s};
     final out = <StayNearbyModel>[];
-    void add(StayNearbyModel s) {
-      if (seen.add(s.id)) out.add(_withActive(loaded[s.id] ?? s, !off.contains(s.id)));
-    }
-
-    for (final s in _plan.shortlistAsModels(d) ?? const <StayNearbyModel>[]) {
-      add(s);
-    }
     for (final e in asked.values) {
-      add(StayNearbyModel(
-        id: e.listingId,
-        name: e.listingName,
-        latitude: e.listingLatitude ?? 0,
-        longitude: e.listingLongitude ?? 0,
-        distanceKm: 0,
-        isActive: true,
-      ));
+      if (!seen.add(e.listingId)) continue;
+      out.add(loaded[e.listingId] ??
+          StayNearbyModel(
+            id: e.listingId,
+            name: e.listingName,
+            latitude: e.listingLatitude ?? 0,
+            longitude: e.listingLongitude ?? 0,
+            distanceKm: 0,
+            isActive: true,
+          ));
     }
     return out;
-  }
-
-  static StayNearbyModel _withActive(StayNearbyModel s, bool active) => s.isActive == active
-      ? s
-      : StayNearbyModel(
-          id: s.id,
-          name: s.name,
-          stayTypeName: s.stayTypeName,
-          latitude: s.latitude,
-          longitude: s.longitude,
-          minPricePerNight: s.minPricePerNight,
-          thumbnailUrl: s.thumbnailUrl,
-          distanceKm: s.distanceKm,
-          ownerName: s.ownerName,
-          ownerPhone: s.ownerPhone,
-          isActive: active,
-          isFeatured: s.isFeatured,
-          maxGuests: s.maxGuests,
-          meals: s.meals,
-          checkInTime: s.checkInTime,
-          roomCount: s.roomCount,
-          hasGroundFloorRoom: s.hasGroundFloorRoom,
-          bestRoomName: s.bestRoomName,
-          bestRoomGuests: s.bestRoomGuests,
-        );
-
-  void _checkLater(List<StayNearbyModel> pinned) {
-    final ids = [for (final s in pinned) if (_checkedStays.add(s.id)) s.id];
-    if (ids.isEmpty) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      for (final id in ids) {
-        _checkStay(id);
-      }
-    });
-  }
-
-  Future<void> _checkStay(String id) async {
-    try {
-      await ApiService.get('/stays/$id');
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 404 && mounted) _offStays.add(id);
-    } catch (_) {}
   }
 
   static String _ago(DateTime? t) {
@@ -621,52 +349,208 @@ class _TripStayScreenState extends State<TripStayScreen> {
     };
   }
 
-  void _toggle(int day, StayNearbyModel s) {
-    if (TripShortlistBar.isFull(_plan, day) || !_plan.toggleShortlist(day, s)) {
-      AppToast.warning(TripStrings.shortlistFull);
-    }
+  String _whatsAppText(int day, int nights) {
+    final first = _plan.dateOf(day);
+    final range = first == null ? null : TripFormat.dateRange(first, DateTime(first.year, first.month, first.day + nights));
+    return TripStrings.stayWhatsAppText(_city, range, _plan.settings.peopleSummary);
   }
 
-  Future<void> _remove(int day, StayNearbyModel s) async {
-    final open = _plan.enquiriesForNight(day).where((e) => e.listingId == s.id && e.isUnconfirmed).toList();
-    if (open.isNotEmpty && !await TripWithdrawSheet.showForRemove(context, open: open)) return;
-    _plan.removeShortlist(day, s.id);
-  }
-
-  Widget _row(StayNearbyModel s, int day, bool shortlisted, TripEnquiryModel? asked, bool locked) {
+  Widget _row(StayNearbyModel s, int day, int nights, TripEnquiryModel? asked) {
     final rawPhone = s.ownerPhone;
     final phone = (rawPhone == null || ContactLauncher.tenDigits(rawPhone).isEmpty) ? null : rawPhone;
-    return TripStayRow(
-      key: ValueKey(s.id),
-      stay: s,
-      fit: _supply.stayFitOf(s.id),
-      shortlisted: shortlisted,
-      status: asked?.display,
-      statusLine: _askedLine(asked),
-      onOpenChat: asked?.conversationId == null ? null : () => TripNavigation.openChatForEnquiry(asked!),
-      readOnly: locked,
-      onOpen: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, 'distanceKm': s.distanceKm}),
-      onCall: phone == null ? null : () => ContactLauncher.call(phone),
-      onWhatsApp: phone == null ? null : () => ContactLauncher.whatsApp(phone, message: _whatsAppText()),
-      onShortlist: () => _toggle(day, s),
-      onRemove: () => _remove(day, s),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _maxWidth),
+        child: TripStayRow(
+          key: ValueKey('${s.id}-$day'),
+          stay: s,
+          fit: _supply.stayFitOf(s.id),
+          status: asked?.display,
+          statusLine: _askedLine(asked),
+          onOpenChat: asked?.conversationId == null ? null : () => TripNavigation.openChatForEnquiry(asked!),
+          readOnly: _plan.isReadOnly,
+          onOpen: () => Get.toNamed(AppRoutes.stayDetail, arguments: {'id': s.id, 'distanceKm': s.distanceKm}),
+          onCall: phone == null ? null : () => ContactLauncher.call(phone),
+          onWhatsApp: phone == null ? null : () => ContactLauncher.whatsApp(phone, message: _whatsAppText(day, nights)),
+          onAsk: () => TripStayEnquirySheet.show(context, stay: s, day: day, nights: nights),
+        ),
+      ),
     );
   }
 
-  String _whatsAppText() {
-    final p = _plan.plan.value;
-    final settings = _plan.settings;
-    final d = _supply.day.value;
-    final legPlan = p != null && p.isMultiCity ? p : null;
-    final leg = legPlan?.legIndexOf(d) ?? 1;
-    final start = legPlan == null ? settings.startDate : settings.dateOf(legPlan.legStart(leg));
-    final end = p == null
-        ? null
-        : (legPlan == null ? settings.endDate(p.days.length) : settings.dateOf(legPlan.legEnd(leg)));
-    return TripStrings.stayWhatsAppText(
-      legPlan?.cityNameOf(d) ?? _plan.cityName,
-      start == null ? null : (end == null ? TripFormat.shortDate(start) : TripFormat.dateRange(start, end)),
-      settings.peopleSummary,
+  Map<String, TripEnquiryModel> _askedOf(List<TripEnquiryModel> rows) => {
+        for (final e in rows.reversed)
+          if (e.isOpen) e.listingId: e,
+      };
+
+  Widget? _emptyView(List<StayNearbyModel> all, List<StayNearbyModel> items) {
+    if (all.isEmpty) {
+      if (_supply.stayFailed.value) {
+        return EmptyStateView(
+          icon: Iconsax.cloud_cross,
+          title: TripStringsV2Find.staysFailed,
+          subtitle: TripStringsV2Find.checkConnection,
+          onRetry: () => _supply.loadStays(),
+          retryLabel: TripStringsV2Find.retry,
+          palette: StayColors.palette,
+        );
+      }
+      return _noSupplyView();
+    }
+    if (items.isEmpty) {
+      return EmptyStateView(
+        icon: Iconsax.filter_remove,
+        title: TripStringsV2Find.noMatch,
+        subtitle: TripStringsA2.noMatchBody,
+        onRetry: _supply.clearStayFilters,
+        retryLabel: TripStringsV2Find.clearFilters,
+        palette: StayColors.palette,
+      );
+    }
+    return null;
+  }
+
+  Widget _buildBody() => Obx(() {
+        _plan.plan.value;
+        _plan.enquiryList.length;
+        if (_noSupply) return _box(_noSupplyView());
+        if (_plan.supplyPendingFor(_firstDay) || _supply.stayLoading.value || _supply.staysOutOfDate) return _skeletons();
+        final all = _supply.stays;
+        final items = _supply.filteredStays;
+        if (_split.value) return _splitBody(all, items);
+        final asked = _askedOf(_plan.stayEnquiriesOf(_leg));
+        final pinned = _pinned(items, asked);
+        final empty = pinned.isEmpty ? _emptyView(all, items) : null;
+        if (empty != null) return _box(empty);
+        final rows = [...pinned, ...items];
+        final past = _pastNights;
+        final day = _firstDay + past;
+        final nights = _nights - past;
+        return SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverList.builder(
+            itemCount: rows.length + 1,
+            itemBuilder: (_, i) => i == rows.length
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text(TripStringsV2Find.askNote,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                  )
+                : _row(rows[i], day, nights, asked[rows[i].id]),
+          ),
+        );
+      });
+
+  Widget _splitBody(List<StayNearbyModel> all, List<StayNearbyModel> items) {
+    final empty = _emptyView(all, items);
+    if (empty != null) return _box(empty);
+    final past = _pastNights;
+    final first = _firstDay + past;
+    final nightDays = _only.isNotEmpty ? _only : [for (var i = 0; i < _nights - past; i++) first + i];
+    final n = nightDays.length;
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverList.builder(
+        itemCount: n + 1,
+        itemBuilder: (_, i) {
+          if (i == n) {
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: _maxWidth),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (!_plan.isReadOnly && _only.isEmpty) _splitBar(),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text(TripStringsV2Find.splitNote,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          final day = nightDays[i];
+          final date = _plan.dateOf(day);
+          final asked = _askedOf(_plan.enquiriesForNight(day));
+          final shown = _pinned(items, asked);
+          final rows = [...shown, ...items];
+          final open = _expanded.contains(day);
+          final visible = open ? rows : rows.take(_nightPreview).toList();
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: _maxWidth),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Text(TripStringsV2Find.nightLabel(day - _firstDay + 1, date == null ? null : TripFormat.shortDate(date)),
+                        style: const TextStyle(
+                            fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                  ),
+                  for (final s in visible) _row(s, day, 1, asked[s.id]),
+                  if (rows.length > _nightPreview)
+                    TextButton(
+                      onPressed: () => open ? _expanded.remove(day) : _expanded.add(day),
+                      style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                      child: Text(open ? TripStringsV2Find.showLess : TripStringsV2Find.showAll(rows.length),
+                          style: const TextStyle(
+                              fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) TripNavigation.backToPlan();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.scaffoldBg,
+        body: Column(
+          children: [
+            Obx(() {
+              _plan.plan.value;
+              return TripPageHeader(
+                title: TripStringsV2Find.stayIn(_city),
+                subtitle: _subtitle(),
+                onBack: TripNavigation.backToPlan,
+                gradient: StayColors.gradient,
+                trailing: _plan.isReadOnly || _only.isNotEmpty || _plan.openRowsOf(_key).isNotEmpty || _plan.confirmedRowOf(_key) != null
+                    ? null
+                    : TextButton(
+                        onPressed: _skip,
+                        style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                        child: const Text(TripStringsV2Find.skip,
+                            style: TextStyle(
+                                fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ),
+              );
+            }),
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(child: _top()),
+                  _buildBody(),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -713,4 +597,58 @@ class _PriceBody extends StatelessWidget {
       ],
     );
   }
+}
+
+class _PickStaySheet extends StatelessWidget {
+  const _PickStaySheet({required this.stays});
+
+  final List<StayNearbyModel> stays;
+
+  @override
+  Widget build(BuildContext context) {
+    return TripSheetFrame(
+      title: TripStringsV2Find.whichStay,
+      description: TripStringsV2Find.pickBookedStay,
+      children: [
+        for (final s in stays)
+          InkWell(
+            onTap: () => Navigator.pop(context, s),
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 52),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(s.name ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                          if (_area(s).isNotEmpty)
+                            Text(_area(s),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, size: 20, color: AppColors.textHint),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  static String _area(StayNearbyModel s) => [
+        if ((s.stayTypeName ?? '').isNotEmpty) s.stayTypeName!,
+        if (s.distanceKm > 0) '${s.distanceKm.toStringAsFixed(1)} km',
+      ].join(' · ');
 }

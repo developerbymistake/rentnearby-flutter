@@ -23,9 +23,9 @@ import '../trip_strings_a3.dart';
 import '../trip_strings_mcb_a3.dart';
 import '../trip_strings_mcc_k2.dart';
 import '../utils/trip_format.dart';
-import '../utils/trip_wizard_rules.dart';
+import '../utils/trip_stay_base.dart';
+import '../screens/trip_taxi_enquiry_sheet.dart';
 import 'trip_sheet_frame.dart';
-import 'trip_status.dart';
 
 class TripTaxiBookingSheet {
   static Future<bool> show(
@@ -94,7 +94,6 @@ class _BookingBodyState extends State<_BookingBody> {
   late TimeOfDay _time;
   late final TextEditingController _place;
   late final TextEditingController _fare;
-  late final TextEditingController _note;
   bool _toll = false;
   bool _saving = false;
   String? _fareError;
@@ -115,11 +114,10 @@ class _BookingBodyState extends State<_BookingBody> {
     final plan = _tripPlan;
     final enq = widget.enquiry;
     _item = widget.taxi ?? _fromEnquiry(enq!);
-    final existing = _existingBooking(plan);
     final server = enq?.taxi;
     final ahead = plan.days.map((d) => d.day).where((d) => !_plan.isDayPast(d)).toSet();
     final enqDays = enq == null ? const <int>[] : _plan.planDaysOf(enq);
-    final base = enqDays.isNotEmpty ? enqDays.toSet() : existing?.days.toSet();
+    final base = enqDays.isNotEmpty ? enqDays.toSet() : null;
     _days = base == null ? <int>{} : base.where(ahead.contains).toSet();
     if (_days.isEmpty && ahead.isNotEmpty) {
       _days.add(ahead.contains(widget.day) ? widget.day : (ahead.toList()..sort()).first);
@@ -134,20 +132,17 @@ class _BookingBodyState extends State<_BookingBody> {
       final inLeg = [for (final d in plan.daysOf(_leg)) if (ahead.contains(d.day)) d.day]..sort();
       if (inLeg.isNotEmpty) _days.add(inLeg.contains(widget.day) ? widget.day : inLeg.first);
     }
-    _time = _parseTime(server?.pickupTime ?? existing?.pickupTime ?? _plan.settings.pickupTime) ??
-        _parseTime(TripConstants.defaultPickupTime)!;
+    _time = _parseTime(server?.pickupTime) ?? TripTaxiEnquirySheet.defaultTime;
     final startDay = _days.isEmpty ? widget.day : (_days.toList()..sort()).first;
     _place = TextEditingController(
-        text: server?.pickupPlace ?? existing?.pickupPlace ?? TripWizardRules.pickupPlaceOf(plan, startDay) ?? _plan.settings.pickupPlace ?? '');
+        text: server?.pickupPlace ?? TripStayBase.nameOf(plan, plan.legIndexOf(startDay), _plan.enquiryList) ?? '');
     final rate = _item.localDayRate;
     final fare = server?.agreedFare ??
-        existing?.agreedFare ??
         widget.initialFare ??
         server?.driverFare ??
         (rate == null || rate <= 0 || _days.isEmpty ? null : rate * _days.length);
     _fare = TextEditingController(text: fare == null ? '' : '$fare');
-    _note = TextEditingController(text: existing?.note ?? '');
-    _toll = server?.tollExtra ?? existing?.tollExtra ?? false;
+    _toll = server?.tollExtra ?? false;
     final phone = enq?.owner.phone;
     if (phone != null && ContactLauncher.tenDigits(phone).isNotEmpty) {
       _phone = phone;
@@ -172,21 +167,12 @@ class _BookingBodyState extends State<_BookingBody> {
   void dispose() {
     _place.dispose();
     _fare.dispose();
-    _note.dispose();
     super.dispose();
   }
 
   TripEnquiryModel? _bookedRow() {
     for (final e in _plan.enquiries) {
       if (e.isTaxi && e.listingId == _taxiId && e.isBooked) return e;
-    }
-    return null;
-  }
-
-  TripTaxiBooking? _existingBooking(TripPlan plan) {
-    for (final d in plan.days) {
-      final t = d.taxi;
-      if (t != null && t.taxiId == _taxiId && t.booking != null) return t.booking;
     }
     return null;
   }
@@ -272,10 +258,6 @@ class _BookingBodyState extends State<_BookingBody> {
     return ok == true;
   }
 
-  bool _serverBooked(int day, String taxiId) => _plan.taxiEnquiriesForDay(day).any((e) =>
-      e.listingId == taxiId &&
-      (e.display == TripDisplayStatus.bookedByYou || e.display == TripDisplayStatus.confirmedByBoth));
-
   int _conflictDay(TripNightConflict c, List<int> days) {
     for (final d in days) {
       if (_plan.taxiEnquiriesForDay(d).any((e) => e.id == c.enquiryId)) return d;
@@ -303,19 +285,6 @@ class _BookingBodyState extends State<_BookingBody> {
       _saving = true;
     });
     final days = {..._pastDays, ..._days}.toList()..sort();
-    final plan = _tripPlan;
-    for (final d in _days.toList()..sort()) {
-      final other = plan.dayAt(d)?.taxi;
-      if (other != null && other.isBooked && other.taxiId != _taxiId && !_serverBooked(d, other.taxiId)) {
-        final replace = await _confirmReplace(d, other.name);
-        if (!mounted) return;
-        if (!replace) {
-          setState(() => _saving = false);
-          return;
-        }
-        break;
-      }
-    }
     final ctrl = TripEnquiryController.to;
     final time = TripFormat.hhmm(_time);
     final replaceIds = <String>[];
@@ -349,19 +318,6 @@ class _BookingBodyState extends State<_BookingBody> {
       setState(() => _saving = false);
       return;
     }
-    final note = _note.text.trim();
-    _plan.bookTaxi(
-      taxi: _item,
-      booking: TripTaxiBooking(
-        agreedFare: fare ?? 0,
-        tollExtra: _toll,
-        pickupTime: time,
-        pickupPlace: place,
-        days: days,
-        note: note.isEmpty ? null : note,
-        bookedAt: DateTime.now().toUtc(),
-      ),
-    );
     AppToast.success(TripStrings.bookingSaved);
     Navigator.pop(context, true);
   }
@@ -440,16 +396,6 @@ class _BookingBodyState extends State<_BookingBody> {
               const SizedBox(height: 6),
               _tollRow(),
               const SizedBox(height: 12),
-              _label(TripStrings.note),
-              TextField(
-                controller: _note,
-                minLines: 2,
-                maxLines: 3,
-                textCapitalization: TextCapitalization.sentences,
-                inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.noteMax)],
-                style: _inputStyle,
-                decoration: _decoration(),
-              ),
               const SizedBox(height: 20),
               GradientButton(
                 onPressed: _saving ? null : _save,
@@ -651,7 +597,7 @@ class _BookingBodyState extends State<_BookingBody> {
           TextField(
             controller: _place,
             textCapitalization: TextCapitalization.words,
-            inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.pickupPlaceMax)],
+            inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripTaxiEnquirySheet.placeMax)],
             style: _inputStyle,
             decoration: _decoration(),
           ),
@@ -741,7 +687,7 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
     _past = _plan.isDatePast(_date);
     final row = widget.enquiry ?? _carRow();
     final server = row?.taxi;
-    _time = _parseTime(server?.pickupTime ?? _plan.settings.pickupTime) ?? _parseTime(TripConstants.defaultPickupTime)!;
+    _time = _parseTime(server?.pickupTime) ?? TripTaxiEnquirySheet.defaultTime;
     _place = TextEditingController(text: server?.pickupPlace ?? _car.fromName);
     final fare = server?.agreedFare ?? server?.driverFare ?? _car.lastQuotedFare ?? _car.listedFare;
     _fare = TextEditingController(text: fare == null ? '' : '$fare');
@@ -1131,7 +1077,7 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
           TextField(
             controller: _place,
             textCapitalization: TextCapitalization.words,
-            inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.pickupPlaceMax)],
+            inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripTaxiEnquirySheet.placeMax)],
             style: _inputStyle,
             decoration: _decoration(),
           ),

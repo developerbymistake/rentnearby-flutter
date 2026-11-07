@@ -15,10 +15,10 @@ import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
 import '../trip_strings_mcd_k1.dart';
 import '../trip_strings_steps_a3.dart';
+import '../trip_strings_v2_easy.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_summary_source.dart';
 import '../utils/trip_summary_text.dart';
-import '../utils/trip_wizard_rules.dart';
 import '../widgets/trip_journey_compact.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_payment_line.dart';
@@ -206,7 +206,8 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                       _section(TripStringsA5.itinerary),
                       for (final d in days) ...[_dayCard(d), const SizedBox(height: 12)],
                     ],
-                    ..._stepSection(r, TripStepRole.gettingThere),
+                    ..._arrangementSection(r),
+                    ..._journeySection(r, TripStepRole.gettingThere),
                     if (r.isMultiCity)
                       for (final leg in r.legs) ..._legSection(leg)
                     else ...[
@@ -219,7 +220,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
                         for (final t in r.taxis) ...[_taxiCard(t), const SizedBox(height: 12)],
                       ],
                     ],
-                    ..._stepSection(r, TripStepRole.comingBack),
+                    ..._journeySection(r, TripStepRole.comingBack),
                     if (r.agreedTotal > 0) _totalStrip(r.agreedTotal),
                     const SizedBox(height: 12),
                     Text(
@@ -249,45 +250,88 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     ];
   }
 
-  List<Widget> _stepSection(TripSummaryRecord r, TripStepRole role) {
-    if (!TripSummaryText.stepShown(r, role)) return const [];
+  List<Widget> _arrangementSection(TripSummaryRecord r) {
+    final rows = TripSummaryText.shownArrangements(r);
+    if (rows.isEmpty) return const [];
     return [
-      _section(role == TripStepRole.gettingThere ? TripStringsStepsA3.gettingThereCaps : TripStringsStepsA3.comingBackCaps),
-      _stepCard(r, role),
+      _section(TripStringsV2Easy.arrangementsHeading),
+      TripStatusCard(
+        status: TripDisplayStatus.none,
+        child: Column(children: [for (final a in rows) _arrangementRow(a)]),
+      ),
       const SizedBox(height: 12),
     ];
   }
 
-  Widget _stepCard(TripSummaryRecord r, TripStepRole role) {
-    final info = TripSummaryText.stepInfo(r, role);
-    final j = TripSummaryText.journeyOf(r, role);
-    final own = info?.state == TripStepState.own;
-    final status = TripSummaryText.pillStatus(info?.state);
-    final pill = TripStatusPill(status, taxi: true, label: info?.line);
-    if (own || j == null) {
-      final note = (r.steps.of(role).note ?? '').trim();
-      return TripStatusCard(
-        status: status,
-        child: _titleRow(TripStringsStepsA3.arrangedByYou, note, pill),
-      );
-    }
-    return TripStatusCard(
-      status: status,
-      child: Column(
+  Widget _arrangementRow(TripSummaryArrangement a) {
+    final done = TripSummaryText.isDone(a.state);
+    final detail = (a.detail ?? '').trim();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _titleRow(
-            TripStringsStepsA3.routeLine(j.places),
-            TripStrings.joinDots([TripFormat.shortDate(j.date), TripStringsStepsA3.carsLine(j.cars)]),
-            pill,
+          Icon(done ? Iconsax.tick_circle5 : Iconsax.clock,
+              size: 18, color: done ? AppColors.success : AppColors.warningText),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(a.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                if (detail.isNotEmpty)
+                  Text(detail,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium)),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          TripJourneyCompact(journey: j),
-          const SizedBox(height: 10),
-          const TripPaymentLine(text: TripStrings.taxiPayLine),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(TripSummaryText.stateWord(a.state),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: done ? AppColors.successText : AppColors.warningText)),
+          ),
         ],
       ),
     );
+  }
+
+  List<Widget> _journeySection(TripSummaryRecord r, TripStepRole role) {
+    final j = TripSummaryText.journeyOf(r, role);
+    final status = r.steps.of(role).status;
+    if (j == null || status == TripStepStatus.own || status == TripStepStatus.skipped) return const [];
+    return [
+      _section(role == TripStepRole.gettingThere ? TripStringsStepsA3.gettingThereCaps : TripStringsStepsA3.comingBackCaps),
+      TripStatusCard(
+        status: TripDisplayStatus.none,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _titleRow(
+              TripStringsStepsA3.routeLine(j.places),
+              TripStrings.joinDots([TripFormat.shortDate(j.date), TripStringsStepsA3.carsLine(j.cars)]),
+              const SizedBox.shrink(),
+            ),
+            const SizedBox(height: 8),
+            TripJourneyCompact(journey: j),
+            const SizedBox(height: 10),
+            const TripPaymentLine(text: TripStrings.taxiPayLine),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+    ];
   }
 
   Widget _section(String text) => Padding(
@@ -328,11 +372,16 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            TripStringsA5.dayHeading(d.day, date),
+            d.city == null ? TripStringsA5.dayHeading(d.day, date) : TripStringsV2Easy.dayInCity(d.day, d.city!),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
           ),
+          if (d.city != null && date != null)
+            Text(
+              date,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium),
+            ),
           if (d.minutes > 0)
             Text(
               TripStringsA5.aboutDuration(TripFormat.duration(d.minutes)),
@@ -432,45 +481,30 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
     final date = n.date == null ? '' : TripFormat.shortDate(n.date!);
     heading ??= TripStringsA5.nightHeading(n.night, date, TripSummaryText.checkOutOf(n.date));
     final agreed = agreedTotal ?? n.agreedTotal;
-    if (TripSummaryText.isSkipped(n)) {
-      return TripStatusCard(
-        status: TripDisplayStatus.none,
-        child: _titleRow(heading, TripStringsA5.noStayTonight, const SizedBox.shrink()),
-      );
-    }
-    final status = n.isOwn ? TripDisplayStatus.own : n.display;
-    final label = n.isOwn
-        ? TripStrings.ownBookingShort
-        : n.isCancelled
-            ? TripSummaryText.statusLabel(n.display, n.cancelledBy ?? 'owner')
-            : null;
+    final status = n.display;
+    final label = n.isCancelled ? TripSummaryText.statusLabel(n.display, n.cancelledBy ?? 'owner') : null;
     return TripStatusCard(
       status: status,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _titleRow(heading, subtitle ?? TripSummaryText.ownOr(n.listingName, n.isOwn, 'Own stay'), TripStatusPill(status, label: label)),
-          if (n.isOwn && (n.ownPhone ?? '').isNotEmpty) _kv(TripStrings.call, n.ownPhone!),
+          _titleRow(heading, subtitle ?? n.listingName, TripStatusPill(status, label: label)),
           for (final room in n.roomLines) _kv(TripStrings.room, TripSummaryText.roomLine(room)),
           if (agreed != null) _kv(TripStrings.agreed, BrowseItem.inr(agreed)),
-          if (!n.isOwn) _kv(TripStrings.advance, TripSummaryText.advanceLine(n)),
+          _kv(TripStrings.advance, TripSummaryText.advanceLine(n)),
           if ((n.cancellationText ?? '').isNotEmpty) _kv(TripStrings.cancellationTerms, n.cancellationText!),
           if (n.gstInvoice != null) _kv(TripStrings.gstInvoice, n.gstInvoice! ? TripStrings.yes : TripStrings.no),
-          if (!n.isOwn) _kv(TripStrings.confirmedLabel, n.confirmedLine()),
+          _kv(TripStrings.confirmedLabel, n.confirmedLine()),
         ],
       ),
     );
   }
 
   Widget _taxiCard(TripSummaryTaxi t) {
-    final taxiName = TripSummaryText.ownOr(t.listingName, t.isOwn, 'Own taxi');
+    final taxiName = t.listingName;
     final vehicle = (t.vehicleTypeName ?? '').isEmpty ? taxiName : '$taxiName · ${t.vehicleTypeName}';
-    final status = t.isOwn ? TripDisplayStatus.own : t.display;
-    final label = t.isOwn
-        ? TripStrings.ownBookingShort
-        : t.isCancelled
-            ? TripSummaryText.statusLabel(t.display, t.cancelledBy ?? 'owner', taxi: true)
-            : null;
+    final status = t.display;
+    final label = t.isCancelled ? TripSummaryText.statusLabel(t.display, t.cancelledBy ?? 'owner', taxi: true) : null;
     final fare = TripSummaryText.fareLine(t);
     final pickup = [
       if ((t.pickupTime ?? '').isNotEmpty) TripFormat.time12(t.pickupTime!),
@@ -486,14 +520,11 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
             vehicle,
             TripStatusPill(status, taxi: true, label: label),
           ),
-          if (t.isOwn && (t.ownPhone ?? '').isNotEmpty) _kv(TripStrings.call, t.ownPhone!),
           if (fare.isNotEmpty) _kv(TripStrings.fare, fare),
           if (pickup.isNotEmpty) _kv(TripStrings.pickup, pickup),
-          if (!t.isOwn) _kv(TripStrings.confirmedLabel, t.confirmedLine()),
-          if (!t.isOwn) ...[
-            const SizedBox(height: 10),
-            const TripPaymentLine(text: TripStrings.taxiPayLine),
-          ],
+          _kv(TripStrings.confirmedLabel, t.confirmedLine()),
+          const SizedBox(height: 10),
+          const TripPaymentLine(text: TripStrings.taxiPayLine),
         ],
       ),
     );
@@ -523,12 +554,23 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _maxWidth),
-          child: GradientButton(
-            onPressed: _share,
-            label: TripStringsA5.shareTrip,
-            height: 48,
-            gradient: TripColors.gradient,
-            shadowColor: TripColors.accent,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GradientButton(
+                onPressed: _share,
+                label: TripStringsA5.shareTrip,
+                height: 48,
+                gradient: TripColors.gradient,
+                shadowColor: TripColors.accent,
+              ),
+              TextButton(
+                onPressed: () => Get.back(),
+                style: TextButton.styleFrom(minimumSize: const Size(double.infinity, 44)),
+                child: const Text(TripStringsV2Easy.done,
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+              ),
+            ],
           ),
         ),
       ),

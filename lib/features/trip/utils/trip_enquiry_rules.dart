@@ -126,8 +126,6 @@ class TripEnquiryRules {
     required bool allNights,
     int? adults,
     int? kids,
-    int? rooms,
-    List<String> needs = const [],
     List<TripPreviewDay> days = const [],
   }) {
     final nights = DateTime.utc(checkOut.year, checkOut.month, checkOut.day)
@@ -135,10 +133,7 @@ class TripEnquiryRules {
         .inDays;
     final nightsPart = allNights && nights > 1 ? ' ($nights nights)' : '';
     final b = StringBuffer('Hi, trip to ${clean(city)}, ${shortDay(checkIn)} to ${shortDay(checkOut)}$nightsPart, ${_people(adults, kids)}');
-    if (rooms != null) b.write(', ${rooms == 1 ? '1 room' : '$rooms rooms'}');
     b.write('.');
-    final words = {for (final n in needs) ?_needWord(n)}.toList();
-    if (words.isNotEmpty) b.write(' We need ${_join(words)}.');
     for (final d in days) {
       final spots = [for (final s in d.spots) clean(s)].where((s) => s.isNotEmpty).toList();
       if (spots.isEmpty) continue;
@@ -155,18 +150,6 @@ class TripEnquiryRules {
     final a = adults == 1 ? '1 adult' : '$adults adults';
     final k = kids ?? 0;
     return k > 0 ? '$a, $k ${k == 1 ? 'kid' : 'kids'}' : a;
-  }
-
-  static String? _needWord(String key) => switch (key) {
-        TripNeeds.noStairs => 'no stairs',
-        TripNeeds.kidsSafe => 'a safe room for kids',
-        TripNeeds.vegFood => 'vegetarian food',
-        _ => null,
-      };
-
-  static String _join(List<String> w) {
-    if (w.length == 1) return w.first;
-    return '${w.sublist(0, w.length - 1).join(', ')} and ${w.last}';
   }
 
   static String closesInLabel(DateTime expiresAt, DateTime now) {
@@ -224,6 +207,12 @@ class TripEnquiryRules {
     return best;
   }
 
+  static bool grewWithTrip(TripEnquiryModel e, int oldDays, int days) {
+    if (!e.isTaxi || e.isSegment || oldDays < 1 || days == oldDays || e.days.length != oldDays) return false;
+    final sorted = [...e.days]..sort();
+    return sorted.first == 1 && sorted.last == oldDays;
+  }
+
   static WrongCityInfo? wrongCity(TripEnquiryModel e, TripPlan plan, TripSettings settings) {
     final start = settings.startDate;
     if (e.isSegment || start == null) return null;
@@ -266,4 +255,30 @@ class TripEnquiryRules {
     if (e.isSegment || start == null) return false;
     return datesOf(e).any((d) => dayOf(start, d, dayCount) == null);
   }
+
+  static bool contextStale(TripEnquiryModel e, TripPlan p) {
+    if (e.isTaxi || !e.isOpen) return false;
+    for (final d in e.context.days) {
+      TripDay? day;
+      for (final x in p.days) {
+        if (x.day == d.day) {
+          day = x;
+          break;
+        }
+      }
+      if (day == null) continue;
+      final now = [for (final s in day.spots) s.name.trim()];
+      final then = [for (final s in d.spots) s.trim()];
+      if (now.length != then.length) return true;
+      for (var i = 0; i < now.length; i++) {
+        if (now[i] != then[i]) return true;
+      }
+    }
+    return false;
+  }
+}
+
+class TripDatesRules {
+  static bool isStale(DateTime? start, DateTime today, bool anyOpen) =>
+      start != null && start.isBefore(today) && !anyOpen;
 }

@@ -10,13 +10,13 @@ import '../data/trip_city_catalog.dart';
 import '../data/trip_popular_routes.dart';
 import '../data/trip_repository.dart';
 import '../models/trip_city_model.dart';
-import '../models/trip_plan_model.dart';
 import '../../../utils/app_toast.dart';
 import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_mca_a2.dart';
+import '../trip_strings_v2_create.dart';
 
 class TripCitySupplyCache {
   static const _ttl = Duration(minutes: 10);
@@ -49,9 +49,10 @@ class TripCityPick {
   final TripCityModel? next;
   final List<TripCityModel> cities;
   final List<TripDraftLeg> draftLegs;
+  final int? days;
 
-  TripCityPick(this.city, {this.next, List<TripCityModel>? cities, this.draftLegs = const []})
-      : cities = cities ?? [city, ?next];
+  TripCityPick(this.city, {this.next, List<TripCityModel>? cities, this.draftLegs = const [], this.days})
+    : cities = cities ?? [city, ?next];
 
   List<String> get draftIds => draftLegs.isEmpty ? const [] : draftLegs.first.ids;
 }
@@ -64,11 +65,11 @@ class TripDraftLeg {
 }
 
 class TripNewDraft {
-  static const _version = 2;
+  static const _version = 3;
   final List<TripDraftLeg> legs;
-  final TripSettings? settings;
+  final int? days;
 
-  const TripNewDraft(this.legs, [this.settings]);
+  const TripNewDraft(this.legs, [this.days]);
 
   TripCityModel get city => legs.first.city;
 
@@ -76,47 +77,39 @@ class TripNewDraft {
 
   static TripNewDraft? read() {
     final m = StorageService.getTripNewDraft();
-    if (m == null) return null;
+    if (m == null || m['v'] != _version) return null;
     try {
       final legs = <TripDraftLeg>[];
-      if (m['v'] == _version) {
-        for (final raw in (m['legs'] as List)) {
-          final e = Map<String, dynamic>.from(raw as Map);
-          legs.add(TripDraftLeg(
+      for (final raw in (m['legs'] as List)) {
+        final e = Map<String, dynamic>.from(raw as Map);
+        legs.add(
+          TripDraftLeg(
             TripCityModel.fromJson(Map<String, dynamic>.from(e['city'] as Map)),
             ((e['ids'] as List?) ?? const []).whereType<String>().toList(),
-          ));
-        }
-      } else {
-        final ids = ((m['ids'] as List?) ?? const []).whereType<String>().toList();
-        legs.add(TripDraftLeg(TripCityModel.fromJson(Map<String, dynamic>.from(m['city'] as Map)), ids));
-        final n = m['next'];
-        if (n is Map) legs.add(TripDraftLeg(TripCityModel.fromJson(Map<String, dynamic>.from(n)), const []));
+          ),
+        );
       }
       if (legs.isEmpty || legs.every((l) => l.ids.isEmpty)) return null;
-      final st = m['settings'];
-      return TripNewDraft(legs, st is Map ? TripSettings.fromJson(Map<String, dynamic>.from(st)) : null);
+      final d = m['days'];
+      return TripNewDraft(legs, d is num ? d.toInt() : null);
     } catch (_) {
       return null;
     }
   }
 
-  static void save(List<TripDraftLeg> legs, {TripSettings? settings}) {
+  static void save(List<TripDraftLeg> legs, {int? days}) {
     if (legs.isEmpty || legs.every((l) => l.ids.isEmpty)) {
       StorageService.clearTripNewDraft();
       return;
     }
-    final keep = settings ?? read()?.settings;
     StorageService.saveTripNewDraft({
       'v': _version,
       'legs': [
         for (final l in legs) {'city': l.city.toJson(), 'ids': l.ids},
       ],
-      'settings': ?keep?.toJson(),
+      'days': ?(days ?? read()?.days),
     });
   }
-
-  static TripSettings? savedSettings() => read()?.settings;
 }
 
 class TripCitySheet extends StatefulWidget {
@@ -124,12 +117,7 @@ class TripCitySheet extends StatefulWidget {
   final String? afterCity;
   final Set<int> inTrip;
 
-  const TripCitySheet({
-    super.key,
-    this.mode = TripCitySheetMode.start,
-    this.afterCity,
-    this.inTrip = const {},
-  });
+  const TripCitySheet({super.key, this.mode = TripCitySheetMode.start, this.afterCity, this.inTrip = const {}});
 
   static Future<TripCityPick?> pick(
     BuildContext context, {
@@ -142,9 +130,7 @@ class TripCitySheet extends StatefulWidget {
       isScrollControlled: true,
       backgroundColor: Colors.white,
       constraints: const BoxConstraints(maxWidth: 640),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => TripCitySheet(mode: mode, afterCity: afterCity, inTrip: inTrip),
     );
   }
@@ -205,7 +191,26 @@ class _TripCitySheetState extends State<TripCitySheet> {
 
   void _continue() {
     if (_picked.isEmpty) return;
-    Navigator.pop(context, TripCityPick(_picked.first, cities: List.of(_picked)));
+    Navigator.pop(context, TripCityPick(_picked.first, cities: List.of(_picked), days: _pickedRouteDays));
+  }
+
+  bool _routeOn(({TripCityModel from, TripCityModel to, int days}) r) =>
+      _picked.length == 2 && _picked[0].cityKey == r.from.cityKey && _picked[1].cityKey == r.to.cityKey;
+
+  int? get _pickedRouteDays {
+    for (final r in _routes) {
+      if (_routeOn(r)) return r.days;
+    }
+    return null;
+  }
+
+  void _toggleRoute(({TripCityModel from, TripCityModel to, int days}) r) {
+    setState(() {
+      final on = _routeOn(r);
+      _picked.clear();
+      if (!on) _picked.addAll([r.from, r.to]);
+      _expanded = null;
+    });
   }
 
   @override
@@ -321,7 +326,9 @@ class _TripCitySheetState extends State<TripCitySheet> {
 
   String get _subtitle {
     final after = widget.afterCity?.trim() ?? '';
-    return _add && after.isNotEmpty ? TripStringsMcaA2.afterCity(after) : TripStrings.pickCity;
+    return _add
+        ? (after.isNotEmpty ? TripStringsMcaA2.afterCity(after) : TripStrings.pickCity)
+        : TripStringsV2Create.citiesHint;
   }
 
   Widget _buildHeader() {
@@ -393,16 +400,38 @@ class _TripCitySheetState extends State<TripCitySheet> {
             onTap: () => _togglePicked(c),
             borderRadius: BorderRadius.circular(20),
             child: Container(
-              padding: const EdgeInsets.only(left: 12, right: 8),
-              decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(20)),
+              padding: const EdgeInsets.fromLTRB(8, 0, 6, 0),
+              decoration: BoxDecoration(color: TripColors.accent, borderRadius: BorderRadius.circular(999)),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('${i + 1}. ${c.name}',
+                  Container(
+                    width: 18,
+                    height: 18,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    child: Text(
+                      '${i + 1}',
                       style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: TripColors.accentDark)),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.close_rounded, size: 16, color: TripColors.accentDark),
+                        fontFamily: 'Poppins',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: TripColors.accentDark,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    c.name,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.close_rounded, size: 14, color: Colors.white),
                 ],
               ),
             ),
@@ -444,16 +473,13 @@ class _TripCitySheetState extends State<TripCitySheet> {
         onChanged: _onSearch,
         style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
         decoration: InputDecoration(
-          hintText: TripStrings.searchCity,
+          hintText: _add ? TripStrings.searchCity : TripStringsV2Create.searchCity,
           hintStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textHint),
           prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppColors.textHint),
           filled: true,
           fillColor: TripColors.palette.surface,
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: TripColors.accent, width: 1.5),
@@ -491,14 +517,8 @@ class _TripCitySheetState extends State<TripCitySheet> {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       children: [
-        if (draft != null) ...[
-          _sectionHeader(TripStrings.continueNewTrip),
-          _draftRow(draft),
-        ],
-        if (_routes.isNotEmpty) ...[
-          _sectionHeader(TripStringsMcaA2.popularRoutes),
-          ..._routes.map(_routeRow),
-        ],
+        if (draft != null) ...[_sectionHeader(TripStrings.continueNewTrip), _draftRow(draft)],
+        if (_routes.isNotEmpty) ...[_sectionHeader(TripStringsMcaA2.popularRoutes), ..._routes.map(_routeRow)],
         if (_nextStops.isNotEmpty) ...[
           _sectionHeader(TripStringsMcaA2.popularNextStops),
           ..._nextStops.map((c) => _cityRow(c, subtitle: from.isEmpty ? null : TripStringsMcaA2.taxisGoFrom(from))),
@@ -518,29 +538,33 @@ class _TripCitySheetState extends State<TripCitySheet> {
     final popular = items.where((c) => c.isPopularDestination).toList();
     final rest = items.where((c) => !c.isPopularDestination).toList();
     return [
-      _sectionHeader(TripStrings.popular),
+      _sectionHeader(_add ? TripStrings.popular : TripStringsV2Create.popularCities),
       ...popular.map((c) => _cityRow(c)),
-      if (rest.isNotEmpty) ...[
-        _sectionHeader(TripStrings.allCities),
-        ...rest.map((c) => _cityRow(c)),
-      ],
+      if (rest.isNotEmpty) ...[_sectionHeader(TripStrings.allCities), ...rest.map((c) => _cityRow(c))],
     ];
   }
 
   Widget _sectionHeader(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
-        child: Text(
-          text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-              fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textLight),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+    child: Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+        fontFamily: 'Poppins',
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textLight,
+      ),
+    ),
+  );
 
   Widget _draftRow(TripNewDraft d) {
     return InkWell(
-      onTap: () => Navigator.pop(context, TripCityPick(d.city, cities: [for (final l in d.legs) l.city], draftLegs: d.legs)),
+      onTap: () => Navigator.pop(
+        context,
+        TripCityPick(d.city, cities: [for (final l in d.legs) l.city], draftLegs: d.legs, days: d.days),
+      ),
       borderRadius: BorderRadius.circular(12),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 52),
@@ -561,7 +585,11 @@ class _TripCitySheetState extends State<TripCitySheet> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
                 ),
               ),
               TextButton(
@@ -570,8 +598,15 @@ class _TripCitySheetState extends State<TripCitySheet> {
                   _draft = null;
                 }),
                 style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-                child: const Text(TripStrings.startOver,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+                child: const Text(
+                  TripStrings.startOver,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMedium,
+                  ),
+                ),
               ),
             ],
           ),
@@ -581,50 +616,68 @@ class _TripCitySheetState extends State<TripCitySheet> {
   }
 
   Widget _routeRow(({TripCityModel from, TripCityModel to, int days}) r) {
-    return InkWell(
-      onTap: () => Navigator.pop(context, TripCityPick(r.from, cities: [r.from, r.to])),
-      borderRadius: BorderRadius.circular(12),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 52),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Iconsax.routing_2, size: 17, color: TripColors.accentDark),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      TripStringsMcaA2.routeTitle(r.from.name, r.to.name),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
-                    ),
-                    Text(
-                      TripStringsMcaA2.routeMeta(r.days),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
-                    ),
-                  ],
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      decoration: BoxDecoration(
+        color: _routeOn(r) ? TripColors.surface : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () => _toggleRoute(r),
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Iconsax.routing_2, size: 17, color: TripColors.accentDark),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textHint),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        TripStringsMcaA2.routeTitle(r.from.name, r.to.name),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      Text(
+                        TripStringsMcaA2.routeMeta(r.days),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _routeOn(r) ? _tick() : const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textHint),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  Widget _tick() => Container(
+    width: 22,
+    height: 22,
+    decoration: const BoxDecoration(color: TripColors.accent, shape: BoxShape.circle),
+    child: const Icon(Icons.check_rounded, size: 15, color: Colors.white),
+  );
 
   void _toggle(TripCityModel city) {
     final key = city.cityKey;
@@ -644,35 +697,38 @@ class _TripCitySheetState extends State<TripCitySheet> {
       return;
     }
     _supplyFailed.remove(key);
-    TripCitySupplyCache.load(key).then((s) {
-      if (mounted) setState(() => _supply[key] = s);
-    }).catchError((Object _) {
-      if (mounted) setState(() => _supplyFailed.add(key));
-    });
+    TripCitySupplyCache.load(key)
+        .then((s) {
+          if (mounted) setState(() => _supply[key] = s);
+        })
+        .catchError((Object _) {
+          if (mounted) setState(() => _supplyFailed.add(key));
+        });
   }
 
   Widget _cityRow(TripCityModel city, {String? subtitle}) {
     final ready = city.isReady;
     final inTrip = _add && widget.inTrip.contains(city.cityKey);
-    final enabled = !inTrip && (ready || _add);
+    final enabled = !inTrip;
     final color = enabled ? AppColors.textDark : AppColors.textHint;
     final place = inTrip
         ? TripStringsMcaA2.alreadyAdded
-        : !ready && _add
-            ? TripStringsMcaA2.noPlacesYet
-            : subtitle ?? city.placeLine;
-    final open = enabled && _expanded == city.cityKey;
+        : !ready
+        ? TripStringsMcaA2.noPlacesYet
+        : subtitle ?? (!_add && city.spotCount > 0 ? TripStringsV2Create.cityMeta(city.spotCount) : city.placeLine);
+    final picked = !_add && _isPicked(city);
+    final open = _add && enabled && _expanded == city.cityKey;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 2),
       decoration: BoxDecoration(
-        color: open ? TripColors.surface : Colors.transparent,
+        color: open || picked ? TripColors.surface : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           InkWell(
-            onTap: enabled ? () => _toggle(city) : null,
+            onTap: enabled ? () => _add ? _toggle(city) : _togglePicked(city) : null,
             borderRadius: BorderRadius.circular(12),
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 48),
@@ -690,7 +746,12 @@ class _TripCitySheetState extends State<TripCitySheet> {
                             city.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w500, color: color),
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: color,
+                            ),
                           ),
                           if (place.isNotEmpty)
                             Text(
@@ -707,22 +768,40 @@ class _TripCitySheetState extends State<TripCitySheet> {
                       const Text(
                         TripStringsMcaA2.inThisTrip,
                         style: TextStyle(
-                            fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textHint),
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textHint,
+                        ),
                       )
+                    else if (enabled && !_add)
+                      (picked
+                          ? _tick()
+                          : Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.divider, width: 1.5),
+                              ),
+                            ))
                     else if (enabled) ...[
                       if (ready)
                         const Text(
                           TripStringsA4.ready,
                           style: TextStyle(
-                              fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.successText),
+                            fontFamily: 'Poppins',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.successText,
+                          ),
                         ),
-                      Icon(open ? Icons.expand_less_rounded : Icons.expand_more_rounded, size: 20, color: AppColors.textHint),
-                    ] else
-                      const Text(
-                        TripStrings.comingSoon,
-                        style: TextStyle(
-                            fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textHint),
+                      Icon(
+                        open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                        size: 20,
+                        color: AppColors.textHint,
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -793,8 +872,8 @@ class _TripCitySheetState extends State<TripCitySheet> {
                 _add
                     ? TripStringsMcaA2.addToTrip
                     : _isPicked(city)
-                        ? _SheetText.remove
-                        : _SheetText.addCity,
+                    ? _SheetText.remove
+                    : _SheetText.addCity,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600),
@@ -807,55 +886,59 @@ class _TripCitySheetState extends State<TripCitySheet> {
   }
 
   Widget _loadingIndicator() => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 48),
-        child: Center(
-          child: SizedBox(
-            width: 26,
-            height: 26,
-            child: CircularProgressIndicator(strokeWidth: 2.5, color: TripColors.accent),
-          ),
-        ),
-      );
+    padding: EdgeInsets.symmetric(vertical: 48),
+    child: Center(
+      child: SizedBox(
+        width: 26,
+        height: 26,
+        child: CircularProgressIndicator(strokeWidth: 2.5, color: TripColors.accent),
+      ),
+    ),
+  );
 
   Widget _emptyState(String message) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-        child: Center(
-          child: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
-          ),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+    child: Center(
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
+      ),
+    ),
+  );
 
   Widget _messageState(String title, String subtitle, {VoidCallback? onRetry}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
-            ),
-            if (onRetry != null) ...[
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: onRetry,
-                child: const Text(
-                  TripStrings.retry,
-                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: TripColors.accent),
-                ),
-              ),
-            ],
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textDark,
+          ),
         ),
-      );
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textLight),
+        ),
+        if (onRetry != null) ...[
+          const SizedBox(height: 10),
+          TextButton(
+            onPressed: onRetry,
+            child: const Text(
+              TripStrings.retry,
+              style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: TripColors.accent),
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
 }

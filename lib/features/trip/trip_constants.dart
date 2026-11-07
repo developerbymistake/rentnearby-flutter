@@ -1,36 +1,26 @@
-import 'trip_strings.dart';
-
 class TripConstants {
-  static const int dayLimitMinutes = 450;
+  static const int dayLimitMinutes = 300;
+  static const int maxSpotsPerDay = 6;
   static const double stayRadiusKm = 5;
   static const double stayQueryRadiusMinKm = 1;
   static const double stayQueryRadiusMaxKm = 50;
   static const int stayGuestsMax = 100;
-  static const int stayRoomsMax = 20;
   static const double stayRadiusWideKm = 12;
   static const int spotsPageSize = 20;
+  static const int travelWholeDayMinutes = 450;
   static const int maxSpots = 60;
-  static const int planVersion = 5;
+  static const int planVersion = 6;
   static const int maxDismissed = 100;
   static const int maxLegs = 4;
-  static const int travelHalfDayMinutes = 240;
-  static const int travelWholeDayMinutes = 450;
-  static const int ownTravelNameMax = 80;
-  static const int ownTravelPhoneLength = 10;
   static const int citiesPageSize = 200;
   static const int citiesMaxPages = 50;
   static const Duration autosaveDebounce = Duration(milliseconds: 1500);
   static const Duration recalcDebounce = Duration(milliseconds: 600);
   static const int maxAdults = 30;
   static const int maxKids = 20;
-  static const int maxRooms = 15;
   static const int maxStartDaysAhead = 365;
-  static const int pickupPlaceMax = 80;
   static const int noteMax = 300;
   static const int defaultAdults = 2;
-  static const int defaultRooms = 1;
-  static const String defaultPickupTime = '08:30';
-  static const int maxShortlist = 3;
   static const int enquiryHours = 48;
   static const int replyBeforeHours = 12;
   static const int floorHours = 2;
@@ -70,24 +60,9 @@ class TripConstants {
   static const int maxTravelPeople = 12;
   static const int maxJourneyCars = 3;
   static const int defaultTravelPeople = 2;
-  static const int travelHubNameMax = 120;
   static const int journeyRoadMinutesMax = 900;
   static const int journeyMaxDaysAhead = 365;
   static final RegExp upiPattern = RegExp(r'^[A-Za-z0-9._-]{2,50}@[A-Za-z]{2,64}$');
-}
-
-class TripNeeds {
-  static const String noStairs = 'no_stairs';
-  static const String kidsSafe = 'kids_safe';
-  static const String vegFood = 'veg_food';
-  static const List<String> all = [noStairs, kidsSafe, vegFood];
-
-  static String label(String key) => switch (key) {
-        noStairs => TripStrings.needNoStairs,
-        kidsSafe => TripStrings.needKidsSafe,
-        vegFood => TripStrings.needVegFood,
-        _ => key,
-      };
 }
 
 class TripPace {

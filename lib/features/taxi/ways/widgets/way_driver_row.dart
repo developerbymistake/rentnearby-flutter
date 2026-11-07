@@ -7,6 +7,7 @@ import '../../taxi_option_sets.dart';
 import '../models/taxi_ways_models.dart';
 import '../taxi_ways_strings.dart';
 import '../../../trip/trip_strings_algo_aa.dart';
+import '../../../trip/trip_strings_steps_a3.dart';
 import 'best_way_mark.dart';
 
 class WayDriverRow extends StatelessWidget {
@@ -14,8 +15,20 @@ class WayDriverRow extends StatelessWidget {
   final int people;
   final String? bestReason;
   final VoidCallback onTap;
+  final VoidCallback? onCall;
+  final VoidCallback? onUse;
+  final bool useBusy;
 
-  const WayDriverRow({super.key, required this.driver, required this.onTap, this.people = 1, this.bestReason});
+  const WayDriverRow({
+    super.key,
+    required this.driver,
+    required this.onTap,
+    this.people = 1,
+    this.bestReason,
+    this.onCall,
+    this.onUse,
+    this.useBusy = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +107,50 @@ class WayDriverRow extends StatelessWidget {
                 ),
               ),
             ]),
+            if (onCall != null || onUse != null) ...[
+              const SizedBox(height: 10),
+              Row(children: [
+                if (onCall != null)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onCall,
+                      icon: const Icon(Iconsax.call, size: 16, color: TaxiColors.accentDark),
+                      label: const Text(TaxiWaysStrings.call,
+                          style: TextStyle(
+                              fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: TaxiColors.accentDark)),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 44),
+                        side: BorderSide(color: TaxiColors.accent.withValues(alpha: 0.5)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                if (onCall != null && onUse != null) const SizedBox(width: 8),
+                if (onUse != null)
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: useBusy ? null : onUse,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: TaxiColors.accentDark,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: TaxiColors.accent.withValues(alpha: 0.5),
+                        disabledForegroundColor: Colors.white,
+                        elevation: 0,
+                        minimumSize: const Size(0, 44),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: useBusy
+                          ? const SizedBox(
+                              width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                          : const Text(TripStringsStepsA3.useForMyTrip,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+              ]),
+            ],
           ]),
         ),
       ),

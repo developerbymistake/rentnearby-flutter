@@ -13,13 +13,11 @@ TripSummaryModel _trip(
   String id, {
   int? startIn,
   int days = 3,
-  int counted = 5,
-  int total = 13,
-  int decided = 1,
+  int done = 2,
+  int total = 6,
   int needYou = 0,
-  int waitingForReply = 0,
-  String? nextKey = 'stay:1:2',
-  int? nextDay = 2,
+  int inProgress = 1,
+  String? nextKey = 'stay:1',
   String updatedAt = '2026-11-01T10:00:00Z',
   String status = 'Planned',
   String? lastEventAt,
@@ -32,8 +30,6 @@ TripSummaryModel _trip(
       'cityName': cities?.first ?? 'Nainital',
       'dayCount': days,
       'spotCount': 4,
-      'taxiDays': 0,
-      'stayDays': 0,
       'category': 'attraction',
       if (startIn != null) 'startDate': _d(startIn),
       if (startIn != null) 'endDate': _d(startIn + days - 1),
@@ -42,15 +38,16 @@ TripSummaryModel _trip(
       'legCities': ?cities,
       'progress': {
         'total': total,
-        'counted': counted,
-        'decided': decided,
-        'waiting': waitingForReply,
-        'waitingForReply': waitingForReply,
-        'needYou': needYou,
-        'needsYou': needYou > 0,
+        'done': done,
+        'inProgress': inProgress,
         'attention': 0,
-        'percent': total == 0 ? 0 : counted * 100 ~/ total,
-        if (nextKey != null) 'next': {'kind': nextKey.split(':').first, 'day': nextDay, 'key': nextKey},
+        'percent': total == 0 ? 100 : done * 100 ~/ total,
+        'needsYou': needYou > 0,
+        if (needYou > 0)
+          'rows': [
+            for (var i = 1; i <= needYou; i++) {'key': 'stay:$i', 'state': 'offer', 'needsYou': true, 'askedCount': 1},
+          ],
+        if (nextKey != null) 'next': {'kind': nextKey.split(':').first, 'key': nextKey},
         'lastEventAt': ?lastEventAt,
       },
     });
@@ -96,17 +93,17 @@ void main() {
     });
 
     test('ready trip shows only today and tomorrow', () {
-      expect(TripBarRules.pick([_trip('r', startIn: 5, counted: 13, nextKey: null)], _today), isNull);
-      final tomorrow = TripBarRules.pick([_trip('r', startIn: 1, counted: 13, nextKey: null)], _today);
+      expect(TripBarRules.pick([_trip('r', startIn: 5, done: 6, nextKey: null)], _today), isNull);
+      final tomorrow = TripBarRules.pick([_trip('r', startIn: 1, done: 6, nextKey: null)], _today);
       expect(tomorrow?.line, TripBarLine.tomorrow);
-      final today = TripBarRules.pick([_trip('r', startIn: 0, counted: 13, nextKey: null)], _today);
+      final today = TripBarRules.pick([_trip('r', startIn: 0, done: 6, nextKey: null)], _today);
       expect(today?.line, TripBarLine.today);
     });
 
     test('ready trip far away does not count for more', () {
       final pick = TripBarRules.pick([
         _trip('p', startIn: 8),
-        _trip('r', startIn: 5, counted: 13, nextKey: null),
+        _trip('r', startIn: 5, done: 6, nextKey: null),
       ], _today);
       expect(pick?.trip.id, 'p');
       expect(pick?.more, 0);
@@ -137,7 +134,7 @@ void main() {
     test('in progress below total, ready at total, past dropped', () {
       final g = TripBarRules.group([
         _trip('p1', startIn: 3),
-        _trip('r1', startIn: 4, counted: 13, nextKey: null),
+        _trip('r1', startIn: 4, done: 6, nextKey: null),
         _trip('p2'),
         _trip('gone', startIn: -10, days: 2),
       ], _today);
@@ -176,22 +173,35 @@ void main() {
   });
 
   group('labels', () {
-    test('start while nothing decided, continue after', () {
-      expect(TripBarRules.actionLabel(_trip('a', decided: 0, nextKey: 'gettingThere', nextDay: null)),
-          'Start: Getting there');
-      expect(TripBarRules.actionLabel(_trip('a')), 'Continue · Day 2 · Stay');
-      expect(TripBarRules.actionLabel(_trip('a', counted: 13, nextKey: null)), 'Your trip is ready · Summary');
-      expect(TripBarRules.actionLabel(_trip('a'), past: true), 'Summary');
+    test('continue while rows are open, summary when every row is done', () {
+      expect(TripBarRules.actionLabel(_trip('a')), 'Continue planning');
+      expect(TripBarRules.actionLabel(_trip('a', done: 6, nextKey: null)), 'View summary');
+      expect(TripBarRules.actionLabel(_trip('a'), past: true), 'View summary');
+    });
+
+    test('next title comes from the row kind', () {
+      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'gettingThere')), 'Getting there');
+      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'comingBack')), 'Coming back');
+      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'taxi')), 'Local taxi');
+      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'stay:1')), 'Stay in Nainital');
+      expect(TripBarRules.nextTitle(_trip('a', nextKey: null)), isNull);
     });
 
     test('city change title uses the leg cities', () {
-      final t = _trip('a', nextKey: 'travel:2', nextDay: null, cities: ['Nainital', 'Almora']);
+      final t = _trip('a', nextKey: 'between:2', cities: ['Nainital', 'Almora']);
       expect(TripBarRules.nextTitle(t), 'Nainital → Almora');
+      expect(TripBarRules.nextTitle(_trip('a', nextKey: 'stay:2', cities: ['Nainital', 'Almora'])), 'Stay in Almora');
     });
 
-    test('continue passes the next key to the list', () {
-      expect(TripBarRules.continueArgs(_trip('a')), {'tripId': 'a', 'step': 'stay:1:2'});
-      expect(TripBarRules.continueArgs(_trip('a', counted: 13, nextKey: null)), {'tripId': 'a'});
+    test('continue passes the next row to the plan', () {
+      expect(TripBarRules.continueArgs(_trip('a')), {'tripId': 'a', 'row': 'stay:1'});
+      expect(TripBarRules.continueArgs(_trip('a', done: 6, nextKey: null)), {'tripId': 'a'});
+    });
+  });
+
+  group('dates line', () {
+    test('a trip without dates shows the day count only', () {
+      expect(TripBarRules.datesLine(_trip('a', days: 3), _today), '3 days · dates not set');
     });
   });
 }

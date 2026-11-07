@@ -21,7 +21,6 @@ class TaxiWaysController extends GetxController {
     this.tripRole,
     this.tripLegIndex,
     this.fromTrip = false,
-    this.fromStep,
   })  : from = Rx<PlaceResult>(from),
         to = Rx<PlaceResult>(to),
         fromMyLocation = (tripLegIndex == null && fromMyLocation).obs,
@@ -38,14 +37,12 @@ class TaxiWaysController extends GetxController {
   final String? tripRole;
   final int? tripLegIndex;
   final bool fromTrip;
-  final String? fromStep;
   final bool datePassed;
 
   late final WayActions actions = WayActions(
     tripId: tripId,
     tripRole: tripRole,
     tripLegIndex: tripLegIndex,
-    fromStep: fromStep,
     date: () => date.value,
     people: () => people.value,
     chosenOf: chosenOf,
@@ -231,7 +228,6 @@ class TaxiWaysController extends GetxController {
       tripRole: tripRole,
       tripLegIndex: tripLegIndex,
       chosen: Map.unmodifiable(chosenOf(plan.planKey)),
-      fromStep: fromStep,
       synthetic: synthetic,
       fromMyLocation: fromMyLocation.value,
     );

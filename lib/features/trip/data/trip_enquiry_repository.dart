@@ -31,7 +31,6 @@ class TripEnquiryErrorTypes {
   static const String changeNotAllowed = 'ChangeNotAllowed';
   static const String changeNotPending = 'ChangeNotPending';
   static const String nothingChanged = 'NothingChanged';
-  static const String askAgainNothing = 'AskAgainNothing';
   static const String tripNotEnded = 'TripNotEnded';
   static const String problemOutsideTrip = 'ProblemOutsideTrip';
   static const String offerLimit = 'OfferLimit';
@@ -208,9 +207,6 @@ class TripEnquiryRepository {
 
   Future<TripEnquiryModel> acceptChange(String enquiryId, String offerId) async =>
       _one(await ApiService.post('/trips/enquiries/$enquiryId/change-request/$offerId/accept', const {}));
-
-  Future<TripEnquiryBatch> askAgain(String tripId, {required String kind, required int day}) =>
-      _batch('/trips/$tripId/enquiries/ask-again', {'kind': kind, 'day': day});
 
   Future<String> reportTraveller(String enquiryId, {required String reasonId, String? details}) async {
     final data = _data(await ApiService.post('/trips/enquiries/$enquiryId/report-traveller', {

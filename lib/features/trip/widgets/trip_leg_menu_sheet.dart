@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'trip_update_ask_sheet.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
@@ -9,8 +10,8 @@ import '../models/trip_city_model.dart';
 import '../models/trip_plan_model.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_colors.dart';
+import '../trip_constants.dart';
 import '../trip_navigation.dart';
-import '../trip_strings_a4.dart';
 import '../trip_strings_fin_a1.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mcc_a1.dart';
@@ -169,34 +170,6 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
         return;
       }
     }
-    final dropped = _c.legDaysImpact(_leg, _days).droppedDaysWithBookings;
-    if (dropped.isNotEmpty) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(TripStringsA4.removesDays(dropped),
-              style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17)),
-          content: const Text(TripStringsA4.removesDaysBody,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-              child: const Text(TripStringsMcaA3.keep,
-                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.textLight)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-              child: const Text(TripStringsMcaA3.save,
-                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: AppColors.error)),
-            ),
-          ],
-        ),
-      );
-      if (ok != true || !mounted) return;
-    }
     final text = TripLegMenuSheet.blockText(_c.canSetLegDays(_leg, _days), city);
     if (text != null) {
       AppToast.warning(text);
@@ -204,6 +177,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
     }
     if (!await _c.setLegDays(_leg, _days)) return;
     if (mounted) _close();
+    TripUpdateAskSheet.afterDaysEdit();
   }
 
   Future<void> _saveDaysWithImpact(LegImpact impact, String city) async {
@@ -234,6 +208,7 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
     if (!await _c.setLegDays(_leg, days, keepBookings: true)) return;
     if (choice == TripLegImpactChoice.keepBookings) AppToast.info(TripStringsMccA2.bookingsKept);
     if (mounted) _close();
+    TripUpdateAskSheet.afterDaysEdit();
   }
 
   List<String> _laterBookedCities(TripPlan p) {
@@ -411,7 +386,8 @@ class _LegMenuBodyState extends State<_LegMenuBody> {
 
   Widget _daysEditor(TripPlan p) {
     final max = _c.maxDaysForLeg(_leg);
-    final min = _c.minDaysForLeg(_leg);
+    final needed = (p.legSpotCount(_leg) / TripConstants.maxSpotsPerDay).ceil();
+    final min = _c.minDaysForLeg(_leg) > needed ? _c.minDaysForLeg(_leg) : (needed < 1 ? 1 : needed);
     final current = p.legDayCount(_leg);
     final fewer = _days < current && p.legSpotCount(_leg) > 0;
     final blocked = !fewer && _days >= current && _c.growthBlockedByBookings(_leg);

@@ -12,13 +12,14 @@ import '../controllers/trip_enquiry_controller.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../controllers/trip_supply_controller.dart';
 import '../models/trip_enquiry_model.dart';
+import '../models/trip_offer_model.dart';
 import '../trip_colors.dart';
-import '../trip_constants.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
 import '../trip_strings_a5.dart';
 import '../trip_strings_f2.dart';
+import '../trip_strings_v2_easy.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_report.dart';
@@ -28,12 +29,11 @@ import '../widgets/trip_change_request_sheet.dart';
 import '../widgets/trip_counter_sheet.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_phone_booking_sheet.dart';
-import '../widgets/trip_shortlist_bar.dart';
 import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_status.dart';
 import '../widgets/trip_status_card.dart';
 import '../widgets/trip_withdraw_sheet.dart';
-import 'trip_details_sheet.dart';
+import 'trip_dates_sheet.dart';
 import 'trip_replies_leg_parts.dart';
 
 class TripRepliesScreen extends StatefulWidget {
@@ -43,13 +43,13 @@ class TripRepliesScreen extends StatefulWidget {
   State<TripRepliesScreen> createState() => _TripRepliesScreenState();
 }
 
+const int _maxOpenAsks = 3;
+
 class _Entry {
   final String stayId;
   final String name;
   final TripEnquiryModel? enquiry;
-  final int? pricePerNight;
-
-  const _Entry({required this.stayId, required this.name, this.enquiry, this.pricePerNight});
+  const _Entry({required this.stayId, required this.name, this.enquiry});
 
   TripDisplayStatus get status => enquiry?.display ?? TripDisplayStatus.shortlisted;
 }
@@ -59,7 +59,6 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
   late final int _day;
   String? _tripId;
   String? _enquiryId;
-  String? _fromStep;
   bool _started = false;
   bool _retried = false;
 
@@ -74,7 +73,6 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     _day = (day is num ? day.toInt() : int.tryParse('${day ?? ''}')) ?? 1;
     _tripId = map['tripId']?.toString();
     _enquiryId = map['enquiryId']?.toString();
-    _fromStep = map['fromStep'] as String?;
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -98,12 +96,14 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     }
     if (!mounted) return;
     setState(() => _started = true);
-    final stale = _c.enquiriesForNight(_day).any((e) => e.display == TripDisplayStatus.offered && e.openOffer == null);
+    final stale = _c.stayEnquiriesOf(_legIndex).any((e) => e.display == TripDisplayStatus.offered && e.openOffer == null);
     if (stale && !_retried) {
       _retried = true;
       await _c.refreshEnquiries();
     }
   }
+
+  int get _legIndex => _c.legIndexOf(_day);
 
   int get _rankDay {
     final id = _enquiryId;
@@ -132,13 +132,10 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
         if (e.id == focus) byStay[e.listingId] = e;
       }
     }
-    for (final e in _c.enquiriesForNight(_day)) {
+    for (final e in _c.stayEnquiriesOf(_legIndex)) {
       byStay.putIfAbsent(e.listingId, () => e);
     }
     final out = <_Entry>[];
-    for (final s in _c.plan.value?.dayAt(_day)?.stayShortlist ?? const []) {
-      out.add(_Entry(stayId: s.stayId, name: s.name, enquiry: byStay.remove(s.stayId), pricePerNight: s.pricePerNight));
-    }
     for (final e in byStay.values) {
       out.add(_Entry(stayId: e.listingId, name: e.listingName, enquiry: e));
     }
@@ -187,7 +184,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
 
   String _statusLine(_Entry x) {
     final e = x.enquiry;
-    if (e == null) return x.pricePerNight == null ? '' : '${_inr(x.pricePerNight)} / night';
+    if (e == null) return '';
     final now = DateTime.now();
     final counter = e.pendingCounter;
     if (counter != null && e.display.isOpen && !e.isBooked) {
@@ -211,20 +208,9 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     };
   }
 
-  bool _canAskAgain(_Entry x) {
-    final e = x.enquiry;
-    if (e == null || !e.isRed || _c.isCompleted) return false;
-    return _c.askAgainStays(_day).any((s) => s.stayId == x.stayId);
-  }
-
-  Future<void> _askAgain() async {
-    final batch = await _c.askAgain(kind: TripEnquiryKinds.stay, day: _day);
-    if (batch != null && mounted) await _c.refreshEnquiries();
-  }
-
   Future<bool> _datesGate() async {
     if (_c.hasDates) return true;
-    await TripDetailsSheet.edit(context, heading: TripStrings.addYourDates, description: TripStrings.addYourDatesOwners);
+    await TripDatesSheet.ensure(context, heading: TripStrings.addYourDates);
     return mounted && _c.hasDates;
   }
 
@@ -351,9 +337,17 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
 
   String _subtitle() {
     final date = _c.dateOf(_rankDay);
-    if (date == null) return _c.cityName;
-    final when = TripEnquiryRules.checkInLabel(date, DateTime.now().toUtc()) ?? TripStrings.night(_rankDay);
-    return '${TripFormat.shortDate(date)} · $when';
+    final city = _c.legOf(_rankDay).cityName;
+    if (date == null) return city.isEmpty ? _c.cityName : city;
+    final days = _c.legDays(_c.legIndexOf(_rankDay));
+    final first = days.isEmpty ? null : _c.dateOf(days.first);
+    final last = days.isEmpty ? null : _c.dateOf(days.last);
+    final from = first ?? date;
+    final to = last == null ? date : DateTime(last.year, last.month, last.day + 1);
+    return [city.isEmpty ? _c.cityName : city, TripFormat.dayMonthRange(from, to), _c.settings.peopleSummary]
+        .whereType<String>()
+        .where((t) => t.isNotEmpty)
+        .join(' · ');
   }
 
   Widget _scroll(List<Widget> children) => RefreshIndicator(
@@ -426,9 +420,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
           ),
         ]);
       }
-      final nothingToAsk = !_c.isCompleted &&
-          entries.every((x) => x.enquiry?.isRed ?? false) &&
-          _c.askAgainStays(_day).isEmpty;
+      final nothingToAsk = !_c.isCompleted && entries.every((x) => x.enquiry?.isRed ?? false);
       return _scroll([
         if (nothingToAsk) ...[
           _nothingToAsk(),
@@ -446,13 +438,13 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
   bool _canAskAnother(List<_Entry> entries) {
     if (_c.isReadOnly || _c.isDayPast(_day)) return false;
     if (entries.any((x) => x.enquiry?.isBooked ?? false)) return false;
-    return entries.where((x) => x.enquiry?.display.isOpen ?? false).length < TripConstants.maxShortlist;
+    return entries.where((x) => x.enquiry?.display.isOpen ?? false).length < _maxOpenAsks;
   }
 
   Widget _askAnotherButton() => SizedBox(
         height: 48,
         child: OutlinedButton.icon(
-          onPressed: () => TripNavigation.openStay(_day, fromStep: _fromStep),
+          onPressed: () => TripNavigation.openStay(_legIndex),
           icon: const Icon(Iconsax.add_circle, size: 18, color: TripColors.accentDark),
           label: const Text(
             TripStringsA5.askAnotherStay,
@@ -468,12 +460,6 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
         ),
       );
 
-  bool _canSendShortlisted(_Entry x) =>
-      x.enquiry == null &&
-      !_c.isReadOnly &&
-      !_c.isDayPast(_day) &&
-      _c.sendableShortlist(_day).any((s) => s.stayId == x.stayId);
-
   Widget _nothingToAsk() => Container(
         padding: const EdgeInsets.only(left: 12),
         decoration: BoxDecoration(color: TripStatusColors.failedSurface, borderRadius: BorderRadius.circular(12)),
@@ -485,7 +471,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  TripStrings.askAgainNothing,
+                  TripStrings.allAsksEnded,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -494,7 +480,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
               ),
             ),
             TextButton(
-              onPressed: () => TripNavigation.openStay(_day, fromStep: _fromStep),
+              onPressed: () => TripNavigation.openStay(_legIndex),
               style: TextButton.styleFrom(minimumSize: const Size(0, 44), padding: const EdgeInsets.symmetric(horizontal: 12)),
               child: const Text(
                 TripStrings.findAnother,
@@ -552,6 +538,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textMedium)),
           ],
+          if (status == TripDisplayStatus.offered && e?.openOffer != null) _offerBreakdown(e!.openOffer!),
           if (e != null) ...[
             if (TripRepliesLegParts.wrongCityStrip(context, _c, e) case final w?) w,
             if (TripRepliesLegParts.oldDatesCard(_c, e) case final o?) o,
@@ -564,6 +551,8 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
             const SizedBox(height: 2),
             _pendingLine('${TripStrings.changeRequest} · ${TripStrings.notAcceptedYet}'),
           ],
+          if (status == TripDisplayStatus.confirmedByBoth && e != null && e.advance.isPending && (e.advance.amount ?? 0) > 0)
+            _advanceSteps(e.advance.amount!),
           if (status == TripDisplayStatus.confirmedByYou && (e?.hostConfirm.answeredAt == null)) ...[
             const SizedBox(height: 2),
             const Text(TripStrings.hostNotConfirmed,
@@ -592,6 +581,113 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
             const Text(TripStrings.ifPaidFooter,
                 style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight, height: 1.35)),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _offerRow(String k, String v, {bool strong = false}) => Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(k,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: strong ? 13 : 12.5,
+                      fontWeight: strong ? FontWeight.w700 : FontWeight.w500,
+                      color: strong ? AppColors.textDark : AppColors.textMedium)),
+            ),
+            Text(v,
+                maxLines: 1,
+                style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: strong ? 15 : 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark)),
+          ],
+        ),
+      );
+
+  Widget _offerBreakdown(TripOfferModel offer) {
+    final each = offer.lines.fold<int>(0, (sum, l) => sum + l.perNight);
+    final advance = offer.advanceAmount ?? 0;
+    final nights = offer.nights;
+    final left = offer.total - advance;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (nights > 0)
+            _offerRow(each > 0 ? '${TripStrings.nights(nights)} · ${_inr(each)} each' : TripStrings.nights(nights),
+                _inr(offer.total),
+                strong: true)
+          else
+            _offerRow(TripStrings.total, _inr(offer.total), strong: true),
+          if (advance > 0) ...[
+            _offerRow(TripStrings.advance, _inr(advance)),
+            if (left > 0) _offerRow(TripStringsV2Easy.balanceAtCheckIn, _inr(left)),
+          ],
+          const SizedBox(height: 2),
+          const Text(TripStrings.termsByHost,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight, height: 1.35)),
+        ],
+      ),
+    );
+  }
+
+  Widget _advanceSteps(int amount) {
+    final steps = [TripStrings.step1Pay(_inr(amount)), TripStrings.step2Screenshot, TripStrings.step3Host];
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(TripStrings.payDirectlyToHost,
+                    style: TextStyle(
+                        fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+              ),
+              Text('${TripStrings.advance} ${_inr(amount)}',
+                  style: const TextStyle(
+                      fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (var i = 0; i < steps.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 20,
+                    height: 20,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(color: TripColors.accent, shape: BoxShape.circle),
+                    child: Text('${i + 1}',
+                        style: const TextStyle(
+                            fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(steps[i],
+                        style: const TextStyle(
+                            fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textDark, height: 1.3)),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 4),
+          const Text(TripStrings.noPaymentTail,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight, height: 1.35)),
         ],
       ),
     );
@@ -654,8 +750,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     final advanceOpen = status == TripDisplayStatus.confirmedByBoth && (e?.advance.isOpenRequest ?? false);
     final chatPrimary = advanceOpen && e?.conversationId != null;
     if (phone != null) {
-      add(Iconsax.call, advanceOpen || status == TripDisplayStatus.holdExpired ? TripStrings.callHost : TripStrings.call,
-          () => ContactLauncher.call(phone));
+      add(Iconsax.call, TripStrings.callHost, () => ContactLauncher.call(phone));
       if (!advanceOpen || e!.advance.isProofSent) {
         add(Iconsax.message, advanceOpen ? TripStrings.openWhatsApp : TripStrings.whatsApp,
             () => ContactLauncher.whatsApp(phone, message: advanceOpen ? null : e?.context.text),
@@ -699,16 +794,9 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
         add(Iconsax.close_circle, TripStrings.cancelBooking,
             () => TripCancelSheet.show(context, enquiry: e!, ownerSide: false),
             color: AppColors.error);
-      case TripDisplayStatus.shortlisted:
-        if (!_c.isReadOnly) {
-          add(Iconsax.call_calling, TripStrings.iBookedByPhone, () => _phoneBooking(x));
-          add(Iconsax.trash, TripStringsA5.removeShortlist, () => _c.removeShortlist(_day, x.stayId), color: AppColors.error);
-        }
       case TripDisplayStatus.holdExpired:
-        if (_canAskAgain(x)) add(Iconsax.refresh, TripStrings.askAgain, _c.askBusy.value ? null : _askAgain);
-        add(Iconsax.building_4, TripStrings.askOtherStays, () => TripNavigation.openStay(_day, fromStep: _fromStep));
+        add(Iconsax.building_4, TripStrings.askOtherStays, () => TripNavigation.openStay(_legIndex));
       default:
-        if (_canAskAgain(x)) add(Iconsax.refresh, TripStrings.askAgain, _c.askBusy.value ? null : _askAgain);
         add(Iconsax.call_calling, TripStrings.iBookedByPhone, () => _phoneBooking(x));
     }
     return LayoutBuilder(builder: (context, box) {
@@ -731,25 +819,6 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
                   fit: BoxFit.scaleDown,
                   child: Text([TripStrings.acceptOffer, _inr(offer.total)].where((s) => s.isNotEmpty).join(' · '),
                       maxLines: 1, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-          if (_canSendShortlisted(x)) ...[
-            SizedBox(
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: busy ? null : () => TripShortlistBar.send(context, _day),
-                icon: const Icon(Iconsax.send_2, size: 18),
-                label: const Text(TripStringsA5.sendEnquiry,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: TripColors.accent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),

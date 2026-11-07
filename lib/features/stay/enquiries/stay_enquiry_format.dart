@@ -59,7 +59,6 @@ class StayEnquiryFormat {
   }
 
   static List<String> chips(TripEnquiryModel e) => [
-        ...e.context.needs.map(TripNeeds.label),
         ...e.context.days.expand((d) => d.spots),
       ];
 

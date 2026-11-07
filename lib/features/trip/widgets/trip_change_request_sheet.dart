@@ -50,6 +50,8 @@ class _ChangeBody extends StatefulWidget {
 
 class _ChangeBodyState extends State<_ChangeBody> {
   static const int _maxNights = TripConstants.maxDaysCap;
+  static const int _maxRooms = 15;
+  static const int _defaultRooms = 1;
 
   final _note = TextEditingController();
   late DateTime? _checkIn;
@@ -77,13 +79,13 @@ class _ChangeBodyState extends State<_ChangeBody> {
     _origAdults = e.context.adults ?? TripConstants.defaultAdults;
     _origKids = e.context.kids ?? 0;
     final acceptedRooms = accepted?.rooms ?? 0;
-    _origRooms = acceptedRooms > 0 ? acceptedRooms : (e.context.rooms ?? TripConstants.defaultRooms);
+    _origRooms = acceptedRooms > 0 ? acceptedRooms : (e.context.rooms ?? _defaultRooms);
     _checkIn = _day(widget.checkIn) ?? _origIn;
     _checkOut = _day(widget.checkOut) ?? _origOut;
     final want = widget.prefill;
     _adults = (want?.adults ?? _origAdults).clamp(1, TripConstants.maxAdults);
     _kids = (want?.kids ?? _origKids).clamp(0, TripConstants.maxKids);
-    _rooms = (want?.rooms ?? _origRooms).clamp(1, TripConstants.maxRooms);
+    _rooms = _origRooms.clamp(1, _maxRooms);
     _tripFirst = _day(e.tripStartDate);
     _tripCheckOut = _day(e.tripCheckOutLimit);
     if ((_tripFirst == null || _tripCheckOut == null) && Get.isRegistered<TripPlanController>()) {
@@ -220,7 +222,7 @@ class _ChangeBodyState extends State<_ChangeBody> {
           const Divider(height: 1, color: AppColors.divider),
           _stepperRow(TripStrings.kids, _kids, 0, TripConstants.maxKids, (v) => setState(() => _kids = v)),
           const Divider(height: 1, color: AppColors.divider),
-          _stepperRow(TripStrings.rooms, _rooms, 1, TripConstants.maxRooms, (v) => setState(() => _rooms = v)),
+          _stepperRow(TripStrings.rooms, _rooms, 1, _maxRooms, (v) => setState(() => _rooms = v)),
         ]),
         const SizedBox(height: 14),
         _label(TripStrings.note),

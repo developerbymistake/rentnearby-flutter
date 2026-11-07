@@ -25,7 +25,6 @@ class TripStringsA6 {
   static const String planEmptyTitle = 'No plan to show';
   static const String planEmptyBody = 'This plan has no cars yet. Try again.';
   static const String refreshFailedTitle = "Couldn't refresh the plan";
-  static const String noLocation = 'Turn on location to see every way to go';
 
   static String feedSubtitle(DateTime date, int people) =>
       '${TripFormat.dayMonth(date)} · ${people == 1 ? '1 person' : '$people people'}';

@@ -1,20 +1,14 @@
-import 'trip_state_labels.dart';
 class TripStringsA5 {
   static const String itinerary = 'Itinerary';
   static const String staysSection = 'Stays';
   static const String taxisSection = 'Taxis';
   static const String datesNotSet = 'Dates not set';
-  static const String noDatesYet = 'No dates yet';
   static const String nothingHere = 'Nothing here yet';
   static const String nothingHereSub = 'Add places to your trip to see them here.';
   static const String share = 'Share';
   static const String shareTrip = 'Share trip';
   static const String shareFailed = 'Could not share. Try again.';
-  static const String noStayTonight = TripStateLabels.noStayTonight;
-  static const String noStayTravelling = 'No stay (travelling)';
-  static const String ownFooter = 'Own bookings were arranged by you.';
   static const String planOnlyFooter = 'Made with Bakhli Trip Planner.';
-  static const String ownBooking = 'Own booking';
   static const String tripNotFoundShare = 'Trip not found';
 
   static String dayHeading(int day, String? date) => date == null || date.isEmpty ? 'Day $day' : 'Day $day · $date';
@@ -29,7 +23,6 @@ class TripStringsA5 {
     if (checkOut != null && checkOut.isNotEmpty) parts.add('check-out $checkOut');
     return parts.join(' · ');
   }
-
 
   static String nightOf(int k, int n, String? total) =>
       total == null ? 'Night $k of $n' : 'Night $k of $n · $total total';
@@ -73,8 +66,6 @@ class TripStringsA5 {
   static const String completeNowBody = 'Open enquiries stay open. You can still see bookings in Summary.';
 
   static const String askAnotherStay = 'Ask another stay';
-  static const String sendEnquiry = 'Send enquiry';
-  static const String removeShortlist = 'Remove';
   static const String couldNotSend = 'Could not send';
   static const String couldNotSendSub = 'Pick another stay or try later.';
   static const String alreadyBookedOther = 'Already booked for other days. Edit the booking to add days.';

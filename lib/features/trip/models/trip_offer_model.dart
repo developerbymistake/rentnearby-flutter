@@ -49,7 +49,6 @@ class TripOfferModel {
   final List<TripOfferLine> lines;
   final int total;
   final String? inclusions;
-  final List<String> needsEchoed;
   final int? advanceAmount;
   final String? balanceNote;
   final String? cancellationText;
@@ -77,7 +76,6 @@ class TripOfferModel {
     this.lines = const [],
     this.total = 0,
     this.inclusions,
-    this.needsEchoed = const [],
     this.advanceAmount,
     this.balanceNote,
     this.cancellationText,
@@ -140,7 +138,6 @@ class TripOfferModel {
             .toList(),
         total: (json['total'] as num?)?.toInt() ?? 0,
         inclusions: json['inclusions'] as String?,
-        needsEchoed: ((json['needsEchoed'] as List?) ?? const []).whereType<String>().toList(),
         advanceAmount: (json['advanceAmount'] as num?)?.toInt(),
         balanceNote: json['balanceNote'] as String?,
         cancellationText: json['cancellationText'] as String?,

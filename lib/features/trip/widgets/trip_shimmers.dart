@@ -17,16 +17,16 @@ class TripSpotRowSkeleton extends StatelessWidget {
   const TripSpotRowSkeleton({super.key});
 
   @override
-  Widget build(BuildContext context) => TripShimmers.rowBox(height: 84, radius: 14);
+  Widget build(BuildContext context) => TripShimmers.rowBox(height: 188, radius: 16);
 }
 
-class TripStepRowSkeleton extends StatelessWidget {
-  const TripStepRowSkeleton({super.key});
+class TripDayCardSkeleton extends StatelessWidget {
+  const TripDayCardSkeleton({super.key});
 
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: TripShimmers.rowBox(height: 64, radius: 16),
+        child: TripShimmers.rowBox(height: 150, radius: 16),
       );
 }
 

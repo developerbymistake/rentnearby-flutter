@@ -452,7 +452,6 @@ typedef WayFeedArgs = ({
   String? tripId,
   String? tripRole,
   int? tripLegIndex,
-  String? fromStep,
 });
 
 class JourneyOpenArgs {
@@ -469,7 +468,6 @@ class JourneyOpenArgs {
   final String? tripRole;
   final int? tripLegIndex;
   final Map<int, WayDriver> chosen;
-  final String? fromStep;
   final bool synthetic;
   final bool fromMyLocation;
 
@@ -484,7 +482,6 @@ class JourneyOpenArgs {
     this.tripRole,
     this.tripLegIndex,
     this.chosen = const {},
-    this.fromStep,
     this.synthetic = false,
     this.fromMyLocation = false,
   });
@@ -506,7 +503,6 @@ class JourneyOpenArgs {
         tripRole: tripRole,
         tripLegIndex: tripLegIndex,
         chosen: Map.unmodifiable(next),
-        fromStep: fromStep,
         synthetic: synthetic,
         fromMyLocation: fromMyLocation,
       );
@@ -532,7 +528,6 @@ class JourneyOpenArgs {
         tripId: args.tripId,
         tripRole: args.tripRole,
         tripLegIndex: args.tripLegIndex,
-        fromStep: args.fromStep,
       );
     }
     if (args is! Map) return null;
@@ -551,7 +546,6 @@ class JourneyOpenArgs {
       tripId: args['tripId'] as String?,
       tripRole: args['tripRole'] as String?,
       tripLegIndex: legIndex is int ? legIndex : null,
-      fromStep: args['fromStep'] as String?,
     );
   }
 }

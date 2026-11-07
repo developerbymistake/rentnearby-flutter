@@ -10,60 +10,54 @@ import '../trip_strings_a5.dart';
 import '../trip_strings_mcb_a1.dart';
 import '../trip_strings_mcd_a1.dart';
 import '../trip_strings_steps_a3.dart';
+import '../trip_strings_v2_easy.dart';
 import '../widgets/trip_status.dart';
 import 'trip_format.dart';
-import 'trip_summary_source.dart';
-import 'trip_wizard_rules.dart';
 
 class TripSummaryText {
-  static const String skippedStatus = 'skipped';
-
-  static bool isSkipped(TripSummaryNight n) => n.displayStatus == skippedStatus;
-
   static int spotCount(TripSummaryRecord r) => r.days.fold(0, (sum, d) => sum + d.spots.length);
 
   static TripJourney? journeyOf(TripSummaryRecord r, TripStepRole role) =>
       role == TripStepRole.gettingThere ? r.gettingThere : r.comingBack;
 
-  static TripStepInfo? stepInfo(TripSummaryRecord r, TripStepRole role) {
-    final kind = role == TripStepRole.gettingThere ? TripWizardStepKind.gettingThere : TripWizardStepKind.comingBack;
-    for (final s in TripWizardRules.steps(TripSummarySource.wizardInput(r))) {
-      if (s.key.kind == kind) return s;
-    }
-    return null;
-  }
+  static bool isDone(TripRowState s) =>
+      s == TripRowState.own || s == TripRowState.saved || s == TripRowState.confirmed || s == TripRowState.booked;
 
-  static TripStepState? stepState(TripSummaryRecord r, TripStepRole role) => stepInfo(r, role)?.state;
+  static List<TripSummaryArrangement> shownArrangements(TripSummaryRecord r) =>
+      [for (final a in r.arrangements) if (a.state != TripRowState.skipped) a];
 
-  static bool stepShown(TripSummaryRecord r, TripStepRole role) {
-    final s = stepState(r, role);
-    if (s == null || s == TripStepState.skipped) return false;
-    return s == TripStepState.own || journeyOf(r, role) != null;
-  }
-
-  static bool hasSteps(TripSummaryRecord r) => TripStepRole.values.any((role) => stepShown(r, role));
-
-  static bool stepHasDriver(TripSummaryRecord r, TripStepRole role) {
-    final s = stepState(r, role);
-    return s != null && s != TripStepState.own && s != TripStepState.skipped && journeyOf(r, role) != null;
-  }
-
-  static TripDisplayStatus pillStatus(TripStepState? s) => switch (s) {
-        TripStepState.done => TripDisplayStatus.confirmedByBoth,
-        TripStepState.own || TripStepState.skipped => TripDisplayStatus.own,
-        TripStepState.waiting => TripDisplayStatus.asked,
-        TripStepState.attention => TripDisplayStatus.notAvailable,
+  static TripDisplayStatus pillStatus(TripRowState s) => switch (s) {
+        TripRowState.confirmed => TripDisplayStatus.confirmedByBoth,
+        TripRowState.booked => TripDisplayStatus.bookedByYou,
+        TripRowState.own || TripRowState.saved => TripDisplayStatus.own,
+        TripRowState.asked || TripRowState.offer => TripDisplayStatus.asked,
+        TripRowState.attention => TripDisplayStatus.notAvailable,
         _ => TripDisplayStatus.none,
       };
 
+  static String stateWord(TripRowState s) => switch (s) {
+        TripRowState.todo => TripStringsV2Easy.pillTodo,
+        TripRowState.asked => TripStringsV2Easy.pillAsked,
+        TripRowState.offer => TripStringsV2Easy.pillOffer,
+        TripRowState.confirmed => TripStringsV2Easy.pillConfirmed,
+        TripRowState.booked => TripStringsV2Easy.pillBooked,
+        TripRowState.own => TripStringsV2Easy.pillOwn,
+        TripRowState.saved => TripStringsV2Easy.pillSaved,
+        TripRowState.skipped => TripStringsV2Easy.pillSkipped,
+        TripRowState.attention => TripStringsV2Easy.pillAttention,
+      };
+
+  static String arrangementLine(TripSummaryArrangement a) {
+    final detail = (a.detail ?? '').trim();
+    final line = TripStrings.joinDots([a.title, detail.isEmpty ? null : detail, stateWord(a.state)]);
+    return '${isDone(a.state) ? TripStringsV2Easy.shareDone : TripStringsV2Easy.shareWaiting}: $line';
+  }
+
   static bool hasContent(TripSummaryRecord r) =>
-      r.days.isNotEmpty || r.nights.isNotEmpty || r.taxis.isNotEmpty || hasSteps(r) || r.hasLegTravel;
+      r.days.isNotEmpty || r.nights.isNotEmpty || r.taxis.isNotEmpty || shownArrangements(r).isNotEmpty || r.hasLegTravel;
 
   static bool canShare(TripSummaryRecord r) =>
-      spotCount(r) > 0 || r.nights.isNotEmpty || r.taxis.isNotEmpty || hasSteps(r) || r.hasLegTravel;
-
-  static String roleHeading(TripStepRole role) =>
-      role == TripStepRole.gettingThere ? TripStringsStepsA3.gettingThere : TripStringsStepsA3.comingBack;
+      spotCount(r) > 0 || r.nights.isNotEmpty || r.taxis.isNotEmpty || shownArrangements(r).isNotEmpty || r.hasLegTravel;
 
   static String journeyHead(TripJourney j) => TripStrings.joinDots([
         TripStringsStepsA3.routeLine(j.places),
@@ -77,30 +71,6 @@ class TripSummaryText {
         if ((leg.listedFare ?? 0) > 0) BrowseItem.inr(leg.listedFare!),
         if (n > 1) TripStringsStepsA3.changeCarShort(leg.changePlace),
       ]);
-
-  static List<String> stepLines(TripSummaryRecord r, TripStepRole role, int level) {
-    if (!stepShown(r, role)) return const [];
-    final info = stepInfo(r, role);
-    final lines = <String>[roleHeading(role)];
-    if (info?.state == TripStepState.own) {
-      final note = (r.steps.of(role).note ?? '').trim();
-      lines.add(note.isEmpty ? TripStringsStepsA3.arrangedByYou : TripStringsStepsA3.arrangedWithNote(note));
-      lines.add('');
-      return lines;
-    }
-    final j = journeyOf(r, role);
-    if (j == null) return const [];
-    lines.add(journeyHead(j));
-    if (level < 2) {
-      for (var i = 0; i < j.legs.length; i++) {
-        lines.add('  ${carLine(j.legs[i], i + 1)}');
-      }
-    }
-    final line = info?.line ?? '';
-    if (line.isNotEmpty) lines.add('  $line');
-    lines.add('');
-    return lines;
-  }
 
   static String travelHeading(TripSummaryTravel t) {
     final date = t.date == null ? null : TripFormat.shortDate(t.date!);
@@ -122,17 +92,10 @@ class TripSummaryText {
     return TripStringsMcdA1.carLine(c.car, c.driverName, fare == null || fare <= 0 ? null : BrowseItem.inr(fare), carStatus(c));
   }
 
-  static String ownTravelLine(TripSummaryTravel t) => TripStringsMcdA1.ownTravelLine(
-        t.howLabel,
-        t.leavesAt == null ? null : TripFormat.time12(t.leavesAt!),
-        t.ownName,
-      );
-
   static List<String> travelLines(TripSummaryTravel t, int level) {
     final lines = <String>[travelHeading(t)];
     if (t.isOwn) {
-      lines.add('  ${ownTravelLine(t)}');
-      if ((t.ownPhone ?? '').isNotEmpty) lines.add('  ${t.ownPhone}');
+      lines.add('  ${TripStringsV2Easy.youArrangeTravel}');
     } else if (level < 2 && t.cars.isNotEmpty) {
       for (final c in t.cars) {
         lines.add('  ${travelCarLine(c)}');
@@ -206,13 +169,7 @@ class TripSummaryText {
   }
 
   static bool _sameStay(TripSummaryNight a, TripSummaryNight b) =>
-      a.enquiryId != null &&
-      a.enquiryId == b.enquiryId &&
-      !a.isOwn &&
-      !b.isOwn &&
-      !isSkipped(a) &&
-      !isSkipped(b) &&
-      b.night == a.night + 1;
+      a.enquiryId != null && a.enquiryId == b.enquiryId && b.night == a.night + 1;
 
   static List<TripSummaryNightGroup> nightGroups(List<TripSummaryNight> nights) {
     final groups = <List<TripSummaryNight>>[];
@@ -235,19 +192,12 @@ class TripSummaryText {
   }
 
   static String footer(TripSummaryRecord r) {
-    final hostStay = r.nights.any((n) => !n.isOwn && !isSkipped(n));
-    final driver = r.taxis.any((t) => !t.isOwn) ||
-        r.hasTravelCars ||
-        TripStepRole.values.any((role) => stepHasDriver(r, role));
+    final driver = r.taxis.isNotEmpty || r.hasTravelCars || r.gettingThere != null || r.comingBack != null;
     final parts = <String>[
-      if (hostStay) TripStrings.summaryFooter,
+      if (r.nights.isNotEmpty) TripStrings.summaryFooter,
       if (driver) TripStrings.taxiPayLine,
     ];
-    if (parts.isNotEmpty) return parts.join('\n');
-    final anyOwn = r.nights.any((n) => n.isOwn) ||
-        r.taxis.any((t) => t.isOwn) ||
-        TripStepRole.values.any((role) => stepState(r, role) == TripStepState.own);
-    return anyOwn ? TripStringsA5.ownFooter : TripStringsA5.planOnlyFooter;
+    return parts.isEmpty ? TripStringsA5.planOnlyFooter : parts.join('\n');
   }
 
   static String build(TripSummaryRecord r) {
@@ -264,30 +214,22 @@ class TripSummaryText {
     return out;
   }
 
-  static String ownOr(String name, bool isOwn, String fallback) =>
-      isOwn && name.trim().isEmpty ? fallback : name;
-
   static List<String> _nightLines(TripSummaryNight n, int level) {
     final lines = <String>[];
     final dateText = n.date == null ? '' : TripFormat.shortDate(n.date!);
-    if (isSkipped(n)) {
-      lines.add(TripStrings.joinDots([TripStrings.nightCard(n.night, dateText), TripStringsA5.noStayTravelling]));
-      return lines;
-    }
     final title = [
       TripStrings.nightCard(n.night, dateText),
-      ownOr(n.listingName, n.isOwn, 'Own stay'),
-      n.isOwn ? TripStrings.ownBookingShort : statusLabel(n.display, n.cancelledBy),
+      n.listingName,
+      statusLabel(n.display, n.cancelledBy),
       if ((n.agreedTotal ?? 0) > 0) BrowseItem.inr(n.agreedTotal!),
     ].where((e) => e.isNotEmpty).join(' · ');
     lines.add(title);
-    if (n.isOwn && (n.ownPhone ?? '').isNotEmpty) lines.add('  ${n.ownPhone}');
     if (level < 2) {
       for (final room in n.roomLines) {
         lines.add('  ${TripStrings.room}: ${roomLine(room)}');
       }
     }
-    if (level < 2 && !n.isOwn) lines.add('  ${TripStrings.advance}: ${advanceLine(n)}');
+    if (level < 2) lines.add('  ${TripStrings.advance}: ${advanceLine(n)}');
     if (level < 1) {
       final c = n.cancellationText;
       if (c != null && c.isNotEmpty) lines.add('  ${TripStrings.cancellationTerms}: $c');
@@ -295,26 +237,25 @@ class TripSummaryText {
         lines.add('  ${TripStrings.gstInvoice}: ${n.gstInvoice! ? TripStrings.yes : TripStrings.no}');
       }
     }
-    if (level < 3 && !n.isOwn) lines.add('  ${TripStrings.confirmedLabel}: ${n.confirmedLine()}');
+    if (level < 3) lines.add('  ${TripStrings.confirmedLabel}: ${n.confirmedLine()}');
     return lines;
   }
 
   static List<String> _taxiLines(TripSummaryTaxi t, int level) {
     final lines = <String>[];
     final title = [
-      ownOr(t.listingName, t.isOwn, 'Own taxi'),
+      t.listingName,
       taxiDayNumbers(t),
-      t.isOwn ? TripStrings.ownBookingShort : statusLabel(t.display, t.cancelledBy, taxi: true),
+      statusLabel(t.display, t.cancelledBy, taxi: true),
       fareLine(t),
     ].where((e) => e.isNotEmpty).join(' · ');
     lines.add(title);
-    if (t.isOwn && (t.ownPhone ?? '').isNotEmpty) lines.add('  ${t.ownPhone}');
     final pickup = [
       if (t.pickupTime != null && t.pickupTime!.isNotEmpty) TripFormat.time12(t.pickupTime!),
       if (level < 1 && t.pickupPlace != null && t.pickupPlace!.isNotEmpty) t.pickupPlace!,
     ].join(', ');
     if (pickup.isNotEmpty) lines.add('  ${TripStrings.pickup}: $pickup');
-    if (level < 3 && !t.isOwn) lines.add('  ${TripStrings.confirmedLabel}: ${t.confirmedLine()}');
+    if (level < 3) lines.add('  ${TripStrings.confirmedLabel}: ${t.confirmedLine()}');
     return lines;
   }
 
@@ -346,7 +287,14 @@ class TripSummaryText {
       lines.add(dayRoute(d));
       lines.add('');
     }
-    lines.addAll(stepLines(r, TripStepRole.gettingThere, level));
+    final arranged = shownArrangements(r);
+    if (arranged.isNotEmpty) {
+      lines.add(TripStringsV2Easy.arrangementsHeading);
+      for (final a in arranged) {
+        lines.add(arrangementLine(a));
+      }
+      lines.add('');
+    }
     if (r.isMultiCity) {
       for (final l in r.legs) {
         lines.addAll(_legLines(l, level));
@@ -367,7 +315,6 @@ class TripSummaryText {
         lines.add('');
       }
     }
-    lines.addAll(stepLines(r, TripStepRole.comingBack, level));
     if (r.agreedTotal > 0) lines.add(TripStrings.agreedInTotal(BrowseItem.inr(r.agreedTotal)));
     lines.add(footer(r));
     return lines.join('\n');

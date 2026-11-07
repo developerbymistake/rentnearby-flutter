@@ -135,7 +135,7 @@ void main() {
     });
 
     test('own, skipped, not needed and chosen are silent', () {
-      for (final s in [TripStepStatus.own, TripStepStatus.skipped, TripStepStatus.notNeeded, TripStepStatus.chosen]) {
+      for (final s in [TripStepStatus.own, TripStepStatus.skipped, TripStepStatus.chosen]) {
         expect(TripStepRules.needsNudge(TripStep(status: s), _delhi, DateTime(2030, 11, 3), today), isFalse);
       }
     });

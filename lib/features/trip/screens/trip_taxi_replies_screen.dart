@@ -26,7 +26,7 @@ import '../widgets/trip_status_card.dart';
 import '../widgets/trip_taxi_booking_sheet.dart';
 import '../widgets/trip_not_found_view.dart';
 import '../widgets/trip_withdraw_sheet.dart';
-import 'trip_details_sheet.dart';
+import 'trip_dates_sheet.dart';
 import 'trip_replies_leg_parts.dart';
 
 class TripTaxiRepliesScreen extends StatefulWidget {
@@ -42,7 +42,6 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
   String? _date;
   String? _tripId;
   String? _enquiryId;
-  String? _fromStep;
   bool _started = false;
 
   @override
@@ -57,7 +56,6 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
     _date = map['date']?.toString();
     _tripId = map['tripId']?.toString();
     _enquiryId = map['enquiryId']?.toString();
-    _fromStep = map['fromStep'] as String?;
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -81,11 +79,8 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
     }
     if (!mounted) return;
     final day = _c.dayOfDate(DateTime.tryParse(_date ?? '')) ?? _focusDay();
-    final from = _fromStep;
-    final moved = day != null && from != null && day != _day ? _c.stepKeyForDay(from, day) : null;
     setState(() {
       if (day != null) _day = day;
-      if (moved != null) _fromStep = moved;
       _started = true;
     });
   }
@@ -136,7 +131,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
 
   Future<bool> _datesGate() async {
     if (_c.hasDates) return true;
-    await TripDetailsSheet.edit(context, heading: TripStrings.addYourDates, description: TripStrings.datesNeededBooking);
+    await TripDatesSheet.ensure(context, heading: TripStrings.addYourDates);
     return mounted && _c.hasDates;
   }
 
@@ -151,14 +146,6 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
   }
 
   bool get _readOnly => _c.isReadOnly || _c.isDayPast(_day);
-
-  bool _canAskAgain(TripEnquiryModel e) =>
-      e.isRed && !_readOnly && _c.askAgainTaxis(_day).any((s) => s.taxiId == e.listingId);
-
-  Future<void> _askAgain() async {
-    final batch = await _c.askAgain(kind: TripEnquiryKinds.taxi, day: _day);
-    if (batch != null && mounted) await _c.refreshEnquiries();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -319,7 +306,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
   Widget _findTaxiButton() => Align(
         child: TextButton(
           style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-          onPressed: () => TripNavigation.openTaxi(_day, fromStep: _fromStep),
+          onPressed: () => TripNavigation.openTaxi(),
           child: const Text(TripStrings.findAnotherTaxi,
               style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
         ),
@@ -483,8 +470,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
             () => TripCancelSheet.show(context, enquiry: e, ownerSide: false),
             color: AppColors.error);
       default:
-        if (_canAskAgain(e)) add(Iconsax.refresh, TripStrings.askAgain, _c.askBusy.value ? null : _askAgain);
-        if (status.isRed) add(Iconsax.car, TripStrings.askAnother, () => TripNavigation.openTaxi(_day, fromStep: _fromStep));
+        if (status.isRed) add(Iconsax.car, TripStrings.askAnother, () => TripNavigation.openTaxi());
     }
     if (buttons.isEmpty) return const SizedBox.shrink();
     return LayoutBuilder(builder: (context, box) {

@@ -10,6 +10,7 @@ import '../trip_strings.dart';
 import '../trip_strings_a3.dart';
 import '../trip_strings_algo_aa.dart';
 import '../trip_strings_final_aa.dart';
+import '../trip_strings_v2_find.dart';
 import '../utils/trip_taxi_fit.dart';
 import 'trip_status.dart';
 
@@ -20,13 +21,10 @@ class TripDriverRow extends StatelessWidget {
     required this.onOpen,
     required this.onCall,
     required this.onWhatsApp,
-    required this.onShortlist,
+    required this.onAsk,
     required this.onMenu,
-    this.onRemove,
     this.status,
-    this.shortlisted = false,
-    this.shortlistFull = false,
-    this.selected = false,
+    this.days = 1,
     this.contactBusy = false,
     this.menuItems = const [],
     this.fit,
@@ -37,16 +35,13 @@ class TripDriverRow extends StatelessWidget {
   final TaxiBrowseItem item;
   final TripTaxiFit? fit;
   final TripDisplayStatus? status;
-  final bool shortlisted;
-  final bool shortlistFull;
-  final bool selected;
+  final int days;
   final bool contactBusy;
   final VoidCallback onOpen;
   final VoidCallback onCall;
   final VoidCallback onWhatsApp;
-  final VoidCallback onShortlist;
+  final VoidCallback onAsk;
   final ValueChanged<int> onMenu;
-  final VoidCallback? onRemove;
   final List<PopupMenuEntry<int>> menuItems;
 
   bool get _booked => status == TripDisplayStatus.bookedByYou || status == TripDisplayStatus.confirmedByBoth;
@@ -67,9 +62,7 @@ class TripDriverRow extends StatelessWidget {
     ].where((e) => e.isNotEmpty).join(' · ');
     final border = _booked
         ? Border.all(color: TripStatusColors.booked, width: 1.5)
-        : (selected || shortlisted)
-            ? Border.all(color: TripColors.accent, width: 1.5)
-            : Border.all(color: AppColors.divider.withValues(alpha: 0.8));
+        : Border.all(color: AppColors.divider.withValues(alpha: 0.8));
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -133,7 +126,6 @@ class TripDriverRow extends StatelessWidget {
                 style: const TextStyle(
                     fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
             if (reply.isNotEmpty) _replyPill(t.tripReplyLabel, reply),
-            if (selected) _tag(TripStrings.selected, AppColors.success, AppColors.successSurface),
           ],
         ),
         const SizedBox(height: 2),
@@ -179,10 +171,16 @@ class TripDriverRow extends StatelessWidget {
                     color: AppColors.textDark)),
           ),
           if (rate != null)
-            Text(cars > 1 ? TripStringsAlgoAa.carsPerDay(cars) : TripStringsA3.perDayLocal,
+            Text(cars > 1 ? TripStringsAlgoAa.carsPerDay(cars) : TripStringsV2Find.perDayShort,
                 maxLines: 2,
                 textAlign: TextAlign.end,
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, color: AppColors.textLight)),
+          if (rate != null && days > 1)
+            Text(TripStringsV2Find.forDays(BrowseItem.inr(rate * days), days),
+                maxLines: 2,
+                textAlign: TextAlign.end,
+                style: const TextStyle(
+                    fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.textMedium)),
           if (extra != null && extra > 0)
             Text(TripStringsAlgoAa.extraKm(extra),
                 maxLines: 2,
@@ -196,67 +194,57 @@ class TripDriverRow extends StatelessWidget {
   Widget _actions() {
     final call = _button(
       icon: const Icon(Iconsax.call, size: 16, color: TaxiColors.accentDark),
-      label: TripStrings.call,
+      label: TripStringsV2Find.call,
       color: TaxiColors.accentDark,
       onTap: contactBusy ? null : onCall,
     );
-    final wa = _button(
-      icon: Image.asset('assets/images/whatsapp_icon.png',
-          width: 16,
-          height: 16,
-          errorBuilder: (_, _, _) => const Icon(Icons.chat, color: AppColors.whatsApp, size: 16)),
-      label: TripStrings.whatsApp,
-      color: AppColors.whatsApp,
-      onTap: contactBusy ? null : onWhatsApp,
+    final wa = SizedBox(
+      width: 44,
+      height: 44,
+      child: IconButton(
+        onPressed: contactBusy ? null : onWhatsApp,
+        tooltip: TripStrings.whatsApp,
+        style: IconButton.styleFrom(
+          side: BorderSide(color: AppColors.whatsApp.withValues(alpha: 0.5)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        icon: Image.asset('assets/images/whatsapp_icon.png',
+            width: 20,
+            height: 20,
+            errorBuilder: (_, _, _) => const Icon(Icons.chat, color: AppColors.whatsApp, size: 20)),
+      ),
     );
-    final Widget third;
-    if (onRemove != null) {
-      third = _button(
-        icon: const Icon(Iconsax.close_circle, size: 16, color: AppColors.error),
-        label: TripStrings.remove,
-        color: AppColors.error,
-        onTap: onRemove,
-      );
-    } else if (status != null) {
-      third = _button(
-        icon: const Icon(Iconsax.eye, size: 16, color: TaxiColors.accentDark),
-        label: TripStringsA3.viewStatus,
-        color: TaxiColors.accentDark,
-        onTap: onShortlist,
-      );
-    } else if (shortlisted) {
-      third = _button(
-        icon: const Icon(Iconsax.tick_circle, size: 16, color: AppColors.success),
-        label: TripStrings.shortlisted,
-        color: AppColors.success,
-        onTap: onShortlist,
-        filled: true,
-      );
-    } else {
-      third = _button(
-        icon: const Icon(Iconsax.add_circle, size: 16, color: TaxiColors.accentDark),
-        label: TripStrings.shortlist,
-        color: TaxiColors.accentDark,
-        onTap: shortlistFull ? null : onShortlist,
-      );
-    }
-    return LayoutBuilder(builder: (context, box) {
-      if (box.maxWidth < 340) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [call, const SizedBox(height: 8), wa, const SizedBox(height: 8), third],
-        );
-      }
-      return Row(
-        children: [
-          Expanded(child: call),
-          const SizedBox(width: 8),
-          Expanded(child: wa),
-          const SizedBox(width: 8),
-          Expanded(child: third),
-        ],
-      );
-    });
+    final asked = status != null;
+    final ask = SizedBox(
+      height: 44,
+      child: ElevatedButton.icon(
+        onPressed: onAsk,
+        icon: Icon(asked ? Iconsax.eye : Iconsax.send_2, size: 16, color: asked ? TaxiColors.accentDark : Colors.white),
+        label: Text(asked ? TripStringsA3.viewStatus : TripStringsV2Find.ask,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: asked ? TaxiColors.accentDark : Colors.white)),
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          minimumSize: const Size(0, 44),
+          backgroundColor: asked ? TaxiColors.surface : TaxiColors.accent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+    return Row(
+      children: [
+        Expanded(child: call),
+        const SizedBox(width: 8),
+        wa,
+        const SizedBox(width: 8),
+        Expanded(child: ask),
+      ],
+    );
   }
 
   Widget _button({

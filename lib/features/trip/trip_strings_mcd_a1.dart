@@ -18,8 +18,5 @@ class TripStringsMcdA1 {
 
   static String carsState(int n, String label) => '${_cars(n)} · $label';
 
-  static String ownTravelLine(String? how, String? leavesAt, String? name) =>
-      [ownTravel, ?how, ?leavesAt, ?name].where((e) => e.isNotEmpty).join(' · ');
-
   static const String ownTravel = 'Own travel';
 }

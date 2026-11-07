@@ -72,7 +72,7 @@ class AppRoutes {
 
   static const String tripSpots = '/trip-spots';
   static const String tripPlan = '/trip-plan';
-  static const String tripStep = '/trip-step';
+  static const String tripDays = '/trip-days';
   static const String tripTaxi = '/trip-taxi';
   static const String tripStay = '/trip-stay';
   static const String tripMap = '/trip-map';

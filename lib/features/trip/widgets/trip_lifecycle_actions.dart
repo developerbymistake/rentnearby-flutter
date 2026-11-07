@@ -11,6 +11,7 @@ import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
+import '../trip_strings_v2_plan.dart';
 
 class TripLifecycleActions {
   static const _repo = TripRepository();
@@ -106,6 +107,111 @@ class TripLifecycleActions {
     } finally {
       _busy = false;
     }
+  }
+
+  static Future<bool> confirmDelete(BuildContext context, {required int open, required int confirmed, int confirmedTaxis = 0}) async {
+    final lines = [
+      if (open > 0) TripStringsV2Plan.openEnquiries(open),
+      if (confirmed > 0) TripStringsV2Plan.confirmedStays(confirmed),
+      if (confirmedTaxis > 0) TripStringsV2Plan.confirmedTaxis(confirmedTaxis),
+    ];
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(TripStringsV2Plan.deleteTitle,
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final l in lines)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(l, style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textDark)),
+              ),
+            const Text(TripStringsV2Plan.deleteBody,
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(TripStringsV2Plan.keepTrip, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(64, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(TripStringsV2Plan.delete, style: TextStyle(fontFamily: 'Poppins')),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
+  static Future<bool> deleteFromPlan(BuildContext context) async {
+    final c = TripPlanController.to;
+    final id = c.trip.value?.id;
+    if (id == null || _busy) return false;
+    final rows = c.enquiryList;
+    final open = rows.where((e) => e.isWithdrawable).length;
+    final stays = rows.where((e) => e.isBooked && !e.isTaxi).length;
+    final taxis = rows.where((e) => e.isBooked && e.isTaxi).length;
+    final ok = await confirmDelete(context, open: open, confirmed: stays, confirmedTaxis: taxis);
+    if (!ok) return false;
+    _busy = true;
+    try {
+      final done = await MyTripsController.to.delete(id);
+      if (done) TripNavigation.replaceWithMyTrips();
+      return done;
+    } finally {
+      _busy = false;
+    }
+  }
+
+  static Future<bool> saveAndExit(BuildContext context) async {
+    final c = TripPlanController.to;
+    final ok = await c.flushPendingSave();
+    if (!ok && c.saveFailed.value) {
+      AppToast.error(TripStringsV2Plan.saveFailed);
+      return false;
+    }
+    if (!context.mounted) return false;
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(TripStringsV2Plan.savedTitle,
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17)),
+        content: const Text(TripStringsV2Plan.savedBody, style: TextStyle(fontFamily: 'Poppins', fontSize: 13)),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(TripStringsV2Plan.keepPlanning, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: TripColors.accent,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(64, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(TripStringsV2Plan.goToMyTrips, style: TextStyle(fontFamily: 'Poppins')),
+          ),
+        ],
+      ),
+    );
+    if (leave == true) TripNavigation.replaceWithMyTrips();
+    return leave == true;
   }
 
   static Future<void>? openSummary(String tripId) => TripNavigation.openSummary(tripId);

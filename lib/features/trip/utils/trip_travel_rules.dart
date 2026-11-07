@@ -191,7 +191,6 @@ class TripTravelRules {
     final List<int> own;
     if (role == TripJourneyRole.segment) {
       if (arrival == null) return gap ? TripTravelState.gap : TripTravelState.notPlanned;
-      if (arrival.isOwn) return TripTravelState.own;
       own = arrival.ownCars;
     } else {
       final s = step;

@@ -5,7 +5,7 @@ import '../models/trip_model.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a5.dart';
-import '../trip_strings_bar.dart';
+import '../trip_strings_v2_plan.dart';
 import '../utils/trip_bar_rules.dart';
 import '../utils/trip_clock.dart';
 import 'trip_status.dart';
@@ -83,10 +83,9 @@ class TripCard extends StatelessWidget {
   });
 
   static TripBookingState stateOf(TripSummaryModel t) {
+    if (t.isCompleted) return TripBookingState.completed;
     final s = t.state;
-    if (s == TripBookingState.completed) return s;
-    if (s == TripBookingState.draft && t.isPlanned) return TripBookingState.planOnly;
-    return s;
+    return s == TripBookingState.planOnly ? TripBookingState.draft : s;
   }
 
   Widget _badge(String label, Color color, Color surface) => Container(
@@ -153,7 +152,7 @@ class TripCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        TripStringsBar.stepsOf(p.counted, p.total),
+                        p.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsV2Plan.myTripsArranged(p.done, p.total),
                         maxLines: 1,
                         style: const TextStyle(
                             fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMedium),
@@ -161,13 +160,11 @@ class TripCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (past) ...[
-                  const SizedBox(width: 6),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 110),
-                    child: TripBookingStatePill(stateOf(t)),
-                  ),
-                ],
+                const SizedBox(width: 6),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 110),
+                  child: TripBookingStatePill(stateOf(t)),
+                ),
                 PopupMenuButton<String>(
                   constraints: const BoxConstraints(minWidth: 140),
                   icon: const Icon(Icons.more_vert_rounded, size: 20, color: AppColors.textLight),
@@ -199,16 +196,17 @@ class TripCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (!past && (p.waitingForReply > 0 || p.needYou > 0)) ...[
+            if (!past && (p.inProgress > 0 || TripBarRules.needCount(t) > 0)) ...[
               const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  if (p.needYou > 0)
-                    _badge(TripStringsBar.needYou(p.needYou), TripStatusColors.failed, TripStatusColors.failedSurface),
-                  if (p.waitingForReply > 0)
-                    _badge(TripStringsBar.waitingForReply(p.waitingForReply), TripStatusColors.waiting,
+                  if (TripBarRules.needCount(t) > 0)
+                    _badge(TripStringsV2Plan.needsYou(TripBarRules.needCount(t)), TripStatusColors.failed,
+                        TripStatusColors.failedSurface),
+                  if (p.inProgress > 0)
+                    _badge(TripStringsV2Plan.waitingForReply(p.inProgress), TripStatusColors.waiting,
                         TripStatusColors.waitingSurface),
                 ],
               ),

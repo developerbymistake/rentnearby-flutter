@@ -105,7 +105,7 @@ class MyTripsController extends GetxController {
   }
 
   void hideBar(TripSummaryModel t) {
-    StorageService.saveTripBarHidden(t.id, DateTime.now(), needYou: t.progress.needYou);
+    StorageService.saveTripBarHidden(t.id, DateTime.now(), needYou: TripBarRules.needCount(t));
     hiddenVersion.value++;
   }
 
@@ -227,10 +227,10 @@ class MyTripsController extends GetxController {
   Future<bool> delete(String id) async {
     final inActive = active.indexWhere((t) => t.id == id);
     final inPast = past.indexWhere((t) => t.id == id);
-    if (inActive < 0 && inPast < 0) return false;
-    final removed = inActive >= 0 ? active.removeAt(inActive) : past.removeAt(inPast);
+    final listed = inActive >= 0 || inPast >= 0;
+    final removed = inActive >= 0 ? active.removeAt(inActive) : (inPast >= 0 ? past.removeAt(inPast) : null);
     final wasPast = inActive < 0;
-    _shiftCount(wasPast, -1);
+    if (listed) _shiftCount(wasPast, -1);
     try {
       await _repo.delete(id);
       StorageService.clearTripCache(id);
@@ -242,12 +242,14 @@ class MyTripsController extends GetxController {
         _repo.forgetCached(id);
         return true;
       }
-      if (wasPast) {
-        past.insert(inPast.clamp(0, past.length), removed);
-      } else {
-        active.insert(inActive.clamp(0, active.length), removed);
+      if (removed != null) {
+        if (wasPast) {
+          past.insert(inPast.clamp(0, past.length), removed);
+        } else {
+          active.insert(inActive.clamp(0, active.length), removed);
+        }
+        _shiftCount(wasPast, 1);
       }
-      _shiftCount(wasPast, 1);
       AppToast.error(DioErrorMapper.toMessage(e, "Couldn't delete the trip."));
       return false;
     }

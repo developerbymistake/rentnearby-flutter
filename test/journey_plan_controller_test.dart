@@ -22,7 +22,7 @@ WayPlan twoCars() => WayPlan(planKey: 'p1~a~b~c', cars: 2, total: 9000, legs: [
       WayLeg(legKey: 'l1~b~c', index: 2, from: b, to: c, listedFare: 5000, topDrivers: [driver('d3', 5000)]),
     ]);
 
-JourneyOpenArgs args({WayPlan? plan, String? key, int people = 2, String? tripId, String? role, int? leg, String? fromStep}) {
+JourneyOpenArgs args({WayPlan? plan, String? key, int people = 2, String? tripId, String? role, int? leg}) {
   final p = plan ?? twoCars();
   return JourneyOpenArgs(
     plan: p,
@@ -34,7 +34,6 @@ JourneyOpenArgs args({WayPlan? plan, String? key, int people = 2, String? tripId
     tripId: tripId,
     tripRole: role,
     tripLegIndex: leg,
-    fromStep: fromStep,
   );
 }
 
@@ -85,10 +84,9 @@ void main() {
     });
 
     test('withChosen keeps every other field', () {
-      final x = args(tripId: 't1', role: 'comingBack', fromStep: 'comingBack');
+      final x = args(tripId: 't1', role: 'comingBack');
       final y = x.withChosen({2: driver('d9', 6000)});
       expect(y.chosen[2]?.taxiId, 'd9');
-      expect(y.fromStep, 'comingBack');
       expect(y.tripRole, 'comingBack');
       expect(y.planKey, x.planKey);
       expect(x.chosen, isEmpty);

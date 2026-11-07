@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
-import '../models/trip_plan_model.dart';
 import '../models/trip_summary_model.dart';
 import '../trip_strings.dart';
 import '../trip_strings_mca_a3.dart';
@@ -11,7 +10,6 @@ import '../trip_strings_steps_a3.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_summary_text.dart';
 import '../utils/trip_travel_rules.dart';
-import 'trip_own_travel_sheet.dart';
 import 'trip_payment_line.dart';
 import 'trip_status.dart';
 import 'trip_status_card.dart';
@@ -81,27 +79,10 @@ class TripSummaryTravelCard extends StatelessWidget {
               Flexible(child: TripStatusPill(status, taxi: true, label: pillLabel)),
             ],
           ),
-          if (t.isOwn) ..._own(t) else ..._cars(t),
+          if (!t.isOwn) ..._cars(t),
         ],
       ),
     );
-  }
-
-  List<Widget> _own(TripSummaryTravel t) {
-    final how = TripTravelHow.parse(t.how);
-    final line = TripStringsMcaA3.ownTravelLine(how == null ? null : TripOwnTravelSheet.howLabel(how), t.leavesAt);
-    final name = (t.ownName ?? '').trim();
-    final phone = (t.ownPhone ?? '').trim();
-    return [
-      const SizedBox(height: 8),
-      Text(
-        TripStrings.joinDots([line, name]),
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark),
-      ),
-      if (phone.isNotEmpty) _kv(TripStrings.call, phone),
-    ];
   }
 
   List<Widget> _cars(TripSummaryTravel t) {
@@ -160,31 +141,4 @@ class TripSummaryTravelCard extends StatelessWidget {
       ),
     );
   }
-
-  Widget _kv(String label, String value) => Padding(
-        padding: const EdgeInsets.only(top: 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 96,
-              child: Text(
-                label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight),
-              ),
-            ),
-            Expanded(
-              child: Text(
-                value,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textDark),
-              ),
-            ),
-          ],
-        ),
-      );
 }

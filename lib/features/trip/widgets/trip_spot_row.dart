@@ -2,171 +2,174 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_shadows.dart';
-import '../../../widgets/plan_badge_chip.dart';
 import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_colors.dart';
 import '../utils/trip_format.dart';
+import 'trip_spot_detail_sheet.dart';
 
 class TripSpotRow extends StatelessWidget {
   final TripSpotModel spot;
   final bool selected;
   final VoidCallback? onToggle;
+  final bool locked;
 
-  const TripSpotRow({super.key, required this.spot, required this.selected, this.onToggle});
+  const TripSpotRow({super.key, required this.spot, required this.selected, this.onToggle, this.locked = false});
 
   @override
   Widget build(BuildContext context) {
     final description = spot.description;
     final area = spot.area;
-    final credit = _credit();
+    final extra = spot.gallery.length - 1;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onToggle,
+      onTap: () => TripSpotDetailSheet.show(context, spot: spot, selected: selected, locked: locked, onToggle: onToggle),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        height: 188,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? TripColors.accent.withValues(alpha: 0.45) : AppColors.divider.withValues(alpha: 0.7),
-          ),
-          boxShadow: AppShadows.premium(TripColors.accent, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: selected ? TripColors.accent : Colors.transparent, width: 1.6),
+          boxShadow: AppShadows.premium(TripColors.accent, alpha: 0.08, blur: 10, offset: const Offset(0, 3)),
         ),
-        child: Row(
-          children: [
-            _leading(),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          spot.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
-                        ),
-                      ),
-                      if (spot.isFeatured) ...[
-                        const SizedBox(width: 6),
-                        const PlanBadgeChip(color: TripColors.accentDark),
-                      ],
-                    ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              TripSpotMedia(spot: spot),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0x00000000), Color(0x22000000), Color(0xCC000000)],
+                    stops: [0.3, 0.55, 1],
                   ),
-                  if (description != null && description.isNotEmpty)
+                ),
+              ),
+              Positioned(left: 10, top: 10, child: _chip(TripSpotCategory.label(spot.category))),
+              if (extra > 0)
+                Positioned(right: 10, top: 10, child: _chip('+$extra', icon: Icons.photo_library_outlined)),
+              Positioned(
+                left: 12,
+                right: 64,
+                bottom: 10,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      description,
+                      spot.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+                      style: const TextStyle(
+                          fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
                     ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      _meta(TripSpotCategory.label(spot.category)),
-                      if (area != null && area.isNotEmpty) _meta(area),
-                      _meta(TripFormat.visit(spot.visitMinutes)),
-                    ],
-                  ),
-                  if (credit != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        credit,
+                    Text(
+                      [if (area != null && area.isNotEmpty) area, '~${TripFormat.visit(spot.visitMinutes)}'].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: Colors.white70),
+                    ),
+                    if (description != null && description.isNotEmpty)
+                      Text(
+                        description,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 10, color: AppColors.textLight),
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: Colors.white),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            _pill(),
-          ],
+              Positioned(
+                right: 10,
+                bottom: 10,
+                child: TripSpotAddButton(selected: selected, locked: locked, onTap: onToggle),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  String? _credit() {
-    final url = spot.imageUrl;
-    final by = spot.imageCredit?.trim();
-    if (url == null || url.isEmpty || by == null || by.isEmpty) return null;
-    final licence = spot.imageLicense?.trim();
-    return licence == null || licence.isEmpty ? '© $by' : '© $by · $licence';
-  }
-
-  Widget _leading() {
-    final icon = Icon(TripSpotCategory.iconOf(spot.category), size: 22, color: TripSpotCategory.colorOf(spot.category));
-    final url = spot.imageUrl;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 44,
-        height: 44,
-        color: TripColors.surface,
-        alignment: Alignment.center,
-        child: url == null || url.isEmpty
-            ? icon
-            : CachedNetworkImage(
-                imageUrl: url,
-                width: 44,
-                height: 44,
-                fit: BoxFit.cover,
-                placeholder: (_, _) => Container(color: AppColors.surfaceWarm),
-                errorWidget: (_, _, _) => icon,
-              ),
-      ),
-    );
-  }
-
-  Widget _meta(String label) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-        decoration: BoxDecoration(color: AppColors.neutralChip, borderRadius: BorderRadius.circular(6)),
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-              fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.neutralChipText),
+  Widget _chip(String label, {IconData? icon}) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), borderRadius: BorderRadius.circular(999)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[Icon(icon, size: 12, color: Colors.white), const SizedBox(width: 3)],
+            Text(
+              label,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.white),
+            ),
+          ],
         ),
       );
+}
 
-  Widget _pill() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+class TripSpotAddButton extends StatelessWidget {
+  final bool selected;
+  final bool locked;
+  final VoidCallback? onTap;
+
+  const TripSpotAddButton({super.key, required this.selected, required this.locked, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: selected ? TripColors.accent : Colors.white,
+          border: Border.all(color: locked && !selected ? AppColors.divider : TripColors.accent, width: 1.4),
+        ),
+        child: Icon(
+          selected ? Icons.check_rounded : Icons.add_rounded,
+          size: 22,
+          color: selected ? Colors.white : (locked ? AppColors.textHint : TripColors.accentDark),
+        ),
+      ),
+    );
+  }
+}
+
+class TripSpotMedia extends StatelessWidget {
+  final TripSpotModel spot;
+  final String? url;
+
+  const TripSpotMedia({super.key, required this.spot, this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    final src = url ?? (spot.hasPhoto ? spot.gallery.first : null);
+    if (src == null || src.isEmpty) return _fallback();
+    return CachedNetworkImage(
+      imageUrl: src,
+      fit: BoxFit.cover,
+      placeholder: (_, _) => Container(color: AppColors.surfaceWarm),
+      errorWidget: (_, _, _) => _fallback(),
+    );
+  }
+
+  Widget _fallback() {
+    final color = TripSpotCategory.colorOf(spot.category);
+    return Container(
       decoration: BoxDecoration(
-        color: selected ? TripColors.accent : Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: TripColors.accent, width: 1.2),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [color.withValues(alpha: 0.35), color.withValues(alpha: 0.75)],
+        ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (selected) ...[
-            const Icon(Icons.check_rounded, size: 13, color: Colors.white),
-            const SizedBox(width: 3),
-          ],
-          Text(
-            selected ? 'Added' : 'Add to list',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : TripColors.accentDark,
-            ),
-          ),
-        ],
-      ),
+      alignment: Alignment.center,
+      child: Icon(TripSpotCategory.iconOf(spot.category), size: 56, color: Colors.white.withValues(alpha: 0.9)),
     );
   }
 }

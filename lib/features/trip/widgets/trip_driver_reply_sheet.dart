@@ -6,7 +6,7 @@ import '../../../utils/contact_launcher.dart';
 import '../../taxi/leads/trip_lead_format.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
-import '../screens/trip_details_sheet.dart';
+import '../screens/trip_dates_sheet.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import 'trip_payment_line.dart';
@@ -19,7 +19,7 @@ class TripDriverReplySheet {
     if (book != true || !context.mounted) return;
     final plan = TripPlanController.to;
     if (!plan.hasDates) {
-      await TripDetailsSheet.edit(context, heading: TripStrings.addYourDates, description: TripStrings.datesNeededBooking);
+      await TripDatesSheet.ensure(context, heading: TripStrings.addYourDates);
       if (!context.mounted || !plan.hasDates) return;
     }
     await TripTaxiBookingSheet.show(

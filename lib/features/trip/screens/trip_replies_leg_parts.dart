@@ -10,7 +10,7 @@ import '../widgets/trip_cancel_sheet.dart';
 import '../widgets/trip_leg_menu_sheet.dart';
 import '../widgets/trip_withdraw_sheet.dart';
 import '../widgets/trip_wrong_city_strip.dart';
-import 'trip_details_sheet.dart';
+import 'trip_dates_sheet.dart';
 
 class TripRepliesLegParts {
   static String? legLine(TripPlanController c, int day) {
@@ -39,7 +39,7 @@ class TripRepliesLegParts {
         onChangeDays: live
             ? () => c.isMultiCity
                 ? TripLegMenuSheet.changeDays(context, c.wrongCityHomeLeg(info) ?? c.legIndexOf(info.firstWrongDay))
-                : TripDetailsSheet.edit(context)
+                : TripDatesSheet.edit(context)
             : null,
       ),
     );

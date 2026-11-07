@@ -28,7 +28,6 @@ class JourneyPlanController extends GetxController {
     tripId: args.tripId,
     tripRole: args.tripRole,
     tripLegIndex: args.tripLegIndex,
-    fromStep: args.fromStep,
     date: () => args.date,
     people: () => args.people,
     chosenOf: (_) => Map<int, WayDriver>.from(chosen),

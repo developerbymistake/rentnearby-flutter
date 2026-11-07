@@ -15,7 +15,6 @@ class TaxiWaysNavigation {
     String? tripId,
     String? tripRole,
     int? tripLegIndex,
-    String? fromStep,
   }) =>
       Get.toNamed(AppRoutes.taxiWays, arguments: {
         'from': from,
@@ -27,7 +26,6 @@ class TaxiWaysNavigation {
         'tripId': ?tripId,
         'tripRole': ?tripRole,
         'tripLegIndex': ?tripLegIndex,
-        'fromStep': ?fromStep,
       });
 
   static Future<dynamic>? openPlan(JourneyOpenArgs args) => Get.toNamed(AppRoutes.journeyPlan, arguments: args);
@@ -43,7 +41,6 @@ class TaxiWaysNavigation {
         'tripId': ?a.tripId,
         'tripRole': ?a.tripRole,
         'tripLegIndex': ?a.tripLegIndex,
-        'fromStep': ?a.fromStep,
       });
 
   static PlaceResult _place(WayPlace p) => PlaceResult(name: p.name, subtitle: '', latLng: LatLng(p.lat, p.lng));

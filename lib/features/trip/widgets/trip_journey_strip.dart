@@ -72,7 +72,10 @@ class TripJourneyStrip extends StatelessWidget {
       final moved = !c.isReadOnly &&
           !c.needsUpdate.value &&
           (k != null ? c.travelStateOf(k) == TripTravelState.dateChanged : j.dateChanged);
-      final lines = TripJourneyCard.infoOf(c, role: role, legIndex: legIndex)?.cars ?? const <TripCarLine>[];
+      final ownCars = k != null
+          ? (c.plan.value?.legAt(k)?.arrival?.ownCars ?? const <int>[])
+          : (role == null ? const <int>[] : c.stepOf(role!).ownCars);
+      final lines = TripTravelRules.carLines(j, rows, ownCars);
       final total = totalOf(j);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

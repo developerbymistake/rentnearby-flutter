@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
-import '../../../utils/app_toast.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../stay/models/stay_nearby_model.dart';
 import '../../stay/setup/stay_option_sets.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../controllers/trip_plan_controller.dart';
@@ -11,53 +11,40 @@ import '../controllers/trip_supply_controller.dart';
 import '../data/trip_enquiry_repository.dart';
 import '../models/trip_enquiry_model.dart';
 import '../trip_constants.dart';
-import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
-import '../trip_strings_mca_a3.dart';
+import '../trip_strings_v2_find.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
-import '../widgets/trip_back_to_plan_bar.dart';
 import '../widgets/trip_payment_line.dart';
 import '../widgets/trip_send_result_sheet.dart';
 import '../widgets/trip_sheet_frame.dart';
-import 'trip_details_sheet.dart';
+import 'trip_dates_sheet.dart';
 
 class TripStayEnquirySheet {
-  static Future<TripEnquiryBatch?> show(BuildContext context, {required int day, String? fromStep}) async {
-    final c = TripPlanController.to;
-    if (c.sendableShortlist(day).isEmpty) return null;
-    final names = <String, String>{
-      for (final s in c.plan.value?.dayAt(day)?.stayShortlist ?? const []) s.stayId: s.name,
-    };
-    final batch = await TripSheetFrame.show<TripEnquiryBatch>(context, _EnquiryBody(day: day));
+  static Future<TripEnquiryBatch?> show(
+    BuildContext context, {
+    required StayNearbyModel stay,
+    required int day,
+    required int nights,
+  }) async {
+    final batch = await TripSheetFrame.show<TripEnquiryBatch>(context, _EnquiryBody(stay: stay, day: day, nights: nights));
     if (batch == null) return null;
     final left = batch.asksLeft;
     if (left != null) TripSupplyController.to.asksLeft.value = left;
-    if (batch.items.isEmpty) {
-      if (context.mounted) await TripSendResultSheet.show(context, batch: batch, names: names);
-      return batch;
+    if (context.mounted) {
+      await TripSendResultSheet.show(context, batch: batch, names: {stay.id: stay.title});
     }
-    final first = batch.items.first;
-    if (batch.skipped.isEmpty && batch.items.length == 1 && first.conversationId != null) {
-      TripBackToStepBar.back(fromStep);
-      TripNavigation.openChatForEnquiry(first);
-      return batch;
-    }
-    if (batch.skipped.isEmpty) {
-      AppToast.success(TripStrings.sentTo(batch.items.length));
-    } else if (context.mounted) {
-      await TripSendResultSheet.show(context, batch: batch, names: names);
-    }
-    TripBackToStepBar.back(fromStep);
     return batch;
   }
 }
 
 class _EnquiryBody extends StatefulWidget {
-  const _EnquiryBody({required this.day});
+  const _EnquiryBody({required this.stay, required this.day, required this.nights});
 
+  final StayNearbyModel stay;
   final int day;
+  final int nights;
 
   @override
   State<_EnquiryBody> createState() => _EnquiryBodyState();
@@ -65,20 +52,17 @@ class _EnquiryBody extends StatefulWidget {
 
 class _EnquiryBodyState extends State<_EnquiryBody> {
   final _c = TripPlanController.to;
-  bool? _allNights;
   bool _sending = false;
   int? _limitMinutes;
 
-  int get _day => widget.day;
-
-  Future<void> _send(List<String> ids, int nights) async {
-    if (_sending || ids.isEmpty) return;
+  Future<void> _send() async {
+    if (_sending) return;
     setState(() {
       _sending = true;
       _limitMinutes = null;
     });
     final enquiries = TripEnquiryController.to;
-    final batch = await enquiries.sendEnquiry(day: _day, stayIds: ids, nights: nights);
+    final batch = await enquiries.sendEnquiry(day: widget.day, stayIds: [widget.stay.id], nights: widget.nights);
     if (!mounted) return;
     setState(() {
       _sending = false;
@@ -102,8 +86,8 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(TripStrings.askLimitTitle,
-                      style: const TextStyle(
+                  const Text(TripStrings.askLimitTitle,
+                      style: TextStyle(
                           fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.warningText)),
                   const SizedBox(height: 2),
                   Text(TripStrings.askLimitBody(minutes),
@@ -115,8 +99,8 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
         ),
       );
 
-  Widget _row(String label, String value, {bool editable = true}) => InkWell(
-        onTap: editable ? () => TripDetailsSheet.edit(context) : null,
+  Widget _row(String label, String value, {VoidCallback? onTap}) => InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
@@ -138,7 +122,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
                       style: const TextStyle(
                           fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
                 ),
-                if (editable) const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textHint),
+                if (onTap != null) const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textHint),
               ],
             ),
           ),
@@ -149,56 +133,39 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
   Widget build(BuildContext context) {
     return Obx(() {
       final p = _c.plan.value;
-      _c.enquiryList.length;
-      final stays = _c.sendableShortlist(_day);
-      final ids = stays.map((s) => s.stayId).toList();
       final s = _c.settings;
-      final checkIn = _c.dateOf(_day);
-      if (p == null || checkIn == null || stays.isEmpty) {
-        final needDates = p != null && checkIn == null && stays.isNotEmpty;
+      final checkIn = _c.dateOf(widget.day);
+      if (p == null || checkIn == null) {
         return TripSheetFrame(
           title: TripStrings.enquiryTitle,
           children: [
-            Text(needDates ? TripStringsA2.addDatesToSend : TripStringsA2.nothingToSend,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.4)),
+            const Text(TripStringsA2.addDatesToSend,
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.4)),
             const SizedBox(height: 16),
-            if (needDates)
-              GradientButton(
-                onPressed: () => TripDetailsSheet.edit(context),
-                label: TripStringsA2.addDates,
-                gradient: StayColors.gradient,
-                shadowColor: StayColors.accent,
-              )
-            else
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
-                child: const Text(TripStrings.done,
-                    style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
-              ),
+            GradientButton(
+              onPressed: () => TripDatesSheet.edit(context),
+              label: TripStringsA2.addDates,
+              gradient: StayColors.gradient,
+              shadowColor: StayColors.accent,
+            ),
           ],
         );
       }
-      final run = _c.enquiryNightsRun(_day).length;
-      final canAll = run > 1;
-      final allNights = canAll && (_allNights ?? true);
-      final nights = allNights ? run : 1;
+      final nights = widget.nights < 1 ? 1 : widget.nights;
       final checkOut = DateTime(checkIn.year, checkIn.month, checkIn.day + nights);
       final now = DateTime.now().toUtc();
       final start = s.startDate ?? checkIn;
       final short = TripEnquiryRules.enquiryExpiry(start, checkIn, now).veryShortNotice;
       final daysLeft = TripEnquiryRules.daysUntil(start, now);
       final preview = TripEnquiryRules.previewText(
-        city: p.isMultiCity ? p.cityNameOf(_day) : _c.cityName,
+        city: p.cityNameOf(widget.day),
         checkIn: checkIn,
         checkOut: checkOut,
-        allNights: allNights,
+        allNights: nights > 1,
         adults: s.adults,
         kids: s.kids,
-        rooms: s.rooms,
-        needs: s.needs,
         days: [
-          for (var d = _day; d < _day + nights; d++)
+          for (var d = widget.day; d < widget.day + nights; d++)
             TripPreviewDay(day: d, spots: p.dayAt(d)?.spots.map((x) => x.name).toList() ?? const []),
         ],
       );
@@ -206,12 +173,10 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
       final limit = _limitMinutes;
       final reply = short
           ? TripStrings.replyExpectedToday('${TripConstants.floorHours} h')
-          : (daysLeft <= 0
-              ? TripStrings.replyExpectedToday('24 h')
-              : TripStrings.replyExpected('24 h', daysLeft));
+          : (daysLeft <= 0 ? TripStrings.replyExpectedToday('24 h') : TripStrings.replyExpected('24 h', daysLeft));
       return TripSheetFrame(
         title: TripStrings.enquiryTitle,
-        description: stays.map((x) => x.name).join(', '),
+        description: widget.stay.title,
         footer: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -228,28 +193,10 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           ],
         ),
         children: [
-          _row(TripStrings.checkIn, TripFormat.shortDate(checkIn), editable: false),
-          _row(TripStrings.checkOut, TripFormat.shortDate(checkOut), editable: false),
-          _row(TripStrings.people, s.peopleSummary ?? TripStrings.addPeople),
-          if (s.roomsSummary != null) _row(TripStrings.rooms, s.roomsSummary!),
-          if (s.needs.isNotEmpty) _row(TripStrings.needs, s.needs.map(TripNeeds.label).join(' · ')),
-          if (canAll)
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              value: allNights,
-              activeTrackColor: StayColors.accent,
-              onChanged: _sending ? null : (v) => setState(() => _allNights = v),
-              title: Text(
-                  p.isMultiCity ? TripStringsMcaA3.allNightsIn(p.cityNameOf(_day), run) : TripStrings.allNights,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-              subtitle: p.isMultiCity
-                  ? null
-                  : Text(TripStrings.nights(run),
-                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-            ),
+          _row(TripStrings.checkIn, TripFormat.shortDate(checkIn)),
+          _row(TripStrings.checkOut, TripFormat.shortDate(checkOut)),
+          _row(TripStrings.people, s.peopleSummary ?? TripStrings.addPeople, onTap: () => TripDatesSheet.edit(context)),
+          if (nights > 1) _row(TripStringsV2Find.nightsLabel, TripStringsV2Find.nightsText(nights)),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(12),
@@ -290,12 +237,12 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           if (limit != null) _limitCard(limit),
           const SizedBox(height: 16),
           GradientButton(
-            label: TripStrings.sendToStays(ids.length),
+            label: TripStrings.sendToStays(1),
             height: 52,
             isLoading: _sending,
             gradient: StayColors.gradient,
             shadowColor: StayColors.accent,
-            onPressed: ids.isEmpty || limit != null ? null : () => _send(ids, nights),
+            onPressed: limit != null ? null : _send,
           ),
         ],
       );

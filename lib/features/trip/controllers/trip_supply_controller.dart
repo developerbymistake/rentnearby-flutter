@@ -26,7 +26,9 @@ class TripSupplyController extends GetxController {
   static const _suv = 'SUV';
   static const pricePresets = [2000, 4000, 8000];
 
-  final day = 1.obs;
+  final stayLeg = 1.obs;
+  final taxiLeg = 1.obs;
+  int _taxiDay = 1;
 
   final taxis = <TaxiBrowseItem>[].obs;
   final taxiLoading = false.obs;
@@ -42,12 +44,10 @@ class TripSupplyController extends GetxController {
   final stays = <StayNearbyModel>[].obs;
   final stayLoading = false.obs;
   final stayFailed = false.obs;
-  final stayRadiusKm = TripConstants.stayRadiusKm.obs;
   int _staySeq = 0;
-  int? _staysDay;
+  int? _staysLeg;
   String? _staysDistrict;
   String? _staysWhere;
-  TripPoint? _searchPoint;
   final Map<String, TripStayFit> _stayFits = {};
 
   final maxPrice = RxnInt();
@@ -60,8 +60,6 @@ class TripSupplyController extends GetxController {
   final onlySuv = false.obs;
 
   TripPlanController get _plan => TripPlanController.to;
-
-  bool get canWidenRadius => stayRadiusKm.value < TripConstants.stayRadiusWideKm;
 
   bool _isTabInactive(Object e) => DioErrorMapper.errorType(e) == ApiService.tabInactiveType;
 
@@ -104,7 +102,7 @@ class TripSupplyController extends GetxController {
     final p = _plan.plan.value;
     final spots = p?.dayAt(d)?.spots ?? const [];
     final first = spots.isEmpty ? null : spots.first;
-    final start = p == null ? null : TripStayBase.startOf(p, d);
+    final start = p == null ? null : TripStayBase.startOf(p, d, _plan.enquiryList);
     return TripTaxiNeed.of(
       people: _plan.settings.peopleCount,
       km: _plan.dayKm(d),
@@ -126,46 +124,41 @@ class TripSupplyController extends GetxController {
     }).toList();
   }
 
-  void setDay(int d) {
-    if (d == day.value) return;
-    day.value = d;
-    _searchPoint = null;
-    stayRadiusKm.value = TripConstants.stayRadiusKm;
+  int _anchor(int legIndex) {
+    final start = _plan.plan.value?.legStart(legIndex) ?? 0;
+    return start > 0 ? start : 1;
   }
 
-  void setSearchPoint(double lat, double lng) {
-    _searchPoint = (lat: lat, lng: lng);
-  }
+  String? _districtOf(int legIndex) => _plan.plan.value?.legAt(legIndex)?.districtId;
 
-  void clearSearchPoint() {
-    _searchPoint = null;
-  }
+  String? get stayDistrictId => _districtOf(stayLeg.value);
 
-  String? get dayDistrictId => _plan.plan.value?.districtIdOf(day.value);
+  String? get taxiDistrictId => _districtOf(taxiLeg.value);
 
-  bool get districtPending => _plan.supplyPendingFor(day.value);
+  bool get stayDistrictPending => _plan.supplyPendingFor(_anchor(stayLeg.value));
 
-  bool get staysOutOfDate => dayDistrictId != null && (_staysDay != day.value || _staysDistrict != dayDistrictId);
+  bool get taxiDistrictPending => _plan.supplyPendingFor(_anchor(taxiLeg.value));
 
-  bool get taxisOutOfDate => dayDistrictId != null && !_plan.taxiTabOff.value && _taxisKey != _taxiKeyFor(dayDistrictId!, day.value);
+  bool get staysOutOfDate => stayDistrictId != null && (_staysLeg != stayLeg.value || _staysDistrict != stayDistrictId);
 
-  Future<void> ensureTaxis() async {
-    final districtId = dayDistrictId;
+  bool get taxisOutOfDate =>
+      taxiDistrictId != null && !_plan.taxiTabOff.value && _taxisKey != _taxiKeyFor(taxiDistrictId!, _taxiDay);
+
+  Future<void> ensureTaxis(int legIndex, {int? day}) async {
+    taxiLeg.value = legIndex;
+    _taxiDay = day ?? _anchor(legIndex);
+    final districtId = taxiDistrictId;
     if (districtId == null || _plan.taxiTabOff.value) {
       _clearTaxis();
       return;
     }
-    if (_taxisKey == _taxiKeyFor(districtId, day.value)) return;
+    if (_taxisKey == _taxiKeyFor(districtId, _taxiDay)) return;
     await loadTaxis();
   }
 
-  Future<void> ensureStays() async {
-    if (_staysDay != day.value || _staysDistrict != dayDistrictId) {
-      await loadStays();
-      return;
-    }
-    if (_loadKey(_nightOf(day.value)) != _staysWhere) {
-      stayRadiusKm.value = TripConstants.stayRadiusKm;
+  Future<void> ensureStays(int legIndex) async {
+    stayLeg.value = legIndex;
+    if (_staysLeg != legIndex || _staysDistrict != stayDistrictId || _staysWhere != _loadKey(legIndex)) {
       await loadStays();
     }
   }
@@ -184,7 +177,7 @@ class TripSupplyController extends GetxController {
 
   Future<void> loadTaxis({bool reset = true}) async {
     final p = _plan.plan.value;
-    final districtId = p?.districtIdOf(day.value);
+    final districtId = taxiDistrictId;
     if (p == null || districtId == null) return;
     if (_plan.taxiTabOff.value) {
       _clearTaxis();
@@ -194,7 +187,7 @@ class TripSupplyController extends GetxController {
     if (!reset && districtId != _taxisDistrict) return;
     final seq = ++_taxiSeq;
     final page = reset ? 1 : _taxiPage + 1;
-    final need = _taxiNeed(day.value);
+    final need = _taxiNeed(_taxiDay);
     if (reset) {
       taxis.clear();
       _taxiFits.clear();
@@ -251,98 +244,92 @@ class TripSupplyController extends GetxController {
     if (taxiHasMore.value && !taxiLoadingMore.value) await loadTaxis(reset: false);
   }
 
-  TripStayNight? _nightOf(int d) {
-    final near = _searchPoint;
+  TripPoint? _near;
+
+  void setNear(double? lat, double? lng) {
+    final point = lat == null || lng == null ? null : (lat: lat, lng: lng);
+    _near = point != null && TripGeo.valid(point) ? point : null;
+  }
+
+  TripStayNight? _legNight(int legIndex) {
+    final near = _near;
     if (near != null) return TripStayNight(spots: [near]);
     final p = _plan.plan.value;
-    final day = p?.dayAt(d);
-    if (p == null || day == null) return null;
-    final spots = [for (final s in day.spots) (lat: s.latitude, lng: s.longitude)].where(TripGeo.valid).toList();
-    final nextDay = p.dayAt(d + 1);
-    TripPoint? next;
-    if (nextDay != null && nextDay.spots.isNotEmpty && p.legIndexOf(d + 1) == p.legIndexOf(d)) {
-      final f = nextDay.spots.first;
-      final pt = (lat: f.latitude, lng: f.longitude);
-      if (TripGeo.valid(pt)) next = pt;
-    }
-    if (spots.isNotEmpty) return TripStayNight(spots: spots, next: next);
-    final leg = p.legOf(d);
+    final leg = p?.legAt(legIndex);
+    if (p == null || leg == null) return null;
+    final spots = <TripPoint>[
+      for (final d in p.daysOf(legIndex))
+        for (final s in d.spots) (lat: s.latitude, lng: s.longitude),
+    ].where(TripGeo.valid).toList();
     final centre = (lat: leg.latitude, lng: leg.longitude);
-    return TripGeo.valid(centre) ? TripStayNight(spots: [centre], next: next) : null;
+    if (spots.isNotEmpty) return TripStayNight(spots: spots);
+    return TripGeo.valid(centre) ? TripStayNight(spots: [centre]) : null;
   }
 
-  static String? _whereKey(TripStayNight? n) =>
-      n == null ? null : [for (final p in n.points) '${p.lat.toStringAsFixed(5)},${p.lng.toStringAsFixed(5)}'].join('|');
-
-  String? _loadKey(TripStayNight? n) {
-    final where = _whereKey(n);
-    return where == null ? null : '$where#${_partyParams()}';
+  TripPoint? _centre(int legIndex) {
+    if (_near != null) return _near;
+    final leg = _plan.plan.value?.legAt(legIndex);
+    if (leg != null && leg.hasPoint) {
+      final c = (lat: leg.latitude, lng: leg.longitude);
+      if (TripGeo.valid(c)) return c;
+    }
+    return _legNight(legIndex)?.spots.first;
   }
 
-  Map<String, dynamic> _partyParams() {
-    final s = _plan.settings;
-    final guests = s.peopleCount;
-    final rooms = s.rooms;
+  String? _loadKey(int legIndex) {
+    final c = _centre(legIndex);
+    if (c == null) return null;
+    return '${c.lat.toStringAsFixed(5)},${c.lng.toStringAsFixed(5)}#${_partyParams(legIndex)}';
+  }
+
+  Map<String, dynamic> _partyParams(int legIndex) {
+    final guests = _plan.settings.peopleCount;
+    final nights = _plan.plan.value?.legDayCount(legIndex) ?? 1;
     return {
       if (guests > 0) 'guests': guests.clamp(1, TripConstants.stayGuestsMax).toInt(),
-      if (guests > 0 && rooms != null && rooms > 0) 'rooms': rooms.clamp(1, TripConstants.stayRoomsMax).toInt(),
-      if (guests > 0) 'nights': 1,
-      if (s.needs.contains(TripNeeds.noStairs)) 'groundFloor': true,
+      if (guests > 0) 'nights': nights < 1 ? 1 : nights,
     };
   }
 
-  static double _queryRadius(double discKm, double radiusKm) {
-    final r = ((discKm + radiusKm) * 2).ceil() / 2;
-    return r.clamp(TripConstants.stayQueryRadiusMinKm, TripConstants.stayQueryRadiusMaxKm).toDouble();
-  }
-
   Future<void> loadStays() async {
+    final k = stayLeg.value;
     final p = _plan.plan.value;
-    final districtId = p?.districtIdOf(day.value);
+    final districtId = stayDistrictId;
     if (p == null || districtId == null || _plan.stayTabOff.value) {
       _staySeq++;
-      _staysDay = day.value;
+      _staysLeg = k;
       _staysDistrict = null;
+      _staysWhere = null;
       _stayFits.clear();
       stays.clear();
       stayFailed.value = false;
       stayLoading.value = false;
       return;
     }
-    final d = day.value;
     final seq = ++_staySeq;
-    _staysDay = d;
+    _staysLeg = k;
     _staysDistrict = districtId;
     stays.clear();
     _stayFits.clear();
     hostelAvailable.value = false;
     stayFailed.value = false;
-    final night = _nightOf(d);
-    _staysWhere = _loadKey(night);
-    if (night == null) return;
-    final radius = stayRadiusKm.value;
-    final discs = TripGeo.cover(night.points, radius);
-    if (discs.isEmpty) return;
-    final party = _partyParams();
+    final night = _legNight(k);
+    final centre = _centre(k);
+    _staysWhere = _loadKey(k);
+    if (night == null || centre == null) return;
     stayLoading.value = true;
     try {
-      final pages = await Future.wait([
-        for (final disc in discs)
-          withRetry(() => ApiService.get('/stays/nearby', params: {
-                'latitude': disc.centre.lat,
-                'longitude': disc.centre.lng,
-                'radius': _queryRadius(disc.radiusKm, radius),
-                'districtId': districtId,
-                ...party,
-              })),
-      ]);
+      final res = await withRetry(() => ApiService.get('/stays/nearby', params: {
+            'latitude': centre.lat,
+            'longitude': centre.lng,
+            'radius': TripConstants.stayQueryRadiusMaxKm,
+            'districtId': districtId,
+            ..._partyParams(k),
+          }));
       if (seq != _staySeq) return;
-      final rows = <Map<String, dynamic>>[];
-      for (final res in pages) {
-        final data = res['data'];
-        final list = data is Map<String, dynamic> ? (data['items'] as List?) ?? const [] : const [];
-        rows.addAll(list.whereType<Map<String, dynamic>>());
-      }
+      final data = res['data'];
+      final rows = (data is Map<String, dynamic> ? (data['items'] as List?) ?? const [] : const [])
+          .whereType<Map<String, dynamic>>();
       final byId = <String, StayNearbyModel>{};
       final good = <Map<String, dynamic>>[];
       for (final r in rows) {
@@ -352,14 +339,13 @@ class TripSupplyController extends GetxController {
           good.add(r);
         } catch (_) {}
       }
-      final ranked = TripStayRank.rank(good, night, radius);
+      final ranked = TripStayRank.rank(good, night, double.infinity);
       _stayFits
         ..clear()
         ..addEntries(ranked.map((f) => MapEntry(f.id, f)));
       final items = [for (final f in ranked) ?byId[f.id]];
       stays.assignAll(items);
       hostelAvailable.value = items.any((s) => s.stayTypeName == _hostel);
-      _plan.fillStayCoordinates(items);
     } catch (e) {
       if (seq != _staySeq) return;
       if (_isTabInactive(e)) {
@@ -372,11 +358,5 @@ class TripSupplyController extends GetxController {
     } finally {
       if (seq == _staySeq) stayLoading.value = false;
     }
-  }
-
-  Future<void> widenRadius() async {
-    if (!canWidenRadius) return;
-    stayRadiusKm.value = TripConstants.stayRadiusWideKm;
-    await loadStays();
   }
 }

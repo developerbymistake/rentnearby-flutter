@@ -1,7 +1,8 @@
 import '../models/trip_model.dart';
+import '../models/trip_plan_model.dart';
 import '../trip_strings_bar.dart';
+import '../trip_strings_v2_plan.dart';
 import 'trip_clock.dart';
-import 'trip_wizard_rules.dart';
 
 enum TripBarLine { next, today, tomorrow }
 
@@ -28,9 +29,15 @@ class TripListGroups {
 }
 
 class TripBarRules {
+  static int needCount(TripSummaryModel t) {
+    final p = t.progress;
+    final n = p.rows.where((r) => r.needsYou).length;
+    return n > 0 ? n : (p.needsYou ? 1 : 0);
+  }
+
   static bool isReady(TripSummaryModel t) {
     final p = t.progress;
-    return p.total > 0 && p.counted >= p.total;
+    return p.total > 0 && p.done >= p.total;
   }
 
   static DateTime? endOf(TripSummaryModel t) {
@@ -114,7 +121,7 @@ class TripBarRules {
     final last = t.progress.lastEventAt;
     if (last != null && last.isAfter(hide.hiddenAt)) return false;
     final before = hide.needYou;
-    if (before != null && t.progress.needYou > before) return false;
+    if (before != null && needCount(t) > before) return false;
     final s = t.startDate;
     if (s != null) {
       final hiddenDay = TripClock.today(hide.hiddenAt.toUtc());
@@ -126,57 +133,39 @@ class TripBarRules {
   static String? nextTitle(TripSummaryModel t) {
     final next = t.progress.next;
     if (next == null) return null;
-    final key = TripStepKey.parse(next.key);
+    final key = TripEasyRowKey.parse(next.key);
     if (key == null) return null;
+    final cities = t.legCities;
+    final leg = key.legIndex ?? 0;
     switch (key.kind) {
-      case TripWizardStepKind.basics:
-        return TripStringsBar.tripBasics;
-      case TripWizardStepKind.gettingThere:
-        return TripStringsBar.gettingThere;
-      case TripWizardStepKind.comingBack:
-        return TripStringsBar.comingBack;
-      case TripWizardStepKind.travel:
-        final leg = key.legIndex ?? 0;
-        final cities = t.legCities;
+      case TripEasyRowKind.gettingThere:
+        return TripStringsV2Plan.rowGettingThere;
+      case TripEasyRowKind.comingBack:
+        return TripStringsV2Plan.rowComingBack;
+      case TripEasyRowKind.taxi:
+        return TripStringsV2Plan.rowTaxi;
+      case TripEasyRowKind.between:
         return leg >= 2 && leg <= cities.length
             ? TripStringsBar.move(cities[leg - 2], cities[leg - 1])
-            : TripStringsBar.cityChange;
-      case TripWizardStepKind.places:
-      case TripWizardStepKind.taxi:
-      case TripWizardStepKind.stay:
-        final day = next.day ?? _dayOf(t, key.legIndex, key.dayInLeg) ?? key.dayInLeg ?? 1;
-        return switch (key.kind) {
-          TripWizardStepKind.places => TripStringsBar.places(day),
-          TripWizardStepKind.taxi => TripStringsBar.taxi(day),
-          _ => TripStringsBar.stay(day),
-        };
+            : TripStringsV2Plan.rowCityChange;
+      case TripEasyRowKind.stay:
+        return leg >= 1 && leg <= cities.length ? TripStringsV2Plan.rowStay(cities[leg - 1]) : TripStringsV2Plan.rowStay(t.cityName);
     }
-  }
-
-  static int? _dayOf(TripSummaryModel t, int? legIndex, int? dayInLeg) {
-    if (legIndex == null || dayInLeg == null) return null;
-    for (final l in t.legs) {
-      if (l.index == legIndex && l.startDay > 0) return l.startDay + dayInLeg - 1;
-    }
-    return legIndex == 1 ? dayInLeg : null;
   }
 
   static Map<String, dynamic> continueArgs(TripSummaryModel t) {
     final key = t.progress.next?.key;
-    return {'tripId': t.id, if (key != null && key.isNotEmpty) 'step': key};
+    return {'tripId': t.id, if (key != null && key.isNotEmpty) 'row': key};
   }
 
   static String actionLabel(TripSummaryModel t, {bool past = false}) {
-    if (past) return TripStringsBar.summary;
-    if (isReady(t)) return TripStringsBar.readySummary;
-    final next = nextTitle(t);
-    if (next == null) return TripStringsBar.continueAction;
-    return t.progress.decided == 0 ? TripStringsBar.start(next) : TripStringsBar.continueTo(next);
+    if (past || isReady(t)) return TripStringsV2Plan.myTripsSummary;
+    return TripStringsV2Plan.myTripsContinue;
   }
 
   static String datesLine(TripSummaryModel t, DateTime today) {
     final s = t.startDate;
-    if (s == null) return TripStringsBar.draftNoDates;
+    if (s == null) return TripStringsV2Plan.myTripsDaysNoDates(t.dayCount);
     final end = endOf(t) ?? s;
     final d = TripClock.daysBetween(today, s);
     final String lead;

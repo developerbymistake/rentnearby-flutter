@@ -13,7 +13,7 @@ Map<String, dynamic> _raw({bool legs = true}) => {
       if (legs) 'legCount': 2,
       if (legs) 'legCities': ['Haridwar', 'Badrinath'],
       'plan': {
-        'version': 4,
+        'version': 6,
         'cityKey': 1,
         'cityName': 'Haridwar',
         'legs': [
@@ -95,91 +95,84 @@ void main() {
     });
   });
 
-  group('MC-D list fields', () {
-    test('travel counters and leg states parse', () {
-      final s = TripSummaryModel.fromJson({
-        'id': 't1',
-        'cityName': 'Haridwar',
-        'legCount': 2,
-        'legCities': ['Haridwar', 'Badrinath'],
-        'travelSegments': 1,
-        'travelSettled': 1,
-        'legs': [
-          {'index': 1, 'cityName': 'Haridwar', 'startDay': 1, 'endDay': 1, 'state': 'ready'},
-          {'index': 2, 'cityName': 'Badrinath', 'startDay': 2, 'endDay': 4, 'state': 'confirming'},
-        ],
-      });
-      expect(s.travelSegments, 1);
-      expect(s.travelSettled, 1);
-      expect(s.showsTravel, isTrue);
-      expect(s.travelAllSettled, isTrue);
-      expect(s.legs.length, 2);
-      expect(s.legs[1].cityName, 'Badrinath');
-      expect(s.legs[1].endDay, 4);
-      expect(s.legs[1].state, 'confirming');
-      expect(s.withMuted(DateTime(2030)).travelSegments, 1);
-    });
-
-    test('an older server defaults to no travel and no legs', () {
-      final s = TripSummaryModel.fromJson({'id': 't1', 'cityName': 'Nainital'});
-      expect(s.travelSegments, 0);
-      expect(s.travelSettled, 0);
-      expect(s.legs, isEmpty);
-      expect(s.showsTravel, isFalse);
-    });
-
-    test('a one-leg trip never shows travel even with a stray count', () {
-      final s = TripSummaryModel.fromJson({'id': 't1', 'cityName': 'Nainital', 'legCount': 1, 'travelSegments': 1});
-      expect(s.showsTravel, isFalse);
-    });
-
-    test('settled above total is clamped for the chip', () {
-      final s = TripSummaryModel.fromJson({
-        'id': 't1',
-        'cityName': 'A',
-        'legCount': 2,
-        'legCities': ['A', 'B'],
-        'travelSegments': 1,
-        'travelSettled': 3,
-      });
-      expect(s.travelSettledShown, 1);
-    });
-  });
-
-  group('wizard progress on the list (5.3)', () {
-    test('progress and the next step parse from the server DTO', () {
-      final s = TripSummaryModel.fromJson({
-        'id': 't1',
-        'cityName': 'Nainital',
-        'progress': {
-          'total': 13,
-          'counted': 5,
-          'decided': 1,
-          'waiting': 2,
+  group('progress v2 on the list', () {
+    Map<String, dynamic> progress() => {
+          'total': 6,
+          'done': 2,
+          'inProgress': 1,
           'attention': 1,
-          'percent': 38,
+          'percent': 33,
           'needsYou': true,
-          'next': {'kind': 'stay', 'day': 1, 'legIndex': 1, 'key': 'stay:1:1'},
+          'next': {'kind': 'taxi', 'legIndex': null, 'key': 'taxi'},
           'lastEventAt': '2030-11-01T10:00:00Z',
-        },
-      });
+          'rows': [
+            {'key': 'gettingThere', 'kind': 'gettingThere', 'legIndex': null, 'state': 'saved', 'needsYou': false, 'askedCount': 0},
+            {'key': 'stay:1', 'kind': 'stay', 'legIndex': 1, 'state': 'asked', 'needsYou': false, 'askedCount': 2},
+            {'key': 'between:2', 'kind': 'between', 'legIndex': 2, 'state': 'own', 'needsYou': false, 'askedCount': 0},
+            {'key': 'stay:2', 'kind': 'stay', 'legIndex': 2, 'state': 'offer', 'needsYou': true, 'askedCount': 1},
+            {'key': 'taxi', 'kind': 'taxi', 'legIndex': null, 'state': 'attention', 'needsYou': false, 'askedCount': 0},
+            {'key': 'comingBack', 'kind': 'comingBack', 'legIndex': null, 'state': 'skipped', 'needsYou': false, 'askedCount': 0},
+          ],
+        };
+
+    test('numbers, next row and rows parse from the server DTO', () {
+      final s = TripSummaryModel.fromJson({'id': 't1', 'cityName': 'Nainital', 'progress': progress()});
       final pr = s.progress;
-      expect((pr.total, pr.counted, pr.decided, pr.percent), (13, 5, 1, 38));
-      expect(pr.waitingForReply, 2);
+      expect((pr.total, pr.done, pr.inProgress, pr.attention, pr.percent), (6, 2, 1, 1, 33));
       expect(pr.needsYou, isTrue);
-      expect(pr.needYou, 1);
-      expect(pr.next?.key, 'stay:1:1');
-      expect(pr.next?.day, 1);
+      expect(pr.next?.key, 'taxi');
+      expect(pr.next?.kind, 'taxi');
+      expect(pr.next?.legIndex, isNull);
+      expect(pr.next?.rowKey, const TripEasyRowKey(TripEasyRowKind.taxi));
       expect(pr.lastEventAt, isNotNull);
       expect(pr.isReady, isFalse);
-      expect(s.withMuted(null).progress.counted, 5);
+      expect(pr.rows.length, 6);
+      expect(pr.rows[1].key, const TripEasyRowKey(TripEasyRowKind.stay, 1));
+      expect(pr.rows[1].state, TripRowState.asked);
+      expect(pr.rows[1].askedCount, 2);
+      expect(pr.rows[1].kind, TripEasyRowKind.stay);
+      expect(pr.rows[1].legIndex, 1);
+      expect(pr.rows[3].needsYou, isTrue);
+      expect(pr.rows[3].state, TripRowState.offer);
+      expect(pr.rows[5].state, TripRowState.skipped);
+      final cover = TripEasyRowModel.tryParse(
+          {'key': 'stay:1', 'state': 'booked', 'nightsTotal': 3, 'nightsCovered': 2})!;
+      expect(cover.state, TripRowState.booked);
+      expect((cover.nightsTotal, cover.nightsCovered), (3, 2));
+      expect(pr.rows[0].nightsTotal, isNull);
+      expect(s.withMuted(null).progress.done, 2);
+    });
+
+    test('dropped fields are not read back', () {
+      final pr = TripProgress.tryParse({'total': 6, 'counted': 4, 'decided': 3, 'waitingForReply': 2, 'needYou': 1})!;
+      expect(pr.done, 0);
+      expect(pr.inProgress, 0);
+      expect(pr.needsYou, isFalse);
     });
 
     test('an older server has no progress; bad numbers are clamped', () {
       expect(TripSummaryModel.fromJson({'id': 't1', 'cityName': 'A'}).progress.total, 0);
-      final pr = TripProgress.tryParse({'total': 6, 'counted': 9, 'needYou': 2, 'next': {'key': ''}})!;
-      expect((pr.counted, pr.percent, pr.needsYou, pr.next), (6, 100, true, null));
+      expect(TripSummaryModel.fromJson({'id': 't1', 'cityName': 'A'}).progress.rows, isEmpty);
+      final pr = TripProgress.tryParse({
+        'total': 6,
+        'done': 9,
+        'next': {'key': ''},
+        'rows': [
+          {'key': 'nope', 'state': 'asked'},
+          'x',
+          {'key': 'taxi', 'state': 'weird'},
+        ],
+      })!;
+      expect((pr.done, pr.percent, pr.next), (6, 100, null));
       expect(pr.isReady, isTrue);
+      expect(pr.rows.length, 1);
+      expect(pr.rows.single.state, TripRowState.todo);
+    });
+
+    test('percent falls back to done over total, an empty list is complete', () {
+      expect(TripProgress.tryParse({'total': 4, 'done': 1})!.percent, 25);
+      expect(TripProgress.tryParse({'total': 0})!.percent, 100);
+      expect(TripProgress.tryParse('x'), isNull);
     });
 
     test('the check-out day is the morning after the last day', () {
@@ -203,9 +196,10 @@ void main() {
         'id': 't1',
         'cityKey': 1,
         'plan': {'cityKey': 1, 'cityName': 'A'},
-        'progress': {'total': 6, 'counted': 3, 'percent': 50},
+        'progress': {'total': 6, 'done': 3, 'percent': 50},
       });
       expect(t.progress?.percent, 50);
+      expect(t.progress?.done, 3);
       expect(t.copyWith(title: 'x').progress?.total, 6);
     });
   });
@@ -220,7 +214,7 @@ void main() {
           'legCount': 3,
           'legCities': ['Haridwar', 'Badrinath', 'Auli'],
           'plan': {
-            'version': 4,
+            'version': 6,
             'cityKey': 1,
             'cityName': 'Haridwar',
             'legs': [
@@ -231,7 +225,7 @@ void main() {
                 'cityName': 'Badrinath',
                 'latitude': 30.74,
                 'longitude': 79.49,
-                'arrival': {'mode': 'journey', 'fromName': 'Haridwar', 'journeyId': 'j2', 'cars': 2, 'listedTotal': 14000},
+                'arrival': {'fromName': 'Haridwar', 'journeyId': 'j2', 'cars': 2, 'listedTotal': 14000},
               },
               {
                 'index': 3,
@@ -239,13 +233,7 @@ void main() {
                 'cityName': 'Auli',
                 'latitude': 30.53,
                 'longitude': 79.57,
-                'arrival': {
-                  'mode': 'own',
-                  'fromName': 'Badrinath',
-                  'how': 'bus',
-                  'leavesAt': '06:00',
-                  'ownPhone': '9876543210',
-                },
+                'travelMark': {'status': 'own'},
               },
             ],
             'days': [
@@ -275,21 +263,18 @@ void main() {
 
     void expectSame(TripModel t) {
       final a2 = t.plan.legAt(2)!.arrival!;
-      expect(a2.isJourney, isTrue);
       expect(a2.journeyId, 'j2');
       expect(a2.cars, 2);
-      final a3 = t.plan.legAt(3)!.arrival!;
-      expect(a3.isOwn, isTrue);
-      expect(a3.how, TripTravelHow.bus);
-      expect(a3.leavesAt, '06:00');
-      expect(a3.ownPhone, '9876543210');
+      final leg3 = t.plan.legAt(3)!;
+      expect(leg3.arrival, isNull);
+      expect(leg3.travelMark?.isOwn, isTrue);
       final j = t.journeyById('j2')!;
       expect(j.isSegment, isTrue);
       expect(j.legs.map((l) => l.phone), ['9800000001', '9800000002']);
       expect(t.legCities, ['Haridwar', 'Badrinath', 'Auli']);
     }
 
-    test('the raw GET json the cache stores keeps arrivals and driver phones', () {
+    test('the raw GET json the cache stores keeps arrivals, marks and driver phones', () {
       final t = TripModel.fromJson(raw());
       expectSame(t);
       expectSame(TripModel.fromJson(t.raw!));
@@ -393,16 +378,43 @@ void main() {
         'mode': 'own',
         'fromName': 'Delhi',
         'toName': 'Haridwar',
-        'state': 'own',
-        'how': 'bus',
         'cars': [
           {'car': 1},
         ],
       });
       expect(t.isOwn, isTrue);
       expect(t.cars, isEmpty);
-      expect(t.howLabel, 'Bus');
       expect(t.places, ['Delhi', 'Haridwar']);
+    });
+
+    test('arrangements parse and skip bad rows', () {
+      final r = TripSummaryRecord.fromJson({
+        'tripId': 'a',
+        'city': 'Nainital',
+        'arrangements': [
+          {'key': 'gettingThere', 'kind': 'gettingThere', 'title': 'Getting there', 'state': 'saved', 'detail': 'Delhi to Nainital'},
+          {'key': 'stay:1', 'title': 'Stay in Nainital', 'state': 'asked', 'detail': '  '},
+          {'key': 'taxi', 'title': 'Local taxi', 'state': 'own'},
+          {'key': 'bad', 'title': 'x', 'state': 'own'},
+        ],
+      });
+      expect(r.arrangements.length, 3);
+      expect(r.arrangements[0].key, const TripEasyRowKey(TripEasyRowKind.gettingThere));
+      expect(r.arrangements[0].state, TripRowState.saved);
+      expect(r.arrangements[0].detail, 'Delhi to Nainital');
+      expect(r.arrangements[1].key.legIndex, 1);
+      expect(r.arrangements[1].detail, isNull);
+      expect(r.arrangements[2].state, TripRowState.own);
+      expect(r.isEmpty, isFalse);
+      expect(r.withDayMinutes({1: 30}).arrangements.length, 3);
+    });
+
+    test('summary rows carry no own fields and a bare record is empty', () {
+      final n = TripSummaryNight.fromJson({'night': 1, 'listingName': 'Deodar', 'isOwn': true, 'ownPhone': '9876543210'});
+      final t = TripSummaryTaxi.fromJson({'listingName': 'Mohan', 'isOwn': true, 'ownPhone': '9876543210'});
+      expect(n.listingName, 'Deodar');
+      expect(t.listingName, 'Mohan');
+      expect(TripSummaryRecord.fromJson({'tripId': 'a'}).isEmpty, isTrue);
     });
   });
 }

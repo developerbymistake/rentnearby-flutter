@@ -4,6 +4,8 @@ import '../../../config/app_colors.dart';
 import '../../../models/browse_item.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/gradient_button.dart';
+import '../../trip/trip_strings_v2_find.dart';
+import '../../trip/utils/trip_enquiry_rules.dart';
 import '../../trip/utils/trip_format.dart';
 import '../../trip/widgets/trip_payment_line.dart';
 import '../../trip/widgets/trip_sheet_frame.dart';
@@ -109,6 +111,7 @@ class _AskBodyState extends State<_AskBody> {
     final req = widget.request;
     final legs = widget.plan.legs;
     final cars = _carsPerLeg(legs);
+    final short = TripEnquiryRules.enquiryExpiry(req.date, req.date, DateTime.now().toUtc()).veryShortNotice;
     return PopScope(
       canPop: !_sending,
       child: TripSheetFrame(
@@ -131,6 +134,23 @@ class _AskBodyState extends State<_AskBody> {
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: TaxiColors.accentDark),
             ),
             const SizedBox(height: 4),
+          ],
+          if (short) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                children: [
+                  const Icon(Iconsax.warning_2, size: 16, color: AppColors.warningText),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(TripStringsV2Find.veryShortNoticeDriver,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText)),
+                  ),
+                ],
+              ),
+            ),
           ],
           const SizedBox(height: 4),
           Text(

@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 final _travelDate = DateTime(2030, 11, 2);
 
-const _arrival = TripTravel.journey(fromName: 'Haridwar', journeyId: 'j1', cars: 2);
+const _arrival = TripTravel(fromName: 'Haridwar', journeyId: 'j1', cars: 2);
 
 TripJourneyLeg _car(int i, {String status = 'Unknown', String? asked, bool available = true, String name = ''}) =>
     TripJourneyLeg(
@@ -69,10 +69,6 @@ void main() {
 
     test('2 no arrival is not planned', () {
       expect(_state(null, arrival: null), TripTravelState.notPlanned);
-    });
-
-    test('3 own arrival is own, even with a gap', () {
-      expect(_state(null, arrival: const TripTravel.own(fromName: 'Haridwar'), gap: true), TripTravelState.own);
     });
 
     test('4 missing journey is not planned', () {
@@ -153,11 +149,10 @@ void main() {
   group('step roles and own cars', () {
     const chosen = TripStep(status: TripStepStatus.chosen, journeyId: 'j1');
 
-    test('own, legacy skipped, not started and a step without a journey', () {
+    test('own, skipped, not started and a step without a journey', () {
       expect(_stepState(const TripStep(status: TripStepStatus.own), null), TripTravelState.own);
       expect(_stepState(const TripStep(status: TripStepStatus.skipped), null), TripTravelState.own);
       expect(_stepState(const TripStep(), _journey([_car(1)])), TripTravelState.notPlanned);
-      expect(_stepState(const TripStep(status: TripStepStatus.notNeeded), _journey([_car(1)])), TripTravelState.notPlanned);
       expect(_stepState(chosen, null), TripTravelState.notPlanned);
     });
 
@@ -176,7 +171,7 @@ void main() {
       const own2 = TripStep(status: TripStepStatus.chosen, journeyId: 'j1', ownCars: [2]);
       expect(_stepState(chosen, j, rows: [_row(1, TripEnquiryStatuses.confirmedByBoth)]), TripTravelState.carMissing);
       expect(_stepState(own2, j, rows: [_row(1, TripEnquiryStatuses.confirmedByBoth)]), TripTravelState.confirmed);
-      const arrival = TripTravel.journey(fromName: 'Haridwar', journeyId: 'j1', cars: 2, ownCars: [2]);
+      const arrival = TripTravel(fromName: 'Haridwar', journeyId: 'j1', cars: 2, ownCars: [2]);
       expect(_state(j, rows: [_row(1, TripEnquiryStatuses.bookedByTraveller)], arrival: arrival), TripTravelState.booked);
     });
 

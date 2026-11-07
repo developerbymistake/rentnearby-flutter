@@ -7,17 +7,17 @@ import '../../../models/place_result_model.dart';
 import '../../../config/app_insets.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../trip/controllers/trip_plan_controller.dart';
-import '../../trip/models/trip_plan_model.dart';
 import '../../trip/trip_colors.dart';
 import '../../trip/trip_strings_final_aa.dart';
 import '../../trip/trip_strings_steps_a3.dart';
+import '../../trip/trip_strings_v2_find.dart';
 import '../../trip/widgets/trip_journey_card.dart';
-import '../../trip/widgets/trip_own_travel_sheet.dart';
 import '../../trip/widgets/trip_shimmers.dart';
 import '../journeys/journey_models.dart';
 import '../journeys/journeys_controller.dart';
 import '../taxi_option_sets.dart';
 import 'destination_section.dart';
+import 'widgets/journey_driver_card.dart';
 import 'journey_plan_screen.dart';
 import 'models/taxi_ways_models.dart';
 import 'taxi_ways_controller.dart';
@@ -57,7 +57,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
       final tripId = args['tripId'];
       final tripRole = args['tripRole'];
       final tripLegIndex = args['tripLegIndex'];
-      final fromStep = args['fromStep'];
       _tag = 'ways-${identityHashCode(route)}';
       _c = Get.put(
         TaxiWaysController(
@@ -70,7 +69,6 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
           tripRole: tripRole is String ? tripRole : null,
           tripLegIndex: tripLegIndex is int && tripLegIndex >= 2 ? tripLegIndex : null,
           fromTrip: args['fromTrip'] == true || tripId is String,
-          fromStep: fromStep is String && fromStep.isNotEmpty ? fromStep : null,
         ),
         tag: _tag,
       );
@@ -122,6 +120,14 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
           slivers: [
             SliverToBoxAdapter(child: _header(context, c)),
             SliverToBoxAdapter(child: _centred(Obx(() => _body(context, c)))),
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(24, 8, 24, 24),
+                child: Text(TaxiWaysStrings.faresNote,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+              ),
+            ),
           ],
         ),
       ),
@@ -136,6 +142,21 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     if (await TripJourneyCard.arrangeMyself(context, role: role, legIndex: leg)) await c.actions.arrangedMyself();
   }
 
+  Future<void> _skipTravel(TaxiWaysController c) async {
+    final leg = c.forSegment ? c.tripLegIndex : null;
+    final role = leg == null ? c.actions.role : null;
+    if (leg == null && role == null) return;
+    if (!Get.isRegistered<TripPlanController>()) return;
+    if (TripJourneyCard.skipTravel(role: role, legIndex: leg)) await c.actions.arrangedMyself();
+  }
+
+  Widget _skipButton(VoidCallback onTap) => TextButton(
+        onPressed: onTap,
+        style: TextButton.styleFrom(foregroundColor: TaxiColors.accentDark, minimumSize: const Size(64, 48)),
+        child: const Text(TripStringsV2Find.skip,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700)),
+      );
+
   Widget _arrangeBar(BuildContext context, TaxiWaysController c) {
     return Container(
       color: Colors.white,
@@ -144,20 +165,25 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
         heightFactor: 1,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _maxWidth),
-          child: TextButton(
-            onPressed: () => _arrangeMyself(context, c),
-            style: TextButton.styleFrom(
-              foregroundColor: TaxiColors.accentDark,
-              minimumSize: const Size(double.infinity, 48),
+          child: Row(children: [
+            Expanded(
+              child: TextButton(
+                onPressed: () => _arrangeMyself(context, c),
+                style: TextButton.styleFrom(
+                  foregroundColor: TaxiColors.accentDark,
+                  minimumSize: const Size(0, 48),
+                ),
+                child: const Text(
+                  TripStringsStepsA3.arrangeMyself,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+              ),
             ),
-            child: const Text(
-              TripStringsStepsA3.arrangeMyself,
-              maxLines: 2,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-          ),
+            _skipButton(() => _skipTravel(c)),
+          ]),
         ),
       ),
     );
@@ -505,11 +531,8 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
   Future<void> _getThereMyself(BuildContext context, TaxiWaysController c) async {
     final k = c.tripLegIndex;
     if (k == null) return;
-    final hub = c.gapHub;
-    if (Get.isRegistered<TripPlanController>()) TripPlanController.to.markTravelGap(k, hub);
-    if (await TripOwnTravelSheet.show(context, k, initialHow: TripTravelHow.train, hubName: hub)) {
-      await c.actions.arrangedMyself();
-    }
+    if (!Get.isRegistered<TripPlanController>()) return;
+    if (await TripJourneyCard.arrangeMyself(context, legIndex: k)) await c.actions.arrangedMyself();
   }
 
   Widget _gapCard(BuildContext context, TaxiWaysController c, TaxiWaysResult r) {
@@ -594,6 +617,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
           }
           return Row(children: [Expanded(child: mine), const SizedBox(width: 10), Expanded(child: again)]);
         }),
+        Align(alignment: Alignment.center, child: _skipButton(() => _skipTravel(c))),
       ]),
     );
   }
@@ -652,6 +676,8 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
     final out = <Widget>[];
     var lastCars = 0;
     var bestShown = false;
+    var noteShown = false;
+    final canUse = c.inTrip;
     final people = c.people.value;
     for (final row in rows) {
       final cars = rowCars(row, people);
@@ -672,6 +698,9 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
           people: people,
           bestReason: reason,
           onTap: () => _openDriver(c, r, row),
+          onCall: () => JourneyDriverCard.call(row),
+          onUse: canUse ? () => _useDriver(context, c, r, row) : null,
+          useBusy: c.busyPlans.isNotEmpty,
         ));
       } else if (row is WayPlan) {
         out.add(WayPlanRibbonCard(
@@ -680,6 +709,9 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
           planIndex: r.plans.indexOf(row),
           bestReason: reason,
           onOpen: () => TaxiWaysNavigation.openPlan(c.openArgs(row)),
+          onUse: canUse ? () => c.actions.useForTrip(row, context: context) : null,
+          useBusy: c.busyPlans.contains(row.planKey),
+          useNote: canUse && !noteShown && (noteShown = true),
         ));
       }
     }
@@ -724,6 +756,9 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
 
   static List<WayDriver> _basedHereFirst(Iterable<WayDriver> list) =>
       [...list.where((d) => d.basedHere), ...list.where((d) => !d.basedHere)];
+
+  Future<void> _useDriver(BuildContext context, TaxiWaysController c, TaxiWaysResult r, WayDriver d) =>
+      c.actions.useForTrip(c.singlePlan(_companions(r, d)), context: context);
 
   void _openDriver(TaxiWaysController c, TaxiWaysResult r, WayDriver d) {
     final plan = c.singlePlan(_companions(r, d));

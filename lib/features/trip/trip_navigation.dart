@@ -5,31 +5,26 @@ import '../../config/app_routes.dart';
 import '../../utils/app_toast.dart';
 import '../taxi/ways/taxi_ways_navigation.dart';
 import 'controllers/trip_plan_controller.dart';
-import 'controllers/trip_wizard_controller.dart';
 import 'models/trip_city_model.dart';
 import 'models/trip_enquiry_model.dart';
 import 'models/trip_plan_model.dart';
-import 'screens/trip_details_sheet.dart';
+import 'screens/trip_dates_sheet.dart';
 import 'trip_constants.dart';
 import 'trip_strings.dart';
 import 'trip_strings_mcb_a1.dart';
 import 'trip_strings_steps_a1.dart';
+import 'trip_strings_steps_k3.dart';
+import 'trip_strings_v2_find.dart';
 import 'utils/trip_travel_rules.dart';
 import 'widgets/trip_city_sheet.dart';
+import 'widgets/trip_journey_card.dart';
 
 class TripNavigation {
   static Future<void> start(BuildContext context) async {
     final pick = await TripCitySheet.pick(context);
     if (pick == null) return;
-    await startWith(pick.city, cities: pick.cities, draftLegs: pick.draftLegs);
+    await openDays(pick.cities, draftLegs: pick.draftLegs, days: pick.days);
   }
-
-  static Future<void>? startWith(TripCityModel city, {List<TripCityModel>? cities, List<TripDraftLeg> draftLegs = const []}) =>
-      Get.toNamed(AppRoutes.tripSpots, arguments: {
-        'city': city,
-        if (cities != null && cities.length > 1) 'cities': cities,
-        if (draftLegs.isNotEmpty) 'draftLegs': draftLegs,
-      });
 
   static Future<void>? openSpots(
     TripCityModel city, {
@@ -79,63 +74,105 @@ class TripNavigation {
     return c.legs.any((l) => l.cityKey == city.cityKey) ? TripLegEditBlock.none : null;
   }
 
-  static Future<void>? openPlan({String? tripId, bool fresh = false, String? step}) =>
-      Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId, 'fresh': fresh, 'step': ?step});
+  static Future<void>? openDays(List<TripCityModel> cities, {List<TripDraftLeg> draftLegs = const [], int? days}) =>
+      Get.toNamed(AppRoutes.tripDays, arguments: {
+        'cities': cities,
+        if (draftLegs.isNotEmpty) 'draftLegs': draftLegs,
+        'days': ?days,
+      });
 
-  static Future<void>? openContinue(String tripId, String? stepKey) =>
-      Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId, 'step': ?stepKey});
+  static Future<void>? openPlan({String? tripId, bool fresh = false, String? row}) =>
+      Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId, 'fresh': fresh, 'row': ?row});
 
-  static Future<void>? openStep(String tripId, String stepKey) {
-    if (Get.currentRoute != AppRoutes.tripPlan) {
-      Get.until((r) => r.settings.name == AppRoutes.tripStep || r.settings.name == AppRoutes.tripPlan || r.isFirst);
+  static void backToPlan() => Get.until((r) => r.settings.name == AppRoutes.tripPlan || r.isFirst);
+
+  static Future<void> helpMeFind(BuildContext context, TripEasyRowKey key) async {
+    final c = TripPlanController.to;
+    if (c.isReadOnly) return;
+    if (c.netOff) {
+      AppToast.warning(TripStringsV2Find.offlineAsk);
+      return;
     }
-    final top = Get.currentRoute == AppRoutes.tripStep ? TripWizardController.onTop(tripId) : null;
-    if (top != null) {
-      top.openKey(stepKey);
-      return null;
+    final p = c.plan.value;
+    if (p == null) return;
+    final leg = key.legIndex ?? 1;
+    final cta = switch (key.kind) {
+      TripEasyRowKind.stay => TripStringsV2Find.showStaysIn(p.cityNameOf(p.legStart(leg))),
+      TripEasyRowKind.taxi => TripStringsV2Find.showDrivers,
+      _ => TripStringsV2Find.showWays,
+    };
+    final ok = await TripDatesSheet.ensure(context, heading: TripStringsV2Find.datesTitle, cta: cta);
+    if (!ok || !c.hasDates) return;
+    switch (key.kind) {
+      case TripEasyRowKind.stay:
+        await openStay(leg);
+      case TripEasyRowKind.taxi:
+        await openTaxi();
+      case TripEasyRowKind.gettingThere:
+        await openWays(TripStepRole.gettingThere);
+      case TripEasyRowKind.comingBack:
+        await openWays(TripStepRole.comingBack);
+      case TripEasyRowKind.between:
+        await openSegmentWays(leg);
     }
-    return Get.toNamed(AppRoutes.tripStep, arguments: {'tripId': tripId, 'key': stepKey});
   }
+
+  static Future<void>? openRepliesForRow(TripEasyRowKey key) {
+    final c = TripPlanController.to;
+    final p = c.plan.value;
+    if (p == null) return null;
+    switch (key.kind) {
+      case TripEasyRowKind.stay:
+        return openReplies(p.legStart(key.legIndex ?? 1));
+      case TripEasyRowKind.taxi:
+        final asked = c.taxiAskedDays;
+        final day = asked.isNotEmpty ? asked.first : (c.taxiEnquiries.isEmpty ? null : c.firstPlanDayOf(c.taxiEnquiries.first));
+        return openTaxiReplies(day ?? 1);
+      case TripEasyRowKind.gettingThere:
+        return _openRowJourney(p.steps.gettingThere.journeyId, () => openWays(TripStepRole.gettingThere));
+      case TripEasyRowKind.comingBack:
+        return _openRowJourney(p.steps.comingBack.journeyId, () => openWays(TripStepRole.comingBack));
+      case TripEasyRowKind.between:
+        final k = key.legIndex ?? 2;
+        return _openRowJourney(p.legAt(k)?.arrival?.journeyId, () => openSegmentWays(k));
+    }
+  }
+
+  static Future<void>? _openRowJourney(String? id, Future<void> Function() fallback) =>
+      id == null || id.isEmpty ? fallback() : openJourney(id);
 
   static void backToList() =>
       Get.until((r) => r.settings.name == AppRoutes.tripPlan || r.settings.name == AppRoutes.main || r.isFirst);
 
-  static Future<void>? openTaxi(int day, {double? nearLat, double? nearLng, String? fromStep}) => Get.toNamed(
-        AppRoutes.tripTaxi,
-        arguments: {'day': day, 'nearLat': ?nearLat, 'nearLng': ?nearLng, 'fromStep': ?fromStep},
-      );
+  static Future<void>? openTaxi({List<int>? days}) =>
+      Get.toNamed(AppRoutes.tripTaxi, arguments: {'days': ?days});
 
   static Future<void>? openStay(
-    int day, {
+    int legIndex, {
+    bool split = false,
     double? nearLat,
     double? nearLng,
-    String? fromStep,
-    String? replaceEnquiryId,
+    List<int>? onlyDays,
   }) =>
-      Get.toNamed(
-        AppRoutes.tripStay,
-        arguments: {
-          'day': day,
-          'nearLat': ?nearLat,
-          'nearLng': ?nearLng,
-          'fromStep': ?fromStep,
-          'replaceEnquiryId': ?replaceEnquiryId,
-        },
-      );
+      Get.toNamed(AppRoutes.tripStay, arguments: {
+        'legIndex': legIndex,
+        'split': split,
+        'nearLat': ?nearLat,
+        'nearLng': ?nearLng,
+        if (onlyDays != null && onlyDays.isNotEmpty) 'onlyDays': onlyDays,
+      });
 
   static Future<void>? openMap({int? day, String? tripId}) =>
       Get.toNamed(AppRoutes.tripMap, arguments: {'day': day, 'tripId': tripId});
 
-  static Future<void>? openReplies(int day, {String? enquiryId, String? fromStep}) {
+  static Future<void>? openReplies(int day, {String? enquiryId}) {
     final tripId = TripPlanController.to.trip.value?.id;
-    return Get.toNamed(AppRoutes.tripReplies,
-        arguments: {'tripId': tripId, 'day': day, 'enquiryId': enquiryId, 'fromStep': ?fromStep});
+    return Get.toNamed(AppRoutes.tripReplies, arguments: {'tripId': tripId, 'day': day, 'enquiryId': enquiryId});
   }
 
-  static Future<void>? openTaxiReplies(int day, {String? enquiryId, String? fromStep}) {
+  static Future<void>? openTaxiReplies(int day, {String? enquiryId}) {
     final tripId = TripPlanController.to.trip.value?.id;
-    return Get.toNamed(AppRoutes.tripTaxiReplies,
-        arguments: {'tripId': tripId, 'day': day, 'enquiryId': enquiryId, 'fromStep': ?fromStep});
+    return Get.toNamed(AppRoutes.tripTaxiReplies, arguments: {'tripId': tripId, 'day': day, 'enquiryId': enquiryId});
   }
 
   static Future<void>? openChatForEnquiry(TripEnquiryModel e) {
@@ -157,8 +194,13 @@ class TripNavigation {
     });
   }
 
-  static Future<void> openWays(TripStepRole role, {String? fromStep}) async {
+  static Future<void> openWays(TripStepRole role) async {
     final c = TripPlanController.to;
+    if (c.steps.endOf(role) == null) await c.ensureStartFrom();
+    if (c.steps.endOf(role) == null) {
+      final pickCtx = Get.context;
+      if (pickCtx != null && pickCtx.mounted) await TripJourneyCard.pickStart(pickCtx);
+    }
     final start = c.steps.endOf(role);
     if (start == null) {
       AppToast.warning(TripStringsStepsA1.pickStartFirst);
@@ -166,11 +208,11 @@ class TripNavigation {
     }
     if (!c.hasDates) {
       final ctx = Get.context;
-      if (ctx == null) {
+      if (ctx == null || !ctx.mounted) {
         AppToast.warning(TripStringsMcbA1.addDatesFirst);
         return;
       }
-      final saved = await TripDetailsSheet.edit(ctx, heading: TripStringsMcbA1.addDatesFirst);
+      final saved = await TripDatesSheet.ensure(ctx, heading: TripStringsV2Find.datesTitle, cta: TripStringsV2Find.showWays);
       if (!saved || !c.hasDates) return;
     }
     final going = role == TripStepRole.gettingThere;
@@ -196,23 +238,22 @@ class TripNavigation {
       fromTrip: true,
       tripId: c.trip.value?.id,
       tripRole: role.name,
-      fromStep: fromStep,
     );
   }
 
-  static Future<void> openSegmentWays(int legIndex, {String? fromStep}) async {
+  static Future<void> openSegmentWays(int legIndex) async {
     final c = TripPlanController.to;
     switch (c.findWayBlock(legIndex)) {
       case TravelFindBlock.none:
         break;
       case TravelFindBlock.noDates:
         final ctx = Get.context;
-        if (ctx == null) {
+        if (ctx == null || !ctx.mounted) {
           AppToast.warning(TripStringsMcbA1.addDatesFirst);
           return;
         }
-        final saved = await TripDetailsSheet.edit(ctx, heading: TripStringsMcbA1.addDatesFirst);
-        if (saved && c.hasDates) await openSegmentWays(legIndex, fromStep: fromStep);
+        final saved = await TripDatesSheet.ensure(ctx, heading: TripStringsV2Find.datesTitle, cta: TripStringsV2Find.showWays);
+        if (saved && c.hasDates) await openSegmentWays(legIndex);
         return;
       case TravelFindBlock.tooFarAhead:
         AppToast.warning(TripStringsMcbA1.pickDateWithinYear);
@@ -224,6 +265,7 @@ class TripNavigation {
         AppToast.warning(TripStringsMcbA1.connectToFindWay);
         return;
       case TravelFindBlock.readOnly:
+        if (c.trip.value == null) AppToast.warning(TripStringsStepsK3.notSavedToTrip);
         return;
     }
     final block = await c.prepareSegmentLink(legIndex);
@@ -244,7 +286,6 @@ class TripNavigation {
       people: c.travelPeople,
       tripId: c.trip.value?.id,
       tripLegIndex: legIndex,
-      fromStep: fromStep,
     );
   }
 

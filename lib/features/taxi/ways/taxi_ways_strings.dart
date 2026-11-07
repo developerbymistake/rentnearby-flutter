@@ -61,6 +61,9 @@ class TaxiWaysStrings {
   static const String askOne = 'Ask this driver if he is free';
   static const String payLine = 'Pay each driver directly. Bakhli does not take or hold payment.';
   static const String call = 'Call';
+  static String callName(String name) => 'Call $name';
+  static const String useNote = 'Saves the way in your trip. Nobody is contacted.';
+  static const String faresNote = 'Fares are listed by drivers. Nobody is booked from this screen.';
   static const String whatsApp = 'WhatsApp';
   static const String saveJourney = 'Save journey';
   static const String saved = 'Journey saved';

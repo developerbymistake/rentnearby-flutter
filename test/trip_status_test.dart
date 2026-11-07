@@ -220,7 +220,7 @@ void main() {
     expect(TripBookingStateVisuals.label(TripBookingState.draft), TripStrings.stateDraft);
     expect(TripBookingStateVisuals.label(TripBookingState.confirming), TripStrings.stateConfirming);
     expect(TripBookingStateVisuals.label(TripBookingState.ready), TripStrings.stateReady);
-    expect(TripBookingStateVisuals.label(TripBookingState.planOnly), TripStrings.planOnly);
+    expect(TripBookingStateVisuals.label(TripBookingState.planOnly), TripStrings.stateDraft);
     expect(TripBookingStateVisuals.surface(TripBookingState.planOnly), AppColors.neutralChip);
     expect(TripBookingStateVisuals.text(TripBookingState.planOnly), AppColors.textMedium);
     expect(TripBookingStateVisuals.label(TripBookingState.completed), TripStrings.stateCompleted);

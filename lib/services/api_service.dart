@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:get/get.dart' hide Response, FormData, MultipartFile;
 import '../config/app_constants.dart';
 import '../controllers/auth_controller.dart';
@@ -7,6 +8,8 @@ import 'storage_service.dart';
 
 class ApiService {
   static late Dio _dio;
+  @visibleForTesting
+  static Dio get dio => _dio;
   static Future<void>? _logoutInFlight;
   static const String skipAuthExtra = 'skipAuth';
   static const String tabInactiveType = 'TabInactive';

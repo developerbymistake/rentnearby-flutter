@@ -1,4 +1,3 @@
-import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
 import 'package:bakhli/features/trip/models/trip_city_model.dart';
 import 'package:bakhli/features/trip/widgets/trip_city_sheet.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,10 +30,19 @@ void main() {
     expect(p.draftIds, ['a', 'b']);
   });
 
-  test('own phone normalises or drops', () {
-    expect(TripPlanController.ownPhoneOf('+91 98765 43210'), '9876543210');
-    expect(TripPlanController.ownPhoneOf('09876543210'), '9876543210');
-    expect(TripPlanController.ownPhoneOf('12345'), isNull);
-    expect(TripPlanController.ownPhoneOf(null), isNull);
+  test('the pick carries the chosen days', () {
+    expect(TripCityPick(_city(1)).days, isNull);
+    expect(TripCityPick(_city(1), days: 3).days, 3);
+  });
+
+  test('a draft knows its places and keeps the first city', () {
+    final d = TripNewDraft([
+      TripDraftLeg(_city(2), const ['a', 'b']),
+      TripDraftLeg(_city(1), const ['c']),
+    ], 3);
+    expect(d.placeCount, 3);
+    expect(d.city.cityKey, 2);
+    expect(d.days, 3);
+    expect(const TripNewDraft([]).days, isNull);
   });
 }

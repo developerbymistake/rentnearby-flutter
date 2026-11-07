@@ -10,6 +10,7 @@ import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
 import '../trip_strings_algo_aa.dart';
 import '../trip_strings_fin_b1.dart';
+import '../trip_strings_v2_find.dart';
 import '../utils/trip_format.dart';
 import '../utils/trip_stay_rank.dart';
 import 'trip_status.dart';
@@ -18,7 +19,6 @@ class TripStayRow extends StatelessWidget {
   const TripStayRow({
     super.key,
     required this.stay,
-    required this.shortlisted,
     required this.onOpen,
     this.status,
     this.statusLine,
@@ -26,14 +26,12 @@ class TripStayRow extends StatelessWidget {
     this.readOnly = false,
     this.onCall,
     this.onWhatsApp,
-    this.onShortlist,
-    this.onRemove,
+    this.onAsk,
     this.fit,
   });
 
   final StayNearbyModel stay;
   final TripStayFit? fit;
-  final bool shortlisted;
   final TripDisplayStatus? status;
   final String? statusLine;
   final VoidCallback? onOpenChat;
@@ -41,11 +39,10 @@ class TripStayRow extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback? onCall;
   final VoidCallback? onWhatsApp;
-  final VoidCallback? onShortlist;
-  final VoidCallback? onRemove;
+  final VoidCallback? onAsk;
 
   static const double thumb = 56;
-  static const double actionHeight = 46;
+  static const double actionHeight = 56;
 
   static String? quoteLine(StayNearbyModel s, TripStayFit? f) {
     final lines = f == null || f.fits != true ? const <TripStayQuoteLine>[] : f.quoteLines;
@@ -87,7 +84,6 @@ class TripStayRow extends StatelessWidget {
         .toList();
     final time = s.checkInTime;
     final parts = [
-      if (s.hasGroundFloorRoom) TripStringsFinB1.groundFloor,
       ...meals,
       if (time != null && time.trim().isNotEmpty) TripStringsA2.checkIn(_checkIn(time.trim())),
     ];
@@ -98,7 +94,6 @@ class TripStayRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final highlight = shortlisted && !_paused;
     return Opacity(
       opacity: _paused ? 0.6 : 1,
       child: Container(
@@ -106,14 +101,11 @@ class TripStayRow extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: highlight ? StayColors.accent : AppColors.divider,
-            width: highlight ? 2 : 1,
-          ),
+          border: Border.all(color: AppColors.divider),
           boxShadow: [
             BoxShadow(
-              color: StayColors.accent.withValues(alpha: highlight ? 0.12 : 0.05),
-              blurRadius: highlight ? 18 : 8,
+              color: StayColors.accent.withValues(alpha: 0.05),
+              blurRadius: 8,
               offset: const Offset(0, 4),
             ),
           ],
@@ -266,129 +258,79 @@ class TripStayRow extends StatelessWidget {
   }
 
   Widget? _actions() {
-    if (_paused) {
-      if ((!shortlisted && status == null) || onRemove == null || readOnly) return null;
-      return _strip([
-        _ActionSpec(
-          icon: Iconsax.close_circle,
-          label: TripStrings.remove,
-          color: AppColors.error,
-          onTap: onRemove,
-        ),
-      ]);
+    if (_paused || readOnly) return null;
+    final st = status;
+    final Widget ask;
+    if (st != null && onOpenChat != null) {
+      ask = _pillButton(TripStrings.openChat, Iconsax.message, onOpenChat, filled: false);
+    } else if (st != null) {
+      ask = _pillButton(TripStringsV2Find.asked, Iconsax.tick_circle, null, filled: false);
+    } else {
+      ask = _pillButton(TripStringsV2Find.ask, Iconsax.send_2, onAsk, filled: true);
     }
-    final specs = <_ActionSpec>[
-      _ActionSpec(icon: Iconsax.call, label: TripStrings.call, color: StayColors.accentDark, onTap: onCall),
-      _ActionSpec(
-        icon: Icons.chat,
-        asset: 'assets/images/whatsapp_icon.png',
-        label: TripStrings.whatsApp,
-        color: AppColors.whatsApp,
-        onTap: onWhatsApp,
-      ),
-    ];
-    if (!readOnly) {
-      if (status != null && onOpenChat != null) {
-        specs.add(_ActionSpec(
-          icon: Iconsax.message,
-          label: TripStrings.openChat,
-          color: StayColors.accentDark,
-          onTap: onOpenChat,
-        ));
-      } else if (status != null) {
-        specs.add(const _ActionSpec(icon: Iconsax.tick_circle, label: TripStringsA2.asked, color: AppColors.textHint));
-      } else if (shortlisted) {
-        specs.add(_ActionSpec(
-          icon: Iconsax.tick_circle,
-          label: TripStrings.shortlisted,
-          color: Colors.white,
-          fill: StayColors.accent,
-          onTap: onRemove,
-        ));
-      } else {
-        specs.add(_ActionSpec(
-          icon: Iconsax.add_circle,
-          label: TripStrings.shortlist,
-          color: StayColors.accentDark,
-          onTap: onShortlist,
-        ));
-      }
-    }
-    if (specs.every((s) => s.onTap == null && s.fill == null) && readOnly) return null;
-    return _strip(specs);
-  }
-
-  Widget _strip(List<_ActionSpec> specs) => DecoratedBox(
-        decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.divider))),
-        child: SizedBox(
-          height: actionHeight,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var i = 0; i < specs.length; i++) ...[
-                if (i > 0) const VerticalDivider(width: 1, thickness: 1, color: AppColors.divider),
-                Expanded(child: _ActionButton(spec: specs[i])),
-              ],
-            ],
-          ),
-        ),
-      );
-}
-
-class _ActionSpec {
-  const _ActionSpec({required this.icon, required this.label, required this.color, this.onTap, this.fill, this.asset});
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback? onTap;
-  final Color? fill;
-  final String? asset;
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.spec});
-
-  final _ActionSpec spec;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = spec.onTap != null;
-    final color = enabled || spec.fill != null ? spec.color : AppColors.textHint;
-    final Widget icon = spec.asset != null && enabled
-        ? Image.asset(spec.asset!,
-            width: 16, height: 16, errorBuilder: (_, _, _) => Icon(spec.icon, size: 16, color: color))
-        : Icon(spec.icon, size: 16, color: color);
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: spec.label,
-      excludeSemantics: true,
-      child: Material(
-        color: spec.fill ?? Colors.transparent,
-        child: InkWell(
-          onTap: spec.onTap,
-          child: SizedBox.expand(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-              child: Center(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      icon,
-                      const SizedBox(width: 6),
-                      Text(spec.label,
-                          maxLines: 1,
-                          style: TextStyle(
-                              fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: color)),
-                    ],
-                  ),
-                ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: onCall,
+              icon: const Icon(Iconsax.call, size: 16, color: StayColors.accentDark),
+              label: const Text(TripStringsV2Find.call,
+                  style: TextStyle(
+                      fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w700, color: StayColors.accentDark)),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 44),
+                side: BorderSide(color: StayColors.accent.withValues(alpha: 0.6)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: IconButton(
+              onPressed: onWhatsApp,
+              tooltip: TripStrings.whatsApp,
+              style: IconButton.styleFrom(
+                side: BorderSide(color: AppColors.whatsApp.withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: Image.asset('assets/images/whatsapp_icon.png',
+                  width: 20,
+                  height: 20,
+                  errorBuilder: (_, _, _) => const Icon(Icons.chat, size: 20, color: AppColors.whatsApp)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: ask),
+        ],
+      ),
+    );
+  }
+
+  Widget _pillButton(String label, IconData icon, VoidCallback? onTap, {required bool filled}) {
+    final fg = filled ? Colors.white : StayColors.accentDark;
+    return SizedBox(
+      height: 44,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon, size: 16, color: onTap == null && !filled ? AppColors.textHint : fg),
+        label: Text(label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: onTap == null && !filled ? AppColors.textHint : fg)),
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          minimumSize: const Size(0, 44),
+          backgroundColor: filled ? StayColors.accent : StayColors.surface,
+          disabledBackgroundColor: StayColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
@@ -449,7 +391,6 @@ class TripStayRowSkeleton extends StatelessWidget {
                 ],
               ),
             ),
-            Container(height: 1, color: Colors.white),
             const SizedBox(height: TripStayRow.actionHeight),
           ],
         ),

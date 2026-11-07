@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../config/app_colors.dart';
 import '../../../widgets/selectable_chip.dart';
 import '../trip_colors.dart';
 
@@ -197,6 +198,72 @@ class _TripDayChipsState extends State<TripDayChips> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class TripDayMultiChips extends StatelessWidget {
+  final int dayCount;
+  final Set<int> selected;
+  final ValueChanged<int> onToggle;
+  final String Function(int day)? groupOf;
+  final List<int>? disabledDays;
+
+  const TripDayMultiChips({
+    super.key,
+    required this.dayCount,
+    required this.selected,
+    required this.onToggle,
+    this.groupOf,
+    this.disabledDays,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = <String, List<int>>{};
+    for (var d = 1; d <= dayCount; d++) {
+      groups.putIfAbsent(groupOf?.call(d) ?? '', () => []).add(d);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final e in groups.entries) ...[
+          if (e.key.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 6),
+              child: Text(
+                e.key,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontFamily: 'Poppins', fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: AppColors.textLight),
+              ),
+            ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final d in e.value)
+                Opacity(
+                  opacity: (disabledDays?.contains(d) ?? false) ? 0.4 : 1,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 44, minHeight: 36),
+                    child: SelectableChip(
+                      label: 'Day $d',
+                      selected: selected.contains(d),
+                      activeColor: TripColors.dayColor(d),
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                      onTap: () {
+                        if (!(disabledDays?.contains(d) ?? false)) onToggle(d);
+                      },
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

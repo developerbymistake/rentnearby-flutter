@@ -10,7 +10,6 @@ class TripStringsMcbA3 {
   static String alsoRemovedFromTravel(String city) => "It is also removed from your trip's travel to $city.";
   static String travelDay(String date) => 'Travel day · $date';
   static const String fareForCar = 'Fare for this car';
-  static String pickupAt(String place) => 'Pickup at $place';
   static const String booked = 'Booked';
   static const String iBooked = 'I booked';
   static String carHeader(int i, String driver, String vehicle) =>

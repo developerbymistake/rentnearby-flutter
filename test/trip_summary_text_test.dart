@@ -3,8 +3,8 @@ import 'package:bakhli/features/trip/models/trip_summary_model.dart';
 import 'package:bakhli/features/trip/trip_constants.dart';
 import 'package:bakhli/features/trip/trip_strings.dart';
 import 'package:bakhli/features/trip/trip_strings_a5.dart';
+import 'package:bakhli/features/trip/trip_strings_v2_easy.dart';
 import 'package:bakhli/features/trip/utils/trip_summary_text.dart';
-import 'package:bakhli/features/trip/utils/trip_wizard_rules.dart';
 import 'package:bakhli/features/trip/widgets/trip_status.dart';
 import 'package:bakhli/models/browse_item.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,7 +15,6 @@ void main() {
         'date': '2026-11-0$n',
         'listingName': name,
         'enquiryId': 'e$n',
-        'isOwn': false,
         'displayStatus': 'confirmedByBoth',
         'roomLines': [
           {'roomName': 'Family room', 'units': 1, 'guests': 4},
@@ -36,7 +35,6 @@ void main() {
         'days': [1, 2],
         'checkIn': '2026-11-01',
         'checkOut': '2026-11-02',
-        'isOwn': false,
         'displayStatus': 'bookedByYou',
         'agreedFare': 3400,
         'tollExtra': true,
@@ -128,28 +126,6 @@ void main() {
     expect(text, isNot(contains(TripStrings.summaryFooter)));
   });
 
-  test('own-only record gets the own footer and no host or driver line', () {
-    final own = {
-      'night': 1,
-      'date': '2026-11-01',
-      'listingName': 'My cousin',
-      'isOwn': true,
-      'displayStatus': 'own',
-    };
-    final ownTaxi = {...taxi(), 'isOwn': true, 'displayStatus': 'own'};
-    final text = TripSummaryText.build(TripSummaryRecord.fromJson(record(nights: [own], taxis: [ownTaxi])));
-    expect(text, contains(TripStringsA5.ownFooter));
-    expect(text, isNot(contains(TripStrings.summaryFooter)));
-    expect(text, isNot(contains(TripStrings.taxiPayLine)));
-  });
-
-  test('skipped night reads as no stay and keeps the host line for other nights', () {
-    final skipped = {'night': 2, 'date': '2026-11-02', 'listingName': 'No stay tonight', 'displayStatus': 'skipped'};
-    final text = TripSummaryText.build(TripSummaryRecord.fromJson(record(nights: [night(1), skipped], taxis: [])));
-    expect(text, contains(TripStringsA5.noStayTravelling));
-    expect(text, contains(TripStrings.summaryFooter));
-  });
-
   test('check-out is the morning after the night', () {
     final r = TripSummaryRecord.fromJson(record(nights: [night(3)]));
     expect(TripSummaryText.checkOutOf(r.nights.first.date), 'Wed 04 Nov');
@@ -193,105 +169,88 @@ void main() {
     };
   }
 
-  Map<String, dynamic> withSteps(Map<String, dynamic> steps, {Map<String, dynamic>? gt, Map<String, dynamic>? cb}) =>
-      {
-        ...record(),
-        'steps': steps,
-        'gettingThere': ?gt,
-        'comingBack': ?cb,
+  Map<String, dynamic> arrangement(String key, String title, String state, {String? detail}) => {
+        'key': key,
+        'kind': key.split(':').first,
+        'title': title,
+        'state': state,
+        'detail': ?detail,
       };
 
-  test('getting there block shows route, cars, about total, car rows and the change place', () {
-    final r = TripSummaryRecord.fromJson(withSteps(
-      {
-        'gettingThere': {'status': 'chosen', 'journeyId': 'j-gettingThere'},
-      },
-      gt: journey('gettingThere'),
-    ));
-    final text = TripSummaryText.build(r);
-    expect(text, contains('Getting there'));
-    expect(text, contains('Delhi → Haridwar → Nainital'));
-    expect(text, contains('2 cars'));
-    expect(text, contains('about ${BrowseItem.inr(14000)}'));
-    expect(text, contains('Car 1 Sunil Kumar'));
-    expect(text, contains('Car 2 Mohan Bisht'));
-    expect(text, contains('change car at Haridwar'));
-    expect(text.indexOf('Getting there'), lessThan(text.indexOf('Night 1')));
-    expect(text, isNot(contains('9800000000')));
-  });
+  Map<String, dynamic> withArrangements(List<Map<String, dynamic>> rows, {bool trips = true}) => {
+        ...record(nights: trips ? null : [], taxis: trips ? null : []),
+        'arrangements': rows,
+      };
 
-  test('coming back with one car sits after the taxis', () {
-    final r = TripSummaryRecord.fromJson(withSteps(
-      {
-        'comingBack': {'status': 'booked', 'journeyId': 'j-comingBack'},
-      },
-      cb: journey('comingBack', legs: [leg(1, 'Nainital', 'Delhi', 'Rajesh Kumar', 5200)], date: '2026-11-03'),
-    ));
+  test('arrangements list ticks and clocks, skipped rows are absent', () {
+    final r = TripSummaryRecord.fromJson(withArrangements([
+      arrangement('gettingThere', 'Getting there', 'saved', detail: 'Delhi to Nainital'),
+      arrangement('stay:1', 'Stay in Nainital', 'asked', detail: 'Deodar Homestay'),
+      arrangement('taxi', 'Local taxi', 'own'),
+      arrangement('comingBack', 'Coming back', 'skipped'),
+    ]));
     final text = TripSummaryText.build(r);
-    expect(text, contains('Coming back'));
-    expect(text, contains('1 car'));
-    expect(text, contains('Car 1 Rajesh Kumar'));
-    expect(text.indexOf('Coming back'), greaterThan(text.indexOf('Mohan Bisht')));
-  });
-
-  test('own step is one line with the note', () {
-    final r = TripSummaryRecord.fromJson(withSteps({
-      'gettingThere': {'status': 'own', 'note': 'Own car, leaving 6 am'},
-    }));
-    final text = TripSummaryText.build(r);
-    expect(text, contains('Arranged by you · Own car, leaving 6 am'));
-  });
-
-  test('skipped and legacy not needed steps are omitted', () {
-    final r = TripSummaryRecord.fromJson(withSteps({
-      'gettingThere': {'status': 'skipped'},
-      'comingBack': {'status': 'notNeeded'},
-    }));
-    final text = TripSummaryText.build(r);
-    expect(text, isNot(contains('Getting there')));
+    expect(text, contains(TripStringsV2Easy.arrangementsHeading));
+    expect(text, contains('Getting there · Delhi to Nainital · ${TripStringsV2Easy.pillSaved}'));
+    expect(text, contains('Stay in Nainital · Deodar Homestay · ${TripStringsV2Easy.pillAsked}'));
+    expect(text, contains('Local taxi · ${TripStringsV2Easy.pillOwn}'));
+    expect(text, contains('${TripStringsV2Easy.shareDone}: Getting there'));
+    expect(text, contains('${TripStringsV2Easy.shareWaiting}: Stay in Nainital'));
+    expect(text, contains('${TripStringsV2Easy.shareDone}: Local taxi'));
     expect(text, isNot(contains('Coming back')));
-    expect(TripSummaryText.hasSteps(r), isFalse);
-    expect(TripSummaryText.stepState(r, TripStepRole.comingBack), TripStepState.todo);
+    expect(TripSummaryText.shownArrangements(r).length, 3);
   });
 
-  test('a saved journey nobody asked is waiting, not done', () {
-    final r = TripSummaryRecord.fromJson(withSteps(
-      {
-        'gettingThere': {'status': 'chosen', 'journeyId': 'j-gettingThere'},
-      },
-      gt: journey('gettingThere'),
-    ));
-    final state = TripSummaryText.stepState(r, TripStepRole.gettingThere);
-    expect(state, TripStepState.waiting);
-    expect(TripSummaryText.pillStatus(state), TripDisplayStatus.asked);
-    expect(TripSummaryText.stepInfo(r, TripStepRole.gettingThere)?.counted, isFalse);
+  test('a record with only skipped arrangements has no arrangements block', () {
+    final r = TripSummaryRecord.fromJson(withArrangements([
+      arrangement('taxi', 'Local taxi', 'skipped'),
+    ], trips: false));
+    expect(TripSummaryText.shownArrangements(r), isEmpty);
+    expect(TripSummaryText.build(r), isNot(contains(TripStringsV2Easy.arrangementsHeading)));
   });
 
-  test('own step reads own and counts', () {
-    final r = TripSummaryRecord.fromJson(withSteps({
-      'gettingThere': {'status': 'own', 'note': 'By bus'},
-    }));
-    final info = TripSummaryText.stepInfo(r, TripStepRole.gettingThere);
-    expect(info?.state, TripStepState.own);
-    expect(info?.counted, isTrue);
-    expect(TripSummaryText.pillStatus(info?.state), TripDisplayStatus.own);
+  test('arrangements alone make the record shareable', () {
+    final r = TripSummaryRecord.fromJson({
+      'tripId': 'a',
+      'city': 'Nainital',
+      'arrangements': [arrangement('taxi', 'Local taxi', 'own')],
+    });
+    expect(TripSummaryText.canShare(r), isTrue);
+    expect(TripSummaryText.hasContent(r), isTrue);
+    expect(TripSummaryText.canShare(TripSummaryRecord.fromJson({'tripId': 'a', 'city': 'Nainital'})), isFalse);
+  });
+
+  test('state words and done states', () {
+    expect(TripSummaryText.stateWord(TripRowState.todo), TripStringsV2Easy.pillTodo);
+    expect(TripSummaryText.stateWord(TripRowState.offer), TripStringsV2Easy.pillOffer);
+    expect(TripSummaryText.stateWord(TripRowState.attention), TripStringsV2Easy.pillAttention);
+    expect(TripSummaryText.stateWord(TripRowState.booked), TripStringsV2Easy.pillBooked);
+    for (final s in [TripRowState.own, TripRowState.saved, TripRowState.confirmed, TripRowState.booked]) {
+      expect(TripSummaryText.isDone(s), isTrue, reason: s.name);
+    }
+    for (final s in [TripRowState.todo, TripRowState.asked, TripRowState.offer, TripRowState.skipped, TripRowState.attention]) {
+      expect(TripSummaryText.isDone(s), isFalse, reason: s.name);
+    }
   });
 
   test('pill status has one look per state', () {
-    expect(TripSummaryText.pillStatus(TripStepState.done), TripDisplayStatus.confirmedByBoth);
-    expect(TripSummaryText.pillStatus(TripStepState.skipped), TripDisplayStatus.own);
-    expect(TripSummaryText.pillStatus(TripStepState.attention), TripDisplayStatus.notAvailable);
-    expect(TripSummaryText.pillStatus(TripStepState.todo), TripDisplayStatus.none);
+    expect(TripSummaryText.pillStatus(TripRowState.confirmed), TripDisplayStatus.confirmedByBoth);
+    expect(TripSummaryText.pillStatus(TripRowState.booked), TripDisplayStatus.bookedByYou);
+    expect(TripSummaryText.pillStatus(TripRowState.own), TripDisplayStatus.own);
+    expect(TripSummaryText.pillStatus(TripRowState.saved), TripDisplayStatus.own);
+    expect(TripSummaryText.pillStatus(TripRowState.asked), TripDisplayStatus.asked);
+    expect(TripSummaryText.pillStatus(TripRowState.offer), TripDisplayStatus.asked);
+    expect(TripSummaryText.pillStatus(TripRowState.attention), TripDisplayStatus.notAvailable);
+    expect(TripSummaryText.pillStatus(TripRowState.todo), TripDisplayStatus.none);
   });
 
   test('a chosen journey alone brings the driver pay line', () {
     final r = TripSummaryRecord.fromJson({
-      ...withSteps(
-        {
-          'gettingThere': {'status': 'chosen', 'journeyId': 'j-gettingThere'},
-        },
-        gt: journey('gettingThere'),
-      ),
+      ...record(nights: [], taxis: []),
+      'steps': {
+        'gettingThere': {'status': 'chosen', 'journeyId': 'j-gettingThere'},
+      },
+      'gettingThere': journey('gettingThere'),
       'taxis': <Map<String, dynamic>>[],
     });
     expect(TripSummaryText.footer(r), contains(TripStrings.taxiPayLine));
@@ -410,21 +369,15 @@ void main() {
         'day': 2,
         'date': '2026-11-02',
         'state': 'own',
-        'how': 'bus',
-        'leavesAt': '06:00',
-        'ownName': 'Shatabdi',
       };
       final text = TripSummaryText.build(TripSummaryRecord.fromJson(twoLegs(travel: own)));
       expect(text, contains('→ Badrinath · Own travel · Mon 02 Nov'));
-      expect(text, contains('  Own travel · Bus · 6:00 am · Shatabdi'));
+      expect(text, contains("  ${TripStringsV2Easy.youArrangeTravel}"));
       expect(text, isNot(contains(TripStrings.taxiPayLine)));
     });
 
     test('a journey car alone brings the driver pay line', () {
-      final r = TripSummaryRecord.fromJson(twoLegs(nights: [
-        {'night': 1, 'date': '2026-11-01', 'listingName': 'My cousin', 'isOwn': true, 'displayStatus': 'own'},
-        {'night': 2, 'date': '2026-11-02', 'listingName': 'Friend', 'isOwn': true, 'displayStatus': 'own'},
-      ]));
+      final r = TripSummaryRecord.fromJson(twoLegs(nights: []));
       expect(r.taxis, isEmpty);
       expect(TripSummaryText.footer(r), contains(TripStrings.taxiPayLine));
       expect(TripSummaryText.footer(r), isNot(contains(TripStrings.summaryFooter)));
@@ -453,7 +406,7 @@ void main() {
         base(2, 'q2', agreed: 4200),
         base(3, 'q2'),
         base(4, 'q2'),
-        {'night': 5, 'date': '2026-11-05', 'listingName': 'My cousin', 'isOwn': true, 'displayStatus': 'own'},
+        {'night': 5, 'date': '2026-11-05', 'listingName': 'My cousin', 'displayStatus': 'none'},
         base(6, 'q2'),
       ].map(TripSummaryNight.fromJson).toList();
       final groups = TripSummaryText.nightGroups(nights);
@@ -469,10 +422,8 @@ void main() {
       expect(groups[0].isRange, isFalse);
     });
 
-    test('nightGroups never joins skipped nights or nights without an enquiry', () {
+    test('nightGroups never joins nights without an enquiry', () {
       final nights = [
-        {'night': 1, 'date': '2026-11-01', 'listingName': 'A', 'enquiryId': 'q', 'displayStatus': TripSummaryText.skippedStatus},
-        {'night': 2, 'date': '2026-11-02', 'listingName': 'A', 'enquiryId': 'q', 'displayStatus': TripSummaryText.skippedStatus},
         {'night': 3, 'date': '2026-11-03', 'listingName': 'B'},
         {'night': 4, 'date': '2026-11-04', 'listingName': 'B'},
       ].map(TripSummaryNight.fromJson).toList();

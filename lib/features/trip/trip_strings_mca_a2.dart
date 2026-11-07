@@ -14,12 +14,9 @@ class TripStringsMcaA2 {
   static const String alreadyAdded = 'Already added';
   static const String noPlacesYet = 'No places yet · stay and taxi only';
   static String taxisGoFrom(String city) => 'Taxis go from $city';
-  static const String notAvailableNew = 'Not available for new trips';
 
-  static String nextCity(String city) => 'Next: $city';
   static const String addToTrip = 'Add to trip';
   static String spotsAddToTrip(int n) => '$n ${n == 1 ? 'spot' : 'spots'} · $addToTrip';
 
-  static const String connectToAdd = 'Connect to add a city';
   static const String cantChangeTrip = 'This trip can not be changed now';
 }

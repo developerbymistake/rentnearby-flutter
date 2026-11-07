@@ -18,8 +18,7 @@ class TripSpotModel {
   final bool isFeatured;
   final int rank;
   final String? imageUrl;
-  final String? imageCredit;
-  final String? imageLicense;
+  final List<String> images;
 
   const TripSpotModel({
     required this.id,
@@ -35,11 +34,35 @@ class TripSpotModel {
     this.isFeatured = false,
     this.rank = 0,
     this.imageUrl,
-    this.imageCredit,
-    this.imageLicense,
+    this.images = const [],
   });
 
   String get title => (displayName == null || displayName!.isEmpty) ? name : displayName!;
+
+  List<String> get gallery {
+    if (images.isNotEmpty) return images;
+    final u = imageUrl;
+    return u == null || u.isEmpty ? const [] : [u];
+  }
+
+  bool get hasPhoto => gallery.isNotEmpty;
+
+  static List<TripSpotModel> photoFirst(List<TripSpotModel> spots) {
+    final out = <TripSpotModel>[];
+    var i = 0;
+    while (i < spots.length) {
+      var j = i;
+      while (j < spots.length && spots[j].rank == spots[i].rank) {
+        j++;
+      }
+      final run = spots.sublist(i, j);
+      out
+        ..addAll(run.where((s) => s.hasPhoto))
+        ..addAll(run.where((s) => !s.hasPhoto));
+      i = j;
+    }
+    return out;
+  }
 
   factory TripSpotModel.fromJson(Map<String, dynamic> json) => TripSpotModel(
         id: json['id'] as String,
@@ -55,8 +78,7 @@ class TripSpotModel {
         isFeatured: json['isFeatured'] == true,
         rank: (json['rank'] as num?)?.toInt() ?? 0,
         imageUrl: json['imageUrl'] as String?,
-        imageCredit: json['imageCredit'] as String?,
-        imageLicense: json['imageLicense'] as String?,
+        images: ((json['images'] as List?) ?? const []).whereType<String>().where((e) => e.isNotEmpty).toList(),
       );
 }
 

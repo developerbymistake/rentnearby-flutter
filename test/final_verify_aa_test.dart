@@ -1,8 +1,10 @@
+import 'package:get/get.dart';
 import 'package:bakhli/features/taxi/journeys/journey_models.dart';
 import 'package:bakhli/features/taxi/journeys/journey_way_bridge.dart';
 import 'package:bakhli/features/taxi/ways/models/ask_models.dart';
 import 'package:bakhli/features/taxi/ways/models/taxi_ways_models.dart';
 import 'package:bakhli/features/trip/controllers/trip_plan_controller.dart';
+import 'package:bakhli/features/trip/models/trip_enquiry_model.dart';
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
 import 'package:bakhli/features/trip/trip_strings_final_aa.dart';
 import 'package:bakhli/features/trip/utils/trip_stay_base.dart';
@@ -18,14 +20,26 @@ class _Row {
 
 _Row _row(Map<String, dynamic> j) => _Row(j['id'] as String);
 
-TripStayChoice _stay(String id, double lat, double lng) => TripStayChoice(stayId: id, name: id, latitude: lat, longitude: lng);
+TripEnquiryModel _stay(String id, double lat, double lng, {int night = 1, int nights = 1, String status = TripEnquiryStatuses.confirmedByBoth}) =>
+    TripEnquiryModel(
+      id: id,
+      tripId: 't1',
+      listingId: 'l-$id',
+      listingName: id,
+      listingLatitude: lat,
+      listingLongitude: lng,
+      status: status,
+      checkIn: DateTime(2030, 11, night),
+      checkOut: DateTime(2030, 11, night + nights),
+    );
 
-TripPlan _nainital(List<TripStayChoice?> nights, {double cityLat = 29.3919, double cityLng = 79.4542}) => TripPlan.singleCity(
+TripPlan _nainital(int days, {double cityLat = 29.3919, double cityLng = 79.4542}) => TripPlan.singleCity(
       cityKey: 1,
       cityName: 'Nainital',
       centreLatitude: cityLat,
       centreLongitude: cityLng,
-      days: [for (var i = 0; i < nights.length; i++) TripDay(day: i + 1, stay: nights[i])],
+      settings: TripSettings(startDate: DateTime(2030, 11, 1)),
+      days: [for (var i = 1; i <= days; i++) TripDay(day: i)],
     );
 
 Map<String, dynamic> _driver(String id, int fare, int seats) => {
@@ -96,69 +110,56 @@ void main() {
 
   group('Stay base anchor (finding 12)', () {
     test('every night at one Bhimtal stay: that stay is the anchor', () {
-      final bhimtal = _stay('s1', 29.3467, 79.5536);
-      final p = _nainital([bhimtal, bhimtal, bhimtal]);
-      expect(TripStayBase.of(p, 1), (lat: 29.3467, lng: 79.5536));
-      expect(TripStayBase.bodyOf(p, 1), {'anchorLatitude': 29.3467, 'anchorLongitude': 79.5536});
+      final p = _nainital(3);
+      final rows = [_stay('s1', 29.3467, 79.5536, nights: 3)];
+      expect(TripStayBase.of(p, 1, rows), (lat: 29.3467, lng: 79.5536));
+      expect(TripStayBase.bodyOf(p, 1, rows), {'anchorLatitude': 29.3467, 'anchorLongitude': 79.5536});
     });
 
-    test('the last day has a night too: a different last-night stay mixes the base', () {
-      final p = _nainital([_stay('s1', 29.3467, 79.5536), _stay('s2', 29.3800, 79.4600)]);
-      expect(TripStayBase.of(p, 1), isNull);
+    test('two different confirmed stays mix the base', () {
+      final rows = [_stay('s1', 29.3467, 79.5536), _stay('s2', 29.3800, 79.4600, night: 2)];
+      expect(TripStayBase.of(_nainital(2), 1, rows), isNull);
     });
 
-    test('same-as nights without a point resolve through the first night', () {
-      final p = _nainital([
-        _stay('s1', 29.3467, 79.5536),
-        const TripStayChoice(stayId: 's1', name: 's1', sameAsDay: 1),
-        null,
-      ]);
-      expect(TripStayBase.of(p, 1), (lat: 29.3467, lng: 79.5536));
-    });
-
-    test('no stay, a skipped night, a point-less own stay or a far stay: no anchor', () {
-      expect(TripStayBase.of(_nainital([null, null]), 1), isNull);
-      expect(TripStayBase.bodyOf(_nainital([null]), 1), isEmpty);
-      expect(TripStayBase.of(_nainital([_stay('s1', 29.3467, 79.5536), const TripStayChoice.skippedNight()]), 1), isNull);
-      expect(TripStayBase.of(_nainital([const TripStayChoice(stayId: '', name: 'Own', isOwn: true)]), 1), isNull);
-      expect(TripStayBase.of(_nainital([_stay('s1', 28.6139, 77.2090)]), 1), isNull);
-      expect(TripStayBase.of(_nainital([_stay('s1', 29.3467, 79.5536)], cityLat: 0, cityLng: 0), 1), isNull);
-      expect(TripStayBase.of(_nainital([_stay('s1', 29.3467, 79.5536)]), 2), isNull);
+    test('no stay, an open ask, a far stay or a city without a point: no anchor', () {
+      expect(TripStayBase.of(_nainital(2), 1, const []), isNull);
+      expect(TripStayBase.bodyOf(_nainital(1), 1, const []), isEmpty);
+      expect(TripStayBase.of(_nainital(2), 1, [_stay('s1', 29.3467, 79.5536, status: TripEnquiryStatuses.asked)]), isNull);
+      expect(TripStayBase.of(_nainital(1), 1, [_stay('s1', 28.6139, 77.2090)]), isNull);
+      expect(TripStayBase.of(_nainital(1, cityLat: 0, cityLng: 0), 1, [_stay('s1', 29.3467, 79.5536)]), isNull);
+      expect(TripStayBase.of(_nainital(1), 2, [_stay('s1', 29.3467, 79.5536)]), isNull);
     });
 
     test('the plan request carries the anchor, and none without a stay', () {
       TestWidgetsFlutterBinding.ensureInitialized();
       final c = TripPlanController();
-      final bhimtal = _stay('s1', 29.3467, 79.5536);
-      final body = c.planBodyForTest(_nainital([bhimtal, bhimtal]), 1, 'recalculate');
+      addTearDown(c.onClose);
+      c.enquiryList.assignAll([_stay('s1', 29.3467, 79.5536, nights: 2)]);
+      final body = c.planBodyForTest(_nainital(2), 1, 'recalculate');
       expect(body['anchorLatitude'], 29.3467);
       expect(body['anchorLongitude'], 79.5536);
-      final plain = c.planBodyForTest(_nainital([null, null]), 1, 'auto');
+      c.enquiryList.clear();
+      final plain = c.planBodyForTest(_nainital(2), 1, 'auto');
       expect(plain.containsKey('anchorLatitude'), isFalse);
     });
 
-    test('a same-as loop never hangs', () {
-      final p = _nainital([
-        const TripStayChoice(stayId: 'x', name: 'x', sameAsDay: 2),
-        const TripStayChoice(stayId: 'x', name: 'x', sameAsDay: 1),
-      ]);
-      expect(TripStayBase.of(p, 1), isNull);
-    });
-
-    test('day d starts at the stay of night d - 1 in the same leg', () {
-      final p = _nainital([_stay('s1', 29.3467, 79.5536), null]);
-      expect(TripStayBase.startOf(p, 2), (lat: 29.3467, lng: 79.5536));
-      expect(TripStayBase.startOf(p, 1), isNull);
+    test('day d starts at the confirmed stay of its own city only', () {
+      final p = _nainital(2);
+      final rows = [_stay('s1', 29.3467, 79.5536, nights: 2)];
+      expect(TripStayBase.startOf(p, 2, rows), (lat: 29.3467, lng: 79.5536));
+      expect(TripStayBase.startOf(p, 1, rows), isNull);
       final multi = TripPlan(
         legs: const [
           TripCityLeg(index: 1, cityKey: 1, cityName: 'Nainital', latitude: 29.39, longitude: 79.45),
           TripCityLeg(index: 2, cityKey: 2, cityName: 'Almora', latitude: 29.59, longitude: 79.65),
         ],
-        days: [TripDay(day: 1, stay: _stay('s1', 29.3467, 79.5536)), const TripDay(day: 2, leg: 2)],
+        days: const [TripDay(day: 1), TripDay(day: 2, leg: 2)],
+        settings: TripSettings(startDate: DateTime(2030, 11, 1)),
       );
-      expect(TripStayBase.startOf(multi, 2), isNull);
-      expect(TripStayBase.of(multi, 2), isNull);
-      expect(TripStayBase.of(multi, 1), (lat: 29.3467, lng: 79.5536));
+      final one = [_stay('s1', 29.3467, 79.5536)];
+      expect(TripStayBase.startOf(multi, 2, one), isNull);
+      expect(TripStayBase.of(multi, 2, one), isNull);
+      expect(TripStayBase.of(multi, 1, one), (lat: 29.3467, lng: 79.5536));
     });
   });
 

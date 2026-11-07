@@ -37,7 +37,6 @@ void main() {
           ],
           'total': 3800,
           'inclusions': 'Breakfast',
-          'needsEchoed': ['no_stairs'],
           'advanceAmount': 500,
           'balanceNote': 'at check-in',
           'cancellationText': 'Free till 24 h before',
@@ -56,7 +55,6 @@ void main() {
           'adults': 2,
           'kids': 2,
           'rooms': 1,
-          'needs': ['no_stairs', 'veg_food'],
           'days': [
             {'day': 1, 'date': '2026-11-01', 'minutes': 335, 'spots': ['Mall Road', 'Naini Lake']},
           ],
@@ -95,7 +93,6 @@ void main() {
     expect(e.nights, 2);
     expect(e.context.city, 'Nainital');
     expect(e.context.adults, 2);
-    expect(e.context.needs, ['no_stairs', 'veg_food']);
     expect(e.traveller.name, 'Rahul');
     expect(e.owner.phone, '9876543210');
     expect(e.hostConfirm.linkSent, isTrue);
@@ -120,7 +117,6 @@ void main() {
     expect(e.openOffer, isNull);
     expect(e.acceptedOffer, isNull);
     expect(e.phoneBooking, isNull);
-    expect(e.context.needs, isEmpty);
     expect(e.display, TripDisplayStatus.none);
   });
 
@@ -509,9 +505,6 @@ void main() {
       'completedAt': null,
     });
     expect(s.state, TripBookingState.confirming);
-    expect(s.staysConfirmed, 1);
-    expect(s.staysTotal, 2);
-    expect(s.taxisTotal, 1);
     expect(s.agreedTotal, 3800);
     expect(s.isCompleted, isFalse);
     expect(TripSummaryModel.fromJson({'id': 't2', 'status': 'Completed', 'bookingState': 'completed'}).isCompleted, isTrue);
@@ -562,5 +555,10 @@ void main() {
     for (final s in ['Declined', 'CancelledByTraveller', 'Closed', 'Asked', 'ConfirmedByBoth']) {
       expect(TripEnquiryModel(id: 'p', status: s).isProblem, isFalse, reason: s);
     }
+  });
+
+  test('cityLeg is parsed and optional', () {
+    expect(TripEnquiryModel.fromJson({'id': 'a', 'kind': 'Taxi', 'cityLeg': 2}).cityLeg, 2);
+    expect(TripEnquiryModel.fromJson({'id': 'b', 'kind': 'Taxi'}).cityLeg, isNull);
   });
 }

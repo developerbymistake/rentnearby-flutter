@@ -8,14 +8,13 @@ import '../../taxi/taxi_option_sets.dart';
 import '../../taxi/ways/trip_strings_mcb_a2.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_journey_model.dart';
-import '../models/trip_plan_model.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
 import '../trip_strings_mca_a3.dart';
+import '../trip_strings_mcb_a1.dart';
+import '../trip_strings_v2_plan.dart';
 import '../utils/trip_format.dart';
-import '../utils/trip_wizard_rules.dart';
 import 'trip_journey_strip.dart';
-import 'trip_own_travel_sheet.dart';
 
 class TripMapTravelBlock extends StatelessWidget {
   final int legIndex;
@@ -33,10 +32,7 @@ class TripMapTravelBlock extends StatelessWidget {
     return null;
   }
 
-  String _lineOf(TripPlanController c) {
-    final k = TripStepKey.parse('travel:$legIndex');
-    return (k == null ? null : c.stepInfo(k)?.line) ?? TripStringsMcaA3.notPlannedYet;
-  }
+  String _lineOf(TripPlanController c) => TripStringsMcbA1.stateLabel(c.travelStateOf(legIndex));
 
   @override
   Widget build(BuildContext context) {
@@ -54,14 +50,15 @@ class TripMapTravelBlock extends StatelessWidget {
       final rows = <Widget>[];
       Widget? open;
       if (a == null) {
+        final own = leg.travelMark?.isOwn ?? false;
         rows.add(_row(
           initial: null,
           icon: Iconsax.routing_2,
-          title: TripStringsMcaA3.travelTo(leg.cityName),
-          subtitle: _lineOf(c),
+          title: own ? TripStringsV2Plan.todayYourTravel : TripStringsMcaA3.travelTo(leg.cityName),
+          subtitle: own ? null : TripStringsMcaA3.notPlannedYet,
           phone: null,
         ));
-      } else if (a.isJourney) {
+      } else {
         final j = c.segmentJourney(legIndex);
         if (j != null) {
           for (var i = 0; i < j.legs.length; i++) {
@@ -93,8 +90,6 @@ class TripMapTravelBlock extends StatelessWidget {
             phone: null,
           ));
         }
-      } else {
-        rows.add(_ownRow(a));
       }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -139,19 +134,6 @@ class TripMapTravelBlock extends StatelessWidget {
       subtitle: subtitle,
       phone: _phoneOf([booking?.owner.phone, l.phone, l.whatsApp]),
       tone: TripJourneyStrip.carColor(car - 1),
-    );
-  }
-
-  Widget _ownRow(TripTravel a) {
-    final how = a.how == null ? null : TripOwnTravelSheet.howLabel(a.how!);
-    final hub = a.hubName;
-    final sub = a.ownName ?? (hub != null && hub.isNotEmpty ? TripStringsMcbA2.reachHub(hub) : null);
-    return _row(
-      initial: null,
-      icon: TripOwnTravelSheet.howIcon(a.how),
-      title: TripStringsMcaA3.ownTravelLine(how, a.leavesAt),
-      subtitle: sub,
-      phone: _validPhone(a.ownPhone),
     );
   }
 

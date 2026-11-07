@@ -261,4 +261,29 @@ void main() {
       expect(identical(ModulePalette.forListingKind('Plot'), ModulePalette.rooms), isTrue);
     });
   });
+
+  group('trip v2 routes', () {
+    test('the days page is registered and the step page is gone', () {
+      expect(AppRoutes.tripDays, '/trip-days');
+      expect(AppRoutes.isRegistered(AppRoutes.tripDays), isTrue);
+      expect(AppRoutes.isRegistered('/trip-step'), isFalse);
+    });
+
+    test('every trip page of the flow is registered', () {
+      for (final route in [
+        AppRoutes.tripDays,
+        AppRoutes.tripSpots,
+        AppRoutes.tripPlan,
+        AppRoutes.tripStay,
+        AppRoutes.tripTaxi,
+        AppRoutes.tripMap,
+        AppRoutes.myTrips,
+        AppRoutes.tripReplies,
+        AppRoutes.tripTaxiReplies,
+        AppRoutes.tripSummary,
+      ]) {
+        expect(AppRoutes.isRegistered(route), isTrue, reason: route);
+      }
+    });
+  });
 }

@@ -23,7 +23,6 @@ class WayActions {
     required this.tripId,
     this.tripRole,
     this.tripLegIndex,
-    this.fromStep,
     required this.date,
     required this.people,
     required this.chosenOf,
@@ -33,7 +32,6 @@ class WayActions {
   final String? tripId;
   final String? tripRole;
   final int? tripLegIndex;
-  final String? fromStep;
   final DateTime Function() date;
   final int Function() people;
   final Map<int, WayDriver> Function(String planKey) chosenOf;
@@ -48,12 +46,9 @@ class WayActions {
   TripPlanController? get trip =>
       Get.isRegistered<TripPlanController>() && TripPlanController.to.trip.value?.id == tripId ? TripPlanController.to : null;
 
-  static void backToStep() => Get.until(
-      (r) => r.settings.name == AppRoutes.tripStep || r.settings.name == AppRoutes.tripPlan || r.isFirst);
-
   static void backToPlan() => Get.until((r) => r.settings.name == AppRoutes.tripPlan || r.isFirst);
 
-  void back() => fromStep != null ? backToStep() : backToPlan();
+  void back() => backToPlan();
 
   int? roadMinutesOf(WayPlan plan) {
     var total = 0;

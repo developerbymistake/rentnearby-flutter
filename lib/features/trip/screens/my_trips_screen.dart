@@ -8,6 +8,7 @@ import '../../../utils/app_toast.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../controllers/my_trips_controller.dart';
 import '../models/trip_model.dart';
+import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
@@ -85,32 +86,16 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
   }
 
   Future<void> _delete(TripSummaryModel t) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(TripStrings.deleteTrip, style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
-        content: const Text(TripStrings.deleteConfirmBody, style: TextStyle(fontFamily: 'Poppins')),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(TripStrings.cancelAction, style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(64, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(TripStrings.delete, style: TextStyle(fontFamily: 'Poppins')),
-          ),
-        ],
-      ),
+    final rows = t.progress.rows;
+    final stays = rows.where((r) => (r.state == TripRowState.confirmed || r.state == TripRowState.booked) && r.key.kind == TripEasyRowKind.stay).length;
+    final taxis = rows.where((r) => (r.state == TripRowState.confirmed || r.state == TripRowState.booked) && r.key.kind == TripEasyRowKind.taxi).length;
+    final ok = await TripLifecycleActions.confirmDelete(
+      context,
+      open: rows.fold<int>(0, (n, r) => n + r.askedCount),
+      confirmed: stays,
+      confirmedTaxis: taxis,
     );
-    if (ok == true) await _ctrl.delete(t.id);
+    if (ok) await _ctrl.delete(t.id);
   }
 
   @override

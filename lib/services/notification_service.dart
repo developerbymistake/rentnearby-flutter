@@ -409,7 +409,6 @@ class NotificationService extends GetxService {
     AppRoutes.savedJourney,
     AppRoutes.tripSpots,
     AppRoutes.tripPlan,
-    AppRoutes.tripStep,
     AppRoutes.tripTaxi,
     AppRoutes.tripStay,
     AppRoutes.tripMap,
@@ -587,13 +586,8 @@ class NotificationService extends GetxService {
   }
 
   bool _isOpenScreen(String route, Map<String, dynamic>? args) {
-    if (route == AppRoutes.tripPlan && args?['step'] == null && Get.currentRoute == AppRoutes.tripStep) {
-      final want = args?['tripId']?.toString();
-      final have = Get.isRegistered<TripPlanController>() ? Get.find<TripPlanController>().trip.value?.id : null;
-      return want != null && want == have;
-    }
     if (Get.currentRoute != route || !_refreshInPlaceRoutes.contains(route)) return false;
-    if (route == AppRoutes.tripPlan && args?['step'] != null) return false;
+    if (route == AppRoutes.tripPlan && args?['row'] != null) return false;
     final current = Get.arguments;
     final open = current is Map ? current : const <String, dynamic>{};
     final taxiReplies = route == AppRoutes.tripTaxiReplies;

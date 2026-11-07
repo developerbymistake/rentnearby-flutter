@@ -18,13 +18,12 @@ import '../models/trip_spot_model.dart';
 import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
-import '../trip_strings_wizard.dart';
+import '../trip_strings_v2_create.dart';
 import '../trip_strings_mca_a2.dart';
-import '../utils/trip_format.dart';
+import '../utils/trip_days_rules.dart';
 import '../widgets/trip_city_sheet.dart';
 import '../widgets/trip_shimmers.dart';
 import '../widgets/trip_spot_row.dart';
-import 'trip_details_sheet.dart';
 
 class TripSpotsScreen extends StatefulWidget {
   const TripSpotsScreen({super.key});
@@ -46,11 +45,16 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   late final Set<String> _existingIds;
   late final TripSpotsController _ctrl;
   late final TripPlanController _plan;
+  TripCreateSession? _session;
+  bool _ownsSession = false;
   final _scroll = ScrollController();
   bool _starting = false;
   Worker? _draftWorker;
+  Worker? _daysWorker;
 
   bool get _intoTrip => _adding || _newLeg;
+  bool get _creating => !_intoTrip;
+  int get _days => _session?.days.value ?? 1;
   bool get _isLast => _index >= _chain.length - 1;
   TripCityModel? get _next => _isLast ? null : _chain[_index + 1];
 
@@ -91,24 +95,56 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
           );
     _plan.openPages++;
     _scroll.addListener(_onScroll);
-    if (!_intoTrip) {
+    if (_creating) {
+      final wanted = args['days'] as int?;
+      var session = Get.isRegistered<TripCreateSession>() ? Get.find<TripCreateSession>() : null;
+      if (session == null) {
+        final least = TripDaysRules.minDays(_chain.length, [for (final c in _chain) _idsOfSaved(c).length]);
+        session = Get.put(TripCreateSession((wanted ?? least).clamp(least, TripConstants.maxDaysCap).toInt()));
+        _ownsSession = true;
+      }
+      _session = session;
+      _syncLimit();
       final seed = _draftLegs.firstWhereOrNull((l) => l.city.cityKey == _city.cityKey)?.ids ?? const <String>[];
       for (final id in seed) {
-        if (_ctrl.selected.length >= TripConstants.maxSpots) break;
+        if (_ctrl.selected.length >= TripConstants.maxSpots || _ctrl.atLimit) break;
         _ctrl.selected.add(id);
       }
       _draftWorker = ever(_ctrl.selected, (_) {
-        if (!_starting) TripNewDraft.save(_legsNow());
+        if (!_starting) TripNewDraft.save(_legsNow(), days: _days);
       });
+      _daysWorker = ever(_session!.days, (_) {
+        _syncLimit();
+        if (!_starting) TripNewDraft.save(_legsNow(), days: _days);
+      });
+    } else {
+      _syncLimit();
     }
+  }
+
+  List<int> _counts() => [for (final c in _chain) c.cityKey == _city.cityKey ? _ctrl.selected.length : _idsOf(c).length];
+
+  void _syncLimit() {
+    if (_pickDay != null) return;
+    if (_newLeg) {
+      _ctrl.limit.value = TripConstants.maxSpotsPerDay;
+    } else if (_adding) {
+      _ctrl.limit.value = _plan.addCapacity(_legIndex ?? _plan.legCount);
+    } else {
+      _ctrl.limit.value = TripDaysRules.limitFor(_days, _counts(), _index);
+    }
+  }
+
+  List<String> _idsOfSaved(TripCityModel c) {
+    final saved = TripNewDraft.read()?.legs ?? _draftLegs;
+    return saved.firstWhereOrNull((l) => l.city.cityKey == c.cityKey)?.ids ?? const <String>[];
   }
 
   List<String> _idsOf(TripCityModel c) {
     if (c.cityKey == _city.cityKey) return _ctrl.selected.toList();
     final tag = '${c.cityKey}';
     if (Get.isRegistered<TripSpotsController>(tag: tag)) return Get.find<TripSpotsController>(tag: tag).selected.toList();
-    final saved = TripNewDraft.read()?.legs ?? _draftLegs;
-    return saved.firstWhereOrNull((l) => l.city.cityKey == c.cityKey)?.ids ?? const <String>[];
+    return _idsOfSaved(c);
   }
 
   List<TripDraftLeg> _legsNow() => [for (final c in _chain) TripDraftLeg(c, _idsOf(c))];
@@ -122,11 +158,15 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   @override
   void dispose() {
     _draftWorker?.dispose();
+    _daysWorker?.dispose();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     final tag = '${_city.cityKey}';
     if (Get.isRegistered<TripSpotsController>(tag: tag) && identical(Get.find<TripSpotsController>(tag: tag), _ctrl)) {
       Get.delete<TripSpotsController>(tag: tag);
+    }
+    if (_ownsSession && Get.isRegistered<TripCreateSession>() && identical(Get.find<TripCreateSession>(), _session)) {
+      Get.delete<TripCreateSession>(force: true);
     }
     if (Get.isRegistered<TripPlanController>() && identical(Get.find<TripPlanController>(), _plan)) {
       _plan.openPages--;
@@ -159,7 +199,16 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     _starting = false;
   }
 
-  Future<void> _pickOne(TripSpotModel spot) async {
+  bool get _pickFull {
+    final day = _pickDay;
+    final p = _plan.plan.value;
+    if (day == null || p == null) return false;
+    final replaceId = _replaceId;
+    if (replaceId != null && p.spotById(replaceId) != null) return false;
+    return !TripDaysRules.canAddOnDay(p, day);
+  }
+
+  void _pickOne(TripSpotModel spot) {
     final day = _pickDay;
     final p = _plan.plan.value;
     if (day == null || p == null || _starting) return;
@@ -169,12 +218,9 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       AppToast.warning(TripStringsMcaA2.maxPlaces);
       return;
     }
-    final over = _plan.pickLoadMinutes(spot, day, replaceId: replacing ? replaceId : null) - _plan.dayLimitMinutes;
-    if (over > 0) {
-      _starting = true;
-      final ok = await _confirmOver(over);
-      _starting = false;
-      if (!ok || !mounted) return;
+    if (!replacing && !TripDaysRules.canAddOnDay(p, day)) {
+      AppToast.warning(TripStringsV2Create.dayFullMove);
+      return;
     }
     _starting = true;
     final leg = p.legIndexOf(day);
@@ -183,45 +229,44 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     Get.back();
   }
 
-  Future<bool> _confirmOver(int over) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(TripStringsWizard.overLimitTitle,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-        content: Text(TripStringsWizard.overLimitBody(TripFormat.duration(over)),
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            child: const Text(TripStringsWizard.pickAnother,
-                style: TextStyle(fontFamily: 'Poppins', color: AppColors.textMedium)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(minimumSize: const Size(64, 44)),
-            child: const Text(TripStringsWizard.addAnyway,
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
-          ),
-        ],
-      ),
-    );
-    return ok == true;
+  void _toggle(String id) {
+    if (_ctrl.toggle(id)) return;
+    if (_ctrl.atLimit) AppToast.warning(_limitText);
+  }
+
+  String get _limitText => _creating
+      ? TripStringsV2Create.limitReached(_days)
+      : _newLeg
+          ? TripStringsV2Create.dayFull
+          : TripStringsV2Create.legFull;
+
+  void _addDay() {
+    final session = _session;
+    if (session == null || session.days.value >= TripConstants.maxDaysCap) return;
+    session.days.value++;
   }
 
   // A city in the chain may stay without places while another one has some.
   bool _canContinue(int selected) =>
       selected > 0 ||
-      (!_intoTrip && _chain.any((c) => c.cityKey != _city.cityKey && _idsOf(c).isNotEmpty));
+      (!_intoTrip && (!_isLast || _chain.any((c) => c.cityKey != _city.cityKey && _idsOf(c).isNotEmpty)));
 
   Future<void> _planMyDays() async {
     if (_starting) return;
-    final chosen = _ctrl.chosen;
-    if (chosen.isEmpty && !_canContinue(0)) return;
+    if (_ctrl.selected.isEmpty && !_canContinue(0)) return;
     _starting = true;
+    if (_creating && _isLast) {
+      for (final c in _chain) {
+        final tag = '${c.cityKey}';
+        if (Get.isRegistered<TripSpotsController>(tag: tag)) {
+          await Get.find<TripSpotsController>(tag: tag).ensureSelectedLoaded();
+        }
+      }
+    } else {
+      await _ctrl.ensureSelectedLoaded();
+    }
+    if (!mounted) return;
+    final chosen = _ctrl.chosen;
     if (_newLeg) {
       await _addLeg(chosen);
       return;
@@ -233,31 +278,28 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     }
     final next = _next;
     if (next != null) {
-      TripNewDraft.save(_legsNow());
+      TripNewDraft.save(_legsNow(), days: _days);
       await Get.toNamed(
         AppRoutes.tripSpots,
-        arguments: {'city': next, 'cities': _chain, 'draftLegs': _legsNow()},
+        arguments: {'city': next, 'cities': _chain, 'draftLegs': _legsNow(), 'days': _days},
         preventDuplicates: false,
       );
       _starting = false;
+      if (mounted) {
+        _syncLimit();
+        setState(() {});
+      }
       return;
     }
     final selections = [
       for (final c in _chain) (city: c, spots: _chosenOf(c)),
     ];
-    final settings = await TripDetailsSheet.collect(
-      context,
-      initial: TripNewDraft.savedSettings() ?? const TripSettings(),
-      dayCount: selections.length,
-      spotCount: selections.fold<int>(0, (n, e) => n + e.spots.length),
+    TripNewDraft.save(_legsNow(), days: _days);
+    unawaited(_plan.startFromSelections(selections, days: _days));
+    Get.offNamedUntil(
+      AppRoutes.tripPlan,
+      (r) => r.settings.name != AppRoutes.tripSpots && r.settings.name != AppRoutes.tripDays,
     );
-    if (!mounted) {
-      _starting = false;
-      return;
-    }
-    TripNewDraft.save(_legsNow(), settings: settings);
-    unawaited(_plan.startFromSelections(selections, settings: settings));
-    Get.offNamedUntil(AppRoutes.tripPlan, (r) => r.settings.name != AppRoutes.tripSpots);
   }
 
   @override
@@ -267,7 +309,9 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       body: Column(
         children: [
           _buildHeader(context),
+          _buildCityChips(),
           _buildChips(),
+          _buildLimitNotice(),
           Expanded(child: _buildBody()),
         ],
       ),
@@ -279,9 +323,9 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     final p = _plan.plan.value;
     final replaceId = _replaceId;
     final replaced = replaceId == null ? null : p?.spotById(replaceId);
-    var left = _plan.dayMinutesLeft(day) + (replaced?.visitMinutes ?? 0);
-    if (left < 0) left = 0;
-    return '${TripStringsWizard.pickOneFor(day)} · ${TripStringsWizard.timeLeftToday(TripFormat.duration(left))}';
+    var n = (p?.dayAt(day)?.spots.length ?? 0) - (replaced == null ? 0 : 1);
+    if (n < 0) n = 0;
+    return TripStringsV2Create.pickHeading(day, n);
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -322,30 +366,40 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
                       color: Colors.white.withValues(alpha: 0.85),
                     ),
                   )
+                else if (_creating)
+                  Obx(() => Text(
+                        _chain.length > 1
+                            ? TripStringsV2Create.spotsHeader(_index + 1, _chain.length, _days)
+                            : TripStringsV2Create.spotsHeaderOne(_days),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                      ))
                 else
-                Obx(() {
-                  final total = _ctrl.total.value;
-                  final loaded = !_ctrl.isLoading.value &&
-                      !_ctrl.loadFailed.value &&
-                      !_ctrl.plannerOff.value &&
-                      !_ctrl.isNotReady &&
-                      total > 0;
-                  return Text(
-                    loaded ? '$total ${total == 1 ? 'place' : 'places'} to visit' : 'Places to visit',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
-                  );
-                }),
-                if (_next case final next?) ...[
-                  const SizedBox(height: 6),
-                  _nextChip(next),
-                ],
+                  Obx(() {
+                    final total = _ctrl.total.value;
+                    final loaded = !_ctrl.isLoading.value &&
+                        !_ctrl.loadFailed.value &&
+                        !_ctrl.plannerOff.value &&
+                        !_ctrl.isNotReady &&
+                        total > 0;
+                    return Text(
+                      loaded ? TripStringsV2Create.placesLine(total) : 'Places to visit',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                    );
+                  }),
               ],
             ),
           ),
@@ -354,29 +408,83 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     );
   }
 
-  Widget _nextChip(TripCityModel next) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.45)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Iconsax.routing_2, size: 14, color: Colors.white),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                TripStringsMcaA2.nextCity(next.name),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.white),
+  void _backTo(int index) {
+    var left = _index - index;
+    if (left <= 0) return;
+    Get.until((_) {
+      if (left == 0) return true;
+      left--;
+      return false;
+    });
+  }
+
+  Widget _buildCityChips() {
+    if (!_creating || _chain.length < 2) return const SizedBox.shrink();
+    return Obx(() {
+      _ctrl.selected.length;
+      return SizedBox(
+        height: 52,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          itemCount: _chain.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
+          itemBuilder: (_, i) {
+            final c = _chain[i];
+            final current = i == _index;
+            final done = !current && _idsOf(c).isNotEmpty;
+            return InkWell(
+              onTap: i < _index ? () => _backTo(i) : null,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: current ? TripColors.accent : (done ? TripColors.surface : Colors.white),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: current || done ? TripColors.accent : AppColors.divider),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 18,
+                      height: 18,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: current ? Colors.white : (done ? TripColors.accent : AppColors.neutralChip),
+                        shape: BoxShape.circle,
+                      ),
+                      child: done
+                          ? const Icon(Icons.check_rounded, size: 12, color: Colors.white)
+                          : Text(
+                              '${i + 1}',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: current ? TripColors.accentDark : AppColors.textHint,
+                              ),
+                            ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      done ? TripStringsV2Create.doneCity(c.name, _idsOf(c).length) : c.name,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: current ? Colors.white : (done ? TripColors.accentDark : AppColors.textHint),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            );
+          },
         ),
       );
+    });
+  }
 
   Widget _buildChips() {
     return Obx(() {
@@ -455,6 +563,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
         ));
       }
       final selected = _ctrl.selected.toSet();
+      final atLimit = _ctrl.atLimit;
+      final pickFull = _pickFull;
       return ListView.builder(
         controller: _scroll,
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -480,7 +590,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
               key: ValueKey(s.id),
               spot: s,
               selected: existing || selected.contains(s.id),
-              onToggle: existing ? null : (_pickDay != null ? () => _pickOne(s) : () => _ctrl.toggle(s.id)),
+              locked: !existing && !selected.contains(s.id) && (_pickDay != null ? pickFull : atLimit),
+              onToggle: existing ? null : (_pickDay != null ? () => _pickOne(s) : () => _toggle(s.id)),
             ),
           );
         },
@@ -493,24 +604,109 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   Widget _buildBottomBar(BuildContext context) {
     return Obx(() {
       final n = _ctrl.selected.length;
+      if (_ctrl.plannerOff.value) return const SizedBox.shrink();
+      if (_pickDay != null) {
+        if (!_pickFull) return const SizedBox.shrink();
+        return _barFrame(context, const [
+          Text(
+            TripStringsV2Create.dayFullMove,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.warningText),
+          ),
+        ]);
+      }
       final nextName = _next?.name;
-      if (!_canContinue(n) || _ctrl.plannerOff.value || _pickDay != null) return const SizedBox.shrink();
-      return Container(
+      final children = <Widget>[];
+      if (_creating) {
+        final total = _counts().fold<int>(0, (a, b) => a + b);
+        final parts = <(String, int)>[
+          for (final c in _chain)
+            if (c.cityKey == _city.cityKey || _idsOf(c).isNotEmpty) (c.name, _idsOf(c).length),
+        ];
+        children.add(Text.rich(
+          TextSpan(children: [
+            TextSpan(
+              text: TripStringsV2Create.barCities(parts),
+              style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textDark),
+            ),
+            TextSpan(text: TripStringsV2Create.barTotal(total, _days)),
+          ]),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textMedium),
+        ));
+      }
+      if (_creating && n == 0 && !_canContinue(0)) {
+        if (children.isNotEmpty) children.add(const SizedBox(height: 6));
+        children.add(const Text(
+          TripStringsV2Create.pickOnePlace,
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+        ));
+      }
+      if (_canContinue(n)) {
+        if (children.isNotEmpty) children.add(const SizedBox(height: 10));
+        children.add(GradientButton(
+          label: _creating
+              ? (nextName == null ? TripStringsV2Create.makeMyPlan : TripStringsV2Create.next(nextName))
+              : TripStringsMcaA2.spotsAddToTrip(n),
+          height: 52,
+          gradient: TripColors.gradient,
+          shadowColor: TripColors.accent,
+          onPressed: _planMyDays,
+        ));
+      }
+      if (children.isEmpty) return const SizedBox.shrink();
+      return _barFrame(context, children);
+    });
+  }
+
+  Widget _barFrame(BuildContext context, List<Widget> children) => Container(
         padding: EdgeInsets.fromLTRB(16, 10, 16, AppInsets.bottomViewPadding(context) + 10),
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, -4))],
         ),
-        child: GradientButton(
-          label: _newLeg
-              ? TripStringsMcaA2.spotsAddToTrip(n)
-              : '${n == 0 ? '' : '$n ${n == 1 ? 'spot' : 'spots'} · '}${nextName == null ? TripStrings.planMyDays : TripStringsMcaA2.nextCity(nextName)}',
-          height: 52,
-          gradient: TripColors.gradient,
-          shadowColor: TripColors.accent,
-          onPressed: _planMyDays,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
         ),
       );
+
+  Widget _buildLimitNotice() {
+    return Obx(() {
+      if (_pickDay != null || _ctrl.plannerOff.value || !_ctrl.atLimit) return const SizedBox.shrink();
+      return Padding(padding: const EdgeInsets.fromLTRB(16, 2, 16, 0), child: _limitNotice());
     });
+  }
+
+  Widget _limitNotice() {
+    final tripFull = _counts().fold<int>(0, (a, b) => a + b) >= TripConstants.maxSpots;
+    final canGrow = _creating && !tripFull && _days < TripConstants.maxDaysCap;
+    final atMax = _creating && !canGrow && !tripFull;
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
+      decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              tripFull ? TripStringsMcaA2.maxPlaces : atMax ? TripStringsV2Create.maxDaysReached : _limitText,
+              style: const TextStyle(
+                  fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
+            ),
+          ),
+          if (canGrow)
+            TextButton(
+              onPressed: _addDay,
+              style: TextButton.styleFrom(minimumSize: const Size(44, 40)),
+              child: const Text(
+                TripStringsV2Create.addADay,
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

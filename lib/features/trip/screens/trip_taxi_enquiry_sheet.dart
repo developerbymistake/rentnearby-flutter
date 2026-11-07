@@ -3,109 +3,54 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
-import '../../../utils/app_toast.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../widgets/gradient_button.dart';
-import '../../../widgets/selectable_chip.dart';
+import '../../taxi/models/taxi_browse_item.dart';
 import '../../taxi/taxi_option_sets.dart';
 import '../controllers/trip_enquiry_controller.dart';
 import '../controllers/trip_plan_controller.dart';
+import '../controllers/trip_supply_controller.dart';
+import '../data/trip_enquiry_repository.dart';
 import '../models/trip_enquiry_model.dart';
-import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a3.dart';
-import '../data/trip_enquiry_repository.dart';
+import '../trip_strings_v2_find.dart';
+import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
-import '../utils/trip_wizard_rules.dart';
-import '../widgets/trip_back_to_plan_bar.dart';
+import '../utils/trip_stay_base.dart';
 import '../widgets/trip_payment_line.dart';
+import '../widgets/trip_send_result_sheet.dart';
 import '../widgets/trip_sheet_frame.dart';
-import 'trip_details_sheet.dart';
+import 'trip_dates_sheet.dart';
 
 class TripTaxiEnquirySheet {
-  static int? _asksLeft;
-
-  static bool _bookedByOther(TripPlanController c, int day, Set<String> ids) {
-    final booked = c.bookedTaxiEnquiryFor(day);
-    if (booked != null) return !ids.contains(booked.listingId);
-    if (c.ownTaxiOf(day) != null) return true;
-    final t = c.plan.value?.dayAt(day)?.taxi;
-    return t != null && t.isBooked && !t.isOwn && !ids.contains(t.taxiId);
-  }
-
-  static List<int> defaultDays(TripPlanController c, int day, {required bool whole, Set<String> taxiIds = const {}}) {
-    final p = c.plan.value;
-    final all = p == null ? const <int>[] : [for (final d in p.daysOf(p.legIndexOf(day))) d.day];
-    final ahead = [for (final d in all) if (!c.isDayPast(d)) d];
-    if (ahead.isEmpty) return const [];
-    final out = <int>[];
-    if (ahead.contains(day) && !_bookedByOther(c, day, taxiIds)) out.add(day);
-    if (whole) {
-      for (final d in ahead) {
-        if (out.length >= TripConstants.maxLeadDays) break;
-        if (d != day && !_bookedByOther(c, d, taxiIds)) out.add(d);
-      }
-    }
-    if (out.isEmpty) out.add(ahead.first);
-    return out..sort();
-  }
+  static const TimeOfDay defaultTime = TimeOfDay(hour: 9, minute: 0);
+  static const int placeMax = 80;
 
   static Future<TripEnquiryBatch?> show(
     BuildContext context, {
-    required List<TripTaxiShortlistItem> drivers,
-    required int day,
-    String? fromStep,
+    required TaxiBrowseItem driver,
+    required List<int> days,
   }) async {
-    if (drivers.isEmpty) return null;
-    final known = {for (final e in TripPlanController.to.enquiryList) e.id};
-    final batch = await TripSheetFrame.show<TripEnquiryBatch>(context, _EnquiryBody(drivers: drivers, day: day));
+    if (days.isEmpty) return null;
+    final batch = await TripSheetFrame.show<TripEnquiryBatch>(context, _EnquiryBody(driver: driver, days: days));
     if (batch == null) return null;
-    _asksLeft = batch.asksLeft ?? _asksLeft;
-    final names = {for (final d in drivers) d.taxiId: d.name};
-    final skipped = <String>{
-      for (final s in batch.skipped)
-        if (_reasonText(s.reason) != null) _reasonText(s.reason)!,
-    };
-    if (batch.items.isEmpty) {
-      AppToast.warning(skipped.isEmpty ? TripStringsA3.couldNotSend : skipped.first);
-      return batch;
+    final left = batch.asksLeft;
+    if (left != null) TripSupplyController.to.asksLeft.value = left;
+    if (context.mounted) {
+      await TripSendResultSheet.show(context, batch: batch, names: {driver.id: driver.driverName}, taxi: true);
     }
-    final updated = batch.updated.toSet();
-    final added = batch.items.where((e) => updated.contains(e.id)).toList();
-    final fresh = batch.items.where((e) => !updated.contains(e.id) && !known.contains(e.id)).length;
-    final reused = batch.items.length - added.length - fresh;
-    if (fresh > 0) {
-      AppToast.success(fresh == 1 ? TripStrings.enquirySent : TripStringsA3.sentToDrivers(fresh));
-    }
-    if (reused > 0) skipped.add(TripStrings.alreadyAsked);
-    if (added.isNotEmpty) {
-      final e = added.first;
-      AppToast.success(TripStringsA3.daysAdded(names[e.listingId] ?? e.listingName));
-    }
-    for (final m in skipped) {
-      AppToast.warning(m);
-    }
-    TripBackToStepBar.back(fromStep);
     return batch;
   }
-
-  static String? _reasonText(String reason) => switch (reason) {
-        TripSkipReasons.alreadyOpen => TripStrings.alreadyAsked,
-        TripSkipReasons.notAvailable => TripStrings.notAvailableNow,
-        TripSkipReasons.blocked => TripStrings.cannotBeAsked,
-        TripSkipReasons.limitReached => TripStrings.threeOpen,
-        TripSkipReasons.alreadyBooked => TripStringsA3.alreadyBookedOther,
-        _ => null,
-      };
 }
 
 class _EnquiryBody extends StatefulWidget {
-  const _EnquiryBody({required this.drivers, required this.day});
+  const _EnquiryBody({required this.driver, required this.days});
 
-  final List<TripTaxiShortlistItem> drivers;
-  final int day;
+  final TaxiBrowseItem driver;
+  final List<int> days;
 
   @override
   State<_EnquiryBody> createState() => _EnquiryBodyState();
@@ -113,11 +58,9 @@ class _EnquiryBody extends StatefulWidget {
 
 class _EnquiryBodyState extends State<_EnquiryBody> {
   final _c = TripPlanController.to;
-  late final Set<int> _days;
-  late final Set<String> _ids;
+  late final List<int> _days;
   late TimeOfDay _time;
   late final TextEditingController _place;
-  bool _placeTyped = false;
   bool _sending = false;
   bool _limited = false;
   String? _limitBody;
@@ -125,15 +68,9 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
   @override
   void initState() {
     super.initState();
-    _ids = {for (final d in widget.drivers) d.taxiId};
-    _time = _parseTime(_c.settings.pickupTime) ?? _parseTime(TripConstants.defaultPickupTime)!;
-    _days = TripTaxiEnquirySheet.defaultDays(
-      _c,
-      widget.day,
-      whole: widget.drivers.any((d) => d.wholeTrip),
-      taxiIds: _ids,
-    ).toSet();
-    _place = TextEditingController(text: _startName() ?? _c.settings.pickupPlace ?? '');
+    _days = [for (final d in widget.days) if (!_c.isDayPast(d)) d]..sort();
+    _time = TripTaxiEnquirySheet.defaultTime;
+    _place = TextEditingController(text: _startName() ?? '');
   }
 
   @override
@@ -142,43 +79,20 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
     super.dispose();
   }
 
-  // The first chosen day starts at last night's stay.
   String? _startName() {
-    if (_days.isEmpty) return null;
     final p = _c.plan.value;
-    return p == null ? null : TripWizardRules.pickupPlaceOf(p, (_days.toList()..sort()).first);
+    if (p == null || _days.isEmpty) return null;
+    return TripStayBase.nameOf(p, p.legIndexOf(_days.first), _c.enquiryList);
   }
 
-  void _followStart() {
-    if (_placeTyped) return;
-    _place.text = _startName() ?? _c.settings.pickupPlace ?? '';
-  }
-
-  TimeOfDay? _parseTime(String? hhmm) {
-    if (hhmm == null) return null;
-    final parts = hhmm.split(':');
-    if (parts.length != 2) return null;
-    final h = int.tryParse(parts[0]);
-    final m = int.tryParse(parts[1]);
-    if (h == null || m == null || h < 0 || h > 23 || m < 0 || m > 59) return null;
-    return TimeOfDay(hour: h, minute: m);
-  }
-
-  bool _blocked(int day) => _c.isDayPast(day) || TripTaxiEnquirySheet._bookedByOther(_c, day, _ids);
-
-  void _toggle(int day) {
-    if (_sending || _blocked(day)) return;
-    if (_days.contains(day)) {
-      if (_days.length == 1) {
-        AppToast.warning(TripStrings.errPickDay);
-        return;
-      }
-      setState(() => _days.remove(day));
-    } else {
-      if (_days.length >= TripConstants.maxLeadDays) return;
-      setState(() => _days.add(day));
+  Map<int, List<int>> _groups() {
+    final p = _c.plan.value;
+    final out = <int, List<int>>{};
+    if (p == null) return out;
+    for (final d in _days) {
+      out.putIfAbsent(p.legIndexOf(d), () => []).add(d);
     }
-    _followStart();
+    return out;
   }
 
   Future<void> _pickTime() async {
@@ -189,30 +103,35 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
   Future<void> _send() async {
     if (_sending || _days.isEmpty) return;
     FocusScope.of(context).unfocus();
-    final days = _days.toList()..sort();
     final time = TripFormat.hhmm(_time);
     final place = _place.text.trim();
-    final s = _c.settings;
     setState(() {
       _sending = true;
       _limited = false;
       _limitBody = null;
     });
-    final perDay = _startName() != null;
-    if (s.pickupTime != time || (!perDay && (s.pickupPlace ?? '') != place)) {
-      await _c.saveSettings(perDay
-          ? s.copyWith(pickupTime: time)
-          : s.copyWith(pickupTime: time, pickupPlace: place.isEmpty ? null : place));
-    }
     final ctrl = TripEnquiryController.to;
-    final batch = await ctrl.sendLead(
-      days: days,
-      taxiIds: widget.drivers.map((d) => d.taxiId).toList(),
-      pickupTime: time,
-      pickupPlace: place.isEmpty ? null : place,
-    );
+    final items = <TripEnquiryModel>[];
+    final skipped = <TripSkipped>[];
+    final updated = <String>[];
+    var short = false;
+    int? left;
+    for (final group in _groups().values) {
+      final batch = await ctrl.sendLead(
+        days: group,
+        taxiIds: [widget.driver.id],
+        pickupTime: time,
+        pickupPlace: place.isEmpty ? null : place,
+      );
+      if (batch == null) break;
+      items.addAll(batch.items);
+      skipped.addAll(batch.skipped);
+      updated.addAll(batch.updated);
+      short = short || batch.veryShortNotice;
+      left = batch.asksLeft ?? left;
+    }
     if (!mounted) return;
-    if (batch == null) {
+    if (items.isEmpty && skipped.isEmpty) {
       final type = ctrl.lastErrorType;
       final limited = type == TripEnquiryErrorTypes.enquiryLimit || type == TripEnquiryErrorTypes.leadLimit;
       setState(() {
@@ -224,7 +143,10 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
       });
       return;
     }
-    Navigator.pop(context, batch);
+    Navigator.pop(
+      context,
+      TripEnquiryBatch(items: items, skipped: skipped, veryShortNotice: short, updated: updated, asksLeft: left),
+    );
   }
 
   static const _inputStyle = TextStyle(fontFamily: 'Poppins', fontSize: 14, color: AppColors.textDark);
@@ -305,9 +227,8 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           _label(TripStrings.pickupPlace),
           TextField(
             controller: _place,
-            onChanged: (_) => _placeTyped = true,
             textCapitalization: TextCapitalization.words,
-            inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripConstants.pickupPlaceMax)],
+            inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(TripTaxiEnquirySheet.placeMax)],
             style: _inputStyle,
             decoration: InputDecoration(
               filled: true,
@@ -335,37 +256,9 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
     });
   }
 
-  Widget _daysWrap(List<TripDay> days) {
-    final full = _days.length >= TripConstants.maxLeadDays;
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final d in days)
-          Builder(builder: (_) {
-            final on = _days.contains(d.day);
-            final date = _c.dateOf(d.day);
-            final label = date == null ? TripStrings.dayN(d.day) : '${TripStrings.dayN(d.day)} · ${TripFormat.shortDate(date)}';
-            final disabled = _blocked(d.day) || (!on && full);
-            return Opacity(
-              opacity: disabled ? 0.4 : 1,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 44),
-                child: SelectableChip(
-                  label: label,
-                  selected: on,
-                  onTap: () => _toggle(d.day),
-                  activeColor: TripColors.accent,
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                ),
-              ),
-            );
-          }),
-      ],
-    );
-  }
-
-  Widget _itinerary(List<TripDay> chosen) {
+  Widget _itinerary() {
+    final p = _c.plan.value;
+    if (p == null) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -373,15 +266,17 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final d in chosen)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(
-                  TripStrings.dayLine(d.day, TripFormat.duration(_c.dayTotalMinutes(d.day)), d.spots.map((s) => s.name).join(' → ')),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textDark, height: 1.35)),
-            ),
+          for (final n in _days)
+            if (p.dayAt(n) != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(
+                    TripStrings.dayLine(n, TripFormat.duration(_c.dayTotalMinutes(n)),
+                        p.dayAt(n)!.spots.map((s) => s.name).join(' → ')),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textDark, height: 1.35)),
+              ),
         ],
       ),
     );
@@ -434,14 +329,14 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           ],
         );
       }
-      final sorted = _days.toList()..sort();
-      final from = _c.dateOf(sorted.first);
-      final to = _c.dateOf(sorted.last);
-      final chosen = [for (final d in p.days) if (_days.contains(d.day)) d];
-      final left = TripTaxiEnquirySheet._asksLeft;
+      final from = _c.dateOf(_days.first);
+      final to = _c.dateOf(_days.last);
+      final left = TripSupplyController.to.asksLeft.value;
+      final short = from != null &&
+          TripEnquiryRules.enquiryExpiry(s.startDate ?? from, from, DateTime.now().toUtc()).veryShortNotice;
       return TripSheetFrame(
         title: TripStrings.taxiEnquiry,
-        description: widget.drivers.length == 1 ? widget.drivers.first.name : TripStringsA3.driversTitle(widget.drivers.length),
+        description: widget.driver.driverName,
         footer: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -460,25 +355,40 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
           if (_limited) _limitBanner(),
           if (from != null) _row(TripStrings.from, TripFormat.shortDate(from)),
           if (to != null) _row(TripStrings.to, TripFormat.shortDate(to)),
-          _row(TripStrings.people, s.peopleSummary ?? TripStrings.addPeople, onTap: () => TripDetailsSheet.edit(context)),
+          _row(TripStrings.people, s.peopleSummary ?? TripStrings.addPeople, onTap: () => TripDatesSheet.edit(context)),
+          if (short) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
+              child: const Row(
+                children: [
+                  Icon(Iconsax.warning_2, size: 16, color: AppColors.warningText),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(TripStringsV2Find.veryShortNoticeDriver,
+                        style: TextStyle(
+                            fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText)),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           _pickup(),
           const SizedBox(height: 16),
-          _label(TripStrings.daysToInclude),
-          _daysWrap(p.daysOf(p.legIndexOf(widget.day))),
-          const SizedBox(height: 16),
           _label(TripStrings.itineraryFromPlan),
-          _itinerary(chosen),
+          _itinerary(),
           const SizedBox(height: 12),
-          Row(
+          const Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 2),
                 child: Icon(Iconsax.info_circle, size: 16, color: AppColors.textLight),
               ),
-              const SizedBox(width: 8),
-              const Expanded(
+              SizedBox(width: 8),
+              Expanded(
                 child: Text(TripStrings.driverSeesPhone,
                     style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textMedium, height: 1.35)),
               ),
@@ -491,7 +401,7 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
             isLoading: _sending,
             gradient: TripColors.gradient,
             shadowColor: TripColors.accent,
-            onPressed: _sending ? null : _send,
+            onPressed: _sending || _days.length > TripConstants.maxLeadDays ? null : _send,
           ),
         ],
       );

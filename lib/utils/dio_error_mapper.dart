@@ -48,6 +48,8 @@ class DioErrorMapper {
     return null;
   }
 
+  static const Set<String> _passThroughTypes = {'TooManySpotsPerDay', 'TooManySpotsForDays'};
+
   static String toMessage(
     dynamic e,
     String fallback, {
@@ -67,7 +69,9 @@ class DioErrorMapper {
         final t = responseData.trim();
         if (t.isNotEmpty && t.length <= 160 && !t.startsWith('<') && !t.startsWith('{')) message = t;
       }
-      final typed = errorType(e) != null;
+      final type = errorType(e);
+      final typed = type != null;
+      if (message != null && _passThroughTypes.contains(type)) return message;
       if (status != null && showRawMessageForStatusCodes.contains(status) && message != null) {
         return message;
       }

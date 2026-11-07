@@ -3,7 +3,6 @@ import 'utils/trip_format.dart';
 
 class TripStringsStepsA3 {
   static const String gettingThere = 'Getting there';
-  static const String comingBack = 'Coming back';
   static const String gettingThereCaps = 'GETTING THERE';
   static const String comingBackCaps = 'COMING BACK';
   static const String useForMyTrip = 'Use for my trip';
@@ -52,13 +51,9 @@ class TripStringsStepsA3 {
   static const String call = 'Call';
   static const String whatsApp = 'WhatsApp';
 
-
   static String routeLine(List<String> places) => places.join(' → ');
   static String carsLine(int cars) => cars == 1 ? '1 car' : '$cars cars';
   static String aboutTotal(String price) => 'about $price';
   static String carRow(int n, String driver) => 'Car $n $driver';
   static String changeCarShort(String place) => 'change car at $place';
-  static const String arrangedByYou = 'Arranged by you';
-  static String arrangedWithNote(String note) => 'Arranged by you · $note';
-  static String checkOutMorning(DateTime d) => 'check-out morning ${TripFormat.shortDate(d)}';
 }
