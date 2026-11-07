@@ -502,7 +502,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         rows.add(_contactRow(
           icon: Iconsax.building_4,
           accent: StayColors.accent,
-          text: own.name,
+          text: own.name.trim().isEmpty ? 'Own stay' : own.name.trim(),
           action: TripStringsA4.callHost,
           phone: phone,
         ));

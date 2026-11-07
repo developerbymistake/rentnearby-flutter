@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../../../controllers/auth_controller.dart';
 import '../../../services/api_service.dart';
@@ -207,7 +208,11 @@ class JourneysController extends GetxController {
 
   String _cut(String s) => s.length > _nameMax ? s.substring(0, _nameMax) : s;
 
-  Map<String, dynamic>? _saveBody({
+  String _label(String name, String key, {required bool start, required bool end}) =>
+      _cut(wayNameOr(name, key, start: start, end: end));
+
+  @visibleForTesting
+  Map<String, dynamic>? saveBodyOf({
     required WayPlan plan,
     required Map<int, WayDriver> chosen,
     required DateTime date,
@@ -232,16 +237,16 @@ class JourneysController extends GetxController {
       legs.add({
         'legIndex': leg.index,
         'legKey': leg.legKey,
-        'fromName': _cut(leg.from.name),
+        'fromName': _label(leg.from.name, leg.from.key, start: leg.index == 1, end: false),
         'fromLat': leg.from.lat,
         'fromLng': leg.from.lng,
-        'toName': _cut(leg.to.name),
+        'toName': _label(leg.to.name, leg.to.key, start: false, end: leg.index == plan.legs.length),
         'toLat': leg.to.lat,
         'toLng': leg.to.lng,
         'meetingPlace': ?(leg.meetingPlace == null ? null : _cut(leg.meetingPlace!)),
         'driverTaxiId': d.taxiId,
         'driverRouteId': ?d.routeId,
-        'listedFare': d.listedFare,
+        'listedFare': ?(d.listedFare > 0 ? d.listedFare : null),
         'partial': d.partial,
         'backup1TaxiId': ?(backups.isNotEmpty ? backups[0].taxiId : null),
         'backup2TaxiId': ?(backups.length > 1 ? backups[1].taxiId : null),
@@ -249,10 +254,10 @@ class JourneysController extends GetxController {
       });
     }
     return {
-      'fromName': _cut(fromName),
+      'fromName': _label(fromName, plan.from.key, start: true, end: false),
       'fromLat': fromLat,
       'fromLng': fromLng,
-      'toName': _cut(toName),
+      'toName': _label(toName, plan.to.key, start: false, end: true),
       'toLat': toLat,
       'toLng': toLng,
       'date': JourneyFormat.wireDate(date),
@@ -280,7 +285,7 @@ class JourneysController extends GetxController {
     int? legIndex,
   }) async {
     if (_saving) return null;
-    final body = _saveBody(
+    final body = saveBodyOf(
       plan: plan,
       chosen: chosen,
       date: date,
@@ -482,13 +487,13 @@ class JourneysController extends GetxController {
     if (type == JourneyErrorTypes.limitReached) {
       AppToast.warning(TaxiWaysStrings.journeyLimit);
     } else if (type == JourneyErrorTypes.journeyInTrip) {
-      AppToast.warning(DioErrorMapper.toMessage(e, TaxiWaysStrings.offlineBody, showRawMessageForStatusCodes: {409}));
+      AppToast.warning(DioErrorMapper.toMessage(e, TaxiWaysStrings.saveFailed, showRawMessageForStatusCodes: {409}));
     } else if (DioErrorMapper.isNetworkError(e)) {
       AppToast.error(TaxiWaysStrings.offlineTitle);
     } else if (type == ApiService.tabInactiveType) {
       AppToast.warning(TaxiWaysStrings.taxisOff);
     } else {
-      AppToast.error(DioErrorMapper.toMessage(e, TaxiWaysStrings.offlineBody, showRawMessageForStatusCodes: {400, 409, 429}));
+      AppToast.error(DioErrorMapper.toMessage(e, TaxiWaysStrings.saveFailed, showRawMessageForStatusCodes: {400, 409, 429}));
     }
   }
 
@@ -505,11 +510,11 @@ class JourneysController extends GetxController {
     }
     if (silent) return;
     if (type == JourneyErrorTypes.journeyInTrip) {
-      AppToast.warning(DioErrorMapper.toMessage(e, TaxiWaysStrings.offlineBody, showRawMessageForStatusCodes: {409}));
+      AppToast.warning(DioErrorMapper.toMessage(e, TaxiWaysStrings.saveFailed, showRawMessageForStatusCodes: {409}));
     } else if (type == ApiService.tabInactiveType) {
       AppToast.warning(TaxiWaysStrings.taxisOff);
     } else {
-      AppToast.error(DioErrorMapper.toMessage(e, TaxiWaysStrings.offlineBody, showRawMessageForStatusCodes: {400, 403, 409, 429}));
+      AppToast.error(DioErrorMapper.toMessage(e, TaxiWaysStrings.saveFailed, showRawMessageForStatusCodes: {400, 403, 409, 429}));
     }
   }
 }

@@ -16,7 +16,11 @@ import 'trip_filter_chips.dart';
 import 'trip_going_home_row.dart';
 import 'trip_sheet_frame.dart';
 
-typedef TripBeforeOwn = Future<bool> Function();
+class _Copy {
+  static const String flight = 'Flight';
+  static const String allOptional = 'All optional';
+  static const String phoneHint = 'Needs a 10 digit number';
+}
 
 class TripOwnTravelSheet {
   static Future<bool> show(
@@ -24,21 +28,20 @@ class TripOwnTravelSheet {
     int legIndex, {
     TripTravelHow? initialHow,
     String? hubName,
-    TripBeforeOwn? beforeSave,
   }) async {
     final c = TripPlanController.to;
     if (legIndex < 2 || c.isReadOnly || c.plan.value?.legAt(legIndex) == null) return false;
     final ok = await TripSheetFrame.show<bool>(
       context,
-      _OwnTravelBody(legIndex: legIndex, initialHow: initialHow, hubName: hubName, beforeSave: beforeSave),
+      _OwnTravelBody(legIndex: legIndex, initialHow: initialHow, hubName: hubName),
     );
     return ok == true;
   }
 
-  static Future<bool> showForRole(BuildContext context, TripStepRole role, {TripBeforeOwn? beforeSave}) async {
+  static Future<bool> showForRole(BuildContext context, TripStepRole role) async {
     final c = TripPlanController.to;
     if (c.isReadOnly || c.plan.value == null) return false;
-    final ok = await TripSheetFrame.show<bool>(context, _OwnTravelBody(role: role, beforeSave: beforeSave));
+    final ok = await TripSheetFrame.show<bool>(context, _OwnTravelBody(role: role));
     return ok == true;
   }
 
@@ -46,6 +49,7 @@ class TripOwnTravelSheet {
         TripTravelHow.car => TripStringsMcaA3.car,
         TripTravelHow.bus => TripStringsMcaA3.bus,
         TripTravelHow.train => TripStringsMcaA3.train,
+        TripTravelHow.flight => _Copy.flight,
         TripTravelHow.other => TripStringsMcaA3.other,
       };
 
@@ -53,26 +57,25 @@ class TripOwnTravelSheet {
         TripTravelHow.bus => Iconsax.bus,
         TripTravelHow.train => Iconsax.driving,
         TripTravelHow.car => Iconsax.car,
+        TripTravelHow.flight => Iconsax.airplane,
         _ => Iconsax.routing,
       };
 }
 
 // One sheet for all journey roles: a city change (legIndex) or Getting there / Coming back (role).
 class _OwnTravelBody extends StatefulWidget {
-  const _OwnTravelBody({this.legIndex, this.role, this.initialHow, this.hubName, this.beforeSave});
+  const _OwnTravelBody({this.legIndex, this.role, this.initialHow, this.hubName});
 
   final int? legIndex;
   final TripStepRole? role;
   final TripTravelHow? initialHow;
   final String? hubName;
-  final TripBeforeOwn? beforeSave;
 
   @override
   State<_OwnTravelBody> createState() => _OwnTravelBodyState();
 }
 
 class _OwnTravelBodyState extends State<_OwnTravelBody> {
-  static final _phonePattern = RegExp(r'^[6-9]\d{9}$');
   final _c = TripPlanController.to;
   late final TextEditingController _name;
   late final TextEditingController _phone;
@@ -116,41 +119,16 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
     super.dispose();
   }
 
-  bool get _phoneOk {
-    final p = _phone.text.trim();
-    return p.isEmpty || _phonePattern.hasMatch(p);
-  }
-
-  TimeOfDay? _parse(String? hhmm) {
-    final m = hhmm == null ? null : RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$').firstMatch(hhmm);
-    if (m == null) return null;
-    return TimeOfDay(hour: int.parse(m.group(1)!), minute: int.parse(m.group(2)!));
-  }
-
-  Future<void> _pickTime() async {
-    final t = await showTimePicker(
-      context: context,
-      initialTime: _parse(_leavesAt) ?? _parse(TripConstants.defaultPickupTime)!,
-    );
-    if (t != null && mounted) setState(() => _leavesAt = TripFormat.hhmm(t));
-  }
+  bool get _phoneHint => _phone.text.trim().isNotEmpty && TripOwnPhone.normalise(_phone.text) == null;
 
   String? _text(TextEditingController t) => t.text.trim().isEmpty ? null : t.text.trim();
 
   Future<void> _save() async {
-    if (!_phoneOk || _saving) return;
-    final before = widget.beforeSave;
-    if (before != null) {
-      setState(() => _saving = true);
-      final ok = await before();
-      if (!mounted) return;
-      setState(() => _saving = false);
-      if (!ok) return;
-    }
+    if (_saving) return;
+    final phone = TripOwnPhone.normalise(_phone.text);
     final role = widget.role;
     if (role != null) {
-      _c.markStepOwn(role,
-          note: _text(_note), how: _how, ownName: _text(_name), ownPhone: _text(_phone), leavesAt: _leavesAt);
+      _c.markStepOwn(role, note: _text(_note), how: _how, ownName: _text(_name), ownPhone: phone, leavesAt: _leavesAt);
       Navigator.pop(context, true);
       return;
     }
@@ -165,19 +143,17 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
       setState(() => _saving = false);
       if (!removed) return;
     }
-    final p = _c.plan.value;
-    final prev = p?.legAt(k - 1)?.cityName ?? '';
-    String? text(TextEditingController t) => _text(t);
+    final prev = _c.plan.value?.legAt(k - 1)?.cityName ?? '';
     _c.setOwnTravel(
       k,
       TripTravel.own(
         fromName: prev,
         how: _how,
-        ownName: text(_name),
-        ownPhone: text(_phone),
+        ownName: _text(_name),
+        ownPhone: phone,
         leavesAt: _leavesAt,
-        roadMinutes: _roadMinutes,
-        note: text(_note),
+        roadMinutes: _roadMinutes ?? TripConstants.travelHalfDayMinutes,
+        note: _text(_note),
         hubName: _hubName,
       ),
     );
@@ -185,10 +161,10 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
     Navigator.pop(context, true);
   }
 
-  InputDecoration _decoration(String label, {String? error, String? prefix}) => InputDecoration(
+  InputDecoration _decoration(String label, {String? helper, String? prefix}) => InputDecoration(
         labelText: label,
         counterText: '',
-        errorText: error,
+        helperText: helper,
         prefixText: prefix,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -202,39 +178,11 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
             style: const TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textMedium)),
       );
 
-  Widget _roadOption(int minutes, String label) {
-    final on = _roadMinutes == minutes;
-    return Expanded(
-      child: Semantics(
-        button: true,
-        selected: on,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() => _roadMinutes = on ? null : minutes),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            constraints: const BoxConstraints(minHeight: 48),
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: BoxDecoration(
-              color: on ? TripColors.surface : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: on ? TripColors.accent : AppColors.divider, width: on ? 1.5 : 1),
-            ),
-            child: Text(label,
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: on ? TripColors.accentDark : AppColors.textMedium)),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _optionalLine() => const Padding(
+        padding: EdgeInsets.only(bottom: 10),
+        child: Text(_Copy.allOptional,
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
+      );
 
   Widget _roleSheet(TripStepRole role) => Obx(() => _roleSheetBody(role));
 
@@ -249,11 +197,11 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
       title: TripStringsMcaA3.yourOwnTravel,
       description: date == null ? route : '$route · ${TripFormat.shortDate(date)}',
       children: [
+        _optionalLine(),
         if (!going) const TripGoingHomeRow(),
         ..._fields(
           editing: _c.stepOf(role).status == TripStepStatus.own,
           onRemove: () => _c.resetStep(role),
-          roadTime: false,
         ),
       ],
     );
@@ -270,21 +218,19 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
       return const TripSheetFrame(title: TripStringsMcaA3.yourOwnTravel, children: [SizedBox(height: 24)]);
     }
     final prev = p.legAt(k - 1)?.cityName ?? '';
-    final travelDay = p.legStart(k);
-    final date = _c.dateOf(travelDay);
+    final date = _c.dateOf(p.legStart(k));
     final route = TripStringsMcaA3.fromTo(prev, leg.cityName);
     return TripSheetFrame(
       title: TripStringsMcaA3.yourOwnTravel,
       description: date == null ? route : '$route · ${TripFormat.shortDate(date)}',
-      footer: Text(
-        TripStringsMcaA3.roadTimeHelper(travelDay),
-        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.35),
-      ),
-      children: _fields(editing: leg.arrival?.isOwn ?? false, onRemove: () => _c.clearTravel(k), roadTime: true),
+      children: [
+        _optionalLine(),
+        ..._fields(editing: leg.arrival?.isOwn ?? false, onRemove: () => _c.clearTravel(k)),
+      ],
     );
   }
 
-  List<Widget> _fields({required bool editing, required VoidCallback onRemove, required bool roadTime}) => [
+  List<Widget> _fields({required bool editing, required VoidCallback onRemove}) => [
         _label(TripStringsMcaA3.how),
         TripFilterChips(
           accent: TripColors.accent,
@@ -307,65 +253,15 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
           decoration: _decoration(TripStringsMcaA3.nameOrNumber),
         ),
         const SizedBox(height: 12),
-        InkWell(
-          onTap: _pickTime,
-          borderRadius: BorderRadius.circular(12),
-          child: InputDecorator(
-            decoration: _decoration(TripStringsMcaA3.leavesAt),
-            child: Row(
-              children: [
-                const Icon(Iconsax.clock, size: 16, color: TripColors.accent),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _leavesAt == null ? TripStringsMcaA3.pickTime : TripFormat.time12(_leavesAt!),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        color: _leavesAt == null ? AppColors.textHint : AppColors.textDark),
-                  ),
-                ),
-                if (_leavesAt != null)
-                  IconButton(
-                    onPressed: () => setState(() => _leavesAt = null),
-                    constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                    padding: EdgeInsets.zero,
-                    icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textLight),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
         TextField(
           controller: _phone,
           keyboardType: TextInputType.phone,
-          maxLength: 10,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
+          maxLength: 12,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(12)],
           onChanged: (_) => setState(() {}),
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-          decoration: _decoration(
-            TripStringsMcaA3.phoneOptional,
-            prefix: '+91 ',
-            error: !_phoneOk ? TripStringsMcaA3.phoneInvalid : null,
-          ),
+          decoration: _decoration(TripStringsMcaA3.phoneOptional, prefix: '+91 ', helper: _phoneHint ? _Copy.phoneHint : null),
         ),
-        if (roadTime) ...[
-          const SizedBox(height: 14),
-          _label(TripStringsMcaA3.roadTime),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _roadOption(TripConstants.travelHalfDayMinutes, TripStringsMcaA3.halfDay),
-                const SizedBox(width: 8),
-                _roadOption(TripConstants.travelWholeDayMinutes, TripStringsMcaA3.wholeDay),
-              ],
-            ),
-          ),
-        ],
         const SizedBox(height: 12),
         TextField(
           controller: _note,
@@ -382,7 +278,7 @@ class _OwnTravelBodyState extends State<_OwnTravelBody> {
           height: 52,
           gradient: TripColors.gradient,
           shadowColor: TripColors.accent,
-          onPressed: _phoneOk && !_saving ? _save : null,
+          onPressed: _saving ? null : _save,
         ),
         if (editing) ...[
           const SizedBox(height: 6),

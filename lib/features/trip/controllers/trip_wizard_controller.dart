@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../../services/storage_service.dart';
+import '../models/trip_plan_model.dart';
 import '../utils/trip_wizard_rules.dart';
 import 'trip_plan_controller.dart';
 
@@ -89,6 +90,40 @@ class TripWizardController extends GetxController {
   }
 
   TripStepInfo? firstOpen() => TripWizardRules.nextStep(steps);
+
+  List<TripStepInfo> get _skippable => [
+        for (final x in steps)
+          if (x.state == TripStepState.todo &&
+              (x.key.kind == TripWizardStepKind.stay && x.day != null ||
+                  x.key.kind == TripWizardStepKind.taxi && x.day != null ||
+                  x.key.kind == TripWizardStepKind.gettingThere ||
+                  x.key.kind == TripWizardStepKind.comingBack ||
+                  x.key.kind == TripWizardStepKind.travel && (x.legIndex ?? x.key.legIndex) != null))
+            x,
+      ];
+
+  int get openCount => _skippable.length;
+
+  int skipRest() {
+    final c = TripPlanController.to;
+    final list = _skippable;
+    for (final x in list) {
+      switch (x.key.kind) {
+        case TripWizardStepKind.stay:
+          c.setSkippedNight(x.day!);
+        case TripWizardStepKind.taxi:
+          c.setSkippedTaxiDay(x.day!);
+        case TripWizardStepKind.gettingThere:
+          c.markStepOwn(TripStepRole.gettingThere);
+        case TripWizardStepKind.comingBack:
+          c.markStepOwn(TripStepRole.comingBack);
+        case TripWizardStepKind.travel:
+          c.setOwnTravel((x.legIndex ?? x.key.legIndex)!);
+        default:
+      }
+    }
+    return list.length;
+  }
 
   void rememberLast() {
     final cur = current;

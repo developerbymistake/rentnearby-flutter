@@ -45,7 +45,7 @@ class TripPopularRoutes {
     for (final p in pairs) {
       final a = _find(byName, p.from);
       final b = _find(byName, p.to);
-      if (a == null || b == null || a.cityKey == b.cityKey || !a.isReady) continue;
+      if (a == null || b == null || a.cityKey == b.cityKey || !a.isReady || !b.isReady) continue;
       out.add((from: a, to: b, days: p.days));
       if (out.length >= maxShown) break;
     }

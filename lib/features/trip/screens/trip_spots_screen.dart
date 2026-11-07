@@ -35,7 +35,9 @@ class TripSpotsScreen extends StatefulWidget {
 
 class _TripSpotsScreenState extends State<TripSpotsScreen> {
   late final TripCityModel _city;
-  late final TripCityModel? _next;
+  late final List<TripCityModel> _chain;
+  late final int _index;
+  late final List<TripDraftLeg> _draftLegs;
   late final bool _adding;
   late final bool _newLeg;
   late final int? _legIndex;
@@ -45,11 +47,12 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   late final TripSpotsController _ctrl;
   late final TripPlanController _plan;
   final _scroll = ScrollController();
-  bool _picking = false;
   bool _starting = false;
   Worker? _draftWorker;
 
   bool get _intoTrip => _adding || _newLeg;
+  bool get _isLast => _index >= _chain.length - 1;
+  TripCityModel? get _next => _isLast ? null : _chain[_index + 1];
 
   @override
   void initState() {
@@ -64,7 +67,20 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     _existingIds = (args['existingIds'] as Set<String>?) ?? const <String>{};
     _plan = TripPlanController.to;
     final next = args['next'] as TripCityModel?;
-    _next = _intoTrip || next?.cityKey == _city.cityKey ? null : next;
+    final cities = args['cities'];
+    final chain = <TripCityModel>[
+      if (cities is List) ...cities.whereType<TripCityModel>() else ...[_city, ?next],
+    ];
+    final at = chain.indexWhere((c) => c.cityKey == _city.cityKey);
+    if (at < 0) chain.insert(0, _city);
+    _chain = _intoTrip ? [_city] : chain;
+    _index = _intoTrip ? 0 : (at < 0 ? 0 : at);
+    final legs = args['draftLegs'];
+    final legacy = args['draftIds'];
+    _draftLegs = [
+      if (legs is List) ...legs.whereType<TripDraftLeg>(),
+      if (legs is! List && legacy is List) TripDraftLeg(_city, legacy.whereType<String>().toList()),
+    ];
     final other = _intoTrip ? _plan.spotCount - _existingIds.length : 0;
     final tag = '${_city.cityKey}';
     _ctrl = Get.isRegistered<TripSpotsController>(tag: tag)
@@ -76,23 +92,31 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     _plan.openPages++;
     _scroll.addListener(_onScroll);
     if (!_intoTrip) {
-      final draft = args['draftIds'];
-      if (draft is List) {
-        for (final id in draft.whereType<String>()) {
-          if (_ctrl.selected.length >= TripConstants.maxSpots) break;
-          _ctrl.selected.add(id);
-        }
+      final seed = _draftLegs.firstWhereOrNull((l) => l.city.cityKey == _city.cityKey)?.ids ?? const <String>[];
+      for (final id in seed) {
+        if (_ctrl.selected.length >= TripConstants.maxSpots) break;
+        _ctrl.selected.add(id);
       }
       _draftWorker = ever(_ctrl.selected, (_) {
-        if (!_starting) TripNewDraft.save(_city, _next, _ctrl.selected);
+        if (!_starting) TripNewDraft.save(_legsNow());
       });
     }
-    if (_newLeg) WidgetsBinding.instance.addPostFrameCallback((_) => _consumePendingNext());
   }
 
-  void _consumePendingNext() {
-    if (!Get.isRegistered<TripPlanController>() || !identical(Get.find<TripPlanController>(), _plan)) return;
-    if (_plan.pendingNextCity.value?.cityKey == _city.cityKey) _plan.pendingNextCity.value = null;
+  List<String> _idsOf(TripCityModel c) {
+    if (c.cityKey == _city.cityKey) return _ctrl.selected.toList();
+    final tag = '${c.cityKey}';
+    if (Get.isRegistered<TripSpotsController>(tag: tag)) return Get.find<TripSpotsController>(tag: tag).selected.toList();
+    final saved = TripNewDraft.read()?.legs ?? _draftLegs;
+    return saved.firstWhereOrNull((l) => l.city.cityKey == c.cityKey)?.ids ?? const <String>[];
+  }
+
+  List<TripDraftLeg> _legsNow() => [for (final c in _chain) TripDraftLeg(c, _idsOf(c))];
+
+  List<TripSpotModel> _chosenOf(TripCityModel c) {
+    if (c.cityKey == _city.cityKey) return _ctrl.chosen;
+    final tag = '${c.cityKey}';
+    return Get.isRegistered<TripSpotsController>(tag: tag) ? Get.find<TripSpotsController>(tag: tag).chosen : const [];
   }
 
   @override
@@ -114,23 +138,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   void _onScroll() {
     final p = _scroll.position;
     if (p.maxScrollExtent > 0 && p.pixels >= p.maxScrollExtent - 300) _ctrl.loadMore();
-  }
-
-  Future<void> _changeCity() async {
-    if (_picking) return;
-    _picking = true;
-    try {
-      final picked = await TripCitySheet.pick(context);
-      if (picked == null || !mounted) return;
-      if (picked.city.cityKey == _city.cityKey && picked.next?.cityKey == _next?.cityKey) return;
-      Get.offNamed(
-        AppRoutes.tripSpots,
-        arguments: {'city': picked.city, 'next': picked.next},
-        preventDuplicates: false,
-      );
-    } finally {
-      _picking = false;
-    }
   }
 
   Future<void> _addLeg(List<TripSpotModel> chosen) async {
@@ -205,10 +212,15 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     return ok == true;
   }
 
+  // A city in the chain may stay without places while another one has some.
+  bool _canContinue(int selected) =>
+      selected > 0 ||
+      (!_intoTrip && _chain.any((c) => c.cityKey != _city.cityKey && _idsOf(c).isNotEmpty));
+
   Future<void> _planMyDays() async {
     if (_starting) return;
     final chosen = _ctrl.chosen;
-    if (chosen.isEmpty) return;
+    if (chosen.isEmpty && !_canContinue(0)) return;
     _starting = true;
     if (_newLeg) {
       await _addLeg(chosen);
@@ -219,19 +231,33 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       Get.back();
       return;
     }
+    final next = _next;
+    if (next != null) {
+      TripNewDraft.save(_legsNow());
+      await Get.toNamed(
+        AppRoutes.tripSpots,
+        arguments: {'city': next, 'cities': _chain, 'draftLegs': _legsNow()},
+        preventDuplicates: false,
+      );
+      _starting = false;
+      return;
+    }
+    final selections = [
+      for (final c in _chain) (city: c, spots: _chosenOf(c)),
+    ];
     final settings = await TripDetailsSheet.collect(
       context,
-      initial: TripNewDraft.settingsFor(_city) ?? const TripSettings(),
-      dayCount: 1,
-      spotCount: chosen.length,
+      initial: TripNewDraft.savedSettings() ?? const TripSettings(),
+      dayCount: selections.length,
+      spotCount: selections.fold<int>(0, (n, e) => n + e.spots.length),
     );
     if (!mounted) {
       _starting = false;
       return;
     }
-    TripNewDraft.save(_city, _next, chosen.map((s) => s.id), settings: settings);
-    unawaited(_plan.startFromSelection(_city, chosen, settings: settings, queuedNext: _next));
-    Get.offNamed(AppRoutes.tripPlan);
+    TripNewDraft.save(_legsNow(), settings: settings);
+    unawaited(_plan.startFromSelections(selections, settings: settings));
+    Get.offNamedUntil(AppRoutes.tripPlan, (r) => r.settings.name != AppRoutes.tripSpots);
   }
 
   @override
@@ -323,19 +349,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
               ],
             ),
           ),
-          if (!_intoTrip)
-            TextButton(
-              onPressed: _changeCity,
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                minimumSize: const Size(0, 36),
-              ),
-              child: const Text(
-                'Change city',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
-              ),
-            ),
         ],
       ),
     );
@@ -418,7 +431,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
         return _message(EmptyStateView(
           icon: Iconsax.cloud_cross,
           title: TripStrings.placesFailed,
-          subtitle: TripStrings.checkConnection,
+          subtitle: _ctrl.loadError.value.isEmpty ? TripStrings.checkConnection : _ctrl.loadError.value,
           onRetry: _ctrl.load,
           palette: TripColors.palette,
         ));
@@ -480,7 +493,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   Widget _buildBottomBar(BuildContext context) {
     return Obx(() {
       final n = _ctrl.selected.length;
-      if (n == 0 || _ctrl.plannerOff.value || _pickDay != null) return const SizedBox.shrink();
+      final nextName = _next?.name;
+      if (!_canContinue(n) || _ctrl.plannerOff.value || _pickDay != null) return const SizedBox.shrink();
       return Container(
         padding: EdgeInsets.fromLTRB(16, 10, 16, AppInsets.bottomViewPadding(context) + 10),
         decoration: BoxDecoration(
@@ -488,7 +502,9 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, -4))],
         ),
         child: GradientButton(
-          label: _newLeg ? TripStringsMcaA2.spotsAddToTrip(n) : '$n ${n == 1 ? 'spot' : 'spots'} · ${TripStrings.planMyDays}',
+          label: _newLeg
+              ? TripStringsMcaA2.spotsAddToTrip(n)
+              : '${n == 0 ? '' : '$n ${n == 1 ? 'spot' : 'spots'} · '}${nextName == null ? TripStrings.planMyDays : TripStringsMcaA2.nextCity(nextName)}',
           height: 52,
           gradient: TripColors.gradient,
           shadowColor: TripColors.accent,

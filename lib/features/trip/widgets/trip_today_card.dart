@@ -304,7 +304,7 @@ class TripTodayCard extends StatelessWidget {
         accent: TaxiColors.accent,
         surface: TaxiColors.surface,
         title: TripStringsMcaA3.ownTravelLine(how, a.leavesAt),
-        subtitle: a.ownName ?? (hub != null && hub.isNotEmpty ? TripStringsMcbA2.reachHub(hub) : ''),
+        subtitle: (a.ownName?.trim().isNotEmpty ?? false ? a.ownName!.trim() : null) ?? (hub != null && hub.isNotEmpty ? TripStringsMcbA2.reachHub(hub) : ''),
         actionLabel: phone == null ? null : TripStrings.call,
         onAction: phone == null ? null : () => ContactLauncher.call(phone),
       ));
@@ -338,7 +338,7 @@ class TripTodayCard extends StatelessWidget {
     } else {
       final own = c.ownStayOf(n - 1);
       if (own == null) return const [];
-      name = own.name;
+      name = own.name.trim().isEmpty ? 'Own stay' : own.name.trim();
       phone = _validPhone(own.ownPhone);
     }
     return [
@@ -365,7 +365,7 @@ class TripTodayCard extends StatelessWidget {
       final sub = [
         if (city.isNotEmpty) city,
         if (room.isNotEmpty) room,
-        TripStringsA5.nightOf(night.k, night.total, e.agreedTotal == null ? null : BrowseItem.inr(e.agreedTotal!)),
+        TripStringsA5.nightOf(night.k, night.total, (e.agreedTotal ?? 0) <= 0 ? null : BrowseItem.inr(e.agreedTotal!)),
         c.dayStatusLine(TripWizardStepKind.stay, n) ??
             (e.isConfirmedByBoth ? TripWizardCopy.confirmedShort : TripWizardCopy.bookedByYouHost),
       ].join(' · ');
@@ -384,6 +384,7 @@ class TripTodayCard extends StatelessWidget {
     }
     final own = c.ownStayOf(n);
     if (own == null) return const [];
+    final ownTitle = own.name.trim().isEmpty ? 'Own stay' : own.name.trim();
     final phone = _validPhone(own.ownPhone);
     final chain = _ownNight(c, n);
     final lastDate = c.dateOf(chain.last);
@@ -396,7 +397,7 @@ class TripTodayCard extends StatelessWidget {
         icon: Iconsax.building_4,
         accent: StayColors.accent,
         surface: StayColors.surface,
-        title: travelDay ? TripStringsMcdA3.tonightTitle(own.name) : own.name,
+        title: travelDay ? TripStringsMcdA3.tonightTitle(ownTitle) : ownTitle,
         subtitle: [if (city.isNotEmpty) city, TripStrings.ownBookingShort, ownSub].join(' · ') +
             (checkOut == null ? '' : '\n$checkOut'),
         actionLabel: phone == null ? null : TripStrings.call,
@@ -440,7 +441,7 @@ class TripTodayCard extends StatelessWidget {
         icon: Iconsax.car,
         accent: TaxiColors.accent,
         surface: TaxiColors.surface,
-        title: own.name,
+        title: own.name.trim().isEmpty ? 'Own taxi' : own.name.trim(),
         subtitle: sub,
         actionLabel: phone == null ? null : TripStrings.call,
         onAction: () => ContactLauncher.call(phone!),

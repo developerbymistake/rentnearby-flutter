@@ -236,9 +236,10 @@ class WayActions {
         }
         return;
       }
-      if (await _linkStep(saved, closeOld) == WaySegmentLink.plain) {
+      final link = await _linkStep(saved, closeOld);
+      if (link == WaySegmentLink.plain) {
         TaxiWaysNavigation.openSavedJourney(saved.id);
-      } else {
+      } else if (link == WaySegmentLink.linked) {
         back();
       }
     } finally {

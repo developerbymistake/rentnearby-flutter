@@ -62,7 +62,7 @@ class _AskBodyState extends State<_AskBody> {
     return (cutoff.isBefore(byTime) ? cutoff : byTime).toLocal();
   }
 
-  bool get _tooLate => !_capHold.isAfter(_minHold);
+  bool get _tooLate => !_capHold.isAfter(_minHold.add(const Duration(minutes: 2)));
 
   @override
   void initState() {

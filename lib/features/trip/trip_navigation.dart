@@ -10,6 +10,8 @@ import 'models/trip_city_model.dart';
 import 'models/trip_enquiry_model.dart';
 import 'models/trip_plan_model.dart';
 import 'screens/trip_details_sheet.dart';
+import 'trip_constants.dart';
+import 'trip_strings.dart';
 import 'trip_strings_mcb_a1.dart';
 import 'trip_strings_steps_a1.dart';
 import 'utils/trip_travel_rules.dart';
@@ -19,12 +21,15 @@ class TripNavigation {
   static Future<void> start(BuildContext context) async {
     final pick = await TripCitySheet.pick(context);
     if (pick == null) return;
-    await startWith(pick.city, next: pick.next, draftIds: pick.draftIds);
+    await startWith(pick.city, cities: pick.cities, draftLegs: pick.draftLegs);
   }
 
-  static Future<void>? startWith(TripCityModel city, {TripCityModel? next, List<String> draftIds = const []}) =>
-      Get.toNamed(AppRoutes.tripSpots,
-          arguments: {'city': city, 'next': ?next, if (draftIds.isNotEmpty) 'draftIds': draftIds});
+  static Future<void>? startWith(TripCityModel city, {List<TripCityModel>? cities, List<TripDraftLeg> draftLegs = const []}) =>
+      Get.toNamed(AppRoutes.tripSpots, arguments: {
+        'city': city,
+        if (cities != null && cities.length > 1) 'cities': cities,
+        if (draftLegs.isNotEmpty) 'draftLegs': draftLegs,
+      });
 
   static Future<void>? openSpots(
     TripCityModel city, {
@@ -165,18 +170,29 @@ class TripNavigation {
         AppToast.warning(TripStringsMcbA1.addDatesFirst);
         return;
       }
-      await TripDetailsSheet.edit(ctx, heading: TripStringsMcbA1.addDatesFirst);
-      return;
+      final saved = await TripDetailsSheet.edit(ctx, heading: TripStringsMcbA1.addDatesFirst);
+      if (!saved || !c.hasDates) return;
     }
     final going = role == TripStepRole.gettingThere;
     final city = going ? c.cityPlace : c.lastCityPlace;
     if (city == null) return;
     final people = c.settings.peopleCount;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    var date = c.stepDate(role);
+    if (date != null) {
+      if (date.isAfter(today.add(const Duration(days: TripConstants.journeyMaxDaysAhead)))) {
+        AppToast.warning(TripStringsMcbA1.pickDateWithinYear);
+        return;
+      }
+      if (date.isBefore(today)) date = today;
+    }
+    if (c.travelPeopleCapped) AppToast.info(TripStrings.bigGroupCapped);
     await TaxiWaysNavigation.openFeed(
       from: going ? start.place : city,
       to: going ? city : start.place,
-      date: c.stepDate(role),
-      people: people > 0 ? people : null,
+      date: date,
+      people: people > 0 ? people.clamp(1, TripConstants.maxTravelPeople).toInt() : null,
       fromTrip: true,
       tripId: c.trip.value?.id,
       tripRole: role.name,
@@ -195,7 +211,8 @@ class TripNavigation {
           AppToast.warning(TripStringsMcbA1.addDatesFirst);
           return;
         }
-        await TripDetailsSheet.edit(ctx, heading: TripStringsMcbA1.addDatesFirst);
+        final saved = await TripDetailsSheet.edit(ctx, heading: TripStringsMcbA1.addDatesFirst);
+        if (saved && c.hasDates) await openSegmentWays(legIndex, fromStep: fromStep);
         return;
       case TravelFindBlock.tooFarAhead:
         AppToast.warning(TripStringsMcbA1.pickDateWithinYear);
@@ -218,11 +235,12 @@ class TripNavigation {
     final from = c.prevCityPlace(legIndex);
     final to = c.cityPlaceOf(legIndex);
     if (from == null || to == null) return;
+    if (c.travelPeopleCapped) AppToast.info(TripStrings.bigGroupCapped);
     await TaxiWaysNavigation.openFeed(
       from: from,
       to: to,
       fromMyLocation: false,
-      date: c.travelDateOf(legIndex),
+      date: c.travelSearchDateOf(legIndex),
       people: c.travelPeople,
       tripId: c.trip.value?.id,
       tripLegIndex: legIndex,

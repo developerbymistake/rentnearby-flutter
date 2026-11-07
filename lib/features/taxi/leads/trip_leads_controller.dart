@@ -230,7 +230,8 @@ class TripLeadsController extends GetxController {
       return result;
     } catch (e) {
       _toastError(e);
-      if (DioErrorMapper.errorType(e) == TripEnquiryErrorTypes.concurrent) refreshOne(id);
+      final type = DioErrorMapper.errorType(e);
+      if (type == TripEnquiryErrorTypes.concurrent || type == TripEnquiryErrorTypes.enquiryClosed) refreshOne(id);
       return null;
     } finally {
       busyIds.remove(id);

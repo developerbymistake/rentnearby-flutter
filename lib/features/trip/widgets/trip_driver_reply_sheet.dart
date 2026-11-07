@@ -6,6 +6,7 @@ import '../../../utils/contact_launcher.dart';
 import '../../taxi/leads/trip_lead_format.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
+import '../screens/trip_details_sheet.dart';
 import '../trip_colors.dart';
 import '../trip_strings.dart';
 import 'trip_payment_line.dart';
@@ -16,10 +17,15 @@ class TripDriverReplySheet {
   static Future<void> show(BuildContext context, {required TripEnquiryModel enquiry}) async {
     final book = await TripSheetFrame.show<bool>(context, _ReplyBody(enquiry: enquiry));
     if (book != true || !context.mounted) return;
+    final plan = TripPlanController.to;
+    if (!plan.hasDates) {
+      await TripDetailsSheet.edit(context, heading: TripStrings.addYourDates, description: TripStrings.datesNeededBooking);
+      if (!context.mounted || !plan.hasDates) return;
+    }
     await TripTaxiBookingSheet.show(
       context,
       taxi: null,
-      day: enquiry.days.isNotEmpty ? enquiry.days.first : 1,
+      day: plan.firstPlanDayOf(enquiry) ?? (enquiry.days.isNotEmpty ? enquiry.days.first : 1),
       enquiry: enquiry,
       initialFare: enquiry.taxi?.driverFare,
     );
@@ -46,7 +52,7 @@ class _ReplyBody extends StatelessWidget {
     final rate = t?.listedRate;
     final total = TripLeadFormat.listedTotal(e);
     final note = t?.driverNote?.trim() ?? '';
-    final day = e.days.isNotEmpty ? e.days.first : 1;
+    final day = TripPlanController.to.firstPlanDayOf(e) ?? (e.days.isNotEmpty ? e.days.first : 1);
     return TripSheetFrame(
       title: TripStrings.driverReplied(name),
       description: TripLeadFormat.dates(e),

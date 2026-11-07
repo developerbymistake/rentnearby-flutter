@@ -379,7 +379,9 @@ class _EnquiryCard extends StatelessWidget {
     switch (e.display) {
       case TripDisplayStatus.confirmedByYou:
         if (pb != null) {
-          lines.add(TripStrings.saysYouAgreed(BrowseItem.inr(pb.agreedTotal), e.datesLabel));
+          lines.add(pb.agreedTotal > 0
+              ? TripStrings.saysYouAgreed(BrowseItem.inr(pb.agreedTotal), e.datesLabel)
+              : TripStrings.saysYouBooked(e.datesLabel));
           if (pb.roomName.isNotEmpty) lines.add('${TripStrings.room}: ${pb.roomName}');
         }
       case TripDisplayStatus.offered:

@@ -31,7 +31,14 @@ class TripStringsA2 {
   static const String forThisNight = 'For this night';
   static const String noBaseStay = 'Pick a stay for last night first';
   static const String noStayBody = 'You chose no stay for this night.';
-  static String sameStayBody(String name) => '$name. Tap Night by night to change it.';
+  static String sameStayBody(String name) =>
+      name.trim().isEmpty ? 'Same stay as last night. Tap Night by night to change it.' : '${name.trim()}. Tap Night by night to change it.';
+  static const String shortlistFirst = 'Shortlist a stay to send an enquiry';
+  static const String allAsked = 'Enquiry already sent to these stays';
+  static const String nothingToSend = 'Nothing to send for this night';
+  static const String addDatesToSend = 'Add your trip dates to send an enquiry';
+  static const String addDates = 'Add dates';
+  static const String refresh = 'Refresh';
   static const String nightPassed = 'This night has passed';
   static const String tripLocked = 'Plan changes are off for this trip.';
   static const String cancelFirstBody = 'This night is booked. Cancel the booking, then add your own stay.';

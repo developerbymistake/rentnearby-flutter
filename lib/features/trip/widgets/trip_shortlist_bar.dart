@@ -100,7 +100,11 @@ class TripShortlistBar extends StatelessWidget {
         onSecondary: () => openOwn(context, day),
         primaryLabel: ownOnly || sendable == 0 ? TripStringsA2.sendEnquiry : TripStrings.sendToStays(sendable),
         onPrimary: ownOnly || sendable == 0 ? null : () => send(context, day, fromStep: fromStep),
-        hint: !ownOnly && used >= TripConstants.maxShortlist ? TripStrings.shortlistFull : null,
+        hint: ownOnly
+            ? null
+            : sendable == 0
+                ? (used == 0 ? TripStringsA2.shortlistFirst : TripStringsA2.allAsked)
+                : (used >= TripConstants.maxShortlist ? TripStrings.shortlistFull : null),
         showPrimary: !noSupply,
         accent: StayColors.accent,
         gradient: StayColors.gradient,

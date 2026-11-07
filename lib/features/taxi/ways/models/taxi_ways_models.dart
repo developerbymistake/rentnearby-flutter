@@ -17,6 +17,13 @@ String? _sn(Object? v) => v is String && v.isNotEmpty ? v : null;
 List<T> _list<T>(Object? v, T Function(Map<String, dynamic>) f) =>
     v is List ? v.whereType<Map<String, dynamic>>().map(f).toList() : <T>[];
 
+String wayNameOr(String? name, String key, {required bool start, required bool end}) {
+  final t = name?.trim() ?? '';
+  if (t.isNotEmpty) return t;
+  if (key.startsWith('m:')) return 'My location';
+  return start ? 'Pickup point' : (end ? 'Drop point' : 'Stop');
+}
+
 class WayPlace {
   final String key;
   final String name;
@@ -44,6 +51,11 @@ class WayPlace {
       );
 
   static WayPlace? tryParse(Object? v) => v is Map<String, dynamic> ? WayPlace.fromJson(v) : null;
+
+  bool get isVirtual => key.startsWith('v:') || key.startsWith('m:');
+
+  WayPlace withName(String next) =>
+      WayPlace(key: key, name: next, lat: lat, lng: lng, resolved: resolved, districtId: districtId);
 }
 
 class WayBest {
@@ -208,6 +220,27 @@ class WayLeg {
     this.fareEstimated = false,
   });
 
+  WayLeg withPlaces({WayPlace? from, WayPlace? to}) => WayLeg(
+        legKey: legKey,
+        index: index,
+        from: from ?? this.from,
+        to: to ?? this.to,
+        meetingPlace: meetingPlace,
+        listedFare: listedFare,
+        partial: partial,
+        distanceKm: distanceKm,
+        passes: passes,
+        topDrivers: topDrivers,
+        driverCount: driverCount,
+        hasRoadLine: hasRoadLine,
+        drivers: drivers,
+        geometry: geometry,
+        carsNeeded: carsNeeded,
+        seatsNote: seatsNote,
+        coverTaxiIds: coverTaxiIds,
+        fareEstimated: fareEstimated,
+      );
+
   factory WayLeg.fromJson(Map<String, dynamic> json) => WayLeg(
         legKey: _s(json['legKey']),
         index: _i(json['index']),
@@ -371,6 +404,24 @@ class WayPlan {
   WayPlace get from => legs.first.from;
   WayPlace get to => legs.last.to;
 
+  // Names the traveller typed for a pinned start or end stay; a blank name is never shown.
+  WayPlan withEndNames(WayPlace typedFrom, WayPlace typedTo) {
+    if (legs.isEmpty) return this;
+    final first = legs.first;
+    final last = legs.last;
+    final fromName = first.from.isVirtual && typedFrom.name.trim().isNotEmpty
+        ? typedFrom.name.trim()
+        : wayNameOr(first.from.name, first.from.key, start: true, end: false);
+    final toName = last.to.isVirtual && typedTo.name.trim().isNotEmpty
+        ? typedTo.name.trim()
+        : wayNameOr(last.to.name, last.to.key, start: false, end: true);
+    final next = [...legs];
+    next[0] = first.withPlaces(from: first.from.withName(fromName));
+    final lastIndex = next.length - 1;
+    next[lastIndex] = next[lastIndex].withPlaces(to: next[lastIndex].to.withName(toName));
+    return WayPlan(planKey: planKey, cars: cars, total: total, legs: next);
+  }
+
   List<WayPlace> get changePlaces => [for (var i = 0; i < legs.length - 1; i++) legs[i].to];
 
   int get maxCarsNeeded => legs.fold(1, (m, l) => l.carsNeeded > m ? l.carsNeeded : m);
@@ -487,7 +538,7 @@ class JourneyOpenArgs {
     if (args is! Map) return null;
     final from = WayPlace.tryParse(args['from']);
     final to = WayPlace.tryParse(args['to']);
-    if (from == null || to == null || from.name.isEmpty || to.name.isEmpty) return null;
+    if (from == null || to == null) return null;
     final rawDate = args['date'];
     final date = rawDate is DateTime ? rawDate : (rawDate is String ? DateTime.tryParse(rawDate) : null);
     final people = args['people'];

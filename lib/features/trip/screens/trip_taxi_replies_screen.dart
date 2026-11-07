@@ -132,7 +132,7 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
     return '${d.inDays} d ago';
   }
 
-  static String _inr(int? v) => v == null ? '' : BrowseItem.inr(v);
+  static String _inr(int? v) => v == null || v <= 0 ? '' : BrowseItem.inr(v);
 
   Future<bool> _datesGate() async {
     if (_c.hasDates) return true;
@@ -330,8 +330,10 @@ class _TripTaxiRepliesScreenState extends State<TripTaxiRepliesScreen> {
     return switch (e.display) {
       TripDisplayStatus.asked => TripStrings.askedAgo(_ago(e.createdAt)),
       TripDisplayStatus.fareSent => TripStrings.repliedFare(_inr(t?.driverFare), _inr(TripLeadFormat.listedTotal(e))),
-      TripDisplayStatus.bookedByYou => '${TripStrings.bookedByYou} · ${_inr(t?.agreedFare)}',
-      TripDisplayStatus.confirmedByBoth => TripStrings.bothFare(_inr(t?.agreedFare)),
+      TripDisplayStatus.bookedByYou =>
+        [TripStrings.bookedByYou, _inr(t?.agreedFare)].where((s) => s.isNotEmpty).join(' · '),
+      TripDisplayStatus.confirmedByBoth =>
+        _inr(t?.agreedFare).isEmpty ? TripStrings.bookedByYou : TripStrings.bothFare(_inr(t?.agreedFare)),
       _ => TripLeadFormat.dates(e),
     };
   }

@@ -100,8 +100,8 @@ class AskDriversRequest {
       legs.add(AskLegRequest(
         legIndex: leg.index,
         legKey: leg.legKey,
-        fromName: _clip(leg.from.name),
-        toName: _clip(leg.to.name),
+        fromName: _clip(wayNameOr(leg.from.name, leg.from.key, start: leg.index == 1, end: false)),
+        toName: _clip(wayNameOr(leg.to.name, leg.to.key, start: false, end: leg.index == plan.legs.length)),
         listedFare: _fare(pick),
         taxiIds: ids,
         carOf: plan.legs.length,
@@ -112,8 +112,8 @@ class AskDriversRequest {
       date: date,
       people: people,
       journeyId: journeyId,
-      fromName: _clip(fromName),
-      toName: _clip(toName),
+      fromName: _clip(wayNameOr(fromName, plan.from.key, start: true, end: false)),
+      toName: _clip(wayNameOr(toName, plan.to.key, start: false, end: true)),
       legs: legs,
     );
   }

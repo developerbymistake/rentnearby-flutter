@@ -23,10 +23,8 @@ class _Copy {
   static const String hostName = 'Host name';
   static const String hostPhone = 'Host phone';
   static const String roomName = 'Room name';
-  static const String errHostName = 'Enter the host name';
-  static const String errHostPhone = 'Enter a 10 digit phone';
-  static const String errRoom = 'Pick or enter the room';
-  static const String errPrice = 'Enter the agreed price';
+  static const String errHostPhone = 'Enter a 10 digit phone or leave it empty';
+  static const String optional = ' (optional)';
   static const String errAdvance = 'Advance must be more than ₹0 and at most the price';
   static const String linkTitle = 'Send the link to the host';
   static const String linkDescription = 'Opens WhatsApp with the message and link.';
@@ -176,25 +174,25 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
 
   Map<String, dynamic>? _validate() {
     final host = _hostName.text.trim();
-    if (host.isEmpty) return _warn(_Copy.errHostName);
     final phone = _hostPhone.text.trim();
-    if (!_phoneRule.hasMatch(phone)) return _warn(_Copy.errHostPhone);
+    if (phone.isNotEmpty && !_phoneRule.hasMatch(phone)) return _warn(_Copy.errHostPhone);
     final room = _roomValue;
-    if (room.isEmpty) return _warn(_Copy.errRoom);
     final priceText = _price.text.trim();
-    if (priceText.isEmpty) return _warn(_Copy.errPrice);
-    final price = int.tryParse(priceText);
-    if (price == null || price < 1 || price > TripConstants.maxAmount) return _warn(TripStringsA3.errPriceRange(TripConstants.maxAmount));
+    var price = 0;
+    if (priceText.isNotEmpty) {
+      price = int.tryParse(priceText) ?? 0;
+      if (price < 1 || price > TripConstants.maxAmount) return _warn(TripStringsA3.errPriceRange(TripConstants.maxAmount));
+    }
     int? advance;
     if (_advancePaid) {
       advance = int.tryParse(_advance.text.trim());
-      if (advance == null || advance < 1 || advance > price) return _warn(_Copy.errAdvance);
+      if (advance == null || advance < 1 || (price > 0 && advance > price)) return _warn(_Copy.errAdvance);
     }
     final note = _note.text.trim();
     return {
-      'hostName': host,
-      'hostPhone': phone,
-      'roomName': room,
+      'hostName': host.isEmpty ? null : host,
+      'hostPhone': phone.isEmpty ? null : phone,
+      'roomName': room.isEmpty ? null : room,
       'agreedTotal': price,
       'advancePaid': _advancePaid,
       'advanceAmount': advance,
@@ -319,7 +317,7 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
         ],
       ),
       children: [
-        _label(_Copy.hostName),
+        _label(_Copy.hostName + _Copy.optional),
         TextField(
           controller: _hostName,
           textCapitalization: TextCapitalization.words,
@@ -328,7 +326,7 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
           decoration: _decoration(),
         ),
         const SizedBox(height: 14),
-        _label(_Copy.hostPhone),
+        _label(_Copy.hostPhone + _Copy.optional),
         TextField(
           controller: _hostPhone,
           keyboardType: TextInputType.phone,
@@ -340,10 +338,10 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
         _label(TripStrings.dates),
         _datesBox(),
         const SizedBox(height: 14),
-        _label(TripStrings.room),
+        _label(TripStrings.room + _Copy.optional),
         _roomSection(),
         const SizedBox(height: 14),
-        _label(TripStrings.agreedPrice),
+        _label(TripStrings.agreedPrice + _Copy.optional),
         TextField(
           controller: _price,
           keyboardType: TextInputType.number,
@@ -355,7 +353,7 @@ class _PhoneBookingBodyState extends State<_PhoneBookingBody> {
         _label(TripStrings.advancePaid),
         _advanceSection(),
         const SizedBox(height: 14),
-        _label(TripStrings.note),
+        _label(TripStrings.note + _Copy.optional),
         TextField(
           controller: _note,
           minLines: 2,

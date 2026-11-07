@@ -102,7 +102,6 @@ class TripPlanController extends GetxController {
   final _stayProbing = <String>{};
   final supplyCheckFailed = <int>{}.obs;
   final lastAddedLeg = RxnInt();
-  final pendingNextCity = Rxn<TripCityModel>();
   final travelGaps = <int, String?>{}.obs;
   final travelBusy = <int>{}.obs;
   final _supplyByDistrict = <String, bool>{};
@@ -798,6 +797,7 @@ class TripPlanController extends GetxController {
         TripTravelHow.car => TripStringsMcaA3.car,
         TripTravelHow.bus => TripStringsMcaA3.bus,
         TripTravelHow.train => TripStringsMcaA3.train,
+        TripTravelHow.flight => 'Flight',
         TripTravelHow.other => TripStringsMcaA3.other,
         null => null,
       };
@@ -1292,7 +1292,7 @@ class TripPlanController extends GetxController {
         leaveOn: cur.leaveOn,
         how: how,
         ownName: clip(ownName, TripConstants.ownTravelNameMax),
-        ownPhone: clip(ownPhone, 10),
+        ownPhone: ownPhoneOf(ownPhone),
         leavesAt: leavesAt,
       ),
     ));
@@ -1809,7 +1809,6 @@ class TripPlanController extends GetxController {
     supplyCheckFailed.clear();
     _supplyTried.clear();
     lastAddedLeg.value = null;
-    pendingNextCity.value = null;
     travelGaps.clear();
     travelBusy.clear();
     _legChain = Future<void>.value();
@@ -1899,7 +1898,7 @@ class TripPlanController extends GetxController {
       _rejectedTitle = _title;
       AppToast.error(DioErrorMapper.toMessage(e, TripStrings.saveFailed));
     } else {
-      AppToast.error(TripStrings.saveFailed);
+      AppToast.error(DioErrorMapper.toMessage(e, TripStrings.saveFailed));
     }
     saveFailed.value = true;
   }
@@ -1939,25 +1938,38 @@ class TripPlanController extends GetxController {
     };
   }
 
-  Future<void> startFromSelection(
-    TripCityModel city,
-    List<TripSpotModel> chosen, {
+  Future<void> startFromSelection(TripCityModel city, List<TripSpotModel> chosen, {TripSettings? settings}) =>
+      startFromSelections([(city: city, spots: chosen)], settings: settings);
+
+  Future<void> startFromSelections(
+    List<({TripCityModel city, List<TripSpotModel> spots})> selections, {
     TripSettings? settings,
-    TripCityModel? queuedNext,
   }) async {
+    if (selections.isEmpty) return;
     final pendingSave = _detachPendingSave();
     _reset();
     if (pendingSave != null) unawaited(pendingSave());
-    picked = city;
+    final legs = <TripCityLeg>[];
+    final days = <TripDay>[];
+    final seenSpots = <String>{};
+    var room = TripConstants.maxSpots;
+    for (final e in selections) {
+      if (legs.length >= TripConstants.maxLegs) break;
+      if (legs.any((l) => l.cityKey == e.city.cityKey)) continue;
+      final n = legs.length + 1;
+      final refs = <TripSpotRef>[];
+      for (final s in e.spots) {
+        if (room <= 0) break;
+        if (!seenSpots.add(s.id)) continue;
+        refs.add(TripSpotRef.fromSpot(s));
+        room--;
+      }
+      legs.add(TripCityLeg.fromCity(n, e.city));
+      days.add(TripDay(day: n, leg: n, spots: refs));
+    }
+    picked = selections.first.city;
     _clientTripId = const Uuid().v4();
-    plan.value = TripPlan(
-      legs: [TripCityLeg.fromCity(1, city)],
-      days: [
-        TripDay(day: 1, leg: 1, spots: chosen.take(TripConstants.maxSpots).map(TripSpotRef.fromSpot).toList()),
-      ],
-      settings: settings ?? const TripSettings(),
-    );
-    pendingNextCity.value = queuedNext != null && queuedNext.cityKey != city.cityKey ? queuedNext : null;
+    plan.value = TripPlan(legs: legs, days: days, settings: settings ?? const TripSettings());
     checkSupply();
     final flow = _flow;
     await autoPlan();
@@ -2940,7 +2952,6 @@ class TripPlanController extends GetxController {
   }
 
   Future<TripLegEditBlock> addLeg(TripCityModel city, List<TripSpotModel> spots) async {
-    pendingNextCity.value = null;
     final block = canAddLeg(city);
     if (block != TripLegEditBlock.none) {
       showLegBlock(block, city: city.name);
@@ -2964,8 +2975,6 @@ class TripPlanController extends GetxController {
     if (adding.isNotEmpty) unawaited(_planLegByCity(city.cityKey));
     return TripLegEditBlock.none;
   }
-
-  void clearPendingNext() => pendingNextCity.value = null;
 
   void _refreshLegSupply() {
     final p = plan.value;
@@ -3281,22 +3290,29 @@ class TripPlanController extends GetxController {
     return t.length > max ? t.substring(0, max).trim() : t;
   }
 
-  void setOwnTravel(int legIndex, TripTravel t) {
+  static String? ownPhoneOf(String? raw) {
+    var d = raw?.replaceAll(RegExp(r'\D'), '') ?? '';
+    if (d.length == 12 && d.startsWith('91')) d = d.substring(2);
+    if (d.length == 11 && d.startsWith('0')) d = d.substring(1);
+    return _phonePattern.hasMatch(d) ? d : null;
+  }
+
+  void setOwnTravel(int legIndex, [TripTravel? given]) {
     final p = plan.value;
     final leg = p?.legAt(legIndex);
     final prev = p?.legAt(legIndex - 1);
     if (p == null || leg == null || prev == null || legIndex < 2 || isReadOnly) return;
     if (leg.arrival?.isJourney ?? false) return;
-    final phone = t.ownPhone?.replaceAll(RegExp(r'\D'), '');
+    final t = given ?? TripTravel.own(fromName: prev.cityName);
     final road = t.roadMinutes;
     final leaves = t.leavesAt?.trim();
     final clean = TripTravel.own(
       fromName: prev.cityName,
       how: t.how,
       ownName: _clip(t.ownName, TripConstants.ownTravelNameMax),
-      ownPhone: phone != null && _phonePattern.hasMatch(phone) ? phone : null,
+      ownPhone: ownPhoneOf(t.ownPhone),
       leavesAt: leaves != null && _timePattern.hasMatch(leaves) ? leaves : null,
-      roadMinutes: road == TripConstants.travelHalfDayMinutes || road == TripConstants.travelWholeDayMinutes ? road : null,
+      roadMinutes: road == TripConstants.travelWholeDayMinutes ? road : TripConstants.travelHalfDayMinutes,
       note: _clip(t.note, TripConstants.noteMax),
       hubName: _clip(t.hubName, TripConstants.travelHubNameMax),
     );
@@ -3379,6 +3395,14 @@ class TripPlanController extends GetxController {
   int get travelPeople {
     final n = settings.peopleCount;
     return (n > 0 ? n : TripConstants.defaultTravelPeople).clamp(1, TripConstants.maxTravelPeople).toInt();
+  }
+
+  DateTime? travelSearchDateOf(int legIndex) {
+    final d = travelDateOf(legIndex);
+    if (d == null) return null;
+    final t = _today;
+    final today = DateTime(t.year, t.month, t.day);
+    return d.isBefore(today) ? today : d;
   }
 
   bool get travelPeopleCapped => settings.peopleCount > TripConstants.maxTravelPeople;
@@ -3727,7 +3751,7 @@ class TripPlanController extends GetxController {
     int? legIndex,
     required int carIndex,
     required String taxiId,
-    required int agreedFare,
+    int? agreedFare,
     required bool tollExtra,
     required String pickupTime,
     required String pickupPlace,
@@ -3778,7 +3802,9 @@ class TripPlanController extends GetxController {
       final type = network ? null : DioErrorMapper.errorType(e);
       enq.lastConflict = enq.conflictOf(e);
       enq.lastErrorType = type;
-      enq.lastErrorMessage = network ? TripStrings.noNetwork : DioErrorMapper.serverMessage(e);
+      enq.lastErrorMessage = network
+          ? TripStrings.noNetwork
+          : DioErrorMapper.toMessage(e, TripStringsMcbA1.bookFailed, showRawMessageForStatusCodes: {400, 403, 404, 409, 422, 429});
       if (enq.lastConflict != null) return null;
       if (network) {
         AppToast.error(TripStrings.noNetwork);
@@ -3793,7 +3819,7 @@ class TripPlanController extends GetxController {
     }
   }
 
-  void _markCarBooked(String journeyId, int carIndex, String enquiryId, int fare) {
+  void _markCarBooked(String journeyId, int carIndex, String enquiryId, int? fare) {
     final t = trip.value;
     final j = t?.journeyById(journeyId);
     if (t == null || j == null) return;
@@ -4037,36 +4063,50 @@ class TripPlanController extends GetxController {
     _applyChoice([for (final x in p.days) x.day == day ? x.copyWith(taxiShortlist: const []) : x]);
   }
 
+  List<int> ownTaxiDefaultDays(int day) {
+    final p = plan.value;
+    if (p == null || p.dayAt(day) == null) return const [];
+    bool free(int d) => p.dayAt(d) != null && _sameLeg(p, d, day) && canEditDay(d) && bookedTaxiEnquiryFor(d) == null;
+    if (!free(day)) return const [];
+    final out = [day];
+    for (var d = day + 1; free(d) && p.dayAt(d)!.taxi == null; d++) {
+      out.add(d);
+    }
+    return out;
+  }
+
   OwnSaveResult setOwnTaxi({
-    required List<int> days,
-    required String name,
+    List<int>? days,
+    String? name,
     String? phone,
     String? note,
     int? farePerDay,
     int? legDay,
+    bool closeOpen = false,
   }) {
     final p = plan.value;
-    if (p == null) return const OwnSaved();
-    final ph = phone?.trim();
-    final nt = note?.trim();
-    final own = TripTaxiChoice.own(
-      name: name.trim(),
-      phone: ph == null || ph.isEmpty ? null : ph,
-      note: nt == null || nt.isEmpty ? null : nt,
-      fare: farePerDay == null || farePerDay <= 0 ? null : farePerDay,
-    );
-    final anchor = legDay != null && p.dayAt(legDay) != null ? legDay : days.where((d) => p.dayAt(d) != null).firstOrNull;
-    if (anchor == null) return const OwnSaved();
+    if (p == null) return const OwnNothingToSave();
+    final anchor = legDay != null && p.dayAt(legDay) != null
+        ? legDay
+        : (days ?? const <int>[]).where((d) => p.dayAt(d) != null).firstOrNull;
+    if (anchor == null) return const OwnNothingToSave();
+    final want = days ?? ownTaxiDefaultDays(anchor);
     final chosen = {
-      for (final d in days)
+      for (final d in (want.isEmpty ? [anchor] : want))
         if (p.dayAt(d) != null && _sameLeg(p, d, anchor) && canEditDay(d) && bookedTaxiEnquiryFor(d) == null) d,
     };
-    if (chosen.isEmpty) return const OwnSaved();
+    if (chosen.isEmpty) return const OwnNothingToSave();
     final open = <TripEnquiryModel>{
       for (final d in chosen) ...taxiEnquiriesForDay(d).where((e) => e.isOpen && !e.isBooked),
     }.toList()
       ..sort(_newestFirst);
-    if (open.isNotEmpty) return OwnNeedsWithdraw(open);
+    if (open.isNotEmpty && !closeOpen) return OwnNeedsWithdraw(open);
+    _withdrawInBackground(open);
+    final own = TripTaxiChoice.own(
+      name: _clip(name, TripConstants.ownTravelNameMax) ?? '',
+      phone: ownPhoneOf(phone),
+      note: _clip(note, TripConstants.noteMax),
+    );
     _applyChoice([
       for (final x in p.days) chosen.contains(x.day) ? x.copyWith(taxi: own, taxiShortlist: const []) : x,
     ]);
@@ -4852,9 +4892,19 @@ class TripPlanController extends GetxController {
     return run;
   }
 
-  OwnSaveResult setOwnStay(int day, {required String name, String? phone, String? note, bool allNights = false}) {
+  void _withdrawInBackground(List<TripEnquiryModel> rows) {
+    if (rows.isEmpty) return;
+    unawaited(() async {
+      for (final e in rows) {
+        await TripEnquiryController.to.withdraw(e.id);
+      }
+    }());
+  }
+
+  OwnSaveResult setOwnStay(int day,
+      {String? name, String? phone, String? note, bool allNights = false, bool closeOpen = false}) {
     final p = plan.value;
-    if (p == null || p.dayAt(day) == null || !canEditDay(day)) return const OwnSaved();
+    if (p == null || p.dayAt(day) == null || !canEditDay(day)) return const OwnNothingToSave();
     final nights = ownStayNights(day, allNights: allNights);
     final rows = <TripEnquiryModel>{
       for (final n in nights) ...enquiriesForNight(n).where((e) => e.isOpen),
@@ -4862,15 +4912,14 @@ class TripPlanController extends GetxController {
       ..sort(_newestFirst);
     final confirmed = rows.where((e) => e.isBooked).firstOrNull;
     if (confirmed != null) return OwnBlockedByConfirmed(confirmed);
-    if (rows.isNotEmpty) return OwnNeedsWithdraw(rows);
-    final ph = phone?.trim();
-    final nt = note?.trim();
+    if (rows.isNotEmpty && !closeOpen) return OwnNeedsWithdraw(rows);
+    _withdrawInBackground(rows);
     final own = TripStayChoice(
       stayId: '',
-      name: name.trim(),
+      name: _clip(name, TripConstants.ownTravelNameMax) ?? '',
       isOwn: true,
-      ownPhone: ph == null || ph.isEmpty ? null : ph,
-      note: nt == null || nt.isEmpty ? null : nt,
+      ownPhone: ownPhoneOf(phone),
+      note: _clip(note, TripConstants.noteMax),
     );
     final copy = TripStayChoice(
       stayId: '',

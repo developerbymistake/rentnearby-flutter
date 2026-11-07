@@ -76,6 +76,7 @@ class TaxiWaysController extends GetxController {
   final result = Rxn<TaxiWaysResult>();
   final isLoading = false.obs;
   final loadFailed = false.obs;
+  final errorText = ''.obs;
   final isOffline = false.obs;
   final tabOff = false.obs;
   final sort = WaysSort.fewestCars.obs;
@@ -115,6 +116,7 @@ class TaxiWaysController extends GetxController {
     final myGen = ++_gen;
     isLoading.value = true;
     loadFailed.value = false;
+    errorText.value = '';
     isOffline.value = false;
     tabOff.value = false;
     try {
@@ -145,7 +147,13 @@ class TaxiWaysController extends GetxController {
       } else if (DioErrorMapper.errorType(e) == 'TabInactive') {
         tabOff.value = true;
       }
-      if (result.value == null) loadFailed.value = true;
+      if (result.value == null) {
+        loadFailed.value = true;
+        if (!isOffline.value) {
+          errorText.value =
+              DioErrorMapper.toMessage(e, '', showRawMessageForStatusCodes: const {400, 404, 409, 429});
+        }
+      }
     } finally {
       if (myGen == _gen) isLoading.value = false;
     }

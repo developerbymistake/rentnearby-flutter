@@ -22,6 +22,7 @@ import '../models/trip_enquiry_model.dart';
 import '../models/trip_journey_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
+import '../trip_constants.dart';
 import '../trip_navigation.dart';
 import '../trip_strings_mca_a3.dart';
 import '../trip_strings_mcb_k2.dart';
@@ -184,8 +185,9 @@ class TripJourneyCard extends StatelessWidget {
       for (final e in rowsOf(c, j, legIndex: legIndex))
         if (TripTravelRules.isLive(e) && (e.isWithdrawable || TripTravelRules.bookedStatuses.contains(e.status))) e,
     ];
+    final anyBooked = rows.any((e) => TripTravelRules.bookedStatuses.contains(e.status));
     var kept = <int>{};
-    if (j != null && rows.isNotEmpty) {
+    if (j != null && anyBooked) {
       final cars = [
         for (final l in j.legs)
           _ArrangeCar(
@@ -207,16 +209,39 @@ class TripJourneyCard extends StatelessWidget {
       return ok;
     }
 
-    if (kept.isEmpty) {
-      final before = rows.isEmpty ? null : close;
-      if (legIndex != null) return TripOwnTravelSheet.show(context, legIndex, beforeSave: before);
-      if (role != null) return TripOwnTravelSheet.showForRole(context, role, beforeSave: before);
-      return false;
+    if (kept.isNotEmpty) {
+      if (!await close()) return false;
+      for (final l in j!.legs) {
+        if (!kept.contains(l.legIndex)) c.setOwnCar(role, legIndex, l.legIndex, true);
+      }
+      return true;
     }
-    if (!await close()) return false;
-    for (final l in j!.legs) {
-      if (!kept.contains(l.legIndex)) c.setOwnCar(role, legIndex, l.legIndex, true);
+    final k = legIndex;
+    if (k != null) {
+      if (c.plan.value?.legAt(k)?.arrival?.isJourney ?? false) {
+        final removed = await c.removeTravel(k, cancelBooked: c.travelImpact(k).hasBooked);
+        if (!removed) {
+          AppToast.warning(TripStringsJourneyCard.carClosedFailed);
+          return false;
+        }
+      } else if (rows.isNotEmpty) {
+        unawaited(close());
+      }
+      c.setOwnTravel(
+        k,
+        TripTravel.own(
+          fromName: c.plan.value?.legAt(k - 1)?.cityName ?? '',
+          roadMinutes: TripConstants.travelHalfDayMinutes,
+        ),
+      );
+      c.clearTravelGap(k);
+      if (context.mounted) await TripOwnTravelSheet.show(context, k);
+      return true;
     }
+    if (role == null) return false;
+    c.markStepOwn(role);
+    if (rows.isNotEmpty) unawaited(close());
+    if (context.mounted) await TripOwnTravelSheet.showForRole(context, role);
     return true;
   }
 

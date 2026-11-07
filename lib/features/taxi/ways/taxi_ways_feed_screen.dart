@@ -434,7 +434,7 @@ class _TaxiWaysFeedScreenState extends State<TaxiWaysFeedScreen> {
         title: c.isOffline.value
             ? TaxiWaysStrings.offlineTitle
             : (c.tabOff.value ? TaxiWaysStrings.taxisOff : TaxiWaysStrings.loadFailed),
-        subtitle: TaxiWaysStrings.offlineBody,
+        subtitle: c.isOffline.value || c.errorText.value.isEmpty ? TaxiWaysStrings.offlineBody : c.errorText.value,
         onRetry: c.tabOff.value ? null : c.retry,
         retryLabel: TaxiWaysStrings.retry,
         palette: ModulePalette.taxi,

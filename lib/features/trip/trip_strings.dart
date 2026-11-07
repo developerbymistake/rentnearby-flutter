@@ -92,7 +92,7 @@ class TripStrings {
   static const String iBookedSubtitle = 'Saved on your plan only. Bakhli does not take payment.';
   static const String saveBooking = 'Save booking';
   static const String bookingSaved = 'Booking saved';
-  static const String agreedFare = 'Agreed fare';
+  static const String agreedFare = 'Agreed fare (optional)';
   static const String agreedFareHelp = 'Total for all booked days';
   static const String tollExtra = 'Toll and parking extra';
   static const String pickupTime = 'Pickup time';
@@ -101,7 +101,7 @@ class TripStrings {
   static const String note = 'Note (optional)';
   static const String errPickDay = 'Pick at least one day';
   static const String errEnterFare = 'Enter the agreed fare';
-  static const String errFareRange = 'Fare must be between ₹1 and ₹99,00,000';
+  static const String errFareRange = 'Fare must be between ₹100 and ₹99,00,000';
   static const String errPickupPlace = 'Add a pickup place';
   static String replaceBooking(String day, String name) => '$day already has $name.';
   static const String replaceQuestion = 'Replace it?';
@@ -276,6 +276,7 @@ class TripStrings {
   static const String byGuest = 'By guest';
   static const String newPill = 'New';
   static String saysYouAgreed(String p, String d) => 'Says you agreed $p for $d by phone';
+  static String saysYouBooked(String d) => 'Says you booked $d by phone';
   static const String chat = 'Chat';
   static const String roomLines = 'Rooms';
   static const String units = 'Units';
@@ -656,6 +657,7 @@ class TripStrings {
   static const String notSavedCheckConnection = 'Not saved yet. Check your connection.';
   static const String tripCompletedEdits = 'This trip is complete. Plan changes are off.';
   static const String noDatesYet = 'No dates yet';
+  static const String bigGroupCapped = 'Big group · plan cars for 12 at a time';
   static const String offlineCopy = 'Offline copy';
   static String offlineCopySaved(String t) => 'Offline copy · saved $t';
 }

@@ -23,6 +23,7 @@ import '../trip_strings_a3.dart';
 import '../trip_strings_mcb_a3.dart';
 import '../trip_strings_mcc_k2.dart';
 import '../utils/trip_format.dart';
+import '../utils/trip_wizard_rules.dart';
 import 'trip_sheet_frame.dart';
 import 'trip_status.dart';
 
@@ -96,6 +97,7 @@ class _BookingBodyState extends State<_BookingBody> {
   late final TextEditingController _note;
   bool _toll = false;
   bool _saving = false;
+  String? _fareError;
   bool _phoneLoading = true;
   String? _phone;
   String? _whatsApp;
@@ -134,8 +136,15 @@ class _BookingBodyState extends State<_BookingBody> {
     }
     _time = _parseTime(server?.pickupTime ?? existing?.pickupTime ?? _plan.settings.pickupTime) ??
         _parseTime(TripConstants.defaultPickupTime)!;
-    _place = TextEditingController(text: server?.pickupPlace ?? existing?.pickupPlace ?? _plan.settings.pickupPlace ?? '');
-    final fare = server?.agreedFare ?? existing?.agreedFare ?? widget.initialFare ?? server?.driverFare;
+    final startDay = _days.isEmpty ? widget.day : (_days.toList()..sort()).first;
+    _place = TextEditingController(
+        text: server?.pickupPlace ?? existing?.pickupPlace ?? TripWizardRules.pickupPlaceOf(plan, startDay) ?? _plan.settings.pickupPlace ?? '');
+    final rate = _item.localDayRate;
+    final fare = server?.agreedFare ??
+        existing?.agreedFare ??
+        widget.initialFare ??
+        server?.driverFare ??
+        (rate == null || rate <= 0 || _days.isEmpty ? null : rate * _days.length);
     _fare = TextEditingController(text: fare == null ? '' : '$fare');
     _note = TextEditingController(text: existing?.note ?? '');
     _toll = server?.tollExtra ?? existing?.tollExtra ?? false;
@@ -281,22 +290,18 @@ class _BookingBodyState extends State<_BookingBody> {
       AppToast.warning(TripStrings.errPickDay);
       return;
     }
-    final place = _place.text.trim();
-    if (place.isEmpty) {
-      AppToast.warning(TripStrings.errPickupPlace);
-      return;
-    }
     final fareText = _fare.text.trim();
-    if (fareText.isEmpty) {
-      AppToast.warning(TripStrings.errEnterFare);
-      return;
-    }
     final fare = int.tryParse(fareText);
-    if (fare == null || fare < TaxiOptionSets.minFare || fare > TaxiOptionSets.maxFare) {
-      AppToast.warning(TripStrings.errFareRange);
+    if (fareText.isNotEmpty && (fare == null || fare < TaxiOptionSets.minFare || fare > TaxiOptionSets.maxFare)) {
+      setState(() => _fareError = TripStrings.errFareRange);
       return;
     }
-    setState(() => _saving = true);
+    final typed = _place.text.trim();
+    final place = typed.isEmpty ? _plan.cityNameOf(_days.first) : typed;
+    setState(() {
+      _fareError = null;
+      _saving = true;
+    });
     final days = {..._pastDays, ..._days}.toList()..sort();
     final plan = _tripPlan;
     for (final d in _days.toList()..sort()) {
@@ -348,7 +353,7 @@ class _BookingBodyState extends State<_BookingBody> {
     _plan.bookTaxi(
       taxi: _item,
       booking: TripTaxiBooking(
-        agreedFare: fare,
+        agreedFare: fare ?? 0,
         tollExtra: _toll,
         pickupTime: time,
         pickupPlace: place,
@@ -427,7 +432,10 @@ class _BookingBodyState extends State<_BookingBody> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(_maxFareDigits)],
                 style: _inputStyle,
-                decoration: _decoration(prefix: '₹ ', helper: TripStrings.agreedFareHelp),
+                onChanged: (_) {
+                  if (_fareError != null) setState(() => _fareError = null);
+                },
+                decoration: _decoration(prefix: '₹ ', helper: TripStrings.agreedFareHelp).copyWith(errorText: _fareError),
               ),
               const SizedBox(height: 6),
               _tollRow(),
@@ -721,6 +729,7 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
   late final TextEditingController _note;
   bool _toll = false;
   bool _saving = false;
+  String? _fareError;
 
   TripJourneyLeg get _car => widget.car;
 
@@ -816,22 +825,18 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
     FocusScope.of(context).unfocus();
     final taxiId = _car.taxiId;
     if (taxiId == null) return;
-    final place = _place.text.trim();
-    if (place.isEmpty) {
-      AppToast.warning(TripStrings.errPickupPlace);
-      return;
-    }
     final fareText = _fare.text.trim();
-    if (fareText.isEmpty) {
-      AppToast.warning(TripStrings.errEnterFare);
-      return;
-    }
     final fare = int.tryParse(fareText);
-    if (fare == null || fare < TaxiOptionSets.minFare || fare > TaxiOptionSets.maxFare) {
-      AppToast.warning(TripStrings.errFareRange);
+    if (fareText.isNotEmpty && (fare == null || fare < TaxiOptionSets.minFare || fare > TaxiOptionSets.maxFare)) {
+      setState(() => _fareError = TripStrings.errFareRange);
       return;
     }
-    setState(() => _saving = true);
+    final typed = _place.text.trim();
+    final place = typed.isEmpty ? (_car.fromName.trim().isEmpty ? TripStrings.pickupPlace : _car.fromName) : typed;
+    setState(() {
+      _fareError = null;
+      _saving = true;
+    });
     final ctrl = TripEnquiryController.to;
     final time = TripFormat.hhmm(_time);
     final note = _note.text.trim();
@@ -940,7 +945,10 @@ class _JourneyCarBodyState extends State<_JourneyCarBody> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(_maxFareDigits)],
                 style: _inputStyle,
-                decoration: _decoration(prefix: '₹ ', helper: TripStrings.agreedFareHelp),
+                onChanged: (_) {
+                  if (_fareError != null) setState(() => _fareError = null);
+                },
+                decoration: _decoration(prefix: '₹ ', helper: TripStrings.agreedFareHelp).copyWith(errorText: _fareError),
               ),
               const SizedBox(height: 6),
               _tollRow(),

@@ -419,6 +419,7 @@ class _DetailsBodyState extends State<_DetailsBody> {
   late final Set<String> _needs = widget.initial.needs.toSet();
   late TripStartFrom? _startFrom = widget.initialStart;
   bool _startTouched = false;
+  bool _more = false;
   String? _error;
 
   bool get _datesRequired => widget.heading != null;
@@ -644,36 +645,67 @@ class _DetailsBodyState extends State<_DetailsBody> {
               const SizedBox(height: 14),
               _card(children: [
                 _stepperRow(TripStrings.adults, _adults, 1, TripConstants.maxAdults, (v) => setState(() => _adults = v)),
-                const Divider(height: 1, color: AppColors.divider),
-                _stepperRow(TripStrings.kids, _kids, 0, TripConstants.maxKids, (v) => setState(() => _kids = v),
-                    unsetShowsMin: true),
-                const Divider(height: 1, color: AppColors.divider),
-                _stepperRow(TripStrings.rooms, _rooms, 1, TripConstants.maxRooms, (v) => setState(() => _rooms = v)),
               ]),
-              const SizedBox(height: 6),
-              const Text(
-                TripStringsA4.peopleHelp,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
-              ),
-              if (widget.showDays && widget.spotCount > 0) ...[
-                const SizedBox(height: 16),
-                _label(TripStringsA4.days),
-                const SizedBox(height: 2),
+              if (_datesRequired) ...[
+                const SizedBox(height: 6),
                 const Text(
-                  TripStringsA4.daysHelp,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+                  'Hosts and drivers need your travel date.',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
                 ),
-                const SizedBox(height: 8),
-                _daysRow(),
               ],
-              const SizedBox(height: 16),
-              _label(TripStrings.pace),
-              const SizedBox(height: 8),
-              _paceRow(),
-              const SizedBox(height: 16),
-              _label(TripStrings.needs),
-              const SizedBox(height: 4),
-              for (final key in TripNeeds.all) _needRow(key),
+              const SizedBox(height: 6),
+              InkWell(
+                onTap: () => setState(() => _more = !_more),
+                borderRadius: BorderRadius.circular(10),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'More options',
+                          style: TextStyle(
+                              fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: TripColors.accentDark),
+                        ),
+                      ),
+                      Icon(_more ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: TripColors.accentDark),
+                    ],
+                  ),
+                ),
+              ),
+              if (_more) ...[
+                const SizedBox(height: 8),
+                _card(children: [
+                  _stepperRow(TripStrings.kids, _kids, 0, TripConstants.maxKids, (v) => setState(() => _kids = v),
+                      unsetShowsMin: true),
+                  const Divider(height: 1, color: AppColors.divider),
+                  _stepperRow(TripStrings.rooms, _rooms, 1, TripConstants.maxRooms, (v) => setState(() => _rooms = v)),
+                ]),
+                const SizedBox(height: 6),
+                const Text(
+                  TripStringsA4.peopleHelp,
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight),
+                ),
+                if (widget.showDays && widget.spotCount > 0) ...[
+                  const SizedBox(height: 16),
+                  _label(TripStringsA4.days),
+                  const SizedBox(height: 2),
+                  const Text(
+                    TripStringsA4.daysHelp,
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),
+                  ),
+                  const SizedBox(height: 8),
+                  _daysRow(),
+                ],
+                const SizedBox(height: 16),
+                _label(TripStrings.pace),
+                const SizedBox(height: 8),
+                _paceRow(),
+                const SizedBox(height: 16),
+                _label(TripStrings.needs),
+                const SizedBox(height: 4),
+                for (final key in TripNeeds.all) _needRow(key),
+              ],
               if (_error != null) ...[
                 const SizedBox(height: 8),
                 Row(

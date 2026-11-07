@@ -74,8 +74,14 @@ class JourneyPlanController extends GetxController {
     refreshFailed.value = false;
     notFound.value = false;
     try {
-      final d = await _repo.plan(planKey, people: args.people, date: args.date);
+      final shownFrom = plan.value.legs.isEmpty ? args.from : plan.value.from;
+      final shownTo = plan.value.legs.isEmpty ? args.to : plan.value.to;
+      final typedFrom = args.from.name.trim().isNotEmpty ? args.from : shownFrom;
+      final typedTo = args.to.name.trim().isNotEmpty ? args.to : shownTo;
+      var d = await _repo.plan(planKey,
+          people: args.people, date: args.date, fromName: typedFrom.name, toName: typedTo.name);
       if (d.legs.isEmpty) throw StateError('empty plan');
+      d = d.withEndNames(typedFrom, typedTo);
       TripSegmentGeometryCache.putPlan(d);
       plan.value = d;
       chosen.assignAll(filledChosen(d, chosen));

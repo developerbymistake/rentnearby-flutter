@@ -49,8 +49,15 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
   void initState() {
     super.initState();
     final args = Get.arguments;
-    final id = args is Map ? args['id'] as String : args as String;
-    StayGuestController.to.getById(id).then((s) {
+    _id = args is Map ? args['id'] as String : args as String;
+    _fetch();
+  }
+
+  late final String _id;
+
+  void _fetch() {
+    if (!_loading) setState(() => _loading = true);
+    StayGuestController.to.getById(_id).then((s) {
       if (mounted) setState(() { _stay = s; _loading = false; });
     }).catchError((_) {
       if (mounted) setState(() => _loading = false);
@@ -156,7 +163,37 @@ class _StayDetailScreenState extends State<StayDetailScreen> {
       );
 
   Widget _buildContent() {
-    if (_stay == null) return const Center(child: Text('Stay not found'));
+    if (_stay == null) {
+      return SafeArea(
+        child: Column(
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                onPressed: () => Get.back(),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppColors.textDark),
+              ),
+            ),
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Stay not found',
+                        style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+                    TextButton(
+                      onPressed: _fetch,
+                      style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
+                      child: const Text('Try again', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     final s = _stay!;
     return CustomScrollView(
       slivers: [

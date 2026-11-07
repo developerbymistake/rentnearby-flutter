@@ -147,7 +147,7 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
             JourneyTotalBar(
               total: plan.totalWith(c.chosen, people: c.args.people),
               askLabel: JourneyAskButton.labelFor(plan.legs.length),
-              busy: c.isBusy,
+              busy: c.isBusy || c.loading.value,
               onAsk: () => c.askDrivers(context),
               onSave: c.args.inTrip ? null : c.saveJourney,
               onUse: c.args.inTrip ? () => c.useForTrip(context) : null,
@@ -160,8 +160,10 @@ class _JourneyPlanScreenState extends State<JourneyPlanScreen> {
 
   Widget _header(BuildContext context, JourneyPlanController c, WayPlan plan) {
     final a = c.args;
-    final from = plan.legs.isEmpty ? a.from.name : plan.from.name;
-    final to = plan.legs.isEmpty ? a.to.name : plan.to.name;
+    final from = wayNameOr(plan.legs.isEmpty || plan.from.name.trim().isEmpty ? a.from.name : plan.from.name,
+        a.from.key, start: true, end: false);
+    final to = wayNameOr(plan.legs.isEmpty || plan.to.name.trim().isEmpty ? a.to.name : plan.to.name,
+        a.to.key, start: false, end: true);
     return JourneyPlanScreen.header(
       context,
       title: TaxiWaysStrings.yourJourney,

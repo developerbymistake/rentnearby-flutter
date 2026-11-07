@@ -35,11 +35,27 @@ class TaxiWaysRepository {
         'toName': ?toName,
       })));
 
-  Future<WayPlanDetail> plan(String planKey, {required int people, DateTime? date}) async =>
+  Future<WayPlanDetail> plan(
+    String planKey, {
+    required int people,
+    DateTime? date,
+    String? fromName,
+    String? toName,
+  }) async =>
       WayPlan.fromJson(_data(await ApiService.get(
         '/taxis/ways/plans/${Uri.encodeComponent(planKey)}',
-        params: {'people': people, 'date': ?(date == null ? null : _date(date))},
+        params: {
+          'people': people,
+          'date': ?(date == null ? null : _date(date)),
+          'fromName': ?_name(fromName),
+          'toName': ?_name(toName),
+        },
       )));
+
+  static String? _name(String? n) {
+    final t = n?.trim() ?? '';
+    return t.isEmpty ? null : (t.length > 80 ? t.substring(0, 80) : t);
+  }
 
   Future<WayDriverPage> legDrivers(
     String legKey, {

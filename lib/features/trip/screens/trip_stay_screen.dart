@@ -49,6 +49,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
   final _checkedStays = <String>{};
   String? _fromStep;
   String? _replaceId;
+  Worker? _planWorker;
 
   @override
   void initState() {
@@ -70,6 +71,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
       _supply.clearSearchPoint();
     }
     _supply.ensureStays();
+    _planWorker = ever(_plan.plan, (_) => _supply.ensureStays());
   }
 
   void _changeDay(int d) {
@@ -84,6 +86,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
 
   @override
   void dispose() {
+    _planWorker?.dispose();
     if (Get.isRegistered<TripPlanController>() && identical(Get.find<TripPlanController>(), _plan)) {
       _plan.openPages--;
       _plan.releaseIfIdle();
@@ -454,7 +457,7 @@ class _TripStayScreenState extends State<TripStayScreen> {
       if (_noSupply()) return _box(_noSupplyView());
       final mode = TripNightChooser.modeOf(_plan, d);
       if (mode != TripNightMode.nightByNight) return _box(_modeCard(d, mode));
-      if (_plan.supplyPendingFor(_supply.day.value) || _supply.stayLoading.value) return _skeletons();
+      if (_plan.supplyPendingFor(_supply.day.value) || _supply.stayLoading.value || _supply.staysOutOfDate) return _skeletons();
       final all = _supply.stays;
       final ground = _groundOnly.value;
       _offStays.length;

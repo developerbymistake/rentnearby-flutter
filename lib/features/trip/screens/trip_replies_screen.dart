@@ -16,6 +16,7 @@ import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a2.dart';
 import '../trip_strings_a5.dart';
 import '../trip_strings_f2.dart';
 import '../utils/trip_enquiry_rules.dart';
@@ -60,6 +61,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
   String? _enquiryId;
   String? _fromStep;
   bool _started = false;
+  bool _retried = false;
 
   @override
   void initState() {
@@ -94,7 +96,13 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     } else {
       await _c.refreshEnquiries();
     }
-    if (mounted) setState(() => _started = true);
+    if (!mounted) return;
+    setState(() => _started = true);
+    final stale = _c.enquiriesForNight(_day).any((e) => e.display == TripDisplayStatus.offered && e.openOffer == null);
+    if (stale && !_retried) {
+      _retried = true;
+      await _c.refreshEnquiries();
+    }
   }
 
   int get _rankDay {
@@ -161,7 +169,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     return '${d.inDays} d ago';
   }
 
-  static String _inr(int? v) => v == null ? '' : BrowseItem.inr(v);
+  static String _inr(int? v) => v == null || v <= 0 ? '' : BrowseItem.inr(v);
 
   String _label(_Entry x) {
     final e = x.enquiry;
@@ -664,7 +672,11 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
     }
     switch (status) {
       case TripDisplayStatus.offered:
-        if (offer != null) add(Iconsax.close_circle, TripStrings.decline, () => _decline(e!), color: AppColors.error);
+        if (offer != null) {
+          add(Iconsax.close_circle, TripStrings.decline, () => _decline(e!), color: AppColors.error);
+        } else {
+          add(Iconsax.refresh, TripStringsA2.refresh, () => _c.refreshEnquiries());
+        }
         counter();
         add(Iconsax.call_calling, TripStrings.iBookedByPhone, () => _phoneBooking(x));
         add(Iconsax.undo, TripStrings.withdraw, () => TripWithdrawSheet.show(context, enquiry: e!), color: AppColors.error);
@@ -717,7 +729,7 @@ class _TripRepliesScreenState extends State<TripRepliesScreen> {
                 ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Text('${TripStrings.acceptOffer} · ${_inr(offer.total)}',
+                  child: Text([TripStrings.acceptOffer, _inr(offer.total)].where((s) => s.isNotEmpty).join(' · '),
                       maxLines: 1, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                 ),
               ),

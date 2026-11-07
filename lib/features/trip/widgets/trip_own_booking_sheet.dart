@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/input_formatters.dart';
 import '../../../widgets/gradient_button.dart';
-import '../../taxi/taxi_option_sets.dart';
 import '../controllers/trip_plan_controller.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
@@ -13,17 +11,21 @@ import '../trip_colors.dart';
 import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a2.dart';
-import '../trip_strings_fin_b1.dart';
-import '../trip_strings_mcc_k2.dart';
-import '../utils/trip_format.dart';
 import 'trip_cancel_sheet.dart';
-import 'trip_filter_chips.dart';
 import 'trip_sheet_frame.dart';
 import 'trip_withdraw_sheet.dart';
 
 enum TripOwnKind { stay, taxi }
 
+class _Copy {
+  static const String nameOptional = 'Name (optional)';
+  static const String allOptional = 'All optional';
+  static const String phoneHint = 'Needs a 10 digit number';
+  static const String cantChange = "This day can't be changed.";
+}
+
 class TripOwnBookingSheet {
+  // One tap marks the day or night as your own; the sheet that follows only adds optional details.
   static Future<bool> show(
     BuildContext context, {
     required int day,
@@ -31,27 +33,101 @@ class TripOwnBookingSheet {
     TripStayChoice? existingStay,
     TripTaxiChoice? existingTaxi,
   }) async {
-    if (TripPlanController.to.isReadOnly) return false;
-    final ok = await TripSheetFrame.show<bool>(
-      context,
-      _OwnBody(
-        day: day,
-        kind: kind,
-        existingStay: existingStay?.isOwn == true ? existingStay : null,
-        existingTaxi: existingTaxi?.isOwn == true ? existingTaxi : null,
-      ),
-    );
-    return ok == true;
+    final c = TripPlanController.to;
+    if (c.isReadOnly) return false;
+    final editing = kind == TripOwnKind.taxi ? existingTaxi?.isOwn == true : existingStay?.isOwn == true;
+    if (!editing && !await _mark(context, c, day, kind)) return false;
+    if (!context.mounted) return true;
+    await TripSheetFrame.show<bool>(context, _OwnBody(day: day, kind: kind));
+    return true;
+  }
+
+  static bool _sameCity(TripPlanController c, int a, int b) => c.legIndexOf(a) == c.legIndexOf(b);
+
+  static bool _dayOpen(TripPlanController c, int d) => !c.isDayPast(d) && c.bookedTaxiEnquiryFor(d) == null;
+
+  static List<int> defaultTaxiDays(TripPlanController c, int day) {
+    final p = c.plan.value;
+    if (p == null) return [day];
+    final days = [
+      for (final d in p.days)
+        if (_dayOpen(c, d.day) && _sameCity(c, d.day, day) && (d.day == day || (d.day > day && d.taxi == null))) d.day,
+    ];
+    return days.isEmpty ? [day] : days;
+  }
+
+  static bool _sameOwn(TripTaxiChoice? a, TripTaxiChoice b) =>
+      a != null && a.isOwn && a.name == b.name && a.ownPhone == b.ownPhone && a.note == b.note;
+
+  static List<int> ownTaxiDays(TripPlanController c, int day) {
+    final p = c.plan.value;
+    final mine = p?.dayAt(day)?.taxi;
+    if (p == null || mine == null || !mine.isOwn) return [day];
+    final days = [
+      for (final d in p.days)
+        if (d.day == day || (_sameOwn(d.taxi, mine) && _dayOpen(c, d.day) && _sameCity(c, d.day, day))) d.day,
+    ];
+    return days..sort();
+  }
+
+  static bool ownStayAllNights(TripPlanController c, int day) =>
+      c.plan.value?.days.any((d) => d.day > day && d.stay?.sameAsDay == day) ?? false;
+
+  static Future<bool> _mark(BuildContext context, TripPlanController c, int day, TripOwnKind kind) async {
+    final taxi = kind == TripOwnKind.taxi;
+    final days = taxi ? defaultTaxiDays(c, day) : const <int>[];
+    final allNights = !taxi && c.ownStayNights(day, allNights: true).length > 1;
+    OwnSaveResult run({bool close = false}) => taxi
+        ? c.setOwnTaxi(days: days, name: '', legDay: day, closeOpen: close)
+        : c.setOwnStay(day, name: '', allNights: allNights, closeOpen: close);
+    var r = run();
+    if (r is OwnNeedsWithdraw) {
+      if (!await TripWithdrawSheet.confirmInline(context) || !context.mounted) return false;
+      r = run(close: true);
+    }
+    if (r is OwnBlockedByConfirmed) {
+      if (!context.mounted) return false;
+      final cancelled = await TripSheetFrame.show<bool>(context, _BlockedBody(enquiry: r.e));
+      if (cancelled != true || !context.mounted) return false;
+      r = run();
+    }
+    if (r is OwnNothingToSave) {
+      AppToast.warning(_Copy.cantChange);
+      return false;
+    }
+    return r is OwnSaved;
   }
 }
 
+class _BlockedBody extends StatelessWidget {
+  const _BlockedBody({required this.enquiry});
+
+  final TripEnquiryModel enquiry;
+
+  @override
+  Widget build(BuildContext context) => TripSheetFrame(
+        title: TripStrings.cancelBookingFirst,
+        description: TripStringsA2.cancelFirstBody,
+        children: [
+          GradientButton(
+            label: TripStringsA2.cancelBooking,
+            height: 52,
+            gradient: TripColors.gradient,
+            shadowColor: TripColors.accent,
+            onPressed: () async {
+              final ok = await TripCancelSheet.show(context, enquiry: enquiry, ownerSide: false);
+              if (ok && context.mounted) Navigator.pop(context, true);
+            },
+          ),
+        ],
+      );
+}
+
 class _OwnBody extends StatefulWidget {
-  const _OwnBody({required this.day, required this.kind, this.existingStay, this.existingTaxi});
+  const _OwnBody({required this.day, required this.kind});
 
   final int day;
   final TripOwnKind kind;
-  final TripStayChoice? existingStay;
-  final TripTaxiChoice? existingTaxi;
 
   @override
   State<_OwnBody> createState() => _OwnBodyState();
@@ -59,64 +135,25 @@ class _OwnBody extends StatefulWidget {
 
 class _OwnBodyState extends State<_OwnBody> {
   static const _nameMax = 80;
-  static const _fareDigits = 7;
-  static final _phonePattern = RegExp(r'^[6-9]\d{9}$');
   final _c = TripPlanController.to;
   late final TextEditingController _name;
   late final TextEditingController _phone;
   late final TextEditingController _note;
-  late final TextEditingController _fare;
-  late bool _allNights;
-  late Set<int> _days;
   bool _busy = false;
-  TripEnquiryModel? _blockedBy;
 
   bool get _isTaxi => widget.kind == TripOwnKind.taxi;
 
   int get _day => widget.day;
 
-  int get _laterNights => _c.dayCount - _day;
-
-  int get _runNights => _c.ownStayNights(_day, allNights: true).length;
-
   @override
   void initState() {
     super.initState();
-    final s = widget.existingStay;
-    final t = widget.existingTaxi;
-    _name = TextEditingController(text: _isTaxi ? (t?.name ?? '') : (s?.name ?? ''));
+    final d = _c.plan.value?.dayAt(_day);
+    final t = d?.taxi?.isOwn == true ? d!.taxi : null;
+    final s = d?.stay?.isOwn == true ? d!.stay : null;
+    _name = TextEditingController(text: (_isTaxi ? t?.name : s?.name) ?? '');
     _phone = TextEditingController(text: (_isTaxi ? t?.ownPhone : s?.ownPhone) ?? '');
     _note = TextEditingController(text: (_isTaxi ? t?.note : s?.note) ?? '');
-    _fare = TextEditingController(text: t?.fare?.toString() ?? '');
-    _allNights = _laterNightsFree();
-    _days = _initialDays();
-  }
-
-  bool _laterNightsFree() {
-    final p = _c.plan.value;
-    if (p == null || _laterNights < 1) return false;
-    return p.days.where((d) => d.day > _day).every((d) => d.stay == null || d.stay!.sameAsDay == _day);
-  }
-
-  bool _dayOpen(int d) => !_c.isDayPast(d) && _c.bookedTaxiEnquiryFor(d) == null;
-
-  bool _sameCity(int d) => _c.legIndexOf(d) == _c.legIndexOf(_day);
-
-  Set<int> _initialDays() {
-    final p = _c.plan.value;
-    if (p == null) return {_day};
-    final t = widget.existingTaxi;
-    if (t != null) {
-      final same = {
-        for (final d in p.days)
-          if (d.taxi?.isOwn == true && d.taxi!.name == t.name && _dayOpen(d.day) && _sameCity(d.day)) d.day,
-      };
-      if (same.isNotEmpty) return same;
-    }
-    return {
-      for (final d in p.days)
-        if (_dayOpen(d.day) && _sameCity(d.day) && (d.day == _day || (d.day > _day && d.taxi == null))) d.day,
-    };
   }
 
   @override
@@ -124,75 +161,50 @@ class _OwnBodyState extends State<_OwnBody> {
     _name.dispose();
     _phone.dispose();
     _note.dispose();
-    _fare.dispose();
     super.dispose();
   }
 
-  bool get _valid {
-    final phone = _phone.text.trim();
-    final fare = _fare.text.trim();
-    final fareValue = int.tryParse(fare) ?? 0;
-    final fareOk = fare.isEmpty || (fareValue > 0 && fareValue <= TripConstants.maxAmount);
-    final daysOk = !_isTaxi || _days.isNotEmpty;
-    return _name.text.trim().isNotEmpty && (phone.isEmpty || _phonePattern.hasMatch(phone)) && fareOk && daysOk;
-  }
+  bool get _phoneHint => _phone.text.trim().isNotEmpty && TripOwnPhone.normalise(_phone.text) == null;
 
-  TripEnquiryModel? _confirmedOnCoveredNights() {
-    for (final d in _c.ownStayNights(_day, allNights: _allNights)) {
-      for (final e in _c.enquiriesForNight(d)) {
-        if (e.isConfirmed) return e;
-      }
-    }
-    return null;
-  }
-
-  Future<void> _saveStay() async {
-    final allNights = _allNights && _runNights > 1;
-    var r = _c.setOwnStay(_day, name: _name.text, phone: _phone.text, note: _note.text, allNights: allNights);
-    if (r is OwnNeedsWithdraw) {
-      if (!await TripWithdrawSheet.showForRemove(context, open: r.open)) return;
-      if (!mounted) return;
-      r = _c.setOwnStay(_day, name: _name.text, phone: _phone.text, note: _note.text, allNights: allNights);
-    }
-    if (!mounted) return;
-    if (r is OwnBlockedByConfirmed) {
-      setState(() => _blockedBy = _confirmedOnCoveredNights());
-      return;
-    }
-    if (r is OwnSaved) Navigator.pop(context, true);
-  }
-
-  Future<void> _saveTaxi() async {
-    final fare = int.tryParse(_fare.text.trim());
-    final days = _days.where((d) => _dayOpen(d) && _sameCity(d)).toList()..sort();
-    if (days.isEmpty) return;
-    OwnSaveResult save() => _c.setOwnTaxi(
-          days: days,
-          name: _name.text.trim(),
-          phone: _phone.text.trim(),
-          note: _note.text.trim(),
-          farePerDay: fare,
-          legDay: _day,
-        );
-    var r = save();
-    if (r is OwnNeedsWithdraw) {
-      if (!await TripWithdrawSheet.showForRemove(context, open: r.open)) return;
-      if (!mounted) return;
-      r = save();
-    }
-    if (!mounted) return;
-    if (r is OwnSaved) Navigator.pop(context, true);
+  OwnSaveResult _write() {
+    final name = _name.text.trim();
+    final phone = TripOwnPhone.normalise(_phone.text);
+    final note = _note.text.trim();
+    OwnSaveResult run() => _isTaxi
+        ? _c.setOwnTaxi(
+            days: TripOwnBookingSheet.ownTaxiDays(_c, _day),
+            name: name,
+            phone: phone,
+            note: note,
+            legDay: _day,
+            closeOpen: true,
+          )
+        : _c.setOwnStay(
+            _day,
+            name: name,
+            phone: phone,
+            note: note,
+            allNights: TripOwnBookingSheet.ownStayAllNights(_c, _day),
+            closeOpen: true,
+          );
+    return run();
   }
 
   Future<void> _save() async {
-    if (!_valid || _busy) return;
+    if (_busy) return;
     setState(() => _busy = true);
     try {
-      if (_isTaxi) {
-        await _saveTaxi();
-      } else {
-        await _saveStay();
+      final r = _write();
+      if (!mounted) return;
+      if (r is OwnBlockedByConfirmed) {
+        AppToast.warning(TripStringsA2.cancelFirstBody);
+        return;
       }
+      if (r is OwnNothingToSave) {
+        AppToast.warning(_Copy.cantChange);
+        return;
+      }
+      Navigator.pop(context, true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -207,149 +219,39 @@ class _OwnBodyState extends State<_OwnBody> {
     Navigator.pop(context, true);
   }
 
-  Future<void> _cancelBooking(TripEnquiryModel e) async {
-    final ok = await TripCancelSheet.show(context, enquiry: e, ownerSide: false);
-    if (ok && mounted) setState(() => _blockedBy = null);
-  }
-
-  InputDecoration _decoration(String label) => InputDecoration(
+  InputDecoration _decoration(String label, {String? helper, String? prefix}) => InputDecoration(
         labelText: label,
         counterText: '',
+        helperText: helper,
+        prefixText: prefix,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       );
 
-  Widget _blocked(TripEnquiryModel e) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-        decoration: BoxDecoration(color: AppColors.warningSurface, borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(TripStrings.cancelBookingFirst,
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.warningText)),
-            const SizedBox(height: 2),
-            const Text(TripStringsA2.cancelFirstBody,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.warningText, height: 1.35)),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: () => _cancelBooking(e),
-                style: TextButton.styleFrom(minimumSize: const Size(0, 44), padding: EdgeInsets.zero),
-                child: const Text(TripStringsA2.cancelBooking,
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: AppColors.error)),
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _dayChips() {
-    final n = _c.dayCount;
-    final anyOpen = [for (var d = 1; d <= n; d++) d].any((d) => _dayOpen(d) && _sameCity(d));
-    if (!anyOpen) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: Text(TripStringsA2.daysPassed,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textLight)),
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(TripStringsA2.days,
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textMedium)),
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 6,
-          children: [
-            for (var d = 1; d <= n; d++) _dayChip(d),
-          ],
-        ),
-        if (_c.isMultiCity)
-          Text(TripStringsFinB1.ownTaxiCityHint(_c.cityNameOf(_day)),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight)),
-        if (_days.isEmpty)
-          const Text(TripStringsA2.pickADay,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.error)),
-      ],
-    );
-  }
-
-  Widget _dayChip(int d) {
-    final open = _dayOpen(d);
-    final date = _c.dateOf(d);
-    final base = TripStringsA2.dayChip(d);
-    final label = !open && _c.bookedTaxiEnquiryFor(d) != null
-        ? '$base · ${TripStringsA2.booked}'
-        : (date == null ? base : '$base · ${TripFormat.dayMonth(date)}');
-    final city = _sameCity(d);
-    final chip = TripChipView(
-      accent: TaxiColors.accent,
-      chip: TripFilterChip(
-        label: label,
-        selected: open && city && _days.contains(d),
-        onTap: () {
-          if (!open) return;
-          if (!city) {
-            AppToast.warning(TripStringsMccK2.pickInOneCity);
-            return;
-          }
-          setState(() => _days.contains(d) ? _days.remove(d) : _days.add(d));
-        },
-      ),
-    );
-    return open && city ? chip : Opacity(opacity: 0.45, child: chip);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final editing = _isTaxi ? widget.existingTaxi != null : widget.existingStay != null;
-    final blocked = _blockedBy;
     return TripSheetFrame(
       title: _isTaxi ? TripStringsA2.haveTaxi : TripStrings.haveStay,
-      footer: Text(
-        _isTaxi ? TripStringsA2.ownTaxiFooter : TripStrings.ownBookingFooter,
-        style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight, height: 1.35),
-      ),
+      description: _Copy.allOptional,
       children: [
-        if (blocked != null) _blocked(blocked),
         TextField(
           controller: _name,
           maxLength: _nameMax,
           textCapitalization: TextCapitalization.words,
           inputFormatters: [...noEmojiInputFormatters, LengthLimitingTextInputFormatter(_nameMax)],
-          onChanged: (_) => setState(() {}),
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-          decoration: _decoration(TripStrings.name),
+          decoration: _decoration(_Copy.nameOptional),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _phone,
           keyboardType: TextInputType.phone,
-          maxLength: 10,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
+          maxLength: 12,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(12)],
           onChanged: (_) => setState(() {}),
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-          decoration: _decoration(TripStrings.phoneOptional).copyWith(prefixText: '+91 '),
+          decoration: _decoration(TripStrings.phoneOptional, prefix: '+91 ', helper: _phoneHint ? _Copy.phoneHint : null),
         ),
-        if (_isTaxi) ...[
-          const SizedBox(height: 12),
-          TextField(
-            controller: _fare,
-            keyboardType: TextInputType.number,
-            maxLength: _fareDigits,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(_fareDigits)],
-            onChanged: (_) => setState(() {}),
-            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
-            decoration: _decoration(TripStringsA2.farePerDay).copyWith(prefixText: '₹ '),
-          ),
-          const SizedBox(height: 12),
-          _dayChips(),
-        ],
         const SizedBox(height: 12),
         TextField(
           controller: _note,
@@ -360,26 +262,6 @@ class _OwnBodyState extends State<_OwnBody> {
           style: const TextStyle(fontFamily: 'Poppins', fontSize: 14),
           decoration: _decoration(TripStrings.note),
         ),
-        if (!_isTaxi && _runNights > 1)
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            value: _allNights,
-            activeTrackColor: TripColors.accent,
-            onChanged: _busy
-                ? null
-                : (v) => setState(() {
-                      _allNights = v;
-                      _blockedBy = null;
-                    }),
-            secondary: const Icon(Iconsax.moon, size: 20, color: TripColors.accentDark),
-            title: Text(TripStringsA2.allNightsOwn(_runNights),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-            subtitle: const Text(TripStringsA2.allNightsOwnBody,
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 12, color: AppColors.textLight)),
-          ),
         const SizedBox(height: 16),
         GradientButton(
           label: TripStrings.save,
@@ -387,19 +269,17 @@ class _OwnBodyState extends State<_OwnBody> {
           isLoading: _busy,
           gradient: TripColors.gradient,
           shadowColor: TripColors.accent,
-          onPressed: _valid ? _save : null,
+          onPressed: _busy ? null : _save,
         ),
-        if (editing) ...[
-          const SizedBox(height: 6),
-          Center(
-            child: TextButton(
-              onPressed: _busy ? null : _remove,
-              style: TextButton.styleFrom(minimumSize: const Size(88, 44)),
-              child: const Text(TripStrings.remove,
-                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.error)),
-            ),
+        const SizedBox(height: 6),
+        Center(
+          child: TextButton(
+            onPressed: _busy ? null : _remove,
+            style: TextButton.styleFrom(minimumSize: const Size(88, 44)),
+            child: const Text(TripStrings.remove,
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppColors.error)),
           ),
-        ],
+        ),
       ],
     );
   }

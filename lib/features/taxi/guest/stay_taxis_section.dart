@@ -21,7 +21,7 @@ import 'taxi_card.dart';
 import 'taxi_navigation.dart';
 import 'traveller_city.dart';
 
-enum _Phase { locating, loading, list, empty, unavailable, error, offline, summary, noWays }
+enum _Phase { hidden, locating, loading, list, empty, unavailable, error, offline, summary, noWays }
 
 class StayTaxisSection extends StatefulWidget {
   final String? stayCityId;
@@ -123,7 +123,11 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
 
   Future<void> _load() async {
     final from = _from;
-    if (from == null || !TabConfigController.to.isTaxiActive) return;
+    if (from == null) return;
+    if (!TabConfigController.to.isTaxiActive) {
+      if (mounted) setState(() => _phase = _Phase.hidden);
+      return;
+    }
     final myGen = ++_gen;
     setState(() => _phase = _Phase.loading);
     try {
@@ -160,13 +164,17 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
   }
 
   DateTime get _date {
-    final d = _tripDate ?? widget.date;
-    if (d != null) return d;
     final n = DateTime.now();
-    return DateTime(n.year, n.month, n.day + 1);
+    final today = DateTime(n.year, n.month, n.day);
+    final d = _tripDate ?? widget.date;
+    if (d == null) return DateTime(n.year, n.month, n.day + 1);
+    final day = DateTime(d.year, d.month, d.day);
+    if (day.isBefore(today)) return today;
+    final limit = DateTime(n.year, n.month, n.day + 365);
+    return day.isAfter(limit) ? limit : day;
   }
 
-  int get _people => _tripPeople ?? widget.people ?? 2;
+  int get _people => (_tripPeople ?? widget.people ?? 2).clamp(1, 12).toInt();
 
   static String _summaryOf(TaxiWaysResult r) {
     final direct = r.allTheWay;
@@ -217,6 +225,7 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
 
   @override
   Widget build(BuildContext context) {
+    if (_phase == _Phase.hidden) return const SizedBox.shrink();
     final from = _from;
     final local = from != null && _sameCity;
     final fromName = from?.place.name ?? '';
@@ -232,6 +241,7 @@ class _StayTaxisSectionState extends State<StayTaxisSection> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _header(label: label, seeAll: local || from == null),
       ...switch (_phase) {
+        _Phase.hidden => const <Widget>[],
         _Phase.locating => [_note('Finding your city...')],
         _Phase.loading => [
             for (var i = 0; i < _previewCount; i++)

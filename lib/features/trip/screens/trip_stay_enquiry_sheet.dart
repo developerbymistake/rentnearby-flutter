@@ -13,6 +13,7 @@ import '../models/trip_enquiry_model.dart';
 import '../trip_constants.dart';
 import '../trip_navigation.dart';
 import '../trip_strings.dart';
+import '../trip_strings_a2.dart';
 import '../trip_strings_mca_a3.dart';
 import '../utils/trip_enquiry_rules.dart';
 import '../utils/trip_format.dart';
@@ -153,8 +154,30 @@ class _EnquiryBodyState extends State<_EnquiryBody> {
       final ids = stays.map((s) => s.stayId).toList();
       final s = _c.settings;
       final checkIn = _c.dateOf(_day);
-      if (p == null || checkIn == null) {
-        return const TripSheetFrame(title: TripStrings.enquiryTitle, children: [SizedBox(height: 24)]);
+      if (p == null || checkIn == null || stays.isEmpty) {
+        final needDates = p != null && checkIn == null && stays.isNotEmpty;
+        return TripSheetFrame(
+          title: TripStrings.enquiryTitle,
+          children: [
+            Text(needDates ? TripStringsA2.addDatesToSend : TripStringsA2.nothingToSend,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium, height: 1.4)),
+            const SizedBox(height: 16),
+            if (needDates)
+              GradientButton(
+                onPressed: () => TripDetailsSheet.edit(context),
+                label: TripStringsA2.addDates,
+                gradient: StayColors.gradient,
+                shadowColor: StayColors.accent,
+              )
+            else
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
+                child: const Text(TripStrings.done,
+                    style: TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMedium)),
+              ),
+          ],
+        );
       }
       final run = _c.enquiryNightsRun(_day).length;
       final canAll = run > 1;

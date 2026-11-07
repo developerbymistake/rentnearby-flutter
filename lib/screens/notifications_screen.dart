@@ -11,6 +11,7 @@ import '../controllers/notification_controller.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 import '../utils/app_date_format.dart';
+import '../utils/app_toast.dart';
 import '../utils/notification_visuals.dart';
 import '../widgets/day_header.dart';
 import '../widgets/empty_state_view.dart';
@@ -56,7 +57,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void _openNotification(NotificationModel n) {
     _ctrl.markRead(n.id);
     final route = n.actionRoute;
-    if (route == null || route == AppRoutes.notifications || !Get.find<AuthController>().canOpenRoute(route)) return;
+    if (route == null || route == AppRoutes.notifications) return;
+    if (!Get.find<AuthController>().canOpenRoute(route)) {
+      AppToast.info('This is no longer available.');
+      return;
+    }
     NotificationService.to.openActionRoute(route, n.actionArguments);
   }
 

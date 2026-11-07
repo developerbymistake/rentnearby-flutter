@@ -131,7 +131,7 @@ class _CancelBodyState extends State<_CancelBody> {
     final line = [
       if (e.datesLabel.isNotEmpty) e.datesLabel,
       e.countLabel,
-      if (total != null) BrowseItem.inr(total),
+      if (total != null && total > 0) BrowseItem.inr(total),
     ].join(' · ');
     return Container(
       padding: const EdgeInsets.all(12),

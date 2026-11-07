@@ -119,7 +119,7 @@ class TripSummaryText {
 
   static String travelCarLine(TripSummaryTravelCar c) {
     final fare = c.fare;
-    return TripStringsMcdA1.carLine(c.car, c.driverName, fare == null ? null : BrowseItem.inr(fare), carStatus(c));
+    return TripStringsMcdA1.carLine(c.car, c.driverName, fare == null || fare <= 0 ? null : BrowseItem.inr(fare), carStatus(c));
   }
 
   static String ownTravelLine(TripSummaryTravel t) => TripStringsMcdA1.ownTravelLine(
@@ -172,7 +172,7 @@ class TripSummaryText {
 
   static String fareLine(TripSummaryTaxi t) {
     final fare = t.agreedFare;
-    if (fare == null) return '';
+    if (fare == null || fare <= 0) return '';
     final p = BrowseItem.inr(fare);
     return t.tollExtra ? '$p · ${TripStrings.tollExtraShort}' : p;
   }
@@ -264,6 +264,9 @@ class TripSummaryText {
     return out;
   }
 
+  static String ownOr(String name, bool isOwn, String fallback) =>
+      isOwn && name.trim().isEmpty ? fallback : name;
+
   static List<String> _nightLines(TripSummaryNight n, int level) {
     final lines = <String>[];
     final dateText = n.date == null ? '' : TripFormat.shortDate(n.date!);
@@ -273,9 +276,9 @@ class TripSummaryText {
     }
     final title = [
       TripStrings.nightCard(n.night, dateText),
-      n.listingName,
+      ownOr(n.listingName, n.isOwn, 'Own stay'),
       n.isOwn ? TripStrings.ownBookingShort : statusLabel(n.display, n.cancelledBy),
-      if (n.agreedTotal != null) BrowseItem.inr(n.agreedTotal!),
+      if ((n.agreedTotal ?? 0) > 0) BrowseItem.inr(n.agreedTotal!),
     ].where((e) => e.isNotEmpty).join(' · ');
     lines.add(title);
     if (n.isOwn && (n.ownPhone ?? '').isNotEmpty) lines.add('  ${n.ownPhone}');
@@ -299,7 +302,7 @@ class TripSummaryText {
   static List<String> _taxiLines(TripSummaryTaxi t, int level) {
     final lines = <String>[];
     final title = [
-      t.listingName,
+      ownOr(t.listingName, t.isOwn, 'Own taxi'),
       taxiDayNumbers(t),
       t.isOwn ? TripStrings.ownBookingShort : statusLabel(t.display, t.cancelledBy, taxi: true),
       fareLine(t),

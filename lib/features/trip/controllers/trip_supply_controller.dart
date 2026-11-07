@@ -143,6 +143,12 @@ class TripSupplyController extends GetxController {
 
   String? get dayDistrictId => _plan.plan.value?.districtIdOf(day.value);
 
+  bool get districtPending => _plan.supplyPendingFor(day.value);
+
+  bool get staysOutOfDate => dayDistrictId != null && (_staysDay != day.value || _staysDistrict != dayDistrictId);
+
+  bool get taxisOutOfDate => dayDistrictId != null && !_plan.taxiTabOff.value && _taxisKey != _taxiKeyFor(dayDistrictId!, day.value);
+
   Future<void> ensureTaxis() async {
     final districtId = dayDistrictId;
     if (districtId == null || _plan.taxiTabOff.value) {
@@ -338,11 +344,15 @@ class TripSupplyController extends GetxController {
         rows.addAll(list.whereType<Map<String, dynamic>>());
       }
       final byId = <String, StayNearbyModel>{};
+      final good = <Map<String, dynamic>>[];
       for (final r in rows) {
-        final m = StayNearbyModel.fromJson(r);
-        byId.putIfAbsent(m.id, () => m);
+        try {
+          final m = StayNearbyModel.fromJson(r);
+          byId.putIfAbsent(m.id, () => m);
+          good.add(r);
+        } catch (_) {}
       }
-      final ranked = TripStayRank.rank(rows, night, radius);
+      final ranked = TripStayRank.rank(good, night, radius);
       _stayFits
         ..clear()
         ..addEntries(ranked.map((f) => MapEntry(f.id, f)));

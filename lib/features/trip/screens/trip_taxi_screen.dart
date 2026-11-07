@@ -55,6 +55,7 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
   final _contactBusy = <String>{}.obs;
   final _contacts = <String, ({String phone, String whatsApp})>{};
   String? _fromStep;
+  Worker? _districtWorker;
 
   int get _day => _supply.day.value;
 
@@ -73,11 +74,13 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
     _supply.minSeats.value = null;
     _supply.onlySuv.value = false;
     _supply.ensureTaxis();
+    _districtWorker = ever(_plan.plan, (_) => _supply.ensureTaxis());
     _scroll.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _districtWorker?.dispose();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     if (Get.isRegistered<TripPlanController>() && identical(Get.find<TripPlanController>(), _plan)) {
@@ -528,6 +531,28 @@ class _TripTaxiScreenState extends State<TripTaxiScreen> {
         );
       }
       final items = _supply.taxis;
+      if (items.isEmpty && _supply.dayDistrictId == null && !_plan.taxiTabOff.value) {
+        if (_plan.trip.value == null) {
+          return SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            sliver: SliverList.separated(
+              itemCount: 4,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (_, _) => _narrow(TripShimmers.rowBox(height: TripDriverRow.height)),
+            ),
+          );
+        }
+        return _stateBox(
+          icon: Iconsax.car,
+          title: TripStrings.notAvailableHere,
+          subtitle: TripStringsA3.noDriversBody,
+          actions: [
+            _outlinedAction(TripStringsA3.iHaveTaxi, Iconsax.car, _own),
+            if (_plan.plan.value?.dayAt(d)?.taxi?.isSkipped != true)
+              _outlinedAction(TripStringsStepsA1.noTaxiThisDay, Iconsax.minus_cirlce, () => _noTaxi(d)),
+          ],
+        );
+      }
       if (items.isEmpty) {
         if (_supply.taxiLoading.value) {
           return SliverPadding(

@@ -56,6 +56,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
   Future<void> _load() async {
     setState(() {
       _loading = true;
+      _offline = false;
     });
     try {
       final snap = await TripSummarySource.load(_tripId);
@@ -448,7 +449,7 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _titleRow(heading, subtitle ?? n.listingName, TripStatusPill(status, label: label)),
+          _titleRow(heading, subtitle ?? TripSummaryText.ownOr(n.listingName, n.isOwn, 'Own stay'), TripStatusPill(status, label: label)),
           if (n.isOwn && (n.ownPhone ?? '').isNotEmpty) _kv(TripStrings.call, n.ownPhone!),
           for (final room in n.roomLines) _kv(TripStrings.room, TripSummaryText.roomLine(room)),
           if (agreed != null) _kv(TripStrings.agreed, BrowseItem.inr(agreed)),
@@ -462,7 +463,8 @@ class _TripSummaryScreenState extends State<TripSummaryScreen> {
   }
 
   Widget _taxiCard(TripSummaryTaxi t) {
-    final vehicle = (t.vehicleTypeName ?? '').isEmpty ? t.listingName : '${t.listingName} · ${t.vehicleTypeName}';
+    final taxiName = TripSummaryText.ownOr(t.listingName, t.isOwn, 'Own taxi');
+    final vehicle = (t.vehicleTypeName ?? '').isEmpty ? taxiName : '$taxiName · ${t.vehicleTypeName}';
     final status = t.isOwn ? TripDisplayStatus.own : t.display;
     final label = t.isOwn
         ? TripStrings.ownBookingShort

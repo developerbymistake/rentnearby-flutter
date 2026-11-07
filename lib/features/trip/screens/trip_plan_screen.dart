@@ -11,7 +11,6 @@ import '../../../utils/input_formatters.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/gradient_button.dart';
 import '../controllers/trip_plan_controller.dart';
-import '../models/trip_city_model.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_plan_model.dart';
 import '../trip_colors.dart';
@@ -56,12 +55,9 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   final _rowsKey = GlobalKey();
   final Map<int, GlobalKey> _legKeys = {};
   Worker? _startWorker;
-  Worker? _nextWorker;
-  Worker? _nextTripWorker;
   Worker? _addedWorker;
   Worker? _linkPlanWorker;
   Worker? _linkOpenWorker;
-  bool _nextOpening = false;
   String? _tripId;
   String? _step;
   int? _linkDay;
@@ -104,15 +100,10 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
       _pickUpKey = StorageService.getTripWizardLast(id);
     }
     _startWorker = ever<TripPlan?>(_c.plan, (_) => _checkStartFrom());
-    _nextWorker = ever<TripCityModel?>(_c.pendingNextCity, (_) => _openPendingNext());
-    _nextTripWorker = ever(_c.trip, (_) => _openPendingNext());
     _addedWorker = ever<int?>(_c.lastAddedLeg, _scrollToAdded);
     _linkPlanWorker = ever<TripPlan?>(_c.plan, (_) => _tryLink());
     _linkOpenWorker = ever<bool>(_c.isOpening, (_) => _tryLink());
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkStartFrom();
-      _openPendingNext();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkStartFrom());
     if (id != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
@@ -132,8 +123,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _startWorker?.dispose();
-    _nextWorker?.dispose();
-    _nextTripWorker?.dispose();
     _addedWorker?.dispose();
     _linkPlanWorker?.dispose();
     _linkOpenWorker?.dispose();
@@ -148,26 +137,6 @@ class _TripPlanScreenState extends State<TripPlanScreen> with WidgetsBindingObse
   void _checkStartFrom() {
     if (!mounted || _c.plan.value == null || _c.startFrom != null || _c.isReadOnly) return;
     unawaited(_c.ensureStartFrom());
-  }
-
-  void _openPendingNext() {
-    final next = _c.pendingNextCity.value;
-    if (!mounted || _nextOpening || next == null || _c.trip.value == null || _c.isReadOnly) return;
-    if (ModalRoute.of(context)?.isCurrent != true) return;
-    _nextOpening = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) {
-        _nextOpening = false;
-        return;
-      }
-      if (next.isReady) {
-        await TripNavigation.openSpots(next, tripId: _c.trip.value?.id, newLeg: true);
-      } else {
-        await _c.addLeg(next, const []);
-      }
-      if (identical(_c.pendingNextCity.value, next)) _c.pendingNextCity.value = null;
-      _nextOpening = false;
-    });
   }
 
   void _tryLink() {

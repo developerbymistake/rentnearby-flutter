@@ -69,6 +69,12 @@ class TripEnquiryController extends GetxController {
       AppToast.error(TripStrings.noNetwork);
       return;
     }
+    if (enquiryId != null &&
+        (type == TripEnquiryErrorTypes.offerExpired ||
+            type == TripEnquiryErrorTypes.offerNotPending ||
+            type == TripEnquiryErrorTypes.enquiryClosed)) {
+      unawaited(refreshOne(enquiryId));
+    }
     if (type == TripEnquiryErrorTypes.enquiryLimit) {
       AppToast.warning('${TripStrings.askLimitTitle}. ${TripStrings.askLimitBody(lastRetryAfterMinutes ?? 1)}');
       return;
@@ -94,7 +100,9 @@ class TripEnquiryController extends GetxController {
       lastConflict = conflictOf(e);
       final network = DioErrorMapper.isNetworkError(e);
       lastErrorType = network ? null : DioErrorMapper.errorType(e);
-      lastErrorMessage = network ? TripStrings.noNetwork : DioErrorMapper.serverMessage(e);
+      lastErrorMessage = network
+          ? TripStrings.noNetwork
+          : DioErrorMapper.toMessage(e, fallback, showRawMessageForStatusCodes: {400, 403, 409, 422, 429});
       _fail(e, enquiryId: id, fallback: fallback, silent: silent);
       return null;
     } finally {
@@ -157,7 +165,7 @@ class TripEnquiryController extends GetxController {
   Map<String, dynamic> _taxiBody({
     required String taxiId,
     required List<int> days,
-    required int agreedFare,
+    int? agreedFare,
     required bool tollExtra,
     required String pickupTime,
     required String pickupPlace,
@@ -168,7 +176,7 @@ class TripEnquiryController extends GetxController {
       {
         'taxiId': taxiId,
         'days': days,
-        'agreedFare': agreedFare,
+        'agreedFare': ?agreedFare,
         'tollExtra': tollExtra,
         'pickupTime': pickupTime,
         'pickupPlace': pickupPlace,
@@ -180,7 +188,7 @@ class TripEnquiryController extends GetxController {
   Future<TripEnquiryModel?> bookTaxi({
     required String taxiId,
     required List<int> days,
-    required int agreedFare,
+    int? agreedFare,
     required bool tollExtra,
     required String pickupTime,
     required String pickupPlace,

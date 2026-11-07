@@ -4,6 +4,7 @@ import 'package:iconsax/iconsax.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../utils/contact_launcher.dart';
+import '../../../widgets/empty_state_view.dart';
 import '../../../widgets/gradient_button.dart';
 import '../../../widgets/pulse_once.dart';
 import '../../stay/setup/stay_option_sets.dart';
@@ -145,7 +146,16 @@ class _TripStepScreenState extends State<TripStepScreen> {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 640),
                     child: cur == null
-                        ? const Center(child: CircularProgressIndicator(color: TripColors.accent))
+                        ? (_c.plan.value == null && !_c.isOpening.value
+                            ? EmptyStateView(
+                                icon: Iconsax.cloud_cross,
+                                title: TripStrings.placesFailed,
+                                subtitle: TripStrings.checkConnection,
+                                onRetry: TripNavigation.backToList,
+                                retryLabel: 'Back to trip',
+                                palette: TripColors.palette,
+                              )
+                            : const Center(child: CircularProgressIndicator(color: TripColors.accent)))
                         : AnimatedSwitcher(
                             duration: const Duration(milliseconds: 220),
                             transitionBuilder: (child, anim) => FadeTransition(
@@ -255,7 +265,35 @@ class _TripStepScreenState extends State<TripStepScreen> {
         onPrev: _w.prev,
         onNext: _w.next,
         onDone: TripNavigation.backToList,
+        openCount: _w.openCount,
+        onSkipRest: () => _confirmSkipRest(context),
       );
+
+  Future<void> _confirmSkipRest(BuildContext context) async {
+    final n = _w.openCount;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Skip the rest?',
+            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, fontSize: 17)),
+        content: Text('$n open ${n == 1 ? 'step' : 'steps'} will be marked as arranged by you. You can change any later.',
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, color: AppColors.textMedium)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Poppins', color: AppColors.textLight)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Skip',
+                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) _w.skipRest();
+  }
 
   Widget _body(BuildContext context, TripStepInfo cur) {
     final children = switch (cur.key.kind) {
@@ -1039,6 +1077,8 @@ class TripStepFooter extends StatelessWidget {
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback onDone;
+  final int openCount;
+  final VoidCallback? onSkipRest;
 
   const TripStepFooter({
     super.key,
@@ -1048,6 +1088,8 @@ class TripStepFooter extends StatelessWidget {
     required this.onPrev,
     required this.onNext,
     required this.onDone,
+    this.openCount = 0,
+    this.onSkipRest,
   });
 
   @override
@@ -1071,7 +1113,18 @@ class TripStepFooter extends StatelessWidget {
         heightFactor: 1,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (openCount > 1 && onSkipRest != null)
+                TextButton(
+                  onPressed: onSkipRest,
+                  style: TextButton.styleFrom(minimumSize: const Size(0, 44)),
+                  child: Text('Skip the rest · $openCount open',
+                      style: const TextStyle(
+                          fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textLight)),
+                ),
+              Row(
             children: [
               if (showPrev) ...[
                 OutlinedButton(
@@ -1088,6 +1141,8 @@ class TripStepFooter extends StatelessWidget {
                 const SizedBox(width: 10),
               ],
               Expanded(child: primary),
+            ],
+          ),
             ],
           ),
         ),

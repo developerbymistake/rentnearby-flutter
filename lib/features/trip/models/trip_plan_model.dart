@@ -691,6 +691,7 @@ enum TripTravelHow {
   car,
   bus,
   train,
+  flight,
   other;
 
   static TripTravelHow? parse(Object? wire) {
@@ -701,6 +702,20 @@ enum TripTravelHow {
   }
 
   String get wire => name;
+}
+
+class TripOwnPhone {
+  static final _valid = RegExp(r'^[6-9]\d{9}$');
+
+  static String? normalise(String? raw) {
+    var d = (raw ?? '').replaceAll(RegExp(r'\D'), '');
+    if (d.length == 12 && d.startsWith('91')) {
+      d = d.substring(2);
+    } else if (d.length == 11 && d.startsWith('0')) {
+      d = d.substring(1);
+    }
+    return _valid.hasMatch(d) ? d : null;
+  }
 }
 
 class TripTravelModes {
@@ -1140,6 +1155,10 @@ sealed class OwnSaveResult {
 
 class OwnSaved extends OwnSaveResult {
   const OwnSaved();
+}
+
+class OwnNothingToSave extends OwnSaveResult {
+  const OwnNothingToSave();
 }
 
 class OwnNeedsWithdraw extends OwnSaveResult {

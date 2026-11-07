@@ -88,7 +88,7 @@ class TripEnquiryRepository {
     required String journeyId,
     required int journeyLegIndex,
     required String taxiId,
-    required int agreedFare,
+    int? agreedFare,
     required bool tollExtra,
     required String pickupTime,
     required String pickupPlace,
@@ -97,7 +97,7 @@ class TripEnquiryRepository {
       taxiBooking(tripId, {
         'taxiId': taxiId,
         'days': const <int>[],
-        'agreedFare': agreedFare,
+        'agreedFare': ?agreedFare,
         'tollExtra': tollExtra,
         'pickupTime': pickupTime,
         'pickupPlace': pickupPlace,

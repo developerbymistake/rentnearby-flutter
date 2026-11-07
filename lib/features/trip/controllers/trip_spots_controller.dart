@@ -21,6 +21,7 @@ class TripSpotsController extends GetxController {
   final isLoadingMore = false.obs;
   final loadFailed = false.obs;
   final plannerOff = false.obs;
+  final loadError = ''.obs;
   final status = TripSpotStatus.ready.obs;
   final hasMore = false.obs;
   final total = 0.obs;
@@ -56,6 +57,7 @@ class TripSpotsController extends GetxController {
     final seq = ++_seq;
     isLoading.value = true;
     loadFailed.value = false;
+    loadError.value = '';
     plannerOff.value = false;
     try {
       final page = await _repo.spots(cityKey);
@@ -75,6 +77,7 @@ class TripSpotsController extends GetxController {
         status.value = TripSpotStatus.notReady;
       } else if (!(e is DioException && e.response?.statusCode == 401)) {
         loadFailed.value = true;
+        loadError.value = DioErrorMapper.isNetworkError(e) ? '' : DioErrorMapper.toMessage(e, '');
       }
     } finally {
       if (seq == _seq) isLoading.value = false;

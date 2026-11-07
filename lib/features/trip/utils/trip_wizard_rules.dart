@@ -3,6 +3,7 @@ import '../../../utils/money_format.dart';
 import '../models/trip_enquiry_model.dart';
 import '../models/trip_journey_model.dart';
 import '../models/trip_plan_model.dart';
+import '../trip_constants.dart';
 import 'trip_enquiry_rules.dart';
 import 'trip_format.dart';
 import 'trip_geo.dart';
@@ -223,7 +224,7 @@ class TripWizardCopy {
   static String twoPlansNight(int day) => 'Two plans for Night $day · keep one';
   static String twoPlansDay(int day) => 'Two plans for Day $day · keep one';
   static const String noStay = 'No stay tonight';
-  static String ownStay(String name) => name.isEmpty ? 'Own stay' : 'Own stay · $name';
+  static String ownStay(String name) => name.trim().isEmpty ? 'Own stay' : 'Own stay · ${name.trim()}';
   static String booked(String name, int? rupees) =>
       rupees == null || rupees <= 0 ? 'Booked · $name' : 'Booked · $name · ${Money.exact(rupees)}';
   static String sameAs(int night, String name) => 'Same as Night $night · $name';
@@ -246,7 +247,7 @@ class TripWizardCopy {
   static const String youDeclinedStay = 'You declined · find a stay';
 
   static const String noTaxi = 'No taxi this day';
-  static String ownTaxi(String name) => name.isEmpty ? 'Own taxi' : 'Own taxi · $name';
+  static String ownTaxi(String name) => name.trim().isEmpty ? 'Own taxi' : 'Own taxi · ${name.trim()}';
   static String taxiConfirmed(String name, int? rupees) =>
       rupees == null || rupees <= 0 ? 'Confirmed · $name' : 'Confirmed · $name · ${Money.exact(rupees)}/day';
   static String askedDrivers(int n) => 'Asked $n ${n == 1 ? 'driver' : 'drivers'} · waiting';
@@ -1055,7 +1056,8 @@ class TripWizardRules {
     final stay = p.dayAt(day - 1)?.stay;
     if (stay == null || stay.isSkipped) return null;
     final name = stay.name.trim();
-    return name.isEmpty ? null : name;
+    if (name.isEmpty) return null;
+    return name.length > TripConstants.pickupPlaceMax ? name.substring(0, TripConstants.pickupPlaceMax).trim() : name;
   }
 
   static TripStartInfo _nightStart(TripWizardInput i, int night) {
@@ -1071,7 +1073,7 @@ class TripWizardRules {
     }
     if (stay != null && stay.isOwn) {
       return TripStartInfo(
-        heading: stay.name.isEmpty ? TripWizardCopy.ownStayPinned : stay.name,
+        heading: stay.name.trim().isEmpty ? TripWizardCopy.ownStayPinned : stay.name.trim(),
         line: point == null ? TripWizardCopy.ownStayNoPin : TripWizardCopy.ownStayPinned,
         point: point,
         kind: TripStartKind.ownStay,

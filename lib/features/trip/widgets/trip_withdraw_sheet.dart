@@ -80,6 +80,20 @@ class TripWithdrawSheet {
     return ok == true;
   }
 
+  static Future<bool> confirmInline(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        content: const Text(TripStrings.withdrawToo, style: TextStyle(fontFamily: 'Poppins', fontSize: 14)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text(TripStrings.keepAsking)),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text(TripStrings.withdraw)),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
   static Future<bool> showForRemove(BuildContext context, {required List<TripEnquiryModel> open}) async {
     if (open.isEmpty) return true;
     final ok = await TripSheetFrame.show<bool>(

@@ -11,7 +11,9 @@ import '../data/trip_popular_routes.dart';
 import '../data/trip_repository.dart';
 import '../models/trip_city_model.dart';
 import '../models/trip_plan_model.dart';
+import '../../../utils/app_toast.dart';
 import '../trip_colors.dart';
+import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_a4.dart';
 import '../trip_strings_mca_a2.dart';
@@ -45,54 +47,76 @@ enum TripCitySheetMode { start, add }
 class TripCityPick {
   final TripCityModel city;
   final TripCityModel? next;
-  final List<String> draftIds;
+  final List<TripCityModel> cities;
+  final List<TripDraftLeg> draftLegs;
 
-  const TripCityPick(this.city, {this.next, this.draftIds = const []});
+  TripCityPick(this.city, {this.next, List<TripCityModel>? cities, this.draftLegs = const []})
+      : cities = cities ?? [city, ?next];
+
+  List<String> get draftIds => draftLegs.isEmpty ? const [] : draftLegs.first.ids;
+}
+
+class TripDraftLeg {
+  final TripCityModel city;
+  final List<String> ids;
+
+  const TripDraftLeg(this.city, this.ids);
 }
 
 class TripNewDraft {
-  final TripCityModel city;
-  final TripCityModel? next;
-  final List<String> ids;
+  static const _version = 2;
+  final List<TripDraftLeg> legs;
   final TripSettings? settings;
 
-  const TripNewDraft(this.city, this.next, this.ids, [this.settings]);
+  const TripNewDraft(this.legs, [this.settings]);
+
+  TripCityModel get city => legs.first.city;
+
+  int get placeCount => legs.fold(0, (n, l) => n + l.ids.length);
 
   static TripNewDraft? read() {
     final m = StorageService.getTripNewDraft();
     if (m == null) return null;
     try {
-      final city = TripCityModel.fromJson(Map<String, dynamic>.from(m['city'] as Map));
-      final n = m['next'];
-      final ids = ((m['ids'] as List?) ?? const []).whereType<String>().toList();
-      if (ids.isEmpty) return null;
+      final legs = <TripDraftLeg>[];
+      if (m['v'] == _version) {
+        for (final raw in (m['legs'] as List)) {
+          final e = Map<String, dynamic>.from(raw as Map);
+          legs.add(TripDraftLeg(
+            TripCityModel.fromJson(Map<String, dynamic>.from(e['city'] as Map)),
+            ((e['ids'] as List?) ?? const []).whereType<String>().toList(),
+          ));
+        }
+      } else {
+        final ids = ((m['ids'] as List?) ?? const []).whereType<String>().toList();
+        legs.add(TripDraftLeg(TripCityModel.fromJson(Map<String, dynamic>.from(m['city'] as Map)), ids));
+        final n = m['next'];
+        if (n is Map) legs.add(TripDraftLeg(TripCityModel.fromJson(Map<String, dynamic>.from(n)), const []));
+      }
+      if (legs.isEmpty || legs.every((l) => l.ids.isEmpty)) return null;
       final st = m['settings'];
-      return TripNewDraft(
-        city,
-        n is Map ? TripCityModel.fromJson(Map<String, dynamic>.from(n)) : null,
-        ids,
-        st is Map ? TripSettings.fromJson(Map<String, dynamic>.from(st)) : null,
-      );
+      return TripNewDraft(legs, st is Map ? TripSettings.fromJson(Map<String, dynamic>.from(st)) : null);
     } catch (_) {
       return null;
     }
   }
 
-  static void save(TripCityModel city, TripCityModel? next, Iterable<String> ids, {TripSettings? settings}) {
-    final list = ids.toList();
-    if (list.isEmpty) {
-      if (read()?.city.cityKey == city.cityKey) StorageService.clearTripNewDraft();
+  static void save(List<TripDraftLeg> legs, {TripSettings? settings}) {
+    if (legs.isEmpty || legs.every((l) => l.ids.isEmpty)) {
+      StorageService.clearTripNewDraft();
       return;
     }
-    final keep = settings ?? (read()?.city.cityKey == city.cityKey ? read()?.settings : null);
-    StorageService.saveTripNewDraft(
-        {'city': city.toJson(), 'next': ?next?.toJson(), 'ids': list, 'settings': ?keep?.toJson()});
+    final keep = settings ?? read()?.settings;
+    StorageService.saveTripNewDraft({
+      'v': _version,
+      'legs': [
+        for (final l in legs) {'city': l.city.toJson(), 'ids': l.ids},
+      ],
+      'settings': ?keep?.toJson(),
+    });
   }
 
-  static TripSettings? settingsFor(TripCityModel city) {
-    final d = read();
-    return d != null && d.city.cityKey == city.cityKey ? d.settings : null;
-  }
+  static TripSettings? savedSettings() => read()?.settings;
 }
 
 class TripCitySheet extends StatefulWidget {
@@ -131,6 +155,13 @@ class TripCitySheet extends StatefulWidget {
 
 enum _LoadError { none, failed, plannerOff }
 
+class _SheetText {
+  static const String addCity = 'Add city';
+  static const String remove = 'Remove';
+  static String continueCities(int n) => 'Continue ($n ${n == 1 ? 'city' : 'cities'})';
+  static String maxCities(int n) => 'Up to $n cities';
+}
+
 class _TripCitySheetState extends State<TripCitySheet> {
   final _searchCtrl = TextEditingController();
   TripNewDraft? _draft = TripNewDraft.read();
@@ -143,6 +174,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
   bool _loading = false;
   _LoadError _error = _LoadError.none;
   int? _expanded;
+  final _picked = <TripCityModel>[];
   final _supply = <int, TripCitySupply>{};
   final _supplyFailed = <int>{};
 
@@ -150,6 +182,31 @@ class _TripCitySheetState extends State<TripCitySheet> {
   double? _baseTopPadding;
 
   bool get _add => widget.mode == TripCitySheetMode.add;
+
+  bool _isPicked(TripCityModel c) => _picked.any((p) => p.cityKey == c.cityKey);
+
+  void _togglePicked(TripCityModel c) {
+    if (_isPicked(c)) {
+      setState(() {
+        _picked.removeWhere((p) => p.cityKey == c.cityKey);
+        _expanded = null;
+      });
+      return;
+    }
+    if (_picked.length >= TripConstants.maxLegs) {
+      AppToast.warning(_SheetText.maxCities(TripConstants.maxLegs));
+      return;
+    }
+    setState(() {
+      _picked.add(c);
+      _expanded = null;
+    });
+  }
+
+  void _continue() {
+    if (_picked.isEmpty) return;
+    Navigator.pop(context, TripCityPick(_picked.first, cities: List.of(_picked)));
+  }
 
   @override
   void initState() {
@@ -253,7 +310,9 @@ class _TripCitySheetState extends State<TripCitySheet> {
         children: [
           _buildHeader(),
           _buildSearchBox(),
+          if (!_add && _picked.isNotEmpty) _pickedRow(),
           Expanded(child: _buildBody()),
+          if (!_add && _picked.isNotEmpty) _continueBar(),
           SizedBox(height: 12 + AppInsets.bottomViewPadding(context)),
         ],
       ),
@@ -316,6 +375,61 @@ class _TripCitySheetState extends State<TripCitySheet> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _pickedRow() {
+    return SizedBox(
+      height: 46,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 6),
+        itemCount: _picked.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final c = _picked[i];
+          return InkWell(
+            onTap: () => _togglePicked(c),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.only(left: 12, right: 8),
+              decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(20)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('${i + 1}. ${c.name}',
+                      style: const TextStyle(
+                          fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: TripColors.accentDark)),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.close_rounded, size: 16, color: TripColors.accentDark),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _continueBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      child: SizedBox(
+        height: 48,
+        child: ElevatedButton(
+          onPressed: _continue,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: TripColors.accent,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Text(
+            _SheetText.continueCities(_picked.length),
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+        ),
       ),
     );
   }
@@ -426,7 +540,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
 
   Widget _draftRow(TripNewDraft d) {
     return InkWell(
-      onTap: () => Navigator.pop(context, TripCityPick(d.city, next: d.next, draftIds: d.ids)),
+      onTap: () => Navigator.pop(context, TripCityPick(d.city, cities: [for (final l in d.legs) l.city], draftLegs: d.legs)),
       borderRadius: BorderRadius.circular(12),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 52),
@@ -443,7 +557,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  TripStrings.draftPlaces(d.city.name, d.ids.length),
+                  TripStrings.draftPlaces(d.legs.map((l) => l.city.name).join(' > '), d.placeCount),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -468,7 +582,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
 
   Widget _routeRow(({TripCityModel from, TripCityModel to, int days}) r) {
     return InkWell(
-      onTap: () => Navigator.pop(context, TripCityPick(r.from, next: r.to)),
+      onTap: () => Navigator.pop(context, TripCityPick(r.from, cities: [r.from, r.to])),
       borderRadius: BorderRadius.circular(12),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 52),
@@ -668,7 +782,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
           SizedBox(
             height: 44,
             child: ElevatedButton(
-              onPressed: () => Navigator.pop(context, TripCityPick(city)),
+              onPressed: () => _add ? Navigator.pop(context, TripCityPick(city)) : _togglePicked(city),
               style: ElevatedButton.styleFrom(
                 backgroundColor: TripColors.accent,
                 foregroundColor: Colors.white,
@@ -676,7 +790,11 @@ class _TripCitySheetState extends State<TripCitySheet> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
-                _add ? TripStringsMcaA2.addToTrip : TripStringsA4.planHere,
+                _add
+                    ? TripStringsMcaA2.addToTrip
+                    : _isPicked(city)
+                        ? _SheetText.remove
+                        : _SheetText.addCity,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600),

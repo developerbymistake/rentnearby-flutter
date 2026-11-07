@@ -10,7 +10,8 @@ import 'stay_enquiry_strings.dart';
 class HostConfirmDialog {
   static Future<bool?> show(BuildContext context, {required bool confirm, required TripEnquiryModel enquiry}) {
     final guest = StayEnquiryFormat.guest(enquiry);
-    final total = enquiry.phoneBooking?.agreedTotal ?? enquiry.agreedTotal;
+    final pbTotal = enquiry.phoneBooking?.agreedTotal;
+    final total = pbTotal != null && pbTotal > 0 ? pbTotal : (pbTotal == null ? enquiry.agreedTotal : null);
     final body = confirm
         ? StayEnquiryStrings.confirmBookingBody(guest, total == null ? '' : BrowseItem.inr(total), enquiry.datesLabel)
         : StayEnquiryStrings.notYourBookingBody(guest);

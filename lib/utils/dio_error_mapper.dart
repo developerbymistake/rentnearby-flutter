@@ -64,13 +64,22 @@ class DioErrorMapper {
         message = responseData['error']?['message'] as String? ??
             responseData['message'] as String?;
       } else if (responseData is String) {
-        message = responseData;
+        final t = responseData.trim();
+        if (t.isNotEmpty && t.length <= 160 && !t.startsWith('<') && !t.startsWith('{')) message = t;
       }
+      final typed = errorType(e) != null;
       if (status != null && showRawMessageForStatusCodes.contains(status) && message != null) {
         return message;
       }
-      if (status == 429) return 'Too many attempts. Please try again later.';
-      if (status != null && status >= 500) return 'Server error. Please try again.';
+      if (typed && message != null && (status == 403 || status == 409 || status == 429)) return message;
+      if (status == 429) return 'Too many requests. Please wait a minute and try again.';
+      if (status == 502 || status == 503 || status == 504) return 'Server is busy. Please try again in a moment.';
+      if (status != null && status >= 500) {
+        final ref = message == null ? null : RegExp(r'Ref ([A-Za-z0-9]{4,12})\s*$').firstMatch(message)?.group(1);
+        return ref == null
+            ? 'Server error. Please try again.'
+            : 'Server error. Please try again. (Ref $ref)';
+      }
       if (message != null) return message;
     }
     return fallback;
