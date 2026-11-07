@@ -30,11 +30,6 @@ void main() {
     expect(p.draftIds, ['a', 'b']);
   });
 
-  test('the pick carries the chosen days', () {
-    expect(TripCityPick(_city(1)).days, isNull);
-    expect(TripCityPick(_city(1), days: 3).days, 3);
-  });
-
   test('a draft knows its places and keeps the first city', () {
     final d = TripNewDraft([
       TripDraftLeg(_city(2), const ['a', 'b']),

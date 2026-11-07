@@ -31,9 +31,6 @@ class TripStrings {
   static const String noCitiesYetSubtitle = 'Trips are coming soon';
   static const String cityUnavailable = 'City not available';
   static const String popular = 'Popular';
-  static const String continueNewTrip = 'Continue your new trip';
-  static String draftPlaces(String city, int n) => '$city · $n ${n == 1 ? 'place' : 'places'}';
-  static const String startOver = 'Start over';
   static const String allCities = 'All cities';
   static const String popularDestinations = 'Popular destinations';
   static const String popularDestinationsSubtitle = 'Plan a trip in a tap';

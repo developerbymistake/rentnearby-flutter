@@ -16,7 +16,6 @@ import '../taxi_option_sets.dart';
 import 'taxi_card.dart';
 import 'taxi_list_controller.dart';
 import 'taxi_navigation.dart';
-import '../ways/taxi_ways_strings.dart';
 import '../ways/widgets/taxi_ways_entry_card.dart';
 
 class TaxiListScreen extends StatefulWidget {
@@ -334,14 +333,7 @@ class _TaxiListScreenState extends State<TaxiListScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            Expanded(
-              child: _OptionTile(
-                label: TaxiWaysStrings.myJourneysTile,
-                icon: Iconsax.routing_2,
-                gradient: AppColors.warningGradient,
-                onTap: () => Get.toNamed(AppRoutes.myJourneys),
-              ),
-            ),
+            const Spacer(),
             const SizedBox(width: 10),
             const Spacer(),
           ],

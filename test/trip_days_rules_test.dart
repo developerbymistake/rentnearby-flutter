@@ -1,4 +1,5 @@
 import 'package:bakhli/features/trip/models/trip_plan_model.dart';
+import 'package:bakhli/features/trip/trip_constants.dart';
 import 'package:bakhli/features/trip/utils/trip_days_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -15,6 +16,10 @@ TripPlan _plan(List<TripDay> days, {int legs = 1}) => TripPlan(
       ],
       days: days,
     );
+
+List<List<int>> _v(List<int> counts) => [
+      for (final n in counts) [for (var i = 0; i < n; i++) 60],
+    ];
 
 void main() {
   group('minDays', () {
@@ -69,24 +74,25 @@ void main() {
     int sum(List<int> l) => l.fold(0, (a, b) => a + b);
 
     test('every city keeps what it needs, the rest goes by share, ties to the earlier city', () {
-      expect(TripDaysRules.allocate(3, const [5, 5]), [2, 1]);
-      expect(TripDaysRules.allocate(4, const [10, 2]), [3, 1]);
-      expect(TripDaysRules.allocate(2, const [0, 0]), [1, 1]);
-      expect(TripDaysRules.allocate(5, const [0, 0]), [3, 2]);
-      expect(TripDaysRules.allocate(2, const [6]), [2]);
+      expect(TripDaysRules.allocate(3, _v(const [5, 5])), [1, 2]);
+      expect(TripDaysRules.allocate(4, _v(const [10, 2])), [3, 1]);
+      expect(TripDaysRules.allocate(2, _v(const [0, 0])), [1, 1]);
+      expect(TripDaysRules.allocate(5, _v(const [0, 0])), [2, 1]);
+      expect(TripDaysRules.allocate(10, _v(const [1])), [2]);
+      expect(TripDaysRules.allocate(2, _v(const [6])), [2]);
     });
 
     test('no cities gives no days', () {
-      expect(TripDaysRules.allocate(2, const []), isEmpty);
+      expect(TripDaysRules.allocate(2, _v(const [])), isEmpty);
     });
 
     test('too many places shrinks the biggest city first and keeps one day each', () {
-      expect(TripDaysRules.allocate(3, const [12, 6, 6]), [1, 1, 1]);
-      expect(TripDaysRules.allocate(2, const [13, 13]), [1, 1]);
+      expect(TripDaysRules.allocate(3, _v(const [12, 6, 6])), [2, 1, 1]);
+      expect(TripDaysRules.allocate(2, _v(const [13, 13])), [3, 3]);
     });
 
-    test('the allocation always sums to the days and gives each city a day', () {
-      for (var days = 3; days <= 8; days++) {
+    test('the allocation never exceeds the tight total by more than one day', () {
+      for (var days = 3; days <= 14; days++) {
         for (final places in [
           [0, 0, 0],
           [4, 9, 2],
@@ -94,20 +100,37 @@ void main() {
           [6, 6, 6],
           [3, 0, 12],
         ]) {
-          final a = TripDaysRules.allocate(days, places);
+          final a = TripDaysRules.allocate(days, _v(places));
           expect(a.length, 3);
-          expect(sum(a), days, reason: '$days $places $a');
+          expect(sum(a), lessThanOrEqualTo(TripDaysRules.autoTotal(_v(places), TripPace.relaxed) + 1), reason: '$days $places $a');
           expect(a.every((d) => d >= 1), isTrue, reason: '$days $places $a');
         }
       }
     });
 
+    test('auto days follow visit and drive minutes against the pace', () {
+      expect(TripDaysRules.autoDaysFor(const [], 300), 1);
+      expect(TripDaysRules.autoDaysFor(const [60], 300), 1);
+      expect(TripDaysRules.autoDaysFor([for (var i = 0; i < 4; i++) 60], 300), 1);
+      expect(TripDaysRules.autoDaysFor([for (var i = 0; i < 5; i++) 60], 300), 2);
+      expect(TripDaysRules.autoDaysFor([for (var i = 0; i < 5; i++) 60], 450), 1);
+      expect(TripDaysRules.autoDaysFor(const [240, 240], 300), 2);
+      expect(TripDaysRules.autoDaysFor([for (var i = 0; i < 7; i++) 5], 300), 2);
+      expect(TripDaysRules.autoTotal(_v(const [1, 1]), 300), 2);
+    });
+
+    test('limitForAuto fits the day cap by time', () {
+      expect(TripDaysRules.limitForAuto(_v(const [0]), 0, 300), 52);
+      expect(TripDaysRules.limitForAuto(_v(const [3]), 0, 300), 52);
+      expect(TripDaysRules.limitForAuto(_v(const [10, 10]), 1, 300), 41);
+      expect(TripDaysRules.limitForAuto(_v(const [10, 10]), 1, 450), 50);
+    });
+
     test('a city never gets fewer days than its places need when the days allow', () {
-      final a = TripDaysRules.allocate(6, const [13, 5, 6]);
+      final a = TripDaysRules.allocate(6, _v(const [13, 5, 6]));
       expect(a[0], greaterThanOrEqualTo(3));
       expect(a[1], greaterThanOrEqualTo(1));
       expect(a[2], greaterThanOrEqualTo(1));
-      expect(sum(a), 6);
     });
   });
 

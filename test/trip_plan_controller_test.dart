@@ -1299,7 +1299,7 @@ void main() {
       expect(c.mapShowsSegment(2), isTrue);
       c.selectMapLeg(1);
       expect([1, 2, 3].map(c.mapShowsDay), [true, false, false]);
-      expect(c.mapShowsSegment(2), isTrue);
+      expect(c.mapShowsSegment(2), isFalse);
       c.selectMapLeg(2);
       expect([1, 2, 3].map(c.mapShowsDay), [false, true, true]);
       expect(c.mapShowsSegment(2), isTrue);

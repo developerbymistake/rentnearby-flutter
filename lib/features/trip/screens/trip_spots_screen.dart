@@ -50,16 +50,16 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   late final Set<String> _existingIds;
   late final TripSpotsController _ctrl;
   late final TripPlanController _plan;
-  TripCreateSession? _session;
-  bool _ownsSession = false;
   final _scroll = ScrollController();
   bool _starting = false;
   Worker? _draftWorker;
-  Worker? _daysWorker;
 
   bool get _intoTrip => _adding || _newLeg;
   bool get _creating => !_intoTrip;
-  int get _days => _session?.days.value ?? 1;
+  int get _days {
+    final n = TripDaysRules.autoTotal(_visits(), TripPace.relaxed);
+    return n < _chain.length ? _chain.length : n;
+  }
   bool get _isLast => _index >= _chain.length - 1;
   TripCityModel? get _next => _isLast ? null : _chain[_index + 1];
 
@@ -101,14 +101,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     _plan.openPages++;
     _scroll.addListener(_onScroll);
     if (_creating) {
-      final wanted = args['days'] as int?;
-      var session = Get.isRegistered<TripCreateSession>() ? Get.find<TripCreateSession>() : null;
-      if (session == null) {
-        final least = TripDaysRules.minDays(_chain.length, [for (final c in _chain) _idsOfSaved(c).length]);
-        session = Get.put(TripCreateSession((wanted ?? least).clamp(least, TripConstants.maxDaysCap).toInt()));
-        _ownsSession = true;
-      }
-      _session = session;
       _syncLimit();
       final seed = _draftLegs.firstWhereOrNull((l) => l.city.cityKey == _city.cityKey)?.ids ?? const <String>[];
       for (final id in seed) {
@@ -116,11 +108,8 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
         _ctrl.selected.add(id);
       }
       _draftWorker = ever(_ctrl.selected, (_) {
-        if (!_starting) TripNewDraft.save(_legsNow(), days: _days);
-      });
-      _daysWorker = ever(_session!.days, (_) {
         _syncLimit();
-        if (!_starting) TripNewDraft.save(_legsNow(), days: _days);
+        if (!_starting) TripNewDraft.save(_legsNow());
       });
     } else {
       _syncLimit();
@@ -129,6 +118,14 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
 
   List<int> _counts() => [for (final c in _chain) c.cityKey == _city.cityKey ? _ctrl.selected.length : _idsOf(c).length];
 
+  List<List<int>> _visits() => [
+        for (final c in _chain)
+          () {
+            final byId = {for (final x in _chosenOf(c)) x.id: x.visitMinutes};
+            return [for (final id in _idsOf(c)) byId[id] ?? TripConstants.defaultVisitMinutes];
+          }(),
+      ];
+
   void _syncLimit() {
     if (_pickDay != null) return;
     if (_newLeg) {
@@ -136,7 +133,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     } else if (_adding) {
       _ctrl.limit.value = _plan.addCapacity(_legIndex ?? _plan.legCount);
     } else {
-      _ctrl.limit.value = TripDaysRules.limitFor(_days, _counts(), _index);
+      _ctrl.limit.value = TripDaysRules.limitForAuto(_visits(), _index, TripPace.relaxed);
     }
   }
 
@@ -163,15 +160,11 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   @override
   void dispose() {
     _draftWorker?.dispose();
-    _daysWorker?.dispose();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     final tag = '${_city.cityKey}';
     if (Get.isRegistered<TripSpotsController>(tag: tag) && identical(Get.find<TripSpotsController>(tag: tag), _ctrl)) {
       Get.delete<TripSpotsController>(tag: tag);
-    }
-    if (_ownsSession && Get.isRegistered<TripCreateSession>() && identical(Get.find<TripCreateSession>(), _session)) {
-      Get.delete<TripCreateSession>(force: true);
     }
     if (Get.isRegistered<TripPlanController>() && identical(Get.find<TripPlanController>(), _plan)) {
       _plan.openPages--;
@@ -281,16 +274,10 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
   }
 
   String get _limitText => _creating
-      ? TripStringsV2Create.limitReached(_days)
+      ? TripStringsV2Create.limitReached
       : _newLeg
           ? TripStringsV2Create.dayFull
           : TripStringsV2Create.legFull;
-
-  void _addDay() {
-    final session = _session;
-    if (session == null || session.days.value >= TripConstants.maxDaysCap) return;
-    session.days.value++;
-  }
 
   // A city in the chain may stay without places while another one has some.
   bool _canContinue(int selected) =>
@@ -324,10 +311,10 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     }
     final next = _next;
     if (next != null) {
-      TripNewDraft.save(_legsNow(), days: _days);
+      TripNewDraft.save(_legsNow());
       await Get.toNamed(
         AppRoutes.tripSpots,
-        arguments: {'city': next, 'cities': _chain, 'draftLegs': _legsNow(), 'days': _days},
+        arguments: {'city': next, 'cities': _chain, 'draftLegs': _legsNow()},
         preventDuplicates: false,
       );
       _starting = false;
@@ -340,11 +327,11 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     final selections = [
       for (final c in _chain) (city: c, spots: _chosenOf(c)),
     ];
-    TripNewDraft.save(_legsNow(), days: _days);
-    unawaited(_plan.startFromSelections(selections, days: _days));
+    TripNewDraft.save(_legsNow());
+    unawaited(_plan.startFromSelections(selections));
     Get.offNamedUntil(
       AppRoutes.tripPlan,
-      (r) => r.settings.name != AppRoutes.tripSpots && r.settings.name != AppRoutes.tripDays,
+      (r) => r.settings.name != AppRoutes.tripSpots,
     );
   }
 
@@ -741,7 +728,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
               text: TripStringsV2Create.barCities(parts),
               style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textDark),
             ),
-            TextSpan(text: TripStringsV2Create.barTotal(total, _days)),
+            TextSpan(text: TripStringsV2Create.barTotal(total)),
           ]),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -794,8 +781,7 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
 
   Widget _limitNotice() {
     final tripFull = _counts().fold<int>(0, (a, b) => a + b) >= TripConstants.maxSpots;
-    final canGrow = _creating && !tripFull && _days < TripConstants.maxDaysCap;
-    final atMax = _creating && !canGrow && !tripFull;
+    final atMax = _creating && !tripFull;
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
@@ -809,15 +795,6 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
                   fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warningText),
             ),
           ),
-          if (canGrow)
-            TextButton(
-              onPressed: _addDay,
-              style: TextButton.styleFrom(minimumSize: const Size(44, 40)),
-              child: const Text(
-                TripStringsV2Create.addADay,
-                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700, color: TripColors.accentDark),
-              ),
-            ),
         ],
       ),
     );

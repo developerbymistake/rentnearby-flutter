@@ -100,8 +100,8 @@ class TripMustSeeRail extends StatelessWidget {
                           if (s.isFeatured) const Positioned(left: 8, top: 8, child: TripFeaturedChip()),
                           Positioned(
                             left: 10,
-                            right: 50,
-                            bottom: 10,
+                            right: 8,
+                            bottom: 48,
                             child: Text(
                               s.title,
                               maxLines: 2,
@@ -111,8 +111,8 @@ class TripMustSeeRail extends StatelessWidget {
                             ),
                           ),
                           Positioned(
-                            right: 6,
-                            bottom: 6,
+                            left: 10,
+                            bottom: 8,
                             child: TripSpotAddButton(selected: on, locked: locked, onTap: toggle),
                           ),
                         ],

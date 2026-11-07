@@ -1,6 +1,8 @@
 class TripConstants {
   static const int dayLimitMinutes = 300;
   static const int maxSpotsPerDay = 6;
+  static const int driveHopMinutes = 20;
+  static const int defaultVisitMinutes = 60;
   static const double stayRadiusKm = 5;
   static const double stayQueryRadiusMinKm = 1;
   static const double stayQueryRadiusMaxKm = 50;

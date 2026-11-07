@@ -1,14 +1,10 @@
 import 'trip_constants.dart';
-import 'utils/trip_days_rules.dart';
 
 class TripStringsV2Create {
   static const String daysTitle = 'Your trip';
   static String daysSubtitle(List<String> names) =>
       '${names.join(' + ')} · ${names.length} ${names.length == 1 ? 'city' : 'cities'}';
-  static const String daysHeading = 'How many days?';
-  static const String daysDescription = 'Pick the days first. You can add up to ${TripConstants.maxSpotsPerDay} places a day.';
   static String daysCount(int d) => '$d ${d == 1 ? 'day' : 'days'}';
-  static String limitHint(int d) => 'Up to ${TripDaysRules.total(d)} places for $d days (${TripConstants.maxSpotsPerDay} a day)';
   static String bestFitPill(int days) => 'Best fit: ${daysCount(days)}';
   static String suggested(int days) => 'Suggested ${daysCount(days)}';
   static const String noDatesNote = 'No dates yet. We ask only if you want help with stay, taxi or ways.';
@@ -24,13 +20,11 @@ class TripStringsV2Create {
   static String spotsHeader(int i, int n, int d) => 'Places to visit · city $i of $n · ${daysCount(d)}';
   static String spotsHeaderOne(int d) => 'Places to visit · ${daysCount(d)}';
   static String barCities(List<(String, int)> parts) => parts.map((e) => '${e.$1} ${e.$2}').join(' · ');
-  static String barTotal(int total, int d) => ' · total $total of ${TripDaysRules.total(d)} places';
+  static String barTotal(int total) => ' · total $total places';
   static String doneCity(String name, int n) => '$name · $n';
   static String next(String city) => 'Next: $city';
   static const String makeMyPlan = 'Make my plan';
-  static String limitReached(int d) =>
-      'Limit reached for ${daysCount(d)} (${TripConstants.maxSpotsPerDay} a day). Add a day for more places.';
-  static const String addADay = 'Add a day';
+  static const String limitReached = 'Place limit reached. Remove one to add another.';
   static const String maxDaysReached = 'This is the longest trip. Remove a place to add another.';
   static const String dayFull = 'This day has ${TripConstants.maxSpotsPerDay} places';
 

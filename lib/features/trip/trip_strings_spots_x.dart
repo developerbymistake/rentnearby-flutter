@@ -5,6 +5,9 @@ class TripStringsSpotsX {
   static const String quickStarts = 'Quick starts';
   static const String quickSub = 'One tap adds 3 places';
   static const String add = 'Add';
+  static const String addWishlist = 'Wishlist';
+  static const String addedWishlist = 'Added';
+  static const String addToWishlist = 'Add to wishlist';
   static const String dismiss = 'No thanks';
   static const String offline = 'Offline. Showing your saved list.';
   static const String list = 'List';

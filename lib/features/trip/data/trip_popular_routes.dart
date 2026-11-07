@@ -4,21 +4,20 @@ import '../models/trip_city_model.dart';
 class TripPopularRoute {
   final String from;
   final String to;
-  final int days;
 
-  const TripPopularRoute(this.from, this.to, this.days);
+  const TripPopularRoute(this.from, this.to);
 }
 
 class TripPopularRoutes {
   static const int maxShown = 6;
 
   static const List<TripPopularRoute> pairs = [
-    TripPopularRoute('Haridwar', 'Badrinath', 4),
-    TripPopularRoute('Haridwar', 'Kedarnath', 5),
-    TripPopularRoute('Rishikesh', 'Badrinath', 4),
-    TripPopularRoute('Nainital', 'Almora', 3),
-    TripPopularRoute('Shimla', 'Manali', 5),
-    TripPopularRoute('Dehradun', 'Mussoorie', 2),
+    TripPopularRoute('Haridwar', 'Badrinath'),
+    TripPopularRoute('Haridwar', 'Kedarnath'),
+    TripPopularRoute('Rishikesh', 'Badrinath'),
+    TripPopularRoute('Nainital', 'Almora'),
+    TripPopularRoute('Shimla', 'Manali'),
+    TripPopularRoute('Dehradun', 'Mussoorie'),
   ];
 
   static TripCityModel? _find(Map<String, List<TripCityModel>> byName, String name) {
@@ -38,15 +37,15 @@ class TripPopularRoutes {
     return m;
   }
 
-  static List<({TripCityModel from, TripCityModel to, int days})> resolve(List<TripCityModel> catalog) {
+  static List<({TripCityModel from, TripCityModel to})> resolve(List<TripCityModel> catalog) {
     if (catalog.isEmpty) return const [];
     final byName = _index(catalog);
-    final out = <({TripCityModel from, TripCityModel to, int days})>[];
+    final out = <({TripCityModel from, TripCityModel to})>[];
     for (final p in pairs) {
       final a = _find(byName, p.from);
       final b = _find(byName, p.to);
       if (a == null || b == null || a.cityKey == b.cityKey || !a.isReady || !b.isReady) continue;
-      out.add((from: a, to: b, days: p.days));
+      out.add((from: a, to: b));
       if (out.length >= maxShown) break;
     }
     return out;

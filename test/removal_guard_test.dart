@@ -37,21 +37,20 @@ void main() {
     test('five tabs with the new indexes', () {
       expect(AppTabs.home, 0);
       expect(AppTabs.stays, 1);
-      expect(AppTabs.jobs, 2);
+      expect(AppTabs.trips, 2);
       expect(AppTabs.taxi, 3);
       expect(AppTabs.profile, 4);
       expect(AppTabs.count, 5);
     });
 
     test('tabKeys map every index to the backend key', () {
-      expect(AppTabs.tabKeys, {0: 'HOME', 1: 'STAYS', 2: 'JOBS', 3: 'TAXI', 4: 'PROFILE'});
+      expect(AppTabs.tabKeys, {0: 'HOME', 1: 'STAYS', 2: 'TRIPS', 3: 'TAXI', 4: 'PROFILE'});
       expect(AppTabs.tabKeys.keys.toList()..sort(), List.generate(AppTabs.count, (i) => i));
     });
 
     test('tab keys match TabConfigController keys', () {
       expect(AppTabs.tabKeys[AppTabs.home], AppTabKeys.home);
       expect(AppTabs.tabKeys[AppTabs.stays], AppTabKeys.stays);
-      expect(AppTabs.tabKeys[AppTabs.jobs], AppTabKeys.jobs);
       expect(AppTabs.tabKeys[AppTabs.taxi], AppTabKeys.taxi);
       expect(AppTabs.tabKeys[AppTabs.profile], AppTabKeys.profile);
     });
@@ -263,15 +262,13 @@ void main() {
   });
 
   group('trip v2 routes', () {
-    test('the days page is registered and the step page is gone', () {
-      expect(AppRoutes.tripDays, '/trip-days');
-      expect(AppRoutes.isRegistered(AppRoutes.tripDays), isTrue);
+    test('the days page and the step page are gone', () {
+      expect(AppRoutes.isRegistered('/trip-days'), isFalse);
       expect(AppRoutes.isRegistered('/trip-step'), isFalse);
     });
 
     test('every trip page of the flow is registered', () {
       for (final route in [
-        AppRoutes.tripDays,
         AppRoutes.tripSpots,
         AppRoutes.tripPlan,
         AppRoutes.tripStay,

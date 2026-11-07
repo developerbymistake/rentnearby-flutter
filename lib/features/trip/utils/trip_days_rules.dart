@@ -36,36 +36,63 @@ class TripDaysRules {
 
   static int total(int days) => math.min(days * perDay, TripConstants.maxSpots);
 
-  static List<int> allocate(int days, List<int> placesPerCity) {
-    final n = placesPerCity.length;
+  static int autoDaysFor(List<int> visits, int paceMinutes) {
+    final n = visits.length;
+    if (n == 0) return 1;
+    final minutes = visits.fold<int>(0, (a, b) => a + b) + (n - 1) * TripConstants.driveHopMinutes;
+    final byTime = (minutes / (paceMinutes < 1 ? 1 : paceMinutes)).ceil();
+    return math.max(1, math.max(byTime, _need(n)));
+  }
+
+  static int autoTotal(List<List<int>> visitsPerCity, int paceMinutes) =>
+      visitsPerCity.fold<int>(0, (n, v) => n + autoDaysFor(v, paceMinutes));
+
+  static int limitForAuto(List<List<int>> visitsPerCity, int cityIndex, int paceMinutes) {
+    var others = 0;
+    var otherPlaces = 0;
+    for (var i = 0; i < visitsPerCity.length; i++) {
+      if (i == cityIndex) continue;
+      others += autoDaysFor(visitsPerCity[i], paceMinutes);
+      otherPlaces += visitsPerCity[i].length;
+    }
+    final left = TripConstants.maxDaysCap - others;
+    if (left < 1) return 0;
+    final byTrip = TripConstants.maxSpots - otherPlaces;
+    final upper = math.min(left * perDay, byTrip < 0 ? 0 : byTrip);
+    final own = cityIndex >= 0 && cityIndex < visitsPerCity.length ? visitsPerCity[cityIndex] : const <int>[];
+    if (upper <= own.length) return upper;
+    final sum = own.fold<int>(0, (a, b) => a + b);
+    final avg = own.isEmpty ? TripConstants.defaultVisitMinutes : (sum / own.length).ceil();
+    for (var n = upper; n > own.length; n--) {
+      final more = [...own, for (var k = own.length; k < n; k++) avg];
+      if (autoDaysFor(more, paceMinutes) <= left) return n;
+    }
+    return own.length;
+  }
+
+  static List<int> allocate(int days, List<List<int>> visitsPerCity, [int paceMinutes = TripPace.relaxed]) {
+    final n = visitsPerCity.length;
     if (n == 0) return const [];
-    final base = [for (final p in placesPerCity) _need(p)];
+    final base = [for (final v in visitsPerCity) autoDaysFor(v, paceMinutes)];
     var sum = base.fold<int>(0, (a, b) => a + b);
+    final floor = [for (final v in visitsPerCity) _need(v.length)];
     while (sum > days) {
       var at = -1;
       for (var i = 0; i < n; i++) {
-        if (base[i] > 1 && (at < 0 || base[i] > base[at])) at = i;
+        if (base[i] > floor[i] && (at < 0 || base[i] > base[at])) at = i;
       }
       if (at < 0) break;
       base[at]--;
       sum--;
     }
-    final extra = days - sum;
-    if (extra <= 0) return base;
-    final weight = [for (final p in placesPerCity) p < 0 ? 0 : p];
-    final totalWeight = weight.fold<int>(0, (a, b) => a + b);
-    final shares = [for (var i = 0; i < n; i++) totalWeight == 0 ? extra / n : extra * weight[i] / totalWeight];
-    final out = [for (var i = 0; i < n; i++) base[i] + shares[i].floor()];
-    var left = days - out.fold<int>(0, (a, b) => a + b);
-    final order = List<int>.generate(n, (i) => i)
-      ..sort((a, b) {
-        final c = (shares[b] - shares[b].floor()).compareTo(shares[a] - shares[a].floor());
-        return c != 0 ? c : a.compareTo(b);
-      });
-    for (var k = 0; left > 0; k++, left--) {
-      out[order[k % n]]++;
+    if (days > sum) {
+      var at = 0;
+      for (var i = 1; i < n; i++) {
+        if (visitsPerCity[i].length > visitsPerCity[at].length) at = i;
+      }
+      base[at]++;
     }
-    return out;
+    return base;
   }
 
   static int suggestedDays(int spotCount) => (spotCount / perDay).ceil().clamp(1, 3).toInt();

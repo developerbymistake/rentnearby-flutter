@@ -6,5 +6,7 @@ class TripStringsMcdA2 {
   static const String travelLegend = 'Travel';
   static const String tapCityHint = 'Tap a city to zoom to it, a number for one day.';
   static const String all = 'All';
+  static String dayCity(int day, String city) => 'Day $day · $city';
+  static String dayLabel(int day) => 'Day $day';
   static String citySemantics(String city, String range) => '$city, $range';
 }

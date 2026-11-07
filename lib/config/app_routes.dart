@@ -53,6 +53,7 @@ class AppRoutes {
   static const String myStays = '/my-stays';
   static const String stayDetail = '/stay-detail';
 
+  static const String jobs = '/jobs';
   static const String myJobs = '/my-jobs';
   static const String postJob = '/post-job';
   static const String jobDetail = '/job-detail';
@@ -72,7 +73,6 @@ class AppRoutes {
 
   static const String tripSpots = '/trip-spots';
   static const String tripPlan = '/trip-plan';
-  static const String tripDays = '/trip-days';
   static const String tripTaxi = '/trip-taxi';
   static const String tripStay = '/trip-stay';
   static const String tripMap = '/trip-map';
@@ -97,6 +97,7 @@ class AppRoutes {
     stayAdvanceDetails: AppTabKeys.stays,
     myStays: AppTabKeys.stays,
     stayDetail: AppTabKeys.stays,
+    jobs: AppTabKeys.jobs,
     myJobs: AppTabKeys.jobs,
     postJob: AppTabKeys.jobs,
     jobDetail: AppTabKeys.jobs,

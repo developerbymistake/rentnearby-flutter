@@ -9,14 +9,6 @@ import '../trip_strings_mca_a2.dart';
 import '../utils/trip_spot_picks.dart';
 import '../utils/trip_spots_cache.dart';
 
-class TripCreateSession extends GetxController {
-  final days = 1.obs;
-
-  TripCreateSession(int start) {
-    days.value = start;
-  }
-}
-
 class TripSpotsController extends GetxController {
   final int cityKey;
   final Set<String> existingIds;

@@ -654,6 +654,11 @@ class TripPlanController extends GetxController {
   }
 
   void selectMapLeg(int legIndex) {
+    final p = plan.value;
+    if (p != null && p.isSingleDayLeg(legIndex)) {
+      selectMapDay(p.legStart(legIndex));
+      return;
+    }
     selectedMapDay.value = mapAll;
     selectedMapLeg.value = legAt(legIndex) == null ? 0 : legIndex;
   }
@@ -946,7 +951,21 @@ class TripPlanController extends GetxController {
     }
   }
 
-  final easyOpen = false.obs;
+  final planStep = 1.obs;
+
+  int get initialStep {
+    final t = trip.value;
+    if (t != null && ((t.progress?.done ?? 0) > 0 ||enquiryList.isNotEmpty)) return 2;
+    return easyRows.any((r) => r.state != TripRowState.todo) ? 2 : 1;
+  }
+
+  int get pendingStep => spotCount == 0 ? 1 : 2;
+
+  ({int done, int total, int percent}) get stepProgress {
+    final e = easyProgress;
+    final percent = (spotCount > 0 ? 50 : 0) + (50 * e.percent / 100).round();
+    return (done: e.done, total: e.total, percent: percent.clamp(0, 100));
+  }
 
   List<TripEasyRowInfo> get easyRows {
     final p = plan.value;
@@ -1842,13 +1861,12 @@ class TripPlanController extends GetxController {
     };
   }
 
-  Future<void> startFromSelection(TripCityModel city, List<TripSpotModel> chosen, {required int days}) =>
-      startFromSelections([(city: city, spots: chosen)], days: days);
+  Future<void> startFromSelection(TripCityModel city, List<TripSpotModel> chosen) =>
+      startFromSelections([(city: city, spots: chosen)]);
 
   Future<void> startFromSelections(
-    List<({TripCityModel city, List<TripSpotModel> spots})> selections, {
-    required int days,
-  }) async {
+    List<({TripCityModel city, List<TripSpotModel> spots})> selections,
+  ) async {
     if (selections.isEmpty) return;
     final pendingSave = _detachPendingSave();
     _reset();
@@ -1873,8 +1891,8 @@ class TripPlanController extends GetxController {
     }
     picked = selections.first.city;
     _clientTripId = const Uuid().v4();
-    final least = TripDaysRules.minDays(legs.length, [for (final d in tripDays) d.spots.length]);
-    final chosenDays = days.clamp(least > TripConstants.maxDaysCap ? TripConstants.maxDaysCap : least, TripConstants.maxDaysCap).toInt();
+    final autoDays = TripDaysRules.autoTotal([for (final d in tripDays) [for (final s in d.spots) s.visitMinutes]], TripPace.relaxed);
+    final chosenDays = autoDays.clamp(legs.length, TripConstants.maxDaysCap).toInt();
     plan.value = TripPlan(
       legs: legs,
       days: tripDays,
@@ -2072,7 +2090,14 @@ class TripPlanController extends GetxController {
 
   int _legMaxDays(TripPlan p, int legIndex) {
     final room = TripConstants.maxDaysCap - _otherLegDays(p, legIndex);
-    final cap = room < 1 ? 1 : room;
+    var cap = room < 1 ? 1 : room;
+    final spots = p.legSpotCount(legIndex);
+    if (spots > 0) {
+      final tight = TripDaysRules.autoDaysFor(_legVisits(p, legIndex), p.settings.dayLimitMinutes) + 1;
+      final own = p.legDayCount(legIndex);
+      final limit = tight > own ? tight : own;
+      if (limit < cap) cap = limit;
+    }
     if (legIndex < p.legCount && _laterLegsHaveBookings(legIndex)) {
       final own = p.legDayCount(legIndex);
       return own < 1 ? 1 : (own > cap ? cap : own);
@@ -2154,8 +2179,12 @@ class TripPlanController extends GetxController {
     final least = TripDaysRules.minDays(counts.length, counts);
     final low = least > TripConstants.maxDaysCap ? TripConstants.maxDaysCap : least;
     final wanted = (p.settings.maxDays ?? p.days.length).clamp(low, TripConstants.maxDaysCap).toInt();
-    return TripDaysRules.allocate(wanted, counts);
+    return TripDaysRules.allocate(wanted, [for (final l in p.legs) _legVisits(p, l.index)], p.settings.dayLimitMinutes);
   }
+
+  static List<int> _legVisits(TripPlan p, int legIndex) => [
+        for (final d in p.daysOf(legIndex)) for (final s in d.spots) s.visitMinutes,
+      ];
 
   Future<void> _runAutoPlan() async {
     final p = plan.value;
@@ -2195,7 +2224,7 @@ class TripPlanController extends GetxController {
         }
         if (edit != _editSeq) _recalcAfterAuto = true;
         final before = now;
-        final after = _applyAutoLeg(before, k2, r, minDays: keep);
+        final after = _applyAutoLeg(before, k2, r);
         plan.value = after;
         result.value = last = _mergeLegResult(before, after, k2, r);
       }

@@ -92,10 +92,7 @@ class TabConfigController extends GetxController {
     return !_displayNames.containsKey(tabKey) || _activeKeys.contains(tabKey);
   }
 
-  // Jobs are a Stays sub-feature, so the Jobs tab also needs STAYS (same as the /stay-jobs gate).
-  bool isActiveForIndex(int tabIndex) => tabIndex == AppTabs.jobs
-      ? isJobsActive && isStaysActive
-      : isActive(AppTabs.tabKeys[tabIndex] ?? '');
+  bool isActiveForIndex(int tabIndex) => tabIndex == AppTabs.trips || isActive(AppTabs.tabKeys[tabIndex] ?? '');
 
   String displayName(String tabKey, String fallback) {
     version.value;

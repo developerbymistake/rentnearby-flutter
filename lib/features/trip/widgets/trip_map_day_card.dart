@@ -78,7 +78,7 @@ class _TripMapDayCardState extends State<TripMapDayCard> {
         const _MapPage.all(),
         for (final l in p.legs)
           if (p.legStart(l.index) >= 1) ...[
-            _MapPage.city(l.index),
+            if (!p.isSingleDayLeg(l.index)) _MapPage.city(l.index),
             for (final d in p.daysOf(l.index)) _MapPage.day(d.day),
           ],
       ];

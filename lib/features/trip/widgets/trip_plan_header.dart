@@ -154,7 +154,8 @@ class TripPlanHeader extends StatelessWidget {
 
   Widget _statusRow(BuildContext context, TripPlanController c) {
     final rows = c.easyRows;
-    final progress = c.easyProgress;
+    final progress = c.stepProgress;
+    final step = c.isCompleted ? 2 : c.planStep.value;
     final hint = hintOf(c, rows);
     final state = stateOf(c);
     final editable = !c.isReadOnly && !c.needsUpdate.value;
@@ -180,14 +181,14 @@ class TripPlanHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  progress.total == 0
-                      ? TripStringsV2Plan.nothingToArrange
-                      : TripStringsV2Plan.arranged(progress.done, progress.total),
+                  step == 1
+                      ? TripStringsV2Plan.stepAddPlaces()
+                      : '${TripStringsV2Plan.stepLabel(2)} · ${progress.total == 0 ? TripStringsV2Plan.nothingToArrange : TripStringsV2Plan.arranged(progress.done, progress.total)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
                 ),
-                if (hint != null)
+                if (hint != null && step == 2)
                   Text(
                     hint,
                     maxLines: 1,

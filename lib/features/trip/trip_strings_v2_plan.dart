@@ -38,6 +38,15 @@ class TripStringsV2Plan {
 
   static String arranged(int done, int total) => '$done of $total arranged';
   static const String nothingToArrange = 'Nothing to arrange';
+  static const String stepPlaces = 'Places';
+  static const String stepEasy = 'Make it easy';
+  static const String next = 'Next';
+  static const String previous = 'Previous';
+  static const String nextSub = 'Make it easy';
+  static const String nextHintNoPlaces = 'Add at least one place to continue';
+  static const String easyOptional = 'All optional. Your plan is ready as it is.';
+  static String stepLabel(int n) => 'Step $n of 2';
+  static String stepAddPlaces() => 'Step 1 of 2 · Add places';
   static const String hintStayWaiting = 'Stay is waiting for a reply';
   static const String hintTaxiWaiting = 'Taxi is waiting for a reply';
   static const String hintWaiting = 'Waiting for a reply';

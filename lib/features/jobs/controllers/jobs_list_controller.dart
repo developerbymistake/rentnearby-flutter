@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'package:get/get.dart';
-import '../../../config/app_tabs.dart';
-import '../../../controllers/auth_controller.dart';
 import '../../../controllers/location_controller.dart';
 import '../data/jobs_repository.dart';
 import '../models/job_experience_bucket.dart';
@@ -40,8 +38,7 @@ class JobsListController extends GetxController {
   bool _lookupsLoading = false;
   bool _locationCheckQueued = false;
 
-  AuthController get _auth => Get.find<AuthController>();
-  bool get _tabActive => _auth.tabIndex.value == AppTabs.jobs;
+  bool get _tabActive => true;
   LocationController get _loc => Get.find<LocationController>();
   String? get _districtId => _loc.effectiveDistrict?.id;
   String get _locationKey => '${_loc.effectiveDistrict?.id}|${_loc.effectiveCity?.id}';
@@ -57,9 +54,6 @@ class JobsListController extends GetxController {
       [loc.selectedDistrict, loc.browsingDistrict, loc.browsingCity, loc.autoCity],
       (_) => _queueLocationCheck(),
     ));
-    _workers.add(ever(_auth.tabIndex, (i) {
-      if (i == AppTabs.jobs) refreshIfNeeded();
-    }));
     _workers.add(ever(exploreRefreshTrigger, (_) => refreshIfNeeded()));
     _workers.add(ever(filterResetTrigger, (_) => _clearFilters()));
     if (_tabActive) refreshIfNeeded();

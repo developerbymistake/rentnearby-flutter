@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../config/app_routes.dart';
+import '../../services/storage_service.dart';
 import '../../utils/app_toast.dart';
 import '../taxi/ways/taxi_ways_navigation.dart';
 import 'controllers/trip_plan_controller.dart';
@@ -20,10 +21,21 @@ import 'widgets/trip_city_sheet.dart';
 import 'widgets/trip_journey_card.dart';
 
 class TripNavigation {
+  static void _clearDraftState() {
+    StorageService.clearTripNewDraft();
+    if (Get.isRegistered<TripPlanController>()) TripPlanController.to.releaseIfIdle();
+  }
+
+  static Future<void>? startWithCities(List<TripCityModel> cities) {
+    _clearDraftState();
+    return openCreate(cities);
+  }
+
   static Future<void> start(BuildContext context) async {
+    _clearDraftState();
     final pick = await TripCitySheet.pick(context);
     if (pick == null) return;
-    await openDays(pick.cities, draftLegs: pick.draftLegs, days: pick.days);
+    await openCreate(pick.cities, draftLegs: pick.draftLegs);
   }
 
   static Future<void>? openSpots(
@@ -74,12 +86,14 @@ class TripNavigation {
     return c.legs.any((l) => l.cityKey == city.cityKey) ? TripLegEditBlock.none : null;
   }
 
-  static Future<void>? openDays(List<TripCityModel> cities, {List<TripDraftLeg> draftLegs = const [], int? days}) =>
-      Get.toNamed(AppRoutes.tripDays, arguments: {
-        'cities': cities,
-        if (draftLegs.isNotEmpty) 'draftLegs': draftLegs,
-        'days': ?days,
-      });
+  static Future<void>? openCreate(List<TripCityModel> cities, {List<TripDraftLeg> draftLegs = const []}) {
+    if (cities.isEmpty) return null;
+    return Get.toNamed(AppRoutes.tripSpots, arguments: {
+      'city': cities.first,
+      if (cities.length > 1) 'cities': cities,
+      if (draftLegs.isNotEmpty) 'draftLegs': draftLegs,
+    });
+  }
 
   static Future<void>? openPlan({String? tripId, bool fresh = false, String? row}) =>
       Get.toNamed(AppRoutes.tripPlan, arguments: {'tripId': tripId, 'fresh': fresh, 'row': ?row});

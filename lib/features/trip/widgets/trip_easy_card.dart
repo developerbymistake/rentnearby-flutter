@@ -35,7 +35,7 @@ class TripEasyCard extends StatelessWidget {
     return Obx(() {
       final failed = c.supplyCheckFailed.length;
       final p = c.plan.value;
-      if (p == null || !c.easyOpen.value) return const SizedBox.shrink();
+      if (p == null) return const SizedBox.shrink();
       final rows = c.easyRows;
       final multi = p.isMultiCity;
       final children = <Widget>[];
@@ -77,10 +77,6 @@ class TripEasyCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-                IconButton(
-                  onPressed: () => c.easyOpen.value = false,
-                  icon: const Icon(Icons.keyboard_arrow_up_rounded, color: AppColors.textMedium),
                 ),
               ],
             ),

@@ -49,9 +49,8 @@ class TripCityPick {
   final TripCityModel? next;
   final List<TripCityModel> cities;
   final List<TripDraftLeg> draftLegs;
-  final int? days;
 
-  TripCityPick(this.city, {this.next, List<TripCityModel>? cities, this.draftLegs = const [], this.days})
+  TripCityPick(this.city, {this.next, List<TripCityModel>? cities, this.draftLegs = const []})
     : cities = cities ?? [city, ?next];
 
   List<String> get draftIds => draftLegs.isEmpty ? const [] : draftLegs.first.ids;
@@ -150,11 +149,10 @@ class _SheetText {
 
 class _TripCitySheetState extends State<TripCitySheet> {
   final _searchCtrl = TextEditingController();
-  TripNewDraft? _draft = TripNewDraft.read();
   late final TripCityCatalog _catalog;
 
   List<TripCityModel> _items = const [];
-  List<({TripCityModel from, TripCityModel to, int days})> _routes = const [];
+  List<({TripCityModel from, TripCityModel to})> _routes = const [];
   List<TripCityModel> _nextStops = const [];
   String _query = '';
   bool _loading = false;
@@ -191,20 +189,13 @@ class _TripCitySheetState extends State<TripCitySheet> {
 
   void _continue() {
     if (_picked.isEmpty) return;
-    Navigator.pop(context, TripCityPick(_picked.first, cities: List.of(_picked), days: _pickedRouteDays));
+    Navigator.pop(context, TripCityPick(_picked.first, cities: List.of(_picked)));
   }
 
-  bool _routeOn(({TripCityModel from, TripCityModel to, int days}) r) =>
+  bool _routeOn(({TripCityModel from, TripCityModel to}) r) =>
       _picked.length == 2 && _picked[0].cityKey == r.from.cityKey && _picked[1].cityKey == r.to.cityKey;
 
-  int? get _pickedRouteDays {
-    for (final r in _routes) {
-      if (_routeOn(r)) return r.days;
-    }
-    return null;
-  }
-
-  void _toggleRoute(({TripCityModel from, TripCityModel to, int days}) r) {
+  void _toggleRoute(({TripCityModel from, TripCityModel to}) r) {
     setState(() {
       final on = _routeOn(r);
       _picked.clear();
@@ -513,11 +504,9 @@ class _TripCitySheetState extends State<TripCitySheet> {
     final nextKeys = {for (final c in _nextStops) c.cityKey};
     final rest = nextKeys.isEmpty ? _items : _items.where((c) => !nextKeys.contains(c.cityKey)).toList();
     final from = widget.afterCity?.trim() ?? '';
-    final draft = _add ? null : _draft;
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       children: [
-        if (draft != null) ...[_sectionHeader(TripStrings.continueNewTrip), _draftRow(draft)],
         if (_routes.isNotEmpty) ...[_sectionHeader(TripStringsMcaA2.popularRoutes), ..._routes.map(_routeRow)],
         if (_nextStops.isNotEmpty) ...[
           _sectionHeader(TripStringsMcaA2.popularNextStops),
@@ -559,63 +548,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
     ),
   );
 
-  Widget _draftRow(TripNewDraft d) {
-    return InkWell(
-      onTap: () => Navigator.pop(
-        context,
-        TripCityPick(d.city, cities: [for (final l in d.legs) l.city], draftLegs: d.legs, days: d.days),
-      ),
-      borderRadius: BorderRadius.circular(12),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 52),
-        child: Padding(
-          padding: const EdgeInsets.only(left: 8, top: 4, bottom: 4),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(color: TripColors.surface, borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Iconsax.edit_2, size: 17, color: TripColors.accentDark),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  TripStrings.draftPlaces(d.legs.map((l) => l.city.name).join(' > '), d.placeCount),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () => setState(() {
-                  StorageService.clearTripNewDraft();
-                  _draft = null;
-                }),
-                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-                child: const Text(
-                  TripStrings.startOver,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textMedium,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _routeRow(({TripCityModel from, TripCityModel to, int days}) r) {
+  Widget _routeRow(({TripCityModel from, TripCityModel to}) r) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 2),
       decoration: BoxDecoration(
@@ -654,7 +587,7 @@ class _TripCitySheetState extends State<TripCitySheet> {
                         ),
                       ),
                       Text(
-                        TripStringsMcaA2.routeMeta(r.days),
+                        TripStringsMcaA2.routeMeta,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontFamily: 'Poppins', fontSize: 11.5, color: AppColors.textLight),

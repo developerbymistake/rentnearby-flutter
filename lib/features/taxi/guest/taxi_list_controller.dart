@@ -101,7 +101,11 @@ class TaxiListController extends GetxController {
     _workers.add(ever(refreshTrigger, (_) => _invalidate()));
     if (root) {
       _workers.add(ever(_auth.tabIndex, (i) {
-        if (i == AppTabs.taxi) refreshIfStale();
+        if (i == AppTabs.taxi) {
+          refreshIfStale();
+        } else {
+          _resetSearch();
+        }
       }));
     }
     if (_tabActive) _fetch(reset: true);
@@ -187,6 +191,17 @@ class TaxiListController extends GetxController {
   void clearTo() {
     if (to.value == null) return;
     to.value = null;
+    _reloadFresh();
+  }
+
+  void _resetSearch() {
+    if (to.value == null && fromIsCurrent.value) return;
+    to.value = null;
+    from.value = null;
+    fromIsCurrent.value = false;
+    _fromDistrictId = null;
+    _fromCityId = null;
+    _applyDefaultFrom();
     _reloadFresh();
   }
 

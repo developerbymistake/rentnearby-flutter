@@ -6,7 +6,6 @@ import '../../../config/app_colors.dart';
 import '../../../config/app_insets.dart';
 import '../../../config/app_routes.dart';
 import '../../../config/app_shadows.dart';
-import '../../../config/app_tabs.dart';
 import '../../../config/module_palette.dart';
 import '../../../controllers/location_controller.dart';
 import '../../../controllers/tab_config_controller.dart';
@@ -53,6 +52,8 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     Get.delete<JobsListController>(tag: JobsListController.tag);
+    final loc = Get.find<LocationController>();
+    Future.microtask(loc.resetBrowsing);
     super.dispose();
   }
 
@@ -107,12 +108,19 @@ class _JobsLandingScreenState extends State<JobsLandingScreen> with ExploreLocat
             children: [
               Row(
                 children: [
+                  IconButton(
+                    onPressed: () => Get.back(),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 36),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Obx(() => Text(
-                              Get.find<TabConfigController>().displayNameForIndex(AppTabs.jobs, 'Jobs'),
+                              Get.find<TabConfigController>().displayName(AppTabKeys.jobs, 'Jobs'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontFamily: 'Poppins', fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),

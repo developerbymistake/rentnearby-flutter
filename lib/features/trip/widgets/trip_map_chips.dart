@@ -103,6 +103,16 @@ class _TripMapChipsState extends State<TripMapChips> {
         final start = p.legStart(k);
         final end = p.legEnd(k);
         if (start < 1) continue;
+        if (p.isSingleDayLeg(k)) {
+          chips.add(_chip(
+            id: 'd$start',
+            label: TripStringsMcdA2.dayCity(start, TripMapChips.shortName(l.cityName)),
+            selected: focus == TripMapFocus.day && day == start,
+            color: TripColors.dayColor(start),
+            onTap: () => widget.onDay(start),
+          ));
+          continue;
+        }
         final range = TripStringsMcaA3.dayRange(start, end);
         chips.add(Semantics(
           button: true,
@@ -121,7 +131,7 @@ class _TripMapChipsState extends State<TripMapChips> {
           if (p.legIndexOf(d) != k) continue;
           chips.add(_chip(
             id: 'd$d',
-            label: '$d',
+            label: TripStringsMcdA2.dayLabel(d),
             selected: focus == TripMapFocus.day && day == d,
             color: TripColors.dayColor(d),
             onTap: () => widget.onDay(d),

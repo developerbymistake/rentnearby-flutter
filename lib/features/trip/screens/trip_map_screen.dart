@@ -237,7 +237,9 @@ class _TripMapScreenState extends State<TripMapScreen> {
     await _applyZoomFloor(p);
     if (!mounted) return;
     final leg = _plan.selectedMapLeg.value;
-    if (leg > 0 && (!p.isMultiCity || p.legAt(leg) == null || p.legStart(leg) < 1)) _plan.selectedMapLeg.value = 0;
+    if (leg > 0 && p.isMultiCity && p.isSingleDayLeg(leg)) {
+      _plan.selectMapDay(p.legStart(leg));
+    } else if (leg > 0 && (!p.isMultiCity || p.legAt(leg) == null || p.legStart(leg) < 1)) _plan.selectedMapLeg.value = 0;
     if (_selected != TripDayChips.all && p.dayAt(_selected) == null) _plan.selectedMapDay.value = 1;
     if (_selected == TripDayChips.all && _plan.selectedMapLeg.value == 0 && p.days.length <= 1) {
       _plan.selectedMapDay.value = 1;

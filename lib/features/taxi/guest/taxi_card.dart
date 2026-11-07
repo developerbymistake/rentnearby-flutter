@@ -44,7 +44,6 @@ class TaxiCard extends StatelessWidget {
       if (t.seats != null) '${TaxiOptionSets.seatsLabel(t.seats!)} seats',
     ].join(' · ');
     final metaLine = [
-      t.plateDisplay,
       t.locality,
       if (_tripMode) TripStrings.listed(TripFormat.monthYear(t.createdAt)),
     ].where((e) => e.isNotEmpty).join(' · ');
@@ -69,64 +68,55 @@ class TaxiCard extends StatelessWidget {
           boxShadow: AppShadows.premium(TaxiColors.accent, alpha: 0.05, blur: 8, offset: const Offset(0, 2)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(t.driverName,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-              ),
-              if (_tripMode) ...[
-                const SizedBox(width: 8),
-                ConstrainedBox(constraints: const BoxConstraints(maxWidth: 130), child: _tripLabelPill(t.tripReplyLabel)),
-              ],
-            ],
-          ),
-          const SizedBox(height: 2),
-          Row(children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _avatar(),
+            const SizedBox(width: 12),
             Expanded(
-              child: Text(vehicleLine,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: TaxiColors.accent)),
-            ),
-            for (final tag in tags) ...[
-              const SizedBox(width: 6),
-              _tagChip(tag),
-            ],
-            if (t.isFeatured) ...[
-              const SizedBox(width: 6),
-              const PlanBadgeChip(color: TaxiColors.accent),
-            ],
-          ]),
-          if (metaLine.isNotEmpty) ...[
-            const SizedBox(height: 3),
-            Text(metaLine,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
-          ],
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: _fareText(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: _checkedChip(),
-              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(t.driverName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontFamily: 'Poppins', fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                    ),
+                    if (_tripMode) ...[
+                      const SizedBox(width: 8),
+                      ConstrainedBox(constraints: const BoxConstraints(maxWidth: 110), child: _tripLabelPill(t.tripReplyLabel)),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(children: [
+                  Flexible(
+                    child: Text(vehicleLine,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w600, color: TaxiColors.accent)),
+                  ),
+                  for (final tag in tags) ...[
+                    const SizedBox(width: 6),
+                    _tagChip(tag),
+                  ],
+                  if (t.isFeatured) ...[
+                    const SizedBox(width: 6),
+                    const PlanBadgeChip(color: TaxiColors.accent),
+                  ],
+                ]),
+                if (metaLine.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(metaLine,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'Poppins', fontSize: 11, color: AppColors.textLight)),
+                ],
+                const SizedBox(height: 4),
+                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: _fareText()),
+              ]),
             ),
           ]),
           const SizedBox(height: 10),
@@ -231,19 +221,18 @@ class TaxiCard extends StatelessWidget {
     );
   }
 
-  Widget _checkedChip() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+  Widget _avatar() => Container(
+        width: 52,
+        height: 52,
         decoration: BoxDecoration(
-          color: TaxiColors.accent.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(999),
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [TaxiColors.accent.withValues(alpha: 0.18), TaxiColors.accent.withValues(alpha: 0.06)],
+          ),
         ),
-        child: const Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Iconsax.tick_circle, size: 12, color: TaxiColors.accent),
-          SizedBox(width: 4),
-          Text(TaxiOptionSets.plateCheckedLabel,
-              maxLines: 1,
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 10, fontWeight: FontWeight.w600, color: TaxiColors.accent)),
-        ]),
+        child: const Icon(Iconsax.car5, size: 26, color: TaxiColors.accent),
       );
 
   Widget _tripLabelPill(String label) {
@@ -302,7 +291,7 @@ class TaxiCardSkeleton extends StatelessWidget {
         baseColor: AppColors.shimmerBase,
         highlightColor: AppColors.shimmerHighlight,
         child: Container(
-          height: 150,
+          height: 130,
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
         ),
       );

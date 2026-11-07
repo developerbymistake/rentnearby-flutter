@@ -4,7 +4,6 @@ import 'screens/my_trips_screen.dart';
 import 'screens/trip_map_screen.dart';
 import 'screens/trip_plan_screen.dart';
 import 'screens/trip_replies_screen.dart';
-import 'screens/trip_days_screen.dart';
 import 'screens/trip_spots_screen.dart';
 import 'screens/trip_stay_screen.dart';
 import 'screens/trip_taxi_replies_screen.dart';
@@ -21,12 +20,6 @@ final List<GetPage> tripPages = [
   GetPage(
     name: AppRoutes.tripPlan,
     page: () => const TripPlanScreen(),
-    transition: Transition.rightToLeft,
-    transitionDuration: const Duration(milliseconds: 300),
-  ),
-  GetPage(
-    name: AppRoutes.tripDays,
-    page: () => const TripDaysScreen(),
     transition: Transition.rightToLeft,
     transitionDuration: const Duration(milliseconds: 300),
   ),

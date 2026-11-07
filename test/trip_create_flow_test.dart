@@ -16,6 +16,10 @@ TripPlan _plan(List<int> perDay) {
   );
 }
 
+List<List<int>> _v(List<int> counts) => [
+      for (final n in counts) [for (var i = 0; i < n; i++) 60],
+    ];
+
 void main() {
   group('minDays', () {
     test('never below the city count', () {
@@ -47,7 +51,7 @@ void main() {
   });
 
   group('allocate', () {
-    test('sums to the days and respects need', () {
+    test('respects need and adds at most one extra day', () {
       for (final days in [2, 3, 5, 8, 14]) {
         for (final places in [
           [3, 3],
@@ -57,8 +61,8 @@ void main() {
           [6, 6, 6],
         ]) {
           if (days < TripDaysRules.minDays(places.length, places)) continue;
-          final a = TripDaysRules.allocate(days, places);
-          expect(a.fold<int>(0, (x, y) => x + y), days, reason: '$days $places');
+          final a = TripDaysRules.allocate(days, _v(places));
+          expect(a.fold<int>(0, (x, y) => x + y), lessThanOrEqualTo(days), reason: '$days $places');
           for (var i = 0; i < places.length; i++) {
             expect(a[i] * 6 >= places[i], isTrue, reason: '$days $places $a');
             expect(a[i] >= 1, isTrue);
@@ -67,16 +71,16 @@ void main() {
       }
     });
 
-    test('extra days follow the larger city', () {
-      expect(TripDaysRules.allocate(5, const [12, 3]), [4, 1]);
+    test('one extra day follows the larger city', () {
+      expect(TripDaysRules.allocate(5, _v(const [12, 3])), [4, 1]);
     });
 
     test('ties go to the earlier city', () {
-      expect(TripDaysRules.allocate(3, const [2, 2]), [2, 1]);
+      expect(TripDaysRules.allocate(3, _v(const [2, 2])), [2, 1]);
     });
 
     test('empty list stays empty', () {
-      expect(TripDaysRules.allocate(3, const []), isEmpty);
+      expect(TripDaysRules.allocate(3, _v(const [])), isEmpty);
     });
   });
 

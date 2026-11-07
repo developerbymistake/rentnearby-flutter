@@ -5,7 +5,7 @@ class TripStringsMcaA2 {
 
   static const String popularRoutes = 'Popular routes';
   static String routeTitle(String a, String b) => '$a then $b';
-  static String routeMeta(int days) => '$days ${days == 1 ? 'day' : 'days'} · 2 cities';
+  static const String routeMeta = '2 cities';
 
   static const String addACity = 'Add a city';
   static String afterCity(String city) => 'After $city';

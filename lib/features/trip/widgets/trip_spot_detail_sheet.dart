@@ -3,6 +3,7 @@ import '../../../config/app_colors.dart';
 import '../models/trip_spot_category.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_colors.dart';
+import '../trip_strings_spots_x.dart';
 import '../utils/trip_format.dart';
 import 'trip_spot_row.dart';
 
@@ -145,7 +146,7 @@ class _TripSpotDetailSheetState extends State<TripSpotDetailSheet> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       child: Text(
-                        widget.selected ? (widget.onToggle == null ? 'Added' : 'Remove') : 'Add to list',
+                        widget.selected ? (widget.onToggle == null ? TripStringsSpotsX.addedWishlist : 'Remove') : TripStringsSpotsX.addToWishlist,
                         style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w700),
                       ),
                     ),

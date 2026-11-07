@@ -57,14 +57,14 @@ explicitly:
 
 **Navigation**: `GetMaterialApp` + named routes declared in `lib/config/app_routes.dart`
 (`AppRoutes.routes`, a flat `List<GetPage>` with per-route transitions). The bottom-nav tabs
-(`lib/config/app_tabs.dart`: `home(0) / stays(1) / jobs(2) / taxi(3) / profile(4)`, `count = 5`; Chat is not a
+(`lib/config/app_tabs.dart`: `home(0) / stays(1) / trips(2) / taxi(3) / profile(4)`; Jobs is no longer a tab, it opens from Profile > Activity > Jobs via `/jobs`, `count = 5`; Chat is not a
 bottom-nav tab, reached instead via a header icon on Home) are NOT part of this
 route table: `MainScreen` renders them as an `IndexedStack` of `TabNavigator` widgets
 (`lib/navigation/tab_router.dart`), each wrapping its tab root screen in its own nested `Navigator`
 keyed via `lib/navigation/tab_keys.dart`. This isolates keyboard/layout/MediaQuery changes per tab.
 The root sits in an `Obx` and is a `SizedBox.shrink()` while `TabConfigController.isActiveForIndex` is false, so an
 admin-disabled tab is never built and makes no API call.
-The bottom-nav **row order** is Home, Stays, Taxi, Jobs, Profile (`_buildBottomNav` in `main_screen.dart`); it differs from the index order and only the row was reordered, indexes, deep links and tab-off logic read indexes. `_screens` must list the TabNavigators in index order [home, stays, jobs, taxi, profile].
+The bottom-nav row order is Home, Stays, Trips, Taxi, Profile and matches the index order (Trips root = `MyTripsScreen(root: true)`, always active, not in the backend master table). `_screens` must list the TabNavigators in index order.
 Deep/detail screens (payment, chat conversation, etc.) still go through
 the global `Get.toNamed` navigator on top of everything, unaffected by which tab is active.
 

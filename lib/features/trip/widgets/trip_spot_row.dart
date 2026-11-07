@@ -63,7 +63,7 @@ class TripSpotRow extends StatelessWidget {
                 Positioned(right: 10, top: 10, child: _chip('+$extra', icon: Icons.photo_library_outlined)),
               Positioned(
                 left: 12,
-                right: 64,
+                right: 112,
                 bottom: 10,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -146,22 +146,30 @@ class TripSpotAddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fg = selected ? Colors.white : (locked ? AppColors.textHint : TripColors.accentDark);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: 40,
-        height: 40,
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
+          borderRadius: BorderRadius.circular(999),
           color: selected ? TripColors.accent : Colors.white,
           border: Border.all(color: locked && !selected ? AppColors.divider : TripColors.accent, width: 1.4),
         ),
-        child: Icon(
-          selected ? Icons.check_rounded : Icons.add_rounded,
-          size: 22,
-          color: selected ? Colors.white : (locked ? AppColors.textHint : TripColors.accentDark),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(selected ? Icons.check_rounded : Icons.add_rounded, size: 16, color: fg),
+            const SizedBox(width: 4),
+            Text(
+              selected ? TripStringsSpotsX.addedWishlist : TripStringsSpotsX.addWishlist,
+              maxLines: 1,
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 12, fontWeight: FontWeight.w700, color: fg),
+            ),
+          ],
         ),
       ),
     );

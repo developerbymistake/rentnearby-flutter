@@ -33,7 +33,6 @@ import '../navigation/tour_keys.dart';
 import '../controllers/tour_controller.dart';
 import '../features/stay/guest/stay_landing_controller.dart';
 import '../features/stay/guest/stay_guest_controller.dart';
-import '../features/jobs/controllers/jobs_list_controller.dart';
 import '../features/taxi/guest/taxi_list_controller.dart';
 import '../features/trip/controllers/my_trips_controller.dart';
 import '../features/trip/widgets/trip_bar.dart';
@@ -59,7 +58,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   final _screens = const [
     TabNavigator(tabId: AppTabs.home),
     TabNavigator(tabId: AppTabs.stays),
-    TabNavigator(tabId: AppTabs.jobs),
+    TabNavigator(tabId: AppTabs.trips),
     TabNavigator(tabId: AppTabs.taxi),
     TabNavigator(tabId: AppTabs.profile),
   ];
@@ -131,6 +130,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // later.
     _tabLeaveWorker = ever<int>(_auth.tabIndex, (newIndex) {
       if (newIndex != _previousTabIndex) {
+        if (_previousTabIndex == AppTabs.stays) _locationCtrl.resetBrowsing();
         final navState = tabKeys[_previousTabIndex].currentState;
         if (navState != null && navState.canPop()) {
           navState.popUntil((route) => route.isFirst);
@@ -457,15 +457,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 child: _navItem(AppTabs.stays, Iconsax.building_4, Iconsax.building_45,
                     _tabConfigCtrl.displayNameForIndex(AppTabs.stays, 'Stays')),
               ),
+            _navItem(AppTabs.trips, Iconsax.routing_2, Iconsax.routing_2,
+                _tabConfigCtrl.displayNameForIndex(AppTabs.trips, 'Trips')),
             if (_tabConfigCtrl.isActive(AppTabKeys.taxi))
               KeyedSubtree(
                 key: TourKeys.homeTaxiNavIcon,
                 child: _navItem(AppTabs.taxi, Iconsax.car, Iconsax.car5,
                     _tabConfigCtrl.displayNameForIndex(AppTabs.taxi, 'Taxi')),
               ),
-            if (_tabConfigCtrl.isActiveForIndex(AppTabs.jobs))
-              _navItem(AppTabs.jobs, Iconsax.briefcase, Iconsax.briefcase5,
-                  _tabConfigCtrl.displayNameForIndex(AppTabs.jobs, 'Jobs')),
             KeyedSubtree(
               key: TourKeys.homeProfileNavIcon,
               child: _navItem(AppTabs.profile, Iconsax.user, Iconsax.user5,
@@ -488,18 +487,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           if (index == AppTabs.stays && _auth.tabIndex.value != AppTabs.stays) {
             stays?.exploreRefreshTrigger.value++;
           }
-          final jobs = Get.isRegistered<JobsListController>(tag: JobsListController.tag)
-              ? Get.find<JobsListController>(tag: JobsListController.tag)
-              : null;
-          if (index == AppTabs.jobs && _auth.tabIndex.value != AppTabs.jobs) {
-            jobs?.exploreRefreshTrigger.value++;
-          }
           if (index == AppTabs.taxi && Get.isRegistered<TaxiListController>(tag: TaxiListController.tag)) {
             Get.find<TaxiListController>(tag: TaxiListController.tag).refreshIfStale();
           }
           if (index == AppTabs.profile && _auth.tabIndex.value != AppTabs.profile) _auth.profileTabTrigger.value++;
           stays?.filterResetTrigger.value++;
-          jobs?.filterResetTrigger.value++;
           _auth.switchToTab(index);
         },
         behavior: HitTestBehavior.opaque,

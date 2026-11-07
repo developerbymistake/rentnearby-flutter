@@ -23,7 +23,6 @@ const _pauseRoutes = {
   '/my-taxi',
   '/taxi-detail',
   '/taxi-list',
-  '/trip-days',
   '/trip-spots',
   '/trip-plan',
   '/trip-taxi',

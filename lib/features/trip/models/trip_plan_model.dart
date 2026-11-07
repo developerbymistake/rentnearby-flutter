@@ -901,6 +901,8 @@ class TripPlan {
     return end;
   }
 
+  bool isSingleDayLeg(int legIndex) => legDayCount(legIndex) == 1;
+
   int legDayCount(int legIndex) => days.where((d) => d.leg == legIndex).length;
 
   int legSpotCount(int legIndex) =>

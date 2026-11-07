@@ -4,6 +4,8 @@ import 'package:iconsax/iconsax.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../config/app_colors.dart';
 import '../../../config/app_routes.dart';
+import '../../../config/app_tabs.dart';
+import '../../../controllers/auth_controller.dart';
 import '../../../utils/app_toast.dart';
 import '../../../widgets/empty_state_view.dart';
 import '../controllers/my_trips_controller.dart';
@@ -23,7 +25,8 @@ import '../widgets/trip_lifecycle_actions.dart';
 import '../widgets/trip_shimmers.dart';
 
 class MyTripsScreen extends StatefulWidget {
-  const MyTripsScreen({super.key});
+  final bool root;
+  const MyTripsScreen({this.root = false, super.key});
 
   @override
   State<MyTripsScreen> createState() => _MyTripsScreenState();
@@ -32,6 +35,7 @@ class MyTripsScreen extends StatefulWidget {
 class _MyTripsScreenState extends State<MyTripsScreen> {
   late final MyTripsController _ctrl;
   final _scroll = ScrollController();
+  Worker? _tabWorker;
 
   @override
   void initState() {
@@ -40,10 +44,16 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
     _ctrl.pastOpen.value = false;
     _ctrl.load();
     _scroll.addListener(_onScroll);
+    if (widget.root) {
+      _tabWorker = ever<int>(Get.find<AuthController>().tabIndex, (i) {
+        if (i == AppTabs.trips) _ctrl.load();
+      });
+    }
   }
 
   @override
   void dispose() {
+    _tabWorker?.dispose();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     super.dispose();
@@ -135,10 +145,13 @@ class _MyTripsScreenState extends State<MyTripsScreen> {
       padding: EdgeInsets.fromLTRB(12, top + 8, 20, 14),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Get.back(),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          ),
+          if (widget.root)
+            const SizedBox(width: 8)
+          else
+            IconButton(
+              onPressed: () => Get.back(),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+            ),
           const SizedBox(width: 2),
           const Expanded(
             child: Text(
