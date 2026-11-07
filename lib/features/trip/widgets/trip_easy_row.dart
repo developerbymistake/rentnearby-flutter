@@ -181,17 +181,6 @@ class _TripEasyRowState extends State<TripEasyRow> {
     switch (_i.state) {
       case TripRowState.todo || TripRowState.attention:
         if (_loadFailed) return const SizedBox.shrink();
-        if (_taxiChecking) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Row(children: [
-              SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: TripColors.accent)),
-              SizedBox(width: 10),
-              Text(TripStringsV2Easy.checkingTaxis,
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 12.5, color: AppColors.textMedium)),
-            ]),
-          );
-        }
         final noSupply = _noSupply;
         return Wrap(
           spacing: 8,
@@ -266,21 +255,30 @@ class _TripEasyRowState extends State<TripEasyRow> {
     }
   }
 
-  bool get _taxiChecking =>
-      _i.key.kind == TripEasyRowKind.taxi && _i.state == TripRowState.todo && _c.taxiChecking.value && !_c.taxiTabOff.value;
+  String get _shownTitle {
+    final p = _c.plan.value;
+    if (p == null) return _i.title;
+    switch (_i.key.kind) {
+      case TripEasyRowKind.taxi:
+        final names = [for (final l in p.legs) l.cityName].where((n) => n.isNotEmpty).toSet().toList();
+        if (names.isEmpty) return TripStringsV2Easy.localTaxiIn(p.cityName);
+        final shown = names.length <= 2 ? names.join(' & ') : '${names.take(2).join(', ')} +${names.length - 2}';
+        return TripStringsV2Easy.localTaxiIn(shown);
+      case TripEasyRowKind.stay:
+        return TripStringsV2Easy.localStayIn(p.legAt(_i.key.legIndex ?? 1)?.cityName ?? p.cityName);
+      default:
+        return _i.title;
+    }
+  }
 
   bool get _noSupply {
     final p = _c.plan.value;
     if (p == null || _c.isReadOnly || _i.state != TripRowState.todo || _loadFailed) return false;
     switch (_i.key.kind) {
       case TripEasyRowKind.stay:
-        final day = _supplyDay;
-        return _c.stayTabOff.value ||
-            (!_c.supplyAvailableFor(day) && !_c.supplyPendingFor(day)) ||
-            _c.staySupplyFor(day) == false;
+        return _c.stayTabOff.value;
       case TripEasyRowKind.taxi:
-        return _c.taxiTabOff.value ||
-            (p.days.isNotEmpty && p.days.every((d) => _c.taxiSupplyFor(d.day) == false));
+        return _c.taxiTabOff.value;
       default:
         return false;
     }
@@ -372,7 +370,7 @@ class _TripEasyRowState extends State<TripEasyRow> {
         ? TripEasyRow.ownLine(i.key)
         : (noSupply
             ? (i.kind == TripEasyRowKind.taxi ? TripStringsV2Easy.noTaxiHere : TripStringsV2Easy.noStayHere)
-            : i.title);
+            : _shownTitle);
     final muted = i.state == TripRowState.skipped;
     final subtitleColor = red
         ? AppColors.errorText

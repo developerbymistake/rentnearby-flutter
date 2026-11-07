@@ -14,7 +14,6 @@ class TripStringsV2Easy {
   static const String helpMeFind = 'Help me find';
   static const String arrangeMyself = "I'll arrange myself";
   static const String skip = 'Skip';
-  static const String checkingTaxis = 'Checking taxis…';
   static const String undo = 'Undo';
   static const String change = 'Change';
   static const String replies = 'Replies';
@@ -31,6 +30,8 @@ class TripStringsV2Easy {
   static const String localTaxi = 'Local taxi';
 
   static String stayIn(String city) => 'Stay in $city';
+  static String localStayIn(String city) => 'Local stay in $city';
+  static String localTaxiIn(String city) => 'Local taxi in $city';
 
   static String between(String from, String to) => '$from to $to';
 
