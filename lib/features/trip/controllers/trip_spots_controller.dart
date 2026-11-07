@@ -6,6 +6,8 @@ import '../data/trip_repository.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_constants.dart';
 import '../trip_strings_mca_a2.dart';
+import '../utils/trip_spot_picks.dart';
+import '../utils/trip_spots_cache.dart';
 
 class TripCreateSession extends GetxController {
   final days = 1.obs;
@@ -37,6 +39,15 @@ class TripSpotsController extends GetxController {
   final selected = <String>{}.obs;
   final filter = Rxn<String>();
   final limit = (-1).obs;
+  final offline = false.obs;
+  final minutesTick = 0.obs;
+  final suggestion = Rxn<({String forId, TripNearby nearby})>();
+  final book = TripMinutesBook();
+  final _suggested = <String>{};
+  final _askedMinutes = <String>{};
+  bool _minutesOff = false;
+  Worker? _routeWorker;
+  final mapMode = false.obs;
   String? nextCursor;
   int _seq = 0;
   bool _loadingAll = false;
@@ -45,8 +56,74 @@ class TripSpotsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _routeWorker = debounce(selected, (_) => _syncRoute(), time: const Duration(milliseconds: 400));
     load();
   }
+
+  @override
+  void onClose() {
+    _routeWorker?.dispose();
+    super.onClose();
+  }
+
+  List<TripSpotModel> get mustSee => TripSpotPicks.mustSee(items);
+
+  List<TripQuickStart> get quickStarts => TripSpotPicks.quickStarts(items);
+
+  TripRouteEstimate? get route {
+    minutesTick.value;
+    return TripSpotPicks.route(chosen, book);
+  }
+
+  int get room => TripSpotPicks.roomFor(
+      limit: limit.value, selected: selected.length, existing: existingIds.length, other: otherSpots);
+
+  Future<void> _fetchMinutes(List<String> ids) async {
+    final list = ids.toSet().take(TripSpotPicks.minutesMax).toList();
+    if (_minutesOff || list.length < 2) return;
+    final key = (list.toList()..sort()).join(',');
+    if (!_askedMinutes.add(key)) return;
+    try {
+      final m = await _repo.spotMinutes(cityKey, list);
+      if (m == null) {
+        _minutesOff = true;
+        return;
+      }
+      book.put(m);
+      minutesTick.value++;
+    } catch (_) {
+      _askedMinutes.remove(key);
+    }
+  }
+
+  void _syncRoute() {
+    final ids = selected.toList();
+    if (ids.length >= 2 && ids.length <= TripSpotPicks.minutesMax) _fetchMinutes(ids);
+  }
+
+  Future<void> _suggestFor(String id) async {
+    if (!_suggested.add(id)) return;
+    final from = items.firstWhereOrNull((s) => s.id == id);
+    if (from == null) return;
+    final pool = items.where((s) => !selected.contains(s.id) && !existingIds.contains(s.id)).toList();
+    final near = TripSpotPicks.candidatesNear(from, pool);
+    if (near.isEmpty) return;
+    await _fetchMinutes([id, ...near.map((s) => s.id)]);
+    if (!selected.contains(id) || atLimit || selected.length + existingIds.length + otherSpots >= TripConstants.maxSpots) return;
+    final left = near.where((s) => !selected.contains(s.id)).toList();
+    final n = TripSpotPicks.nearest(from, left, book);
+    suggestion.value = n == null ? null : (forId: id, nearby: n);
+  }
+
+  void dismissSuggestion() => suggestion.value = null;
+
+  List<String> addBundle(TripQuickStart b) {
+    final add = TripSpotPicks.bundleAdds(b, selected, room);
+    selected.addAll(add);
+    return add;
+  }
+
+  void removeAdded(List<String> ids) => selected.removeAll(ids);
 
   bool get isNotReady => status.value == TripSpotStatus.notReady;
 
@@ -74,6 +151,8 @@ class TripSpotsController extends GetxController {
       final page = await _repo.spots(cityKey);
       if (seq != _seq) return;
       items.assignAll(page.items);
+      offline.value = false;
+      _saveCache(page);
       status.value = page.status;
       cityName.value = page.cityName;
       total.value = page.total;
@@ -86,6 +165,8 @@ class TripSpotsController extends GetxController {
         plannerOff.value = true;
       } else if (type == TripErrorTypes.cityNotFound) {
         status.value = TripSpotStatus.notReady;
+      } else if (items.isEmpty && _useCache()) {
+        offline.value = true;
       } else if (!(e is DioException && e.response?.statusCode == 401)) {
         loadFailed.value = true;
         loadError.value = DioErrorMapper.isNetworkError(e) ? '' : DioErrorMapper.toMessage(e, '');
@@ -93,6 +174,29 @@ class TripSpotsController extends GetxController {
     } finally {
       if (seq == _seq) isLoading.value = false;
     }
+  }
+
+  void _saveCache(TripSpotsPage page) {
+    if (page.isNotReady || page.items.isEmpty) return;
+    try {
+      TripSpotsCache.save(cityKey, page.items);
+    } catch (_) {}
+  }
+
+  bool _useCache() {
+    List<TripSpotModel>? cached;
+    try {
+      cached = TripSpotsCache.load(cityKey);
+    } catch (_) {
+      return false;
+    }
+    if (cached == null || cached.isEmpty) return false;
+    items.assignAll(cached);
+    status.value = TripSpotStatus.ready;
+    total.value = cached.length;
+    hasMore.value = false;
+    nextCursor = null;
+    return true;
   }
 
   Future<bool> loadMore() async {
@@ -158,6 +262,7 @@ class TripSpotsController extends GetxController {
   bool toggle(String id) {
     if (selected.contains(id)) {
       selected.remove(id);
+      if (suggestion.value?.forId == id) suggestion.value = null;
       return true;
     }
     if (atLimit) return false;
@@ -166,6 +271,8 @@ class TripSpotsController extends GetxController {
       return false;
     }
     selected.add(id);
+    suggestion.value = null;
+    _suggestFor(id);
     return true;
   }
 }

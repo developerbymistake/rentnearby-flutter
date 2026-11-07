@@ -20,10 +20,15 @@ import '../trip_constants.dart';
 import '../trip_strings.dart';
 import '../trip_strings_v2_create.dart';
 import '../trip_strings_mca_a2.dart';
+import '../trip_strings_spots_x.dart';
+import '../utils/trip_spot_picks.dart';
 import '../utils/trip_days_rules.dart';
 import '../widgets/trip_city_sheet.dart';
 import '../widgets/trip_shimmers.dart';
+import '../widgets/trip_spot_detail_sheet.dart';
 import '../widgets/trip_spot_row.dart';
+import '../widgets/trip_spots_extras.dart';
+import '../widgets/trip_spots_map_view.dart';
 
 class TripSpotsScreen extends StatefulWidget {
   const TripSpotsScreen({super.key});
@@ -229,6 +234,47 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
     Get.back();
   }
 
+  VoidCallback? _toggleFor(TripSpotModel s) {
+    if (_existingIds.contains(s.id)) return null;
+    return _pickDay != null ? () => _pickOne(s) : () => _toggle(s.id);
+  }
+
+  bool _lockedFor(TripSpotModel s) =>
+      !_existingIds.contains(s.id) && !_ctrl.selected.contains(s.id) && (_pickDay != null ? _pickFull : _ctrl.atLimit);
+
+  void _openDetail(TripSpotModel s) {
+    final on = _existingIds.contains(s.id) || _ctrl.selected.contains(s.id);
+    TripSpotDetailSheet.show(context, spot: s, selected: on, locked: _lockedFor(s), onToggle: _toggleFor(s));
+  }
+
+  void _applyBundle(TripQuickStart b) {
+    final added = _ctrl.addBundle(b);
+    if (added.isEmpty) {
+      AppToast.warning(_limitText);
+      return;
+    }
+    final m = ScaffoldMessenger.of(context);
+    m.hideCurrentSnackBar();
+    m.showSnackBar(SnackBar(
+      content: Text(TripStringsSpotsX.bundleAdded(added.length)),
+      action: SnackBarAction(label: TripStringsSpotsX.undo, onPressed: () => _ctrl.removeAdded(added)),
+    ));
+  }
+
+  Widget _buildOffline() => Obx(() => _ctrl.offline.value && !_ctrl.isLoading.value
+      ? TripOfflineBanner(onTap: _ctrl.load)
+      : const SizedBox.shrink());
+
+  Widget _buildViewSwitch() => Obx(() {
+        final show = !_ctrl.plannerOff.value &&
+            !_ctrl.isLoading.value &&
+            !_ctrl.isNotReady &&
+            !(_ctrl.loadFailed.value && _ctrl.items.isEmpty) &&
+            _ctrl.items.isNotEmpty;
+        if (!show) return const SizedBox.shrink();
+        return TripSpotsViewSwitch(map: _ctrl.mapMode.value, onChanged: (v) => _ctrl.mapMode.value = v);
+      });
+
   void _toggle(String id) {
     if (_ctrl.toggle(id)) return;
     if (_ctrl.atLimit) AppToast.warning(_limitText);
@@ -310,7 +356,9 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
         children: [
           _buildHeader(context),
           _buildCityChips(),
+          _buildOffline(),
           _buildChips(),
+          _buildViewSwitch(),
           _buildLimitNotice(),
           Expanded(child: _buildBody()),
         ],
@@ -552,9 +600,23 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
           palette: TripColors.palette,
         ));
       }
+      if (_ctrl.mapMode.value) {
+        return TripSpotsMapView(controller: _ctrl, onOpen: _openDetail);
+      }
       final visible = _ctrl.visible;
       final loadingMore = _ctrl.isLoadingMore.value;
+      final filter = _ctrl.filter.value;
       if (visible.isEmpty && !loadingMore) {
+        if (filter != null) {
+          return _message(EmptyStateView(
+            icon: Iconsax.location,
+            title: TripStringsSpotsX.noneIn(TripSpotCategory.label(filter)),
+            subtitle: '',
+            onRetry: () => _ctrl.setFilter(null),
+            retryLabel: TripStringsSpotsX.showAll,
+            palette: TripColors.palette,
+          ));
+        }
         return _message(const EmptyStateView(
           icon: Iconsax.location,
           title: TripStrings.noPlaces,
@@ -565,11 +627,39 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       final selected = _ctrl.selected.toSet();
       final atLimit = _ctrl.atLimit;
       final pickFull = _pickFull;
+      final sug = _ctrl.suggestion.value;
+      final count = _ctrl.items.length;
+      final few = !_ctrl.hasMore.value && count <= 3;
+      final mustSee = filter == null && !few ? _ctrl.mustSee : const <TripSpotModel>[];
+      final quick = filter == null && !few && _pickDay == null && selected.length < 3
+          ? _ctrl.quickStarts.where((b) => TripSpotPicks.bundleAdds(b, selected, 3).isNotEmpty).toList()
+          : const <TripQuickStart>[];
+      final heads = <Widget>[
+        if (few && filter == null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(
+              TripStringsSpotsX.fewPlaces(count),
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textMedium),
+            ),
+          ),
+        if (quick.isNotEmpty) TripQuickStartRail(bundles: quick, onTap: _applyBundle),
+        if (mustSee.isNotEmpty)
+          TripMustSeeRail(
+            city: _city.name,
+            spots: mustSee,
+            selected: {...selected, ..._existingIds},
+            lockedOf: (s) => !_existingIds.contains(s.id) && !selected.contains(s.id) && (_pickDay != null ? pickFull : atLimit),
+            toggleOf: _toggleFor,
+          ),
+      ];
       return ListView.builder(
         controller: _scroll,
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        itemCount: visible.length + (loadingMore ? 1 : 0),
-        itemBuilder: (_, i) {
+        itemCount: heads.length + visible.length + (loadingMore ? 1 : 0),
+        itemBuilder: (_, k) {
+          if (k < heads.length) return heads[k];
+          final i = k - heads.length;
           if (i == visible.length) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -584,16 +674,33 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
           }
           final s = visible[i];
           final existing = _existingIds.contains(s.id);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: TripSpotRow(
-              key: ValueKey(s.id),
-              spot: s,
-              selected: existing || selected.contains(s.id),
-              locked: !existing && !selected.contains(s.id) && (_pickDay != null ? pickFull : atLimit),
-              onToggle: existing ? null : (_pickDay != null ? () => _pickOne(s) : () => _toggle(s.id)),
-            ),
+          final card = TripSpotRow(
+            key: ValueKey(s.id),
+            spot: s,
+            selected: existing || selected.contains(s.id),
+            locked: !existing && !selected.contains(s.id) && (_pickDay != null ? pickFull : atLimit),
+            onToggle: existing ? null : (_pickDay != null ? () => _pickOne(s) : () => _toggle(s.id)),
           );
+          if (sug != null && sug.forId == s.id && _pickDay == null) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                children: [
+                  card,
+                  const SizedBox(height: 6),
+                  TripSuggestionCard(
+                    text: TripSpotPicks.nearbyText(s, sug.nearby),
+                    onAdd: () {
+                      _ctrl.dismissSuggestion();
+                      _toggle(sug.nearby.spot.id);
+                    },
+                    onDismiss: _ctrl.dismissSuggestion,
+                  ),
+                ],
+              ),
+            );
+          }
+          return Padding(padding: const EdgeInsets.only(bottom: 10), child: card);
         },
       );
     });
@@ -616,6 +723,12 @@ class _TripSpotsScreenState extends State<TripSpotsScreen> {
       }
       final nextName = _next?.name;
       final children = <Widget>[];
+      final route = _ctrl.route;
+      if (route != null) {
+        children
+          ..add(TripSpotsRouteStrip(route: route))
+          ..add(const SizedBox(height: 6));
+      }
       if (_creating) {
         final total = _counts().fold<int>(0, (a, b) => a + b);
         final parts = <(String, int)>[

@@ -13,6 +13,7 @@ import '../models/trip_plan_result_model.dart';
 import '../models/trip_summary_model.dart';
 import '../models/trip_spot_model.dart';
 import '../trip_constants.dart';
+import '../utils/trip_spot_picks.dart';
 
 class TripErrorTypes {
   static const String tripNotFound = 'TripNotFound';
@@ -106,6 +107,9 @@ class TripRepository {
             'cursor': ?cursor,
             'pageSize': pageSize,
           }))));
+
+  Future<TripSpotMinutes?> spotMinutes(int cityKey, List<String> spotIds) async => TripSpotMinutes.fromJson(
+      _data(await ApiService.post('/trips/cities/$cityKey/spots/minutes', {'spotIds': spotIds})));
 
   Future<TripPlanResult> plan(Map<String, dynamic> body) async =>
       TripPlanResult.fromJson(_data(await ApiService.post('/trips/plan', body)));
